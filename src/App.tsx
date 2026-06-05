@@ -1,193 +1,528 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import ActivityLog from './components/ActivityLog'
+import BilingualText from './components/BilingualText'
+import BuildingGrid from './components/BuildingGrid'
+import ComboPanel from './components/ComboPanel'
+import ContractsPanel from './components/ContractsPanel'
+import EventsPanel from './components/EventsPanel'
+import MilestonesPanel from './components/MilestonesPanel'
+import ProductionPanel from './components/ProductionPanel'
+import ResearchPanel from './components/ResearchPanel'
+import ResourcePanel from './components/ResourcePanel'
+import SavePanel from './components/SavePanel'
+import StaffPanel from './components/StaffPanel'
+import StatsPanel from './components/StatsPanel'
+import { BUILDINGS } from './data/buildings'
+import { serializeBilingualText, text } from './translations'
+import type { BuildingType, Contract, ResearchItem, WorkerConfig } from './types'
+import {
+  CRUDE_COST,
+  RANDOM_EVENT_INTERVAL_MS,
+  TICK_MS,
+  addLog,
+  applyMilestones,
+  applyRandomEvent,
+  calculateDerivedStats,
+  getRandomEvent,
+  getUpgradeCost,
+} from './utils/gameCalculations'
+import {
+  clearStoredGameState,
+  loadStoredGameState,
+  saveStoredGameState,
+} from './utils/gameStorage'
 import './App.css'
 
-const STARTING_MONEY = 60
-const STARTING_CRUDE = 12
-const GASOLINE_PRICE = 18
-const BASE_REFINING_MS = 2600
-const SPEED_STEP_MS = 350
-const MIN_REFINING_MS = 900
-
 function App() {
-  const [money, setMoney] = useState(STARTING_MONEY)
-  const [crudeOil, setCrudeOil] = useState(STARTING_CRUDE)
-  const [gasoline, setGasoline] = useState(0)
-  const [speedLevel, setSpeedLevel] = useState(0)
-  const [isRefining, setIsRefining] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [activeRefiningTime, setActiveRefiningTime] = useState(BASE_REFINING_MS)
-
-  const refiningTime = Math.max(
-    MIN_REFINING_MS,
-    BASE_REFINING_MS - speedLevel * SPEED_STEP_MS,
-  )
-  const upgradeCost = 45 + speedLevel * 35
-  const refineSeconds = (refiningTime / 1000).toFixed(1)
-  const activeRefineSeconds = (activeRefiningTime / 1000).toFixed(1)
+  const [initialLoad] = useState(loadStoredGameState)
+  const [game, setGame] = useState(initialLoad.game)
+  const [saveStatusMessage, setSaveStatusMessage] = useState(initialLoad.message)
+  const [selectedBuilding, setSelectedBuilding] = useState<BuildingType>('crudeTank')
+  const gameRef = useRef(game)
+  const {
+    activeContracts,
+    activeMilestones,
+    activeResearchItems,
+    activeWorkers,
+    availableSpace,
+    canProcessCrude,
+    comboStats,
+    maxCrudeStorage,
+    maxGasolineStorage,
+    productionInterval,
+    productionRate,
+    progressPercent,
+    reputationTier,
+    nextReputationTier,
+    sellPrice,
+    statusLabel,
+    upgradeCost,
+  } = calculateDerivedStats(game)
 
   useEffect(() => {
-    if (!isRefining) {
-      return
-    }
+    gameRef.current = game
+  }, [game])
 
-    const startedAt = Date.now()
-    const progressTimer = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt
-      setProgress(Math.min((elapsed / activeRefiningTime) * 100, 100))
-    }, 100)
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setGame((current) => {
+        const nextTick = current.tickCount + 1
+        const currentStats = calculateDerivedStats(current)
+        const currentMaxGasoline = currentStats.maxGasolineStorage
 
-    const finishTimer = window.setTimeout(() => {
-      setGasoline((current) => current + 1)
-      setProgress(100)
-      setIsRefining(false)
-    }, activeRefiningTime)
+        if (current.crudeOil < 1 || current.gasoline >= currentMaxGasoline) {
+          return {
+            ...current,
+            tickCount: nextTick,
+            productionProgress: 0,
+          }
+        }
 
-    return () => {
-      window.clearInterval(progressTimer)
-      window.clearTimeout(finishTimer)
-    }
-  }, [activeRefiningTime, isRefining])
+        const interval = currentStats.productionInterval
+        const nextProgress = current.productionProgress + TICK_MS
 
-  function handleRefine() {
-    if (isRefining || crudeOil < 1) {
-      return
-    }
+        if (nextProgress < interval) {
+          return {
+            ...current,
+            tickCount: nextTick,
+            productionProgress: nextProgress,
+          }
+        }
 
-    setCrudeOil((current) => current - 1)
-    setActiveRefiningTime(refiningTime)
-    setProgress(0)
-    setIsRefining(true)
+        const storageRoom = currentMaxGasoline - current.gasoline
+        const batchesProduced = Math.min(
+          Math.floor(nextProgress / interval),
+          current.crudeOil,
+          storageRoom,
+        )
+
+        if (batchesProduced < 1) {
+          return {
+            ...current,
+            tickCount: nextTick,
+            productionProgress: 0,
+          }
+        }
+
+        const crudeRemaining = current.crudeOil - batchesProduced
+        const gasolineTotal = current.gasoline + batchesProduced
+        const leftoverProgress =
+          crudeRemaining > 0 && gasolineTotal < currentMaxGasoline
+            ? nextProgress - batchesProduced * interval
+            : 0
+
+        return applyMilestones({
+          ...current,
+          tickCount: nextTick,
+          crudeOil: crudeRemaining,
+          gasoline: gasolineTotal,
+          totalGasolineProduced: current.totalGasolineProduced + batchesProduced,
+          productionProgress: leftoverProgress,
+          activityLog: addLog(
+            current.activityLog,
+            serializeBilingualText(
+              text.logs.processedCrude(batchesProduced, batchesProduced),
+            ),
+          ),
+        })
+      })
+    }, TICK_MS)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const eventTimer = window.setInterval(() => {
+      setGame((current) => applyRandomEvent(current, getRandomEvent()))
+    }, RANDOM_EVENT_INTERVAL_MS)
+
+    return () => window.clearInterval(eventTimer)
+  }, [])
+
+  useEffect(() => {
+    const autosaveTimer = window.setInterval(() => {
+      saveStoredGameState(gameRef.current)
+      setSaveStatusMessage(text.save.autosaved)
+    }, 10000)
+
+    return () => window.clearInterval(autosaveTimer)
+  }, [])
+
+  function handleBuyCrude() {
+    setGame((current) => {
+      const currentMaxCrude = calculateDerivedStats(current).maxCrudeStorage
+
+      if (current.money < CRUDE_COST || current.crudeOil >= currentMaxCrude) {
+        return current
+      }
+
+      return {
+        ...current,
+        money: current.money - CRUDE_COST,
+        crudeOil: current.crudeOil + 1,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.boughtCrude(CRUDE_COST)),
+        ),
+      }
+    })
   }
 
-  function handleSell() {
-    if (gasoline < 1) {
-      return
-    }
+  function handleSellGasoline() {
+    setGame((current) => {
+      if (current.gasoline < 1) {
+        return current
+      }
 
-    setGasoline((current) => current - 1)
-    setMoney((current) => current + GASOLINE_PRICE)
+      const currentSellPrice = calculateDerivedStats(current).sellPrice
+
+      return {
+        ...current,
+        gasoline: current.gasoline - 1,
+        money: current.money + currentSellPrice,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.soldGasoline(currentSellPrice)),
+        ),
+      }
+    })
   }
 
-  function handleUpgrade() {
-    if (money < upgradeCost) {
-      return
-    }
+  function handleUpgradeRefinery() {
+    setGame((current) => {
+      const nextUpgradeCost = getUpgradeCost(current.refineryLevel)
 
-    setMoney((current) => current - upgradeCost)
-    setSpeedLevel((current) => current + 1)
+      if (current.money < nextUpgradeCost) {
+        return current
+      }
+
+      return {
+        ...current,
+        money: current.money - nextUpgradeCost,
+        refineryLevel: current.refineryLevel + 1,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.logs.upgradedRefinery(current.refineryLevel + 1),
+          ),
+        ),
+      }
+    })
+  }
+
+  function handleCompleteContract(contract: Contract) {
+    setGame((current) => {
+      if (current.refineryLevel < contract.unlockLevel) {
+        return current
+      }
+
+      if (current.completedContractIds.includes(contract.id)) {
+        return current
+      }
+
+      if (current.gasoline < contract.gasolineRequired) {
+        return current
+      }
+
+      const currentStats = calculateDerivedStats(current)
+      const currentContractReward = Math.round(
+        contract.reward * currentStats.contractRewardMultiplier,
+      )
+      const currentContractRpReward = Math.round(
+        contract.rpReward * currentStats.contractRpRewardMultiplier,
+      )
+      const currentContractReputationReward = contract.reputationReward
+
+      return applyMilestones({
+        ...current,
+        gasoline: current.gasoline - contract.gasolineRequired,
+        money: current.money + currentContractReward,
+        researchPoints: current.researchPoints + currentContractRpReward,
+        reputation: current.reputation + currentContractReputationReward,
+        completedContractCount: current.completedContractCount + 1,
+        completedContractIds: [...current.completedContractIds, contract.id],
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.logs.completedContractWithReputation(
+              contract.name,
+              currentContractReward,
+              currentContractRpReward,
+              currentContractReputationReward,
+            ),
+          ),
+        ),
+      })
+    })
+  }
+
+  function handleUnlockResearch(research: ResearchItem) {
+    setGame((current) => {
+      if (current.unlockedResearchIds.includes(research.key)) {
+        return current
+      }
+
+      if (current.researchPoints < research.cost) {
+        return current
+      }
+
+      return applyMilestones({
+        ...current,
+        researchPoints: current.researchPoints - research.cost,
+        unlockedResearchCount: current.unlockedResearchCount + 1,
+        unlockedResearchIds: [...current.unlockedResearchIds, research.key],
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.logs.unlockedResearch(research.name, research.cost),
+          ),
+        ),
+      })
+    })
+  }
+
+  function handleHireWorker(worker: WorkerConfig) {
+    setGame((current) => {
+      if (current.money < worker.cost) {
+        return current
+      }
+
+      return applyMilestones({
+        ...current,
+        money: current.money - worker.cost,
+        totalWorkersHired: current.totalWorkersHired + 1,
+        workerCounts: {
+          ...current.workerCounts,
+          [worker.key]: current.workerCounts[worker.key] + 1,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.hiredWorker(worker.name, worker.cost)),
+        ),
+      })
+    })
+  }
+
+  function handlePlaceBuilding(cellIndex: number) {
+    setGame((current) => {
+      const building = selectedBuilding
+      const cell = current.grid[cellIndex]
+      const buildingData = BUILDINGS[building]
+
+      if (cell !== null || current.money < buildingData.cost) {
+        return current
+      }
+
+      const nextGrid = [...current.grid]
+      nextGrid[cellIndex] = building
+
+      return {
+        ...current,
+        money: current.money - buildingData.cost,
+        grid: nextGrid,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.logs.placedBuilding(buildingData.name, buildingData.cost),
+          ),
+        ),
+      }
+    })
+  }
+
+  function handleTriggerTestEvent() {
+    setGame((current) => applyRandomEvent(current, getRandomEvent()))
+  }
+
+  function handleManualSave() {
+    saveStoredGameState(game)
+    setSaveStatusMessage(text.save.manualSaved)
+  }
+
+  function handleResetSave() {
+    clearStoredGameState()
+    const resetState = loadStoredGameState().game
+    const resetMessage = text.save.reset
+
+    setGame({
+      ...resetState,
+      activityLog: addLog(
+        resetState.activityLog,
+        serializeBilingualText(resetMessage),
+      ),
+    })
+    setSelectedBuilding('crudeTank')
+    setSaveStatusMessage(resetMessage)
   }
 
   return (
     <main className="app-shell">
       <section className="hero-panel">
-        <p className="eyebrow">Refinery Story</p>
-        <h1>Small refinery, tight margins, one more barrel.</h1>
+        <p className="eyebrow">
+          <BilingualText text={text.app.eyebrow} />
+        </p>
+        <h1>
+          <BilingualText text={text.app.title} />
+        </h1>
         <p className="hero-copy">
-          Turn crude into gasoline, sell it for cash, and keep upgrading the
-          plant so each batch finishes faster.
+          <BilingualText text={text.app.heroCopy} />
         </p>
       </section>
 
-      <section className="resource-grid" aria-label="Resources">
-        <article className="resource-card">
-          <span className="resource-label">Money</span>
-          <strong>${money}</strong>
-          <p>Used to fund refinery upgrades.</p>
-        </article>
+      <section className="app-section">
+        <div className="section-heading">
+          <p className="section-kicker">
+            <BilingualText text={text.app.sections.summary.kicker} />
+          </p>
+          <h2 className="section-title">
+            <BilingualText text={text.app.sections.summary.title} />
+          </h2>
+          <p className="section-copy">
+            <BilingualText text={text.app.sections.summary.description} />
+          </p>
+        </div>
 
-        <article className="resource-card">
-          <span className="resource-label">Crude Oil</span>
-          <strong>{crudeOil} bbl</strong>
-          <p>Each refining run consumes one barrel.</p>
-        </article>
-
-        <article className="resource-card">
-          <span className="resource-label">Gasoline</span>
-          <strong>{gasoline} units</strong>
-          <p>Sell each unit for ${GASOLINE_PRICE}.</p>
-        </article>
+        <ResourcePanel
+          money={game.money}
+          researchPoints={game.researchPoints}
+          reputation={game.reputation}
+          crudeOil={game.crudeOil}
+          maxCrudeStorage={maxCrudeStorage}
+          gasoline={game.gasoline}
+          maxGasolineStorage={maxGasolineStorage}
+        />
       </section>
 
-      <section className="control-grid">
-        <article className="panel operation-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="panel-kicker">Operations</p>
-              <h2>Refinery Floor</h2>
-            </div>
-            <span className={`status-badge ${isRefining ? 'active' : ''}`}>
-              {isRefining ? 'Refining' : 'Idle'}
-            </span>
-          </div>
-
-          <div className="progress-block" aria-live="polite">
-            <div className="progress-meta">
-              <span>Current batch</span>
-              <span>{isRefining ? `${progress.toFixed(0)}%` : 'Ready'}</span>
-            </div>
-            <div className="progress-track" aria-hidden="true">
-              <div
-                className="progress-fill"
-                style={{ width: `${isRefining ? progress : 0}%` }}
-              />
-            </div>
-            <p className="helper-text">
-              {isRefining
-                ? `One barrel is being processed into gasoline in ${activeRefineSeconds}s.`
-                : crudeOil > 0
-                  ? `The next batch will finish in ${refineSeconds}s.`
-                  : 'No crude remaining for the next batch.'}
-            </p>
-          </div>
-
-          <div className="button-row">
-            <button
-              type="button"
-              className="action-button primary"
-              onClick={handleRefine}
-              disabled={isRefining || crudeOil < 1}
-            >
-              Refine 1 Crude
-            </button>
-            <button
-              type="button"
-              className="action-button"
-              onClick={handleSell}
-              disabled={gasoline < 1}
-            >
-              Sell 1 Gasoline
-            </button>
-          </div>
-        </article>
-
-        <article className="panel upgrade-panel">
-          <p className="panel-kicker">Upgrades</p>
-          <h2>Refinery Speed</h2>
-          <p className="upgrade-value">Level {speedLevel}</p>
-          <p className="helper-text">
-            Faster equipment lowers the time needed for each barrel.
+      <section className="app-section">
+        <div className="section-heading">
+          <p className="section-kicker">
+            <BilingualText text={text.app.sections.production.kicker} />
           </p>
+          <h2 className="section-title">
+            <BilingualText text={text.app.sections.production.title} />
+          </h2>
+          <p className="section-copy">
+            <BilingualText text={text.app.sections.production.description} />
+          </p>
+        </div>
 
-          <dl className="stats-list">
-            <div>
-              <dt>Current speed</dt>
-              <dd>{refineSeconds}s per barrel</dd>
-            </div>
-            <div>
-              <dt>Next upgrade cost</dt>
-              <dd>${upgradeCost}</dd>
-            </div>
-          </dl>
+        <div className="production-stack">
+          <section className="control-grid">
+            <ProductionPanel
+              canProcessCrude={canProcessCrude}
+              crudeOil={game.crudeOil}
+              gasoline={game.gasoline}
+              maxCrudeStorage={maxCrudeStorage}
+              maxGasolineStorage={maxGasolineStorage}
+              money={game.money}
+              productionInterval={productionInterval}
+              progressPercent={progressPercent}
+              sellPrice={sellPrice}
+              statusLabel={statusLabel}
+              upgradeCost={upgradeCost}
+              onBuyCrude={handleBuyCrude}
+              onSellGasoline={handleSellGasoline}
+              onUpgradeRefinery={handleUpgradeRefinery}
+            />
+            <StatsPanel
+              refineryLevel={game.refineryLevel}
+              productionRate={productionRate}
+              sellPrice={sellPrice}
+              maxCrudeStorage={maxCrudeStorage}
+              maxGasolineStorage={maxGasolineStorage}
+              availableSpace={availableSpace}
+            />
+          </section>
 
-          <button
-            type="button"
-            className="action-button accent"
-            onClick={handleUpgrade}
-            disabled={money < upgradeCost}
-          >
-            Upgrade Speed
-          </button>
-        </article>
+          <ComboPanel comboStats={comboStats} />
+        </div>
+      </section>
+
+      <section className="app-section">
+        <div className="section-heading">
+          <p className="section-kicker">
+            <BilingualText text={text.app.sections.grid.kicker} />
+          </p>
+          <h2 className="section-title">
+            <BilingualText text={text.app.sections.grid.title} />
+          </h2>
+          <p className="section-copy">
+            <BilingualText text={text.app.sections.grid.description} />
+          </p>
+        </div>
+
+        <BuildingGrid
+          grid={game.grid}
+          money={game.money}
+          selectedBuilding={selectedBuilding}
+          onPlaceBuilding={handlePlaceBuilding}
+          onSelectBuilding={setSelectedBuilding}
+        />
+      </section>
+
+      <section className="app-section">
+        <div className="section-heading">
+          <p className="section-kicker">
+            <BilingualText text={text.app.sections.progression.kicker} />
+          </p>
+          <h2 className="section-title">
+            <BilingualText text={text.app.sections.progression.title} />
+          </h2>
+          <p className="section-copy">
+            <BilingualText text={text.app.sections.progression.description} />
+          </p>
+        </div>
+
+        <section className="progression-grid">
+          <ContractsPanel
+            activeContracts={activeContracts}
+            gasoline={game.gasoline}
+            currentReputation={game.reputation}
+            currentReputationTier={reputationTier}
+            nextReputationTier={nextReputationTier}
+            onCompleteContract={handleCompleteContract}
+          />
+          <ResearchPanel
+            researchPoints={game.researchPoints}
+            activeResearchItems={activeResearchItems}
+            onUnlockResearch={handleUnlockResearch}
+          />
+          <StaffPanel
+            money={game.money}
+            activeWorkers={activeWorkers}
+            onHireWorker={handleHireWorker}
+          />
+          <MilestonesPanel activeMilestones={activeMilestones} />
+        </section>
+      </section>
+
+      <section className="app-section">
+        <div className="section-heading">
+          <p className="section-kicker">
+            <BilingualText text={text.app.sections.systems.kicker} />
+          </p>
+          <h2 className="section-title">
+            <BilingualText text={text.app.sections.systems.title} />
+          </h2>
+          <p className="section-copy">
+            <BilingualText text={text.app.sections.systems.description} />
+          </p>
+        </div>
+
+        <section className="system-grid">
+          <div className="system-side">
+            <EventsPanel
+              lastEventMessage={game.lastEventMessage}
+              onTriggerEvent={handleTriggerTestEvent}
+            />
+            <SavePanel
+              statusMessage={saveStatusMessage}
+              onSave={handleManualSave}
+              onReset={handleResetSave}
+            />
+          </div>
+          <ActivityLog entries={game.activityLog} />
+        </section>
       </section>
     </main>
   )

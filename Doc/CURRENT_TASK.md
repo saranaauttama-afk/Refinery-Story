@@ -1,17 +1,17 @@
 # Current Task
 
-Create the first playable prototype.
+Do a first balancing and readability review.
+
+Do not add new systems.
 
 Requirements:
-- Show money
-- Show crude oil
-- Show gasoline
-- Add a button to refine crude into gasoline
-- Add a button to sell gasoline for money
-- Add a simple upgrade button for refinery speed
-- Keep UI simple but clean
-- Do not add routing, backend, save system, or complex architecture yet
+- Review current numbers for early game pacing
+- Add comments or constants for important balance values
+- Improve unclear labels if needed
+- Do not change core gameplay behavior unless clearly needed
+- Keep build and lint passing
 
 Success:
-- npm run dev works
-- Player can refine, sell, and upgrade
+- Game is easier to tune
+- Balance values are easier to find
+- No new gameplay systems added

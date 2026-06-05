@@ -1,6 +1,8 @@
 .app-shell {
   display: grid;
-  gap: 24px;
+  gap: 28px;
+  max-width: 1360px;
+  margin: 0 auto;
   padding: 32px;
 }
 
@@ -45,19 +47,73 @@
   color: rgba(246, 239, 227, 0.84);
 }
 
+.app-section,
+.production-stack,
+.progression-grid,
+.system-grid,
+.system-side {
+  display: grid;
+  gap: 18px;
+}
+
+.section-heading {
+  display: grid;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.section-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.section-title {
+  margin: 0;
+  color: var(--heading);
+}
+
+.section-copy {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--muted);
+}
+
+.bilingual-text {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bilingual-en {
+  font-size: 1em;
+  line-height: 1.2;
+}
+
+.bilingual-th {
+  font-size: 0.74em;
+  line-height: 1.25;
+  opacity: 0.78;
+}
+
 .resource-grid,
 .control-grid,
-.button-row {
+.layout-grid,
+.button-row,
+.build-options {
   display: grid;
   gap: 16px;
 }
 
 .resource-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .resource-card {
   padding: 20px;
+  min-height: 100%;
 }
 
 .resource-card strong {
@@ -77,12 +133,40 @@
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
 }
 
+.layout-grid {
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+}
+
+.progression-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.system-grid {
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  align-items: start;
+}
+
 .panel {
   padding: 24px;
 }
 
 .panel h2 {
   margin: 6px 0 0;
+}
+
+.operation-panel,
+.combo-panel,
+.events-panel,
+.save-panel,
+.milestones-panel,
+.contracts-panel,
+.research-panel,
+.staff-panel,
+.build-panel,
+.grid-panel,
+.log-panel {
+  display: grid;
+  gap: 20px;
 }
 
 .panel-heading {
@@ -139,8 +223,8 @@
 }
 
 .button-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 8px;
 }
 
 .action-button {
@@ -152,6 +236,7 @@
   color: var(--heading);
   background: var(--chip);
   cursor: pointer;
+  text-align: center;
   transition:
     transform 140ms ease,
     background-color 140ms ease,
@@ -185,6 +270,11 @@
   background: linear-gradient(135deg, #efc26c, #d99228);
 }
 
+.action-button .bilingual-text {
+  width: 100%;
+  align-items: center;
+}
+
 .upgrade-value {
   margin: 18px 0 6px;
   font-size: clamp(2rem, 5vw, 3rem);
@@ -208,6 +298,278 @@
   font-weight: 700;
 }
 
+.combo-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.combo-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 255, 255, 0.38);
+  min-height: 100%;
+}
+
+.combo-card strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--heading);
+}
+
+.combo-card p {
+  color: var(--muted);
+}
+
+.event-card,
+.contract-status-card,
+.save-status-card,
+.milestones-list,
+.research-list,
+.staff-list,
+.contracts-list {
+  display: grid;
+  gap: 14px;
+}
+
+.event-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.contract-status-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 250, 242, 0.56);
+}
+
+.event-card strong {
+  color: var(--heading);
+}
+
+.event-card p,
+.contract-status-card p {
+  color: var(--muted);
+}
+
+.contract-status-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--heading);
+}
+
+.save-status-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.save-status-card strong {
+  color: var(--heading);
+}
+
+.save-status-card p {
+  color: var(--muted);
+}
+
+.save-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.milestones-list,
+.research-list,
+.staff-list,
+.contracts-list {
+  display: grid;
+  gap: 14px;
+}
+
+.milestone-card,
+.research-card,
+.staff-card,
+.contract-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 255, 255, 0.38);
+  min-height: 100%;
+}
+
+.milestone-card.completed,
+.research-card.completed,
+.contract-card.completed {
+  background: rgba(232, 244, 229, 0.72);
+  border-color: rgba(83, 124, 65, 0.2);
+}
+
+.contract-card.locked {
+  background: rgba(243, 238, 232, 0.68);
+  border-color: rgba(97, 78, 55, 0.16);
+}
+
+.milestone-copy,
+.research-copy,
+.staff-copy,
+.contract-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.milestone-copy strong,
+.research-copy strong,
+.staff-copy strong,
+.contract-copy strong {
+  color: var(--heading);
+}
+
+.contract-tier-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(210, 139, 45, 0.14);
+  color: var(--heading);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.milestone-copy p,
+.research-copy p,
+.staff-copy p,
+.contract-copy p {
+  color: var(--muted);
+}
+
+.build-option {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  border: 1px solid rgba(97, 78, 55, 0.14);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--heading);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.build-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+}
+
+.build-option.selected {
+  border-color: rgba(191, 106, 35, 0.45);
+  box-shadow: 0 0 0 3px rgba(210, 139, 45, 0.14);
+}
+
+.build-option-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.build-option-copy {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.refinery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grid-cell {
+  min-height: 108px;
+  border-radius: 18px;
+  border: 1px dashed rgba(97, 78, 55, 0.22);
+  background: rgba(255, 255, 255, 0.34);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: start;
+  text-align: left;
+  color: var(--heading);
+  font: inherit;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.grid-cell.empty {
+  cursor: pointer;
+}
+
+.grid-cell.empty:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(191, 106, 35, 0.38);
+  background: rgba(255, 247, 235, 0.8);
+}
+
+.grid-cell.filled {
+  border-style: solid;
+  border-color: rgba(97, 78, 55, 0.12);
+  background: rgba(240, 231, 219, 0.72);
+  cursor: default;
+}
+
+.grid-cell:disabled {
+  opacity: 1;
+}
+
+.grid-cell-code {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.grid-cell-name {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.log-panel {
+  padding-top: 22px;
+  align-self: start;
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.log-list li {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--heading);
+}
+
 @media (max-width: 860px) {
   .app-shell {
     padding: 20px;
@@ -215,8 +577,30 @@
 
   .resource-grid,
   .control-grid,
+  .layout-grid,
+  .progression-grid,
+  .system-grid,
+  .combo-list,
+  .save-actions,
   .button-row {
     grid-template-columns: 1fr;
+  }
+
+  .contract-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .research-card,
+  .staff-card,
+  .milestone-card,
+  .contract-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .refinery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .hero-panel h1 {
