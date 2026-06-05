@@ -261,6 +261,12 @@ export const text = {
     cost: (cost: number) => bilingual(`Cost: $${cost}`, `ค่าใช้จ่าย: $${cost}`),
     hireButton: bilingual('Hire', 'จ้าง'),
   },
+  workforce: {
+    kicker: bilingual('Workforce', 'กำลังแรงงาน'),
+    title: bilingual('Active Workforce', 'พนักงานที่ทำงาน'),
+    totalStaff: (count: number) => bilingual(`${count} staff`, `${count} คน`),
+    noStaff: bilingual('No staff hired yet.', 'ยังไม่มีพนักงาน'),
+  },
   contracts: {
     kicker: bilingual('Orders', 'คำสั่งซื้อ'),
     title: bilingual('Fuel Contracts', 'สัญญาจัดส่งเชื้อเพลิง'),
@@ -325,7 +331,7 @@ export const text = {
     buildings: {
       crudeTank: {
         name: bilingual('Crude Tank', 'ถังน้ำมันดิบ'),
-        description: bilingual('+3 max crude storage', '+3 ความจุน้ำมันดิบสูงสุด'),
+        description: bilingual('+25 max crude storage', '+25 ความจุน้ำมันดิบสูงสุด'),
       },
       distillationUnit: {
         name: bilingual('Distillation Unit', 'หน่วยกลั่น'),
@@ -333,7 +339,7 @@ export const text = {
       },
       productTank: {
         name: bilingual('Product Tank', 'ถังเก็บผลิตภัณฑ์'),
-        description: bilingual('+3 max gasoline storage', '+3 ความจุเบนซินสูงสุด'),
+        description: bilingual('+25 max gasoline storage', '+25 ความจุเบนซินสูงสุด'),
       },
       laboratory: {
         name: bilingual('Laboratory', 'ห้องปฏิบัติการ'),
@@ -368,8 +374,8 @@ export const text = {
       mechanic: {
         name: bilingual('Mechanic', 'ช่างเทคนิค'),
         description: bilingual(
-          '+10 max crude and +10 max gasoline',
-          '+10 ความจุน้ำมันดิบ และ +10 ความจุเบนซิน',
+          '+25 max crude and +25 max gasoline',
+          '+25 ความจุน้ำมันดิบ และ +25 ความจุเบนซิน',
         ),
       },
       salesAgent: {
@@ -388,8 +394,8 @@ export const text = {
       biggerTanks: {
         name: bilingual('Bigger Tanks', 'ถังขนาดใหญ่ขึ้น'),
         description: bilingual(
-          '+20 max crude and +20 max gasoline',
-          '+20 ความจุน้ำมันดิบ และ +20 ความจุเบนซิน',
+          '+50 max crude and +50 max gasoline',
+          '+50 ความจุน้ำมันดิบ และ +50 ความจุเบนซิน',
         ),
       },
       premiumFuel: {
@@ -403,8 +409,8 @@ export const text = {
       industrialStorage: {
         name: bilingual('Industrial Storage', 'คลังอุตสาหกรรม'),
         description: bilingual(
-          '+50 crude storage and +50 gasoline storage',
-          '+50 ความจุน้ำมันดิบ และ +50 ความจุเบนซิน',
+          '+150 crude storage and +150 gasoline storage',
+          '+150 ความจุน้ำมันดิบ และ +150 ความจุเบนซิน',
         ),
       },
       premiumContracts: {
@@ -482,8 +488,8 @@ export const text = {
       crudeDiscount: {
         name: bilingual('Crude Discount', 'ส่วนลดน้ำมันดิบ'),
         message: bilingual(
-          'Supplier offered discounted crude. Crude +50.',
-          'ซัพพลายเออร์เสนอส่วนลดน้ำมันดิบ น้ำมันดิบ +50',
+          'Supplier offered discounted crude. Crude +10.',
+          'ซัพพลายเออร์เสนอส่วนลดน้ำมันดิบ น้ำมันดิบ +10',
         ),
       },
       machineTuneUp: {

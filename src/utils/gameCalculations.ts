@@ -456,7 +456,10 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
   if (event.key === 'crudeDiscount') {
     return {
       ...game,
-      crudeOil: game.crudeOil + EVENT_BALANCE.crudeDiscountAmount,
+      crudeOil: Math.min(
+        stats.maxCrudeStorage,
+        game.crudeOil + EVENT_BALANCE.crudeDiscountAmount,
+      ),
       lastEventMessage: event.message,
       activityLog: addLog(game.activityLog, event.message),
     }

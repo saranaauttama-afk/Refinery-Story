@@ -1,9 +1,9 @@
 .app-shell {
   display: grid;
-  gap: 28px;
+  gap: 18px;
   max-width: 1360px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 24px;
 }
 
 .hero-panel,
@@ -16,7 +16,7 @@
 }
 
 .hero-panel {
-  padding: 28px;
+  padding: 16px 24px;
   background:
     linear-gradient(135deg, rgba(248, 178, 74, 0.18), transparent 58%),
     linear-gradient(180deg, rgba(21, 31, 43, 0.94), rgba(21, 31, 43, 0.86));
@@ -38,8 +38,8 @@
 }
 
 .hero-panel h1 {
-  margin: 12px 0;
-  max-width: 12ch;
+  margin: 6px 0 0;
+  max-width: 16ch;
 }
 
 .hero-copy {
@@ -147,7 +147,7 @@
 }
 
 .panel {
-  padding: 24px;
+  padding: 18px 20px;
 }
 
 .panel h2 {
@@ -568,6 +568,51 @@
   border: 1px solid rgba(97, 78, 55, 0.12);
   background: rgba(255, 255, 255, 0.4);
   color: var(--heading);
+}
+
+.workforce-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.workforce-list {
+  display: grid;
+  gap: 10px;
+}
+
+.workforce-row {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(97, 78, 55, 0.12);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.workforce-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workforce-identity strong {
+  color: var(--heading);
+}
+
+.workforce-count-badge {
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--heading);
+  background: var(--chip);
+}
+
+.workforce-bonus {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0;
 }
 
 @media (max-width: 860px) {

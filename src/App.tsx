@@ -12,6 +12,7 @@ import ResourcePanel from './components/ResourcePanel'
 import SavePanel from './components/SavePanel'
 import StaffPanel from './components/StaffPanel'
 import StatsPanel from './components/StatsPanel'
+import WorkforcePanel from './components/WorkforcePanel'
 import { BUILDINGS } from './data/buildings'
 import { serializeBilingualText, text } from './translations'
 import type { BuildingType, Contract, ResearchItem, WorkerConfig } from './types'
@@ -364,9 +365,6 @@ function App() {
         <h1>
           <BilingualText text={text.app.title} />
         </h1>
-        <p className="hero-copy">
-          <BilingualText text={text.app.heroCopy} />
-        </p>
       </section>
 
       <section className="app-section">
@@ -377,9 +375,6 @@ function App() {
           <h2 className="section-title">
             <BilingualText text={text.app.sections.summary.title} />
           </h2>
-          <p className="section-copy">
-            <BilingualText text={text.app.sections.summary.description} />
-          </p>
         </div>
 
         <ResourcePanel
@@ -401,9 +396,6 @@ function App() {
           <h2 className="section-title">
             <BilingualText text={text.app.sections.production.title} />
           </h2>
-          <p className="section-copy">
-            <BilingualText text={text.app.sections.production.description} />
-          </p>
         </div>
 
         <div className="production-stack">
@@ -446,9 +438,6 @@ function App() {
           <h2 className="section-title">
             <BilingualText text={text.app.sections.grid.title} />
           </h2>
-          <p className="section-copy">
-            <BilingualText text={text.app.sections.grid.description} />
-          </p>
         </div>
 
         <BuildingGrid
@@ -458,6 +447,7 @@ function App() {
           onPlaceBuilding={handlePlaceBuilding}
           onSelectBuilding={setSelectedBuilding}
         />
+        <WorkforcePanel activeWorkers={activeWorkers} />
       </section>
 
       <section className="app-section">
@@ -468,9 +458,6 @@ function App() {
           <h2 className="section-title">
             <BilingualText text={text.app.sections.progression.title} />
           </h2>
-          <p className="section-copy">
-            <BilingualText text={text.app.sections.progression.description} />
-          </p>
         </div>
 
         <section className="progression-grid">
@@ -504,9 +491,6 @@ function App() {
           <h2 className="section-title">
             <BilingualText text={text.app.sections.systems.title} />
           </h2>
-          <p className="section-copy">
-            <BilingualText text={text.app.sections.systems.description} />
-          </p>
         </div>
 
         <section className="system-grid">
