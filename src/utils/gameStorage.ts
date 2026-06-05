@@ -1,4 +1,4 @@
-import type { BilingualTextValue, GameState, WorkerCounts } from '../types'
+import type { BilingualTextValue, GameState, PendingShipment, WorkerCounts } from '../types'
 import { text } from '../translations'
 import { createInitialGameState } from './gameCalculations'
 
@@ -50,6 +50,29 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
     : fallback
 }
 
+function getSafeGridLevels(value: unknown, length: number): number[] {
+  const result: number[] = Array(length).fill(1)
+  if (!Array.isArray(value)) return result
+  for (let i = 0; i < length; i++) {
+    const item = value[i]
+    if (item === 1 || item === 2 || item === 3) {
+      result[i] = item
+    }
+  }
+  return result
+}
+
+function getSafePendingShipments(value: unknown): PendingShipment[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(
+    (item): item is PendingShipment =>
+      isRecord(item) &&
+      typeof item.id === 'number' &&
+      typeof item.amount === 'number' &&
+      typeof item.arrivesAt === 'number',
+  )
+}
+
 function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
   if (!isRecord(value)) {
     return fallback
@@ -59,6 +82,8 @@ function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
     operator: getSafeNumber(value.operator, fallback.operator),
     mechanic: getSafeNumber(value.mechanic, fallback.mechanic),
     salesAgent: getSafeNumber(value.salesAgent, fallback.salesAgent),
+    chemist: getSafeNumber(value.chemist, fallback.chemist),
+    logisticsCoordinator: getSafeNumber(value.logisticsCoordinator, fallback.logisticsCoordinator),
   }
 }
 
@@ -68,6 +93,8 @@ function sanitizeLoadedGameState(value: unknown) {
   if (!isRecord(value)) {
     return fallback
   }
+
+  const grid = getSafeGrid(value.grid, fallback.grid)
 
   return {
     ...fallback,
@@ -113,11 +140,13 @@ function sanitizeLoadedGameState(value: unknown) {
       fallback.unlockedResearchIds,
     ) as GameState['unlockedResearchIds'],
     workerCounts: getSafeWorkerCounts(value.workerCounts, fallback.workerCounts),
-    grid: getSafeGrid(value.grid, fallback.grid),
+    grid,
+    gridLevels: getSafeGridLevels(value.gridLevels, grid.length),
     gridExpansionLevel: getSafeNumber(value.gridExpansionLevel, fallback.gridExpansionLevel),
     prototypeCompleted: getSafeBoolean(value.prototypeCompleted, fallback.prototypeCompleted),
     everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
+    pendingShipments: getSafePendingShipments(value.pendingShipments),
   }
 }
 

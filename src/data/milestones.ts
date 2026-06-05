@@ -12,18 +12,18 @@ export const MILESTONES: Milestone[] = [
     key: 'smallSupplier',
     name: text.data.milestones.smallSupplier.name,
     requirement: text.data.milestones.smallSupplier.requirement,
-    reward: '5 RP',
+    reward: '5 RP, +10 Rep',
   },
   {
     key: 'growingRefinery',
     name: text.data.milestones.growingRefinery.name,
     requirement: text.data.milestones.growingRefinery.requirement,
-    reward: '$1000',
+    reward: '$1000, +15 Rep',
   },
   {
     key: 'researchBeginner',
     name: text.data.milestones.researchBeginner.name,
     requirement: text.data.milestones.researchBeginner.requirement,
-    reward: '$500',
+    reward: '$500, +20 Rep',
   },
 ]

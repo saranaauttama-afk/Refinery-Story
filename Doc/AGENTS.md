@@ -125,3 +125,15 @@ Not:
 * Enterprise patterns
 * Multiplayer systems
 * Real-world refinery simulation
+
+---
+
+## New Idea Rule
+
+Do not immediately implement every new idea.
+
+When a new idea appears:
+
+1. Add it to BACKLOG.md
+2. Discuss priority
+3. Promote to CURRENT_TASK.md only when appropriate

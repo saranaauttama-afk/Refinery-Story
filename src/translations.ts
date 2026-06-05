@@ -312,6 +312,12 @@ export const text = {
     count: (count: number) => bilingual(`Count: ${count}`, `จำนวน: ${count}`),
     cost: (cost: number) => bilingual(`Cost: $${cost}`, `ค่าใช้จ่าย: $${cost}`),
     hireButton: bilingual('Hire', 'จ้าง'),
+    locked: bilingual('Locked', 'ถูกล็อก'),
+    unlockAtLevel: (level: number) =>
+      bilingual(
+        `Unlock at Refinery Level ${level}`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
+      ),
   },
   workforce: {
     kicker: bilingual('Workforce', 'กำลังแรงงาน'),
@@ -380,6 +386,10 @@ export const text = {
         `Unlock at Refinery Level ${level}`,
         `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
       ),
+    levelBadge: (level: number) => bilingual(`Lv${level}`, `Lv${level}`),
+    maxLevelBadge: bilingual('Max', 'แม็กซ์'),
+    upgradeButton: (cost: number) =>
+      bilingual(`↑ $${cost.toLocaleString()}`, `↑ $${cost.toLocaleString()}`),
     removeModeButton: bilingual('Remove Building', 'ถอดอาคาร'),
     removeModeActive: bilingual('Remove Mode On', 'โหมดถอดเปิดอยู่'),
     noRefundWarning: bilingual('No refund', 'ไม่คืนเงิน'),
@@ -444,6 +454,14 @@ export const text = {
       salesAgent: {
         name: bilingual('Sales Agent', 'เจ้าหน้าที่ฝ่ายขาย'),
         description: bilingual('+3 gasoline sell price', '+3 ราคาขายเบนซิน'),
+      },
+      chemist: {
+        name: bilingual('Chemist', 'นักเคมี'),
+        description: bilingual('+10% RP earned from contracts', '+10% RP ที่ได้รับจากสัญญา'),
+      },
+      logisticsCoordinator: {
+        name: bilingual('Logistics Coordinator', 'ผู้ประสานงานโลจิสติกส์'),
+        description: bilingual('+10% shipment crude received', '+10% น้ำมันดิบที่รับจากการขนส่ง'),
       },
     } satisfies Record<
       WorkerType,
@@ -576,10 +594,42 @@ export const text = {
           'ได้ล็อตคุณภาพสูง เบนซิน +20',
         ),
       },
+      marketDemandSpike: {
+        name: bilingual('Market Demand Spike', 'ความต้องการตลาดพุ่งสูง'),
+        message: bilingual(
+          'Market demand increased. Money +$750.',
+          'ความต้องการในตลาดเพิ่มขึ้น เงิน +$750',
+        ),
+      },
+      safetyInspection: {
+        name: bilingual('Safety Inspection', 'การตรวจความปลอดภัย'),
+        message: bilingual(
+          'Safety inspection passed. Reputation +10.',
+          'ผ่านการตรวจความปลอดภัย ชื่อเสียง +10',
+        ),
+      },
+      equipmentWear: {
+        name: bilingual('Equipment Wear', 'การสึกหรอของอุปกรณ์'),
+        message: bilingual(
+          'Equipment wear reduced output. Gasoline -10.',
+          'อุปกรณ์สึกหรอทำให้ผลผลิตลดลง เบนซิน -10',
+        ),
+      },
+      efficientBatch: {
+        name: bilingual('Efficient Batch', 'ล็อตประสิทธิภาพสูง'),
+        message: bilingual(
+          'Efficient production run. Gasoline +30.',
+          'กระบวนการผลิตมีประสิทธิภาพสูง เบนซิน +30',
+        ),
+      },
     } satisfies Record<
       RandomEventKey,
       { name: BilingualTextValue; message: BilingualTextValue }
     >,
+    safetyInspectionFailMessage: bilingual(
+      'Safety inspection failed. Money -$300.',
+      'ไม่ผ่านการตรวจความปลอดภัย เงิน -$300',
+    ),
   },
   choiceEvents: {
     kicker: bilingual('Decision', 'การตัดสินใจ'),
@@ -601,8 +651,8 @@ export const text = {
           'รับดีลจำนวนมาก (+100 น้ำมันดิบ, −5 ชื่อเสียง)',
         ),
         optionB: bilingual(
-          'Decline ethically (+5 reputation, −$500)',
-          'ปฏิเสธอย่างมีจริยธรรม (+5 ชื่อเสียง, −$500)',
+          'Decline ethically (+10 reputation, −$500)',
+          'ปฏิเสธอย่างมีจริยธรรม (+10 ชื่อเสียง, −$500)',
         ),
       },
       researchGrant: {
@@ -670,6 +720,68 @@ export const text = {
       'ต้นแบบสมบูรณ์! บรรลุเป้าหมายทั้งหมดแล้ว',
     ),
   },
+  shipments: {
+    kicker: bilingual('Supply', 'การจัดหา'),
+    title: bilingual('Crude Shipments', 'การสั่งซื้อน้ำมันดิบ'),
+    names: {
+      localTruck: bilingual('Local Truck Delivery', 'รถบรรทุกท้องถิ่น'),
+      coastalTanker: bilingual('Coastal Tanker', 'เรือบรรทุกชายฝั่ง'),
+      importedShip: bilingual('Imported Crude Ship', 'เรือนำเข้าน้ำมันดิบ'),
+    },
+    amount: (n: number) => bilingual(`${n} crude`, `น้ำมันดิบ ${n} หน่วย`),
+    cost: (n: number) =>
+      bilingual(`$${n.toLocaleString()}`, `$${n.toLocaleString()}`),
+    delaySecs: (s: number) =>
+      bilingual(`${s}s delivery`, `ส่งใน ${s} วินาที`),
+    orderButton: bilingual('Order', 'สั่งซื้อ'),
+    pendingTitle: bilingual('In Transit', 'ระหว่างการขนส่ง'),
+    countdown: (s: number) => bilingual(`${s}s`, `${s} วิ`),
+    logOrdered: (
+      name: BilingualTextValue,
+      amount: number,
+      cost: number,
+      delaySecs: number,
+    ) =>
+      bilingual(
+        `Ordered ${name.en}: ${amount} crude for $${cost}. ETA ${delaySecs}s.`,
+        `สั่งซื้อ ${name.th}: น้ำมันดิบ ${amount} หน่วย ราคา $${cost} ถึงใน ${delaySecs}s`,
+      ),
+    logArrived: (delivered: number, excess: number) =>
+      excess > 0
+        ? bilingual(
+            `Shipment arrived: +${delivered} crude (${excess} excess discarded).`,
+            `ขนส่งมาถึง: +${delivered} น้ำมันดิบ (ทิ้ง ${excess} หน่วยส่วนเกิน)`,
+          )
+        : bilingual(
+            `Shipment arrived: +${delivered} crude.`,
+            `ขนส่งมาถึง: +${delivered} น้ำมันดิบ`,
+          ),
+  },
+  devTools: {
+    label: bilingual('Dev Tools', 'เครื่องมือทดสอบ'),
+    addMoney: bilingual('Add $10,000', 'เพิ่ม $10,000'),
+    addRP: bilingual('Add 100 RP', 'เพิ่ม 100 RP'),
+    addReputation: bilingual('Add 100 Reputation', 'เพิ่มชื่อเสียง 100'),
+    addCrude: bilingual('Add 500 Crude', 'เพิ่มน้ำมันดิบ 500'),
+    addGasoline: bilingual('Add 500 Gasoline', 'เพิ่มเบนซิน 500'),
+    setLevel5: bilingual('Set Level 5', 'ตั้งระดับ 5'),
+    setLevel10: bilingual('Set Level 10', 'ตั้งระดับ 10'),
+    logAddMoney: (amount: number) =>
+      bilingual(`[Dev] Added $${amount}.`, `[Dev] เพิ่ม $${amount}`),
+    logAddRP: (amount: number) =>
+      bilingual(`[Dev] Added ${amount} RP.`, `[Dev] เพิ่ม ${amount} RP`),
+    logAddReputation: (amount: number) =>
+      bilingual(`[Dev] Added ${amount} reputation.`, `[Dev] เพิ่มชื่อเสียง ${amount}`),
+    logAddCrude: (amount: number) =>
+      bilingual(`[Dev] Added ${amount} crude.`, `[Dev] เพิ่มน้ำมันดิบ ${amount}`),
+    logAddGasoline: (amount: number) =>
+      bilingual(`[Dev] Added ${amount} gasoline.`, `[Dev] เพิ่มเบนซิน ${amount}`),
+    logSetLevel: (level: number) =>
+      bilingual(
+        `[Dev] Set refinery level to ${level}.`,
+        `[Dev] ตั้งระดับโรงกลั่นเป็น ${level}`,
+      ),
+  },
   logs: {
     refineryOnline: bilingual(
       'Refinery online. Place buildings to expand storage and output.',
@@ -721,21 +833,26 @@ export const text = {
       bilingual(`Placed ${name.en} for $${cost}.`, `วาง ${name.th} ในราคา $${cost}`),
     removedBuilding: (name: BilingualTextValue) =>
       bilingual(`Removed ${name.en}.`, `ถอด ${name.th} ออกแล้ว`),
+    upgradedBuilding: (name: BilingualTextValue, level: number, cost: number) =>
+      bilingual(
+        `Upgraded ${name.en} to Level ${level} for $${cost.toLocaleString()}.`,
+        `อัปเกรด ${name.th} เป็นระดับ ${level} ราคา $${cost.toLocaleString()}`,
+      ),
     milestoneFirstFuel: bilingual(
       'Milestone completed: First Fuel. Reward: $300.',
       'ทำหมุดหมายสำเร็จ: First Fuel รับรางวัล $300',
     ),
     milestoneSmallSupplier: bilingual(
-      'Milestone completed: Small Supplier. Reward: 5 RP.',
-      'ทำหมุดหมายสำเร็จ: Small Supplier รับรางวัล 5 RP',
+      'Milestone completed: Small Supplier. Reward: 5 RP, +10 reputation.',
+      'ทำหมุดหมายสำเร็จ: Small Supplier รับรางวัล 5 RP และชื่อเสียง +10',
     ),
     milestoneGrowingRefinery: bilingual(
-      'Milestone completed: Growing Refinery. Reward: $1000.',
-      'ทำหมุดหมายสำเร็จ: Growing Refinery รับรางวัล $1000',
+      'Milestone completed: Growing Refinery. Reward: $1000, +15 reputation.',
+      'ทำหมุดหมายสำเร็จ: Growing Refinery รับรางวัล $1000 และชื่อเสียง +15',
     ),
     milestoneResearchBeginner: bilingual(
-      'Milestone completed: Research Beginner. Reward: $500.',
-      'ทำหมุดหมายสำเร็จ: Research Beginner รับรางวัล $500',
+      'Milestone completed: Research Beginner. Reward: $500, +20 reputation.',
+      'ทำหมุดหมายสำเร็จ: Research Beginner รับรางวัล $500 และชื่อเสียง +20',
     ),
   },
 } as const

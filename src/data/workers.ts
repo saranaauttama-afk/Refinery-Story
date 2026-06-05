@@ -20,4 +20,18 @@ export const WORKERS: WorkerConfig[] = [
     cost: 1000,
     description: text.data.workers.salesAgent.description,
   },
+  {
+    key: 'chemist',
+    name: text.data.workers.chemist.name,
+    cost: 1500,
+    description: text.data.workers.chemist.description,
+    unlockLevel: 4,
+  },
+  {
+    key: 'logisticsCoordinator',
+    name: text.data.workers.logisticsCoordinator.name,
+    cost: 2000,
+    description: text.data.workers.logisticsCoordinator.description,
+    unlockLevel: 5,
+  },
 ]

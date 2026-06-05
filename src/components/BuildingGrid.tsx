@@ -1,12 +1,26 @@
 import { useState } from 'react'
 import { BUILDINGS } from '../data/buildings'
-import { EXPANSION_BALANCE } from '../data/balance'
+import { BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from '../data/balance'
 import type { BuildingConfig, BuildingType, GridCell } from '../types'
 import BilingualText from './BilingualText'
 import { text, toAriaLabel } from '../translations'
 
+const UPGRADEABLE_TYPES: ReadonlySet<BuildingType> = new Set([
+  'crudeTank',
+  'productTank',
+  'distillationUnit',
+])
+
+const UPGRADE_COST_BY_LEVEL = [
+  0,
+  BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost,
+  BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost,
+  0,
+]
+
 type BuildingGridProps = {
   grid: GridCell[]
+  gridLevels: number[]
   gridExpansionLevel: number
   money: number
   refineryLevel: number
@@ -14,10 +28,12 @@ type BuildingGridProps = {
   onPlaceBuilding: (cellIndex: number) => void
   onSelectBuilding: (building: BuildingType) => void
   onRemoveBuilding: (cellIndex: number) => void
+  onUpgradeBuilding: (cellIndex: number) => void
 }
 
 function BuildingGrid({
   grid,
+  gridLevels,
   gridExpansionLevel,
   money,
   refineryLevel,
@@ -25,6 +41,7 @@ function BuildingGrid({
   onPlaceBuilding,
   onSelectBuilding,
   onRemoveBuilding,
+  onUpgradeBuilding,
 }: BuildingGridProps) {
   const [isRemoveMode, setIsRemoveMode] = useState(false)
   const selectedConfig = BUILDINGS[selectedBuilding]
@@ -158,35 +175,58 @@ function BuildingGrid({
               )
             }
 
+            if (cell && building) {
+              const level = gridLevels[index] ?? 1
+              const isUpgradeable = UPGRADEABLE_TYPES.has(cell)
+              const canUpgrade = isUpgradeable && level < BUILDING_UPGRADE_BALANCE.maxBuildingLevel
+              const upgradeCost = UPGRADE_COST_BY_LEVEL[level] ?? 0
+              const canAffordUpgrade = money >= upgradeCost
+
+              return (
+                <div key={index} className="grid-cell filled" role="gridcell">
+                  <div className="grid-cell-header">
+                    <span className="grid-cell-code">{building.shortName}</span>
+                    {isUpgradeable && (
+                      <span className={`grid-cell-level-badge${level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel ? ' max' : ''}`}>
+                        {level < BUILDING_UPGRADE_BALANCE.maxBuildingLevel ? (
+                          <BilingualText text={text.buildings.levelBadge(level)} />
+                        ) : (
+                          <BilingualText text={text.buildings.maxLevelBadge} />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <span className="grid-cell-name">
+                    <BilingualText text={building.name} />
+                  </span>
+                  {canUpgrade && (
+                    <button
+                      type="button"
+                      className="grid-cell-upgrade"
+                      disabled={!canAffordUpgrade}
+                      onClick={() => onUpgradeBuilding(index)}
+                    >
+                      <BilingualText text={text.buildings.upgradeButton(upgradeCost)} />
+                    </button>
+                  )}
+                </div>
+              )
+            }
+
             return (
               <button
                 key={index}
                 type="button"
-                className={`grid-cell ${cell ? 'filled' : 'empty'}`}
+                className="grid-cell empty"
                 onClick={() => onPlaceBuilding(index)}
-                disabled={
-                  cell !== null ||
-                  selectedIsLocked ||
-                  money < selectedConfig.cost
-                }
+                disabled={selectedIsLocked || money < selectedConfig.cost}
               >
-                {building ? (
-                  <>
-                    <span className="grid-cell-code">{building.shortName}</span>
-                    <span className="grid-cell-name">
-                      <BilingualText text={building.name} />
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="grid-cell-code">+</span>
-                    <span className="grid-cell-name">
-                      <BilingualText
-                        text={text.buildings.placeBuilding(selectedConfig.name)}
-                      />
-                    </span>
-                  </>
-                )}
+                <span className="grid-cell-code">+</span>
+                <span className="grid-cell-name">
+                  <BilingualText
+                    text={text.buildings.placeBuilding(selectedConfig.name)}
+                  />
+                </span>
               </button>
             )
           })}

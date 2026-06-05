@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import ActivityLog from './components/ActivityLog'
 import BilingualText from './components/BilingualText'
 import BuildingGrid from './components/BuildingGrid'
+import CrudeShipmentsPanel from './components/CrudeShipmentsPanel'
+import DevToolsPanel from './components/DevToolsPanel'
 import ComboPanel from './components/ComboPanel'
 import ContractsPanel from './components/ContractsPanel'
 import EventsPanel from './components/EventsPanel'
@@ -20,8 +22,8 @@ import WorkforcePanel from './components/WorkforcePanel'
 import RefineryProgressionPanel from './components/RefineryProgressionPanel'
 import ChoiceEventModal from './components/ChoiceEventModal'
 import { BUILDINGS } from './data/buildings'
-import { EXPANSION_BALANCE } from './data/balance'
-import type { PaidExpansionEntry } from './data/balance'
+import { BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { serializeBilingualText, text } from './translations'
 import type { BuildingType, ChoiceEvent, Contract, ResearchItem, WorkerConfig } from './types'
@@ -33,10 +35,12 @@ import {
   applyChoiceEventOption,
   applyMilestones,
   applyRandomEvent,
+  applyShipmentArrivals,
   applyWinGoal,
   calculateDerivedStats,
   getRandomEvent,
   getUpgradeCost,
+  orderShipment,
 } from './utils/gameCalculations'
 import {
   clearStoredGameState,
@@ -166,6 +170,16 @@ function App() {
     }, 60000)
 
     return () => window.clearInterval(choiceEventTimer)
+  }, [])
+
+  useEffect(() => {
+    const deliveryTimer = window.setInterval(() => {
+      setGame((current) => {
+        if (current.pendingShipments.length === 0) return current
+        return applyShipmentArrivals(current, Date.now())
+      })
+    }, 1000)
+    return () => window.clearInterval(deliveryTimer)
   }, [])
 
   useEffect(() => {
@@ -319,6 +333,9 @@ function App() {
       if (current.money < worker.cost) {
         return current
       }
+      if (worker.unlockLevel && current.refineryLevel < worker.unlockLevel) {
+        return current
+      }
 
       return applyMilestones({
         ...current,
@@ -358,6 +375,7 @@ function App() {
         money: current.money - nextEntry.cost,
         gridExpansionLevel: nextLevel,
         grid: [...current.grid, ...Array(newCells).fill(null)],
+        gridLevels: [...current.gridLevels, ...Array(newCells).fill(1)],
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(
@@ -385,11 +403,14 @@ function App() {
 
       const nextGrid = [...current.grid]
       nextGrid[cellIndex] = building
+      const nextLevelsPlace = [...current.gridLevels]
+      nextLevelsPlace[cellIndex] = 1
 
       return {
         ...current,
         money: current.money - buildingData.cost,
         grid: nextGrid,
+        gridLevels: nextLevelsPlace,
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(
@@ -408,10 +429,13 @@ function App() {
       const buildingData = BUILDINGS[cell]
       const nextGrid = [...current.grid]
       nextGrid[cellIndex] = null
+      const nextLevelsRemove = [...current.gridLevels]
+      nextLevelsRemove[cellIndex] = 1
 
       return {
         ...current,
         grid: nextGrid,
+        gridLevels: nextLevelsRemove,
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(text.logs.removedBuilding(buildingData.name)),
@@ -420,8 +444,129 @@ function App() {
     })
   }
 
+  function handleOrderShipment(option: ShipmentOption) {
+    setGame((current) => orderShipment(current, option, Date.now()))
+  }
+
+  function handleUpgradeBuilding(cellIndex: number) {
+    setGame((current) => {
+      const cell = current.grid[cellIndex]
+      if (!cell) return current
+
+      const isUpgradeable =
+        cell === 'crudeTank' || cell === 'productTank' || cell === 'distillationUnit'
+      if (!isUpgradeable) return current
+
+      const currentLevel = current.gridLevels[cellIndex] ?? 1
+      if (currentLevel >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel) return current
+
+      const cost =
+        currentLevel === 1
+          ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
+          : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
+
+      if (current.money < cost) return current
+
+      const nextLevel = currentLevel + 1
+      const nextLevels = [...current.gridLevels]
+      nextLevels[cellIndex] = nextLevel
+      const buildingData = BUILDINGS[cell]
+
+      return {
+        ...current,
+        money: current.money - cost,
+        gridLevels: nextLevels,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.logs.upgradedBuilding(buildingData.name, nextLevel, cost),
+          ),
+        ),
+      }
+    })
+  }
+
   function handleDismissStarterGuide() {
     setGame((current) => ({ ...current, starterGuideDismissed: true }))
+  }
+
+  function handleDevAddMoney() {
+    setGame((current) => ({
+      ...current,
+      money: current.money + 10000,
+      activityLog: addLog(
+        current.activityLog,
+        serializeBilingualText(text.devTools.logAddMoney(10000)),
+      ),
+    }))
+  }
+
+  function handleDevAddRP() {
+    setGame((current) => ({
+      ...current,
+      researchPoints: current.researchPoints + 100,
+      activityLog: addLog(
+        current.activityLog,
+        serializeBilingualText(text.devTools.logAddRP(100)),
+      ),
+    }))
+  }
+
+  function handleDevAddReputation() {
+    setGame((current) => ({
+      ...current,
+      reputation: current.reputation + 100,
+      activityLog: addLog(
+        current.activityLog,
+        serializeBilingualText(text.devTools.logAddReputation(100)),
+      ),
+    }))
+  }
+
+  function handleDevAddCrude() {
+    setGame((current) => {
+      const stats = calculateDerivedStats(current)
+      const added = Math.min(500, stats.maxCrudeStorage - current.crudeOil)
+      if (added <= 0) return current
+      return {
+        ...current,
+        crudeOil: current.crudeOil + added,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.devTools.logAddCrude(added)),
+        ),
+      }
+    })
+  }
+
+  function handleDevAddGasoline() {
+    setGame((current) => {
+      const stats = calculateDerivedStats(current)
+      const added = Math.min(500, stats.maxGasolineStorage - current.gasoline)
+      if (added <= 0) return current
+      return {
+        ...current,
+        gasoline: current.gasoline + added,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.devTools.logAddGasoline(added)),
+        ),
+      }
+    })
+  }
+
+  function handleDevSetLevel(level: number) {
+    setGame((current) => {
+      if (current.refineryLevel === level) return current
+      return applyWinGoal({
+        ...current,
+        refineryLevel: level,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.devTools.logSetLevel(level)),
+        ),
+      })
+    })
   }
 
   function handleTriggerTestEvent() {
@@ -479,16 +624,7 @@ function App() {
         />
       )}
 
-      <section className="app-section">
-        <div className="section-heading">
-          <p className="section-kicker">
-            <BilingualText text={text.app.sections.summary.kicker} />
-          </p>
-          <h2 className="section-title">
-            <BilingualText text={text.app.sections.summary.title} />
-          </h2>
-        </div>
-
+      <div className="sticky-resources">
         <ResourcePanel
           money={game.money}
           researchPoints={game.researchPoints}
@@ -498,18 +634,9 @@ function App() {
           gasoline={game.gasoline}
           maxGasolineStorage={maxGasolineStorage}
         />
-      </section>
+      </div>
 
       <section className="app-section">
-        <div className="section-heading">
-          <p className="section-kicker">
-            <BilingualText text={text.app.sections.production.kicker} />
-          </p>
-          <h2 className="section-title">
-            <BilingualText text={text.app.sections.production.title} />
-          </h2>
-        </div>
-
         <div className="production-stack">
           <section className="control-grid">
             <ProductionPanel
@@ -540,21 +667,19 @@ function App() {
 
           <ComboPanel comboStats={comboStats} />
           <RefineryProgressionPanel refineryLevel={game.refineryLevel} />
+          <CrudeShipmentsPanel
+            money={game.money}
+            pendingShipments={game.pendingShipments}
+            tickCount={game.tickCount}
+            onOrder={handleOrderShipment}
+          />
         </div>
       </section>
 
       <section className="app-section">
-        <div className="section-heading">
-          <p className="section-kicker">
-            <BilingualText text={text.app.sections.grid.kicker} />
-          </p>
-          <h2 className="section-title">
-            <BilingualText text={text.app.sections.grid.title} />
-          </h2>
-        </div>
-
         <BuildingGrid
           grid={game.grid}
+          gridLevels={game.gridLevels}
           gridExpansionLevel={game.gridExpansionLevel}
           money={game.money}
           refineryLevel={game.refineryLevel}
@@ -562,6 +687,7 @@ function App() {
           onPlaceBuilding={handlePlaceBuilding}
           onSelectBuilding={setSelectedBuilding}
           onRemoveBuilding={handleRemoveBuilding}
+          onUpgradeBuilding={handleUpgradeBuilding}
         />
         <ExpansionPanel
           gridExpansionLevel={game.gridExpansionLevel}
@@ -583,15 +709,6 @@ function App() {
       </section>
 
       <section className="app-section">
-        <div className="section-heading">
-          <p className="section-kicker">
-            <BilingualText text={text.app.sections.progression.kicker} />
-          </p>
-          <h2 className="section-title">
-            <BilingualText text={text.app.sections.progression.title} />
-          </h2>
-        </div>
-
         <GoalPanel
           refineryLevel={game.refineryLevel}
           reputation={game.reputation}
@@ -616,6 +733,7 @@ function App() {
           />
           <StaffPanel
             money={game.money}
+            refineryLevel={game.refineryLevel}
             activeWorkers={activeWorkers}
             onHireWorker={handleHireWorker}
           />
@@ -624,15 +742,6 @@ function App() {
       </section>
 
       <section className="app-section">
-        <div className="section-heading">
-          <p className="section-kicker">
-            <BilingualText text={text.app.sections.systems.kicker} />
-          </p>
-          <h2 className="section-title">
-            <BilingualText text={text.app.sections.systems.title} />
-          </h2>
-        </div>
-
         <section className="system-grid">
           <div className="system-side">
             <EventsPanel
@@ -649,6 +758,16 @@ function App() {
           <ActivityLog entries={game.activityLog} />
         </section>
       </section>
+
+      <DevToolsPanel
+        onAddMoney={handleDevAddMoney}
+        onAddRP={handleDevAddRP}
+        onAddReputation={handleDevAddReputation}
+        onAddCrude={handleDevAddCrude}
+        onAddGasoline={handleDevAddGasoline}
+        onSetLevel5={() => handleDevSetLevel(5)}
+        onSetLevel10={() => handleDevSetLevel(10)}
+      />
 
       {pendingChoiceEvent && (
         <ChoiceEventModal

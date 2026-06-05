@@ -22,4 +22,24 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     name: text.data.events.qualityBonus.name,
     message: serializeBilingualText(text.data.events.qualityBonus.message),
   },
+  {
+    key: 'marketDemandSpike',
+    name: text.data.events.marketDemandSpike.name,
+    message: serializeBilingualText(text.data.events.marketDemandSpike.message),
+  },
+  {
+    key: 'safetyInspection',
+    name: text.data.events.safetyInspection.name,
+    message: serializeBilingualText(text.data.events.safetyInspection.message),
+  },
+  {
+    key: 'equipmentWear',
+    name: text.data.events.equipmentWear.name,
+    message: serializeBilingualText(text.data.events.equipmentWear.message),
+  },
+  {
+    key: 'efficientBatch',
+    name: text.data.events.efficientBatch.name,
+    message: serializeBilingualText(text.data.events.efficientBatch.message),
+  },
 ]

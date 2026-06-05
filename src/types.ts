@@ -33,10 +33,12 @@ export type GameState = {
   unlockedResearchIds: ResearchKey[]
   workerCounts: WorkerCounts
   grid: GridCell[]
+  gridLevels: number[]
   gridExpansionLevel: number
   prototypeCompleted: boolean
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
+  pendingShipments: PendingShipment[]
 }
 
 export type BuildingConfig = {
@@ -103,7 +105,12 @@ export type ActiveResearchItem = ResearchItem & {
 
 export type BuildingCounts = Record<BuildingType, number>
 
-export type WorkerType = 'operator' | 'mechanic' | 'salesAgent'
+export type WorkerType =
+  | 'operator'
+  | 'mechanic'
+  | 'salesAgent'
+  | 'chemist'
+  | 'logisticsCoordinator'
 
 export type WorkerCounts = Record<WorkerType, number>
 
@@ -112,6 +119,7 @@ export type WorkerConfig = {
   name: BilingualTextValue
   cost: number
   description: BilingualTextValue
+  unlockLevel?: number
 }
 
 export type ActiveWorkerItem = WorkerConfig & {
@@ -123,6 +131,10 @@ export type RandomEventKey =
   | 'machineTuneUp'
   | 'minorLeak'
   | 'qualityBonus'
+  | 'marketDemandSpike'
+  | 'safetyInspection'
+  | 'equipmentWear'
+  | 'efficientBatch'
 
 export type RandomEvent = {
   key: RandomEventKey
@@ -141,6 +153,14 @@ export type ChoiceEvent = {
   description: BilingualTextValue
   optionA: BilingualTextValue
   optionB: BilingualTextValue
+}
+
+export type ShipmentKey = 'localTruck' | 'coastalTanker' | 'importedShip'
+
+export type PendingShipment = {
+  id: number
+  amount: number
+  arrivesAt: number
 }
 
 export type MilestoneKey =

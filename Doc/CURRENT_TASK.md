@@ -1,50 +1,78 @@
 # Current Task
 
-Add Simple Starter Guidance.
+Content Expansion 1: More Events and Staff.
 
 ## Overview
 
-Add a lightweight starter guide for new players.
+The game is playable, but events and staff feel too limited.
 
 Goal:
-Help players understand the first 3 actions.
+Add more variety without changing core systems.
 
-## Requirements
+## Add Random Events
 
-Add Starter Guide Panel near the top.
+Add 4 new simple random events:
 
-Show these steps:
+1. Market Demand Spike
+- +$750
+- Message: "Market demand increased. Money +$750."
 
-1. Buy crude oil
-2. Let refinery produce gasoline
-3. Fulfill contracts to earn money, RP, and reputation
+2. Safety Inspection
+- If reputation >= 50: +10 reputation
+- Else: -$300
+- Prevent money below 0
 
-## Dynamic Checklist
+3. Equipment Wear
+- -10 gasoline
+- Prevent gasoline below 0
 
-Show checkmarks when completed:
+4. Efficient Batch
+- +30 gasoline
+- Clamp to max gasoline
 
-- Bought crude at least once
-- Produced gasoline at least once
-- Completed first contract
+## Add Staff Types
 
-## UI Rules
+Add 2 new worker types:
 
-- Keep it compact
-- Do not create a modal
-- Do not block gameplay
-- Allow player to dismiss/hide the guide
+### Chemist
+Cost:
+$1500
+
+Bonus:
++10% RP earned from contracts
+
+Unlock:
+Refinery Level 4
+
+### Logistics Coordinator
+Cost:
+$2000
+
+Bonus:
++10% shipment crude received
+
+Unlock:
+Refinery Level 5
+
+## UI Requirements
+
+- Show new staff in Staff Panel
+- Show locked staff with unlock requirement
+- Show new staff in Workforce Summary after hiring
+- Update English and Thai labels
 
 ## Technical Rules
 
-Keep all existing systems working.
+Keep existing systems working.
 
 Do not add:
-- Full tutorial system
-- Forced tutorial
-- Dialogue
-- Character guide
-- Routing
+- Staff levels
+- Staff rarity
+- Staff salaries
+- Staff assignment
+- New shipment systems
 - Backend
+- Routing
 
 Build passes.
 Lint passes.

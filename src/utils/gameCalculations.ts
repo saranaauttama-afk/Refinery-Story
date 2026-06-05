@@ -1,5 +1,6 @@
 import {
   BONUS_BALANCE,
+  BUILDING_UPGRADE_BALANCE,
   CORE_BALANCE,
   ECONOMY_BALANCE,
   EVENT_BALANCE,
@@ -10,6 +11,7 @@ import {
   STARTING_BALANCE,
   STORAGE_BALANCE,
 } from '../data/balance'
+import type { ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
 import { RANDOM_EVENTS } from '../data/events'
 import { MILESTONES } from '../data/milestones'
@@ -25,6 +27,7 @@ import type {
   DerivedStats,
   GameState,
   GridCell,
+  PendingShipment,
   RandomEvent,
   ReputationTier,
   WorkerCounts,
@@ -88,12 +91,16 @@ export function createInitialGameState(): GameState {
       operator: 0,
       mechanic: 0,
       salesAgent: 0,
+      chemist: 0,
+      logisticsCoordinator: 0,
     },
     grid: Array(EXPANSION_BALANCE[0].cells).fill(null),
+    gridLevels: Array(EXPANSION_BALANCE[0].cells).fill(1),
     gridExpansionLevel: 0,
     prototypeCompleted: false,
     everBoughtCrude: false,
     starterGuideDismissed: false,
+    pendingShipments: [],
   }
 }
 
@@ -129,6 +136,8 @@ function getEmptyWorkerCounts(): WorkerCounts {
     operator: 0,
     mechanic: 0,
     salesAgent: 0,
+    chemist: 0,
+    logisticsCoordinator: 0,
   }
 }
 
@@ -246,15 +255,30 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const operatorCount = game.workerCounts.operator
   const mechanicCount = game.workerCounts.mechanic
   const salesAgentCount = game.workerCounts.salesAgent
+  const chemistCount = game.workerCounts.chemist ?? 0
   const laboratoryCount = buildingCounts.laboratory
   const maintenanceWorkshopCount = buildingCounts.maintenanceWorkshop
   const salesOfficeCount = buildingCounts.salesOffice
-  const baseCrudeStorage =
-    STORAGE_BALANCE.baseCrudeStorage +
-    buildingCounts.crudeTank * STORAGE_BALANCE.crudeTankStorageBonus
-  const baseGasolineStorage =
-    STORAGE_BALANCE.baseGasolineStorage +
-    buildingCounts.productTank * STORAGE_BALANCE.productTankStorageBonus
+  let crudeTankStorageTotal = 0
+  let productTankStorageTotal = 0
+  let distillationUpgradeBonusRate = 0
+  for (let i = 0; i < game.grid.length; i++) {
+    const cell = game.grid[i]
+    if (!cell) continue
+    const level = game.gridLevels[i] ?? 1
+    if (cell === 'crudeTank') {
+      crudeTankStorageTotal += BUILDING_UPGRADE_BALANCE.crudeTankStorageByLevel[level] ?? 25
+    } else if (cell === 'productTank') {
+      productTankStorageTotal += BUILDING_UPGRADE_BALANCE.productTankStorageByLevel[level] ?? 25
+    } else if (cell === 'distillationUnit') {
+      distillationUpgradeBonusRate +=
+        BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel[level] ?? 0
+    }
+  }
+  const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
+
+  const baseCrudeStorage = STORAGE_BALANCE.baseCrudeStorage + crudeTankStorageTotal
+  const baseGasolineStorage = STORAGE_BALANCE.baseGasolineStorage + productTankStorageTotal
   const storageMultiplier =
     1 + comboStats.crudeToProduct * BONUS_BALANCE.adjacencyBonusRate
   const researchStorageBonus =
@@ -288,7 +312,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     baseProductionInterval /
       productionMultiplier /
       researchProductionMultiplier /
-      workerProductionMultiplier,
+      workerProductionMultiplier /
+      distillationUpgradeProductionMultiplier,
   )
   const productionRate = 1000 / productionInterval
   const sellPriceMultiplier =
@@ -308,7 +333,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     specialBuildingContractRewardMultiplier
   const specialBuildingRpRewardMultiplier =
     1 + laboratoryCount * BONUS_BALANCE.laboratoryRpBonusRate
-  const contractRpRewardMultiplier = specialBuildingRpRewardMultiplier
+  const chemistRpMultiplier = 1 + chemistCount * BONUS_BALANCE.chemistRpBonusRate
+  const contractRpRewardMultiplier = specialBuildingRpRewardMultiplier * chemistRpMultiplier
   const eventPenaltyMultiplier = Math.pow(
     BONUS_BALANCE.maintenanceWorkshopPenaltyRate,
     maintenanceWorkshopCount,
@@ -450,6 +476,8 @@ export function applyMilestones(game: GameState) {
       ...nextGame,
       researchPoints:
         nextGame.researchPoints + MILESTONE_BALANCE.smallSupplierRpReward,
+      reputation:
+        nextGame.reputation + MILESTONE_BALANCE.smallSupplierReputationReward,
       completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'smallSupplier'],
       activityLog: addLog(nextGame.activityLog, message),
     }
@@ -463,6 +491,8 @@ export function applyMilestones(game: GameState) {
     nextGame = {
       ...nextGame,
       money: nextGame.money + MILESTONE_BALANCE.growingRefineryMoneyReward,
+      reputation:
+        nextGame.reputation + MILESTONE_BALANCE.growingRefineryReputationReward,
       completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'growingRefinery'],
       activityLog: addLog(nextGame.activityLog, message),
     }
@@ -476,6 +506,8 @@ export function applyMilestones(game: GameState) {
     nextGame = {
       ...nextGame,
       money: nextGame.money + MILESTONE_BALANCE.researchBeginnerMoneyReward,
+      reputation:
+        nextGame.reputation + MILESTONE_BALANCE.researchBeginnerReputationReward,
       completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'researchBeginner'],
       activityLog: addLog(nextGame.activityLog, message),
     }
@@ -521,15 +553,127 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     }
   }
 
+  if (event.key === 'qualityBonus') {
+    return {
+      ...game,
+      gasoline: Math.min(
+        stats.maxGasolineStorage,
+        game.gasoline + EVENT_BALANCE.qualityBonusGasolineAmount,
+      ),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'marketDemandSpike') {
+    return {
+      ...game,
+      money: game.money + EVENT_BALANCE.marketDemandSpikeMoneyReward,
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'safetyInspection') {
+    const passed = game.reputation >= EVENT_BALANCE.safetyInspectionReputationThreshold
+    const message = passed
+      ? serializeBilingualText(text.data.events.safetyInspection.message)
+      : serializeBilingualText(text.data.safetyInspectionFailMessage)
+    if (passed) {
+      return {
+        ...game,
+        reputation: game.reputation + EVENT_BALANCE.safetyInspectionPassReputationReward,
+        lastEventMessage: message,
+        activityLog: addLog(game.activityLog, message),
+      }
+    }
+    return {
+      ...game,
+      money: Math.max(0, game.money - EVENT_BALANCE.safetyInspectionFailMoneyPenalty),
+      lastEventMessage: message,
+      activityLog: addLog(game.activityLog, message),
+    }
+  }
+
+  if (event.key === 'equipmentWear') {
+    return {
+      ...game,
+      gasoline: Math.max(0, game.gasoline - EVENT_BALANCE.equipmentWearGasolineLoss),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  // efficientBatch
   return {
     ...game,
     gasoline: Math.min(
       stats.maxGasolineStorage,
-      game.gasoline + EVENT_BALANCE.qualityBonusGasolineAmount,
+      game.gasoline + EVENT_BALANCE.efficientBatchGasolineAmount,
     ),
     lastEventMessage: event.message,
     activityLog: addLog(game.activityLog, event.message),
   }
+}
+
+export function orderShipment(
+  game: GameState,
+  option: ShipmentOption,
+  now: number,
+): GameState {
+  if (game.money < option.cost) return game
+
+  const shipment: PendingShipment = {
+    id: now,
+    amount: option.amount,
+    arrivesAt: now + option.delayMs,
+  }
+
+  const delaySecs = option.delayMs / 1000
+  const name = text.shipments.names[option.key]
+
+  return {
+    ...game,
+    money: game.money - option.cost,
+    pendingShipments: [...game.pendingShipments, shipment],
+    activityLog: addLog(
+      game.activityLog,
+      serializeBilingualText(
+        text.shipments.logOrdered(name, option.amount, option.cost, delaySecs),
+      ),
+    ),
+  }
+}
+
+export function applyShipmentArrivals(game: GameState, now: number): GameState {
+  const arrived = game.pendingShipments.filter((s) => s.arrivesAt <= now)
+  if (arrived.length === 0) return game
+
+  const remaining = game.pendingShipments.filter((s) => s.arrivesAt > now)
+  let nextGame: GameState = { ...game, pendingShipments: remaining }
+
+  for (const shipment of arrived) {
+    const currentStats = calculateDerivedStats(nextGame)
+    const logisticsCount = nextGame.workerCounts.logisticsCoordinator ?? 0
+    const logisticsMultiplier = 1 + logisticsCount * BONUS_BALANCE.logisticsCoordinatorShipmentBonusRate
+    const boostedAmount = Math.floor(shipment.amount * logisticsMultiplier)
+    const space = currentStats.maxCrudeStorage - nextGame.crudeOil
+    const delivered = Math.min(boostedAmount, Math.max(0, space))
+    const excess = boostedAmount - delivered
+
+    nextGame = {
+      ...nextGame,
+      crudeOil: nextGame.crudeOil + delivered,
+      activityLog: addLog(
+        nextGame.activityLog,
+        serializeBilingualText(
+          text.shipments.logArrived(delivered, excess),
+        ),
+      ),
+    }
+  }
+
+  return nextGame
 }
 
 export function applyChoiceEventOption(
@@ -557,7 +701,7 @@ export function applyChoiceEventOption(
     }
     return {
       ...game,
-      reputation: game.reputation + 5,
+      reputation: game.reputation + 10,
       money: game.money - 500,
       activityLog: addLog(game.activityLog, logMessage),
     }
