@@ -5,6 +5,10 @@ import BuildingGrid from './components/BuildingGrid'
 import ComboPanel from './components/ComboPanel'
 import ContractsPanel from './components/ContractsPanel'
 import EventsPanel from './components/EventsPanel'
+import BuildingEffectsPanel from './components/BuildingEffectsPanel'
+import ExpansionPanel from './components/ExpansionPanel'
+import GoalPanel from './components/GoalPanel'
+import StarterGuidePanel from './components/StarterGuidePanel'
 import MilestonesPanel from './components/MilestonesPanel'
 import ProductionPanel from './components/ProductionPanel'
 import ResearchPanel from './components/ResearchPanel'
@@ -13,16 +17,23 @@ import SavePanel from './components/SavePanel'
 import StaffPanel from './components/StaffPanel'
 import StatsPanel from './components/StatsPanel'
 import WorkforcePanel from './components/WorkforcePanel'
+import RefineryProgressionPanel from './components/RefineryProgressionPanel'
+import ChoiceEventModal from './components/ChoiceEventModal'
 import { BUILDINGS } from './data/buildings'
+import { EXPANSION_BALANCE } from './data/balance'
+import type { PaidExpansionEntry } from './data/balance'
+import { getRandomChoiceEvent } from './data/choiceEvents'
 import { serializeBilingualText, text } from './translations'
-import type { BuildingType, Contract, ResearchItem, WorkerConfig } from './types'
+import type { BuildingType, ChoiceEvent, Contract, ResearchItem, WorkerConfig } from './types'
 import {
   CRUDE_COST,
   RANDOM_EVENT_INTERVAL_MS,
   TICK_MS,
   addLog,
+  applyChoiceEventOption,
   applyMilestones,
   applyRandomEvent,
+  applyWinGoal,
   calculateDerivedStats,
   getRandomEvent,
   getUpgradeCost,
@@ -39,6 +50,7 @@ function App() {
   const [game, setGame] = useState(initialLoad.game)
   const [saveStatusMessage, setSaveStatusMessage] = useState(initialLoad.message)
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingType>('crudeTank')
+  const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
   const gameRef = useRef(game)
   const {
     activeContracts,
@@ -48,17 +60,25 @@ function App() {
     availableSpace,
     canProcessCrude,
     comboStats,
+    contractRewardMultiplier,
+    contractRpRewardMultiplier,
+    eventPenaltyMultiplier,
     maxCrudeStorage,
     maxGasolineStorage,
     productionInterval,
+    productionMultiplier,
     productionRate,
     progressPercent,
     reputationTier,
     nextReputationTier,
+    researchProductionMultiplier,
     sellPrice,
     statusLabel,
     upgradeCost,
+    workerProductionMultiplier,
   } = calculateDerivedStats(game)
+
+  const petrochemicalDone = game.completedContractIds.includes(7)
 
   useEffect(() => {
     gameRef.current = game
@@ -141,6 +161,14 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const choiceEventTimer = window.setInterval(() => {
+      setPendingChoiceEvent((current) => current ?? getRandomChoiceEvent())
+    }, 60000)
+
+    return () => window.clearInterval(choiceEventTimer)
+  }, [])
+
+  useEffect(() => {
     const autosaveTimer = window.setInterval(() => {
       saveStoredGameState(gameRef.current)
       setSaveStatusMessage(text.save.autosaved)
@@ -149,41 +177,45 @@ function App() {
     return () => window.clearInterval(autosaveTimer)
   }, [])
 
-  function handleBuyCrude() {
+  function handleBuyCrudeAmount(amount: number) {
     setGame((current) => {
       const currentMaxCrude = calculateDerivedStats(current).maxCrudeStorage
+      const canAfford = Math.floor(current.money / CRUDE_COST)
+      const space = currentMaxCrude - current.crudeOil
+      const actualAmount = Math.min(amount, canAfford, space)
 
-      if (current.money < CRUDE_COST || current.crudeOil >= currentMaxCrude) {
-        return current
-      }
+      if (actualAmount <= 0) return current
+
+      const totalCost = actualAmount * CRUDE_COST
 
       return {
         ...current,
-        money: current.money - CRUDE_COST,
-        crudeOil: current.crudeOil + 1,
+        money: current.money - totalCost,
+        crudeOil: current.crudeOil + actualAmount,
+        everBoughtCrude: true,
         activityLog: addLog(
           current.activityLog,
-          serializeBilingualText(text.logs.boughtCrude(CRUDE_COST)),
+          serializeBilingualText(text.logs.boughtCrude(actualAmount, totalCost)),
         ),
       }
     })
   }
 
-  function handleSellGasoline() {
+  function handleSellGasolineAmount(amount: number) {
     setGame((current) => {
-      if (current.gasoline < 1) {
-        return current
-      }
+      const actualAmount = Math.min(amount, current.gasoline)
+      if (actualAmount <= 0) return current
 
       const currentSellPrice = calculateDerivedStats(current).sellPrice
+      const totalRevenue = actualAmount * currentSellPrice
 
       return {
         ...current,
-        gasoline: current.gasoline - 1,
-        money: current.money + currentSellPrice,
+        gasoline: current.gasoline - actualAmount,
+        money: current.money + totalRevenue,
         activityLog: addLog(
           current.activityLog,
-          serializeBilingualText(text.logs.soldGasoline(currentSellPrice)),
+          serializeBilingualText(text.logs.soldGasoline(actualAmount, totalRevenue)),
         ),
       }
     })
@@ -197,7 +229,7 @@ function App() {
         return current
       }
 
-      return {
+      return applyWinGoal({
         ...current,
         money: current.money - nextUpgradeCost,
         refineryLevel: current.refineryLevel + 1,
@@ -207,7 +239,7 @@ function App() {
             text.logs.upgradedRefinery(current.refineryLevel + 1),
           ),
         ),
-      }
+      })
     })
   }
 
@@ -234,7 +266,7 @@ function App() {
       )
       const currentContractReputationReward = contract.reputationReward
 
-      return applyMilestones({
+      return applyWinGoal(applyMilestones({
         ...current,
         gasoline: current.gasoline - contract.gasolineRequired,
         money: current.money + currentContractReward,
@@ -253,7 +285,7 @@ function App() {
             ),
           ),
         ),
-      })
+      }))
     })
   }
 
@@ -304,13 +336,50 @@ function App() {
     })
   }
 
+  function handleExpandGrid() {
+    setGame((current) => {
+      const nextLevel = current.gridExpansionLevel + 1
+
+      if (nextLevel >= EXPANSION_BALANCE.length) return current
+
+      const nextEntry = EXPANSION_BALANCE[nextLevel] as PaidExpansionEntry
+
+      if (
+        current.money < nextEntry.cost ||
+        current.refineryLevel < nextEntry.requiresRefineryLevel
+      ) {
+        return current
+      }
+
+      const newCells = nextEntry.cells - EXPANSION_BALANCE[current.gridExpansionLevel].cells
+
+      return applyWinGoal({
+        ...current,
+        money: current.money - nextEntry.cost,
+        gridExpansionLevel: nextLevel,
+        grid: [...current.grid, ...Array(newCells).fill(null)],
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.expansion.nextSize(nextEntry.size),
+          ),
+        ),
+      })
+    })
+  }
+
   function handlePlaceBuilding(cellIndex: number) {
     setGame((current) => {
       const building = selectedBuilding
       const cell = current.grid[cellIndex]
       const buildingData = BUILDINGS[building]
 
-      if (cell !== null || current.money < buildingData.cost) {
+      const buildingUnlockLevel = buildingData.unlockLevel ?? 1
+      if (
+        cell !== null ||
+        current.money < buildingData.cost ||
+        current.refineryLevel < buildingUnlockLevel
+      ) {
         return current
       }
 
@@ -331,8 +400,42 @@ function App() {
     })
   }
 
+  function handleRemoveBuilding(cellIndex: number) {
+    setGame((current) => {
+      const cell = current.grid[cellIndex]
+      if (!cell) return current
+
+      const buildingData = BUILDINGS[cell]
+      const nextGrid = [...current.grid]
+      nextGrid[cellIndex] = null
+
+      return {
+        ...current,
+        grid: nextGrid,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.removedBuilding(buildingData.name)),
+        ),
+      }
+    })
+  }
+
+  function handleDismissStarterGuide() {
+    setGame((current) => ({ ...current, starterGuideDismissed: true }))
+  }
+
   function handleTriggerTestEvent() {
     setGame((current) => applyRandomEvent(current, getRandomEvent()))
+  }
+
+  function handleTriggerChoiceEvent() {
+    setPendingChoiceEvent(getRandomChoiceEvent())
+  }
+
+  function handleChooseOption(option: 'A' | 'B') {
+    if (!pendingChoiceEvent) return
+    setGame((current) => applyWinGoal(applyChoiceEventOption(current, pendingChoiceEvent, option)))
+    setPendingChoiceEvent(null)
   }
 
   function handleManualSave() {
@@ -366,6 +469,15 @@ function App() {
           <BilingualText text={text.app.title} />
         </h1>
       </section>
+
+      {!game.starterGuideDismissed && (
+        <StarterGuidePanel
+          everBoughtCrude={game.everBoughtCrude}
+          hasProducedGasoline={game.totalGasolineProduced > 0}
+          hasCompletedContract={game.completedContractCount > 0}
+          onDismiss={handleDismissStarterGuide}
+        />
+      )}
 
       <section className="app-section">
         <div className="section-heading">
@@ -412,8 +524,8 @@ function App() {
               sellPrice={sellPrice}
               statusLabel={statusLabel}
               upgradeCost={upgradeCost}
-              onBuyCrude={handleBuyCrude}
-              onSellGasoline={handleSellGasoline}
+              onBuyCrudeAmount={handleBuyCrudeAmount}
+              onSellGasolineAmount={handleSellGasolineAmount}
               onUpgradeRefinery={handleUpgradeRefinery}
             />
             <StatsPanel
@@ -427,6 +539,7 @@ function App() {
           </section>
 
           <ComboPanel comboStats={comboStats} />
+          <RefineryProgressionPanel refineryLevel={game.refineryLevel} />
         </div>
       </section>
 
@@ -442,10 +555,29 @@ function App() {
 
         <BuildingGrid
           grid={game.grid}
+          gridExpansionLevel={game.gridExpansionLevel}
           money={game.money}
+          refineryLevel={game.refineryLevel}
           selectedBuilding={selectedBuilding}
           onPlaceBuilding={handlePlaceBuilding}
           onSelectBuilding={setSelectedBuilding}
+          onRemoveBuilding={handleRemoveBuilding}
+        />
+        <ExpansionPanel
+          gridExpansionLevel={game.gridExpansionLevel}
+          refineryLevel={game.refineryLevel}
+          money={game.money}
+          onExpandGrid={handleExpandGrid}
+        />
+        <BuildingEffectsPanel
+          maxCrudeStorage={maxCrudeStorage}
+          maxGasolineStorage={maxGasolineStorage}
+          contractRewardMultiplier={contractRewardMultiplier}
+          contractRpRewardMultiplier={contractRpRewardMultiplier}
+          eventPenaltyMultiplier={eventPenaltyMultiplier}
+          productionMultiplier={productionMultiplier}
+          researchProductionMultiplier={researchProductionMultiplier}
+          workerProductionMultiplier={workerProductionMultiplier}
         />
         <WorkforcePanel activeWorkers={activeWorkers} />
       </section>
@@ -459,6 +591,14 @@ function App() {
             <BilingualText text={text.app.sections.progression.title} />
           </h2>
         </div>
+
+        <GoalPanel
+          refineryLevel={game.refineryLevel}
+          reputation={game.reputation}
+          petrochemicalDone={petrochemicalDone}
+          gridExpansionLevel={game.gridExpansionLevel}
+          isComplete={game.prototypeCompleted}
+        />
 
         <section className="progression-grid">
           <ContractsPanel
@@ -498,6 +638,7 @@ function App() {
             <EventsPanel
               lastEventMessage={game.lastEventMessage}
               onTriggerEvent={handleTriggerTestEvent}
+              onTriggerChoiceEvent={handleTriggerChoiceEvent}
             />
             <SavePanel
               statusMessage={saveStatusMessage}
@@ -508,6 +649,13 @@ function App() {
           <ActivityLog entries={game.activityLog} />
         </section>
       </section>
+
+      {pendingChoiceEvent && (
+        <ChoiceEventModal
+          event={pendingChoiceEvent}
+          onChoose={handleChooseOption}
+        />
+      )}
     </main>
   )
 }

@@ -3,6 +3,7 @@ import {
   CORE_BALANCE,
   ECONOMY_BALANCE,
   EVENT_BALANCE,
+  EXPANSION_BALANCE,
   MILESTONE_BALANCE,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
@@ -19,6 +20,7 @@ import type {
   ActiveWorkerItem,
   BuildingCounts,
   BilingualTextValue,
+  ChoiceEvent,
   ComboStats,
   DerivedStats,
   GameState,
@@ -58,6 +60,11 @@ export const REPUTATION_TIERS: ReputationTier[] = [
   },
 ]
 
+export function getGridColumns(expansionLevel: number): number {
+  const entry = EXPANSION_BALANCE[Math.min(expansionLevel, EXPANSION_BALANCE.length - 1)]
+  return entry.size
+}
+
 export function createInitialGameState(): GameState {
   return {
     money: STARTING_MONEY,
@@ -82,7 +89,11 @@ export function createInitialGameState(): GameState {
       mechanic: 0,
       salesAgent: 0,
     },
-    grid: Array(GRID_SIZE).fill(null),
+    grid: Array(EXPANSION_BALANCE[0].cells).fill(null),
+    gridExpansionLevel: 0,
+    prototypeCompleted: false,
+    everBoughtCrude: false,
+    starterGuideDismissed: false,
   }
 }
 
@@ -140,13 +151,15 @@ function getComboStats(grid: GridCell[]): ComboStats {
     crudeToProduct: 0,
   }
 
+  const cols = Math.round(Math.sqrt(grid.length))
+
   grid.forEach((cell, index) => {
     if (!cell) {
       return
     }
 
-    const rightNeighbor = index % 3 < 2 ? grid[index + 1] : null
-    const bottomNeighbor = index < 6 ? grid[index + 3] : null
+    const rightNeighbor = index % cols < cols - 1 ? grid[index + 1] : null
+    const bottomNeighbor = index < cols * (cols - 1) ? grid[index + cols] : null
     const neighbors = [rightNeighbor, bottomNeighbor]
 
     neighbors.forEach((neighbor) => {
@@ -391,6 +404,27 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   }
 }
 
+export function applyWinGoal(game: GameState): GameState {
+  if (game.prototypeCompleted) return game
+
+  const allGoalsDone =
+    game.refineryLevel >= 10 &&
+    game.reputation >= 250 &&
+    game.completedContractIds.includes(7) &&
+    game.gridExpansionLevel >= 2
+
+  if (!allGoalsDone) return game
+
+  return {
+    ...game,
+    prototypeCompleted: true,
+    activityLog: addLog(
+      game.activityLog,
+      serializeBilingualText(text.goal.completionLog),
+    ),
+  }
+}
+
 export function applyMilestones(game: GameState) {
   let nextGame = game
 
@@ -496,4 +530,73 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     lastEventMessage: event.message,
     activityLog: addLog(game.activityLog, event.message),
   }
+}
+
+export function applyChoiceEventOption(
+  game: GameState,
+  event: ChoiceEvent,
+  option: 'A' | 'B',
+): GameState {
+  const stats = calculateDerivedStats(game)
+  const chosenLabel = option === 'A' ? event.optionA : event.optionB
+  const logMessage = serializeBilingualText(
+    text.choiceEvents.logChose(event.title, chosenLabel),
+  )
+
+  if (event.key === 'supplierNegotiation') {
+    if (option === 'A') {
+      return {
+        ...game,
+        crudeOil: Math.min(
+          stats.maxCrudeStorage,
+          game.crudeOil + 100,
+        ),
+        reputation: Math.max(0, game.reputation - 5),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: game.reputation + 5,
+      money: game.money - 500,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'researchGrant') {
+    if (option === 'A') {
+      return {
+        ...game,
+        researchPoints: game.researchPoints + 20,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      money: game.money + 1000,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  // workerRecruitment
+  if (option === 'A') {
+    return applyMilestones({
+      ...game,
+      totalWorkersHired: game.totalWorkersHired + 1,
+      workerCounts: {
+        ...game.workerCounts,
+        operator: game.workerCounts.operator + 1,
+      },
+      activityLog: addLog(game.activityLog, logMessage),
+    })
+  }
+  return applyMilestones({
+    ...game,
+    totalWorkersHired: game.totalWorkersHired + 1,
+    workerCounts: {
+      ...game.workerCounts,
+      mechanic: game.workerCounts.mechanic + 1,
+    },
+    activityLog: addLog(game.activityLog, logMessage),
+  })
 }

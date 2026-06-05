@@ -8,6 +8,20 @@ export const CORE_BALANCE = {
   randomEventIntervalMs: 30000,
 } as const
 
+export const EXPANSION_BALANCE = [
+  { level: 0, size: 3, cells: 9 },
+  { level: 1, size: 4, cells: 16, cost: 25000, requiresRefineryLevel: 5 },
+  { level: 2, size: 5, cells: 25, cost: 100000, requiresRefineryLevel: 10 },
+] as const
+
+export type PaidExpansionEntry = {
+  level: number
+  size: number
+  cells: number
+  cost: number
+  requiresRefineryLevel: number
+}
+
 export const STARTING_BALANCE = {
   money: 120,
   crudeOil: 2,

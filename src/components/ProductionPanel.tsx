@@ -15,8 +15,8 @@ type ProductionPanelProps = {
   sellPrice: number
   statusLabel: BilingualTextValue
   upgradeCost: number
-  onBuyCrude: () => void
-  onSellGasoline: () => void
+  onBuyCrudeAmount: (amount: number) => void
+  onSellGasolineAmount: (amount: number) => void
   onUpgradeRefinery: () => void
 }
 
@@ -32,10 +32,17 @@ function ProductionPanel({
   sellPrice,
   statusLabel,
   upgradeCost,
-  onBuyCrude,
-  onSellGasoline,
+  onBuyCrudeAmount,
+  onSellGasolineAmount,
   onUpgradeRefinery,
 }: ProductionPanelProps) {
+  const canAfford = Math.floor(money / CRUDE_COST)
+  const space = maxCrudeStorage - crudeOil
+  const fillAmount = Math.max(0, Math.min(canAfford, space))
+  const canBuyAny = fillAmount > 0
+
+  const canSellAny = gasoline >= 1
+
   return (
     <article className="panel operation-panel">
       <div className="panel-heading">
@@ -89,19 +96,62 @@ function ProductionPanel({
         <button
           type="button"
           className="action-button primary"
-          onClick={onBuyCrude}
-          disabled={money < CRUDE_COST || crudeOil >= maxCrudeStorage}
+          onClick={() => onBuyCrudeAmount(10)}
+          disabled={!canBuyAny}
         >
-          <BilingualText text={text.production.buyCrudeButton(CRUDE_COST)} />
+          <BilingualText text={text.production.buyCrude10Button} />
+        </button>
+        <button
+          type="button"
+          className="action-button primary"
+          onClick={() => onBuyCrudeAmount(50)}
+          disabled={!canBuyAny}
+        >
+          <BilingualText text={text.production.buyCrude50Button} />
+        </button>
+        <button
+          type="button"
+          className="action-button primary"
+          onClick={() => onBuyCrudeAmount(fillAmount)}
+          disabled={!canBuyAny}
+        >
+          <BilingualText text={text.production.fillTankButton(fillAmount)} />
+        </button>
+      </div>
+
+      <div className="button-row">
+        <button
+          type="button"
+          className="action-button"
+          onClick={() => onSellGasolineAmount(10)}
+          disabled={!canSellAny}
+        >
+          <BilingualText text={text.production.sellGasoline10Button} />
         </button>
         <button
           type="button"
           className="action-button"
-          onClick={onSellGasoline}
-          disabled={gasoline < 1}
+          onClick={() => onSellGasolineAmount(50)}
+          disabled={!canSellAny}
         >
-          <BilingualText text={text.production.sellGasolineButton(sellPrice)} />
+          <BilingualText text={text.production.sellGasoline50Button} />
         </button>
+        <button
+          type="button"
+          className="action-button"
+          onClick={() => onSellGasolineAmount(gasoline)}
+          disabled={!canSellAny}
+        >
+          <BilingualText text={text.production.sellGasolineAllButton(gasoline)} />
+        </button>
+      </div>
+
+      <div className="sell-upgrade-row">
+        <p className="helper-text" style={{ margin: 0, alignSelf: 'center' }}>
+          <BilingualText
+            text={{ en: `$${sellPrice} per gasoline`, th: `$${sellPrice} ต่อหน่วย` }}
+          />
+        </p>
         <button
           type="button"
           className="action-button accent"

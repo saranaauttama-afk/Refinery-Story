@@ -25,17 +25,20 @@ export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
     shortName: 'LB',
     cost: 2000,
     description: text.data.buildings.laboratory.description,
+    unlockLevel: 4,
   },
   maintenanceWorkshop: {
     name: text.data.buildings.maintenanceWorkshop.name,
     shortName: 'MW',
     cost: 2500,
     description: text.data.buildings.maintenanceWorkshop.description,
+    unlockLevel: 6,
   },
   salesOffice: {
     name: text.data.buildings.salesOffice.name,
     shortName: 'SO',
     cost: 3000,
     description: text.data.buildings.salesOffice.description,
+    unlockLevel: 7,
   },
 }

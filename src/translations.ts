@@ -1,6 +1,7 @@
 import type {
   BilingualTextValue,
   BuildingType,
+  ChoiceEventKey,
   MilestoneKey,
   RandomEventKey,
   ResearchKey,
@@ -139,13 +140,14 @@ export const text = {
       'Buy crude to restart production.',
       'ซื้อน้ำมันดิบเพื่อเริ่มการผลิตต่อ',
     ),
-    buyCrudeButton: (cost: number) =>
-      bilingual(`Buy 1 Crude ($${cost})`, `ซื้อน้ำมันดิบ 1 หน่วย ($${cost})`),
-    sellGasolineButton: (price: number) =>
-      bilingual(
-        `Sell 1 Gasoline ($${price})`,
-        `ขายเบนซิน 1 หน่วย ($${price})`,
-      ),
+    buyCrude10Button: bilingual('Buy 10 Crude', 'ซื้อน้ำมันดิบ 10 หน่วย'),
+    buyCrude50Button: bilingual('Buy 50 Crude', 'ซื้อน้ำมันดิบ 50 หน่วย'),
+    fillTankButton: (amount: number) =>
+      bilingual(`Fill Tank (+${amount})`, `เติมถัง (+${amount})`),
+    sellGasoline10Button: bilingual('Sell 10 Gasoline', 'ขายเบนซิน 10 หน่วย'),
+    sellGasoline50Button: bilingual('Sell 50 Gasoline', 'ขายเบนซิน 50 หน่วย'),
+    sellGasolineAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
     upgradeRefineryButton: (cost: number) =>
       bilingual(`Upgrade Refinery ($${cost})`, `อัปเกรดโรงกลั่น ($${cost})`),
   },
@@ -164,6 +166,55 @@ export const text = {
     maxCrude: bilingual('Max crude', 'ความจุน้ำมันดิบสูงสุด'),
     maxGasoline: bilingual('Max gasoline', 'ความจุเบนซินสูงสุด'),
     openCells: bilingual('Open cells', 'ช่องว่าง'),
+  },
+  refineryProgression: {
+    kicker: bilingual('Refinery', 'โรงกลั่น'),
+    title: bilingual('Level Progression', 'ความก้าวหน้าของระดับ'),
+    currentLabel: bilingual('Current', 'ปัจจุบัน'),
+    nextLabel: (level: number) =>
+      bilingual(`Next: Level ${level}`, `ถัดไป: ระดับ ${level}`),
+    speedBonus: (ms: number) =>
+      bilingual(`Production speed: +${ms}ms`, `ความเร็วการผลิต: +${ms}ms`),
+    maxReached: bilingual('All milestones reached.', 'ถึงหมุดหมายสูงสุดแล้ว'),
+  },
+  buildingEffects: {
+    kicker: bilingual('Active Bonuses', 'โบนัสที่ใช้งานอยู่'),
+    title: bilingual('Active Effects Summary', 'สรุปเอฟเฟกต์ที่ใช้งานอยู่'),
+    noBonuses: bilingual(
+      'Place buildings to see active bonuses.',
+      'วางอาคารเพื่อดูโบนัสที่ใช้งานอยู่',
+    ),
+    storageGroup: bilingual('Storage', 'ความจุ'),
+    productionGroup: bilingual('Production', 'การผลิต'),
+    contractRewardsGroup: bilingual('Contract Rewards', 'รางวัลสัญญา'),
+    researchRewardsGroup: bilingual('Research Rewards', 'รางวัลวิจัย'),
+    eventProtectionGroup: bilingual('Event Protection', 'การป้องกันเหตุการณ์'),
+    crudeBonus: (n: number) =>
+      bilingual(`+${n} Max Crude`, `+${n} ความจุน้ำมันดิบสูงสุด`),
+    gasolineBonus: (n: number) =>
+      bilingual(`+${n} Max Gasoline`, `+${n} ความจุเบนซินสูงสุด`),
+    productionBonusPct: (pct: number) =>
+      bilingual(`+${pct}% faster production`, `+${pct}% การผลิตเร็วขึ้น`),
+    contractRewardBonusPct: (pct: number) =>
+      bilingual(`+${pct}% money rewards`, `+${pct}% รางวัลเงิน`),
+    rpRewardBonusPct: (pct: number) =>
+      bilingual(`+${pct}% research rewards`, `+${pct}% รางวัลวิจัย`),
+    penaltyReductionPct: (pct: number) =>
+      bilingual(`${pct}% penalty reduced`, `ลดผลเสีย ${pct}%`),
+  },
+  expansion: {
+    kicker: bilingual('Refinery Grid', 'ผังโรงกลั่น'),
+    title: bilingual('Grid Expansion', 'การขยายตาราง'),
+    currentSize: (n: number) =>
+      bilingual(`Current: ${n}×${n}`, `ปัจจุบัน: ${n}×${n}`),
+    nextSize: (n: number) =>
+      bilingual(`Expand to ${n}×${n}`, `ขยายเป็น ${n}×${n}`),
+    expandButton: (cost: number) =>
+      bilingual(`Expand Grid ($${cost.toLocaleString()})`, `ขยายตาราง ($${cost.toLocaleString()})`),
+    requiresLevel: (level: number) =>
+      bilingual(`Requires Refinery Level ${level}`, `ต้องการระดับโรงกลั่น ${level}`),
+    locked: bilingual('Locked', 'ล็อก'),
+    maxReached: bilingual('Maximum grid size reached.', 'ถึงขนาดตารางสูงสุดแล้ว'),
   },
   combos: {
     kicker: bilingual('Combos', 'คอมโบ'),
@@ -201,6 +252,7 @@ export const text = {
     title: bilingual('Refinery Events', 'เหตุการณ์โรงกลั่น'),
     lastEvent: bilingual('Last event', 'เหตุการณ์ล่าสุด'),
     triggerButton: bilingual('Trigger Test Event', 'เรียกเหตุการณ์ทดสอบ'),
+    triggerChoiceButton: bilingual('Trigger Choice Event', 'เรียกเหตุการณ์ตัดสินใจ'),
     noEvent: bilingual('No refinery event yet.', 'ยังไม่มีเหตุการณ์โรงกลั่น'),
   },
   save: {
@@ -322,6 +374,17 @@ export const text = {
     placeBuilding: (name: BilingualTextValue) =>
       bilingual(`Place ${name.en}`, `วาง ${name.th}`),
     gridAriaLabel: bilingual('Refinery building grid', 'ผังอาคารโรงกลั่น'),
+    locked: bilingual('Locked', 'ถูกล็อก'),
+    unlockAtLevel: (level: number) =>
+      bilingual(
+        `Unlock at Refinery Level ${level}`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
+      ),
+    removeModeButton: bilingual('Remove Building', 'ถอดอาคาร'),
+    removeModeActive: bilingual('Remove Mode On', 'โหมดถอดเปิดอยู่'),
+    noRefundWarning: bilingual('No refund', 'ไม่คืนเงิน'),
+    removeCell: (name: BilingualTextValue) =>
+      bilingual(`Remove ${name.en}`, `ถอด ${name.th}`),
   },
   activity: {
     kicker: bilingual('Activity', 'กิจกรรม'),
@@ -518,6 +581,95 @@ export const text = {
       { name: BilingualTextValue; message: BilingualTextValue }
     >,
   },
+  choiceEvents: {
+    kicker: bilingual('Decision', 'การตัดสินใจ'),
+    chooseLabel: bilingual('Choose an option:', 'เลือกตัวเลือก:'),
+    logChose: (title: BilingualTextValue, option: BilingualTextValue) =>
+      bilingual(
+        `Resolved "${title.en}": chose ${option.en}.`,
+        `ตัดสินใจ "${title.th}": เลือก ${option.th}`,
+      ),
+    events: {
+      supplierNegotiation: {
+        title: bilingual('Supplier Negotiation', 'การเจรจากับซัพพลายเออร์'),
+        description: bilingual(
+          'A supplier offers a bulk crude deal. Choose how to respond.',
+          'ซัพพลายเออร์เสนอดีลน้ำมันดิบจำนวนมาก เลือกวิธีตอบสนอง',
+        ),
+        optionA: bilingual(
+          'Accept bulk deal (+100 crude, −5 reputation)',
+          'รับดีลจำนวนมาก (+100 น้ำมันดิบ, −5 ชื่อเสียง)',
+        ),
+        optionB: bilingual(
+          'Decline ethically (+5 reputation, −$500)',
+          'ปฏิเสธอย่างมีจริยธรรม (+5 ชื่อเสียง, −$500)',
+        ),
+      },
+      researchGrant: {
+        title: bilingual('Research Grant', 'ทุนวิจัย'),
+        description: bilingual(
+          'A government grant arrives. Choose how to allocate the funds.',
+          'ทุนจากภาครัฐมาถึง เลือกวิธีจัดสรรเงินทุน',
+        ),
+        optionA: bilingual('Invest in research (+20 RP)', 'ลงทุนด้านวิจัย (+20 RP)'),
+        optionB: bilingual('Take the cash (+$1000)', 'รับเป็นเงินสด (+$1000)'),
+      },
+      workerRecruitment: {
+        title: bilingual('Worker Recruitment', 'การรับสมัครพนักงาน'),
+        description: bilingual(
+          'Two candidates are available. Choose who to hire.',
+          'มีผู้สมัครสองคน เลือกว่าจะจ้างใคร',
+        ),
+        optionA: bilingual('Hire Operator (+1 Operator)', 'จ้างโอเปอเรเตอร์ (+1 คน)'),
+        optionB: bilingual('Hire Mechanic (+1 Mechanic)', 'จ้างช่างเทคนิค (+1 คน)'),
+      },
+    } satisfies Record<
+      ChoiceEventKey,
+      {
+        title: BilingualTextValue
+        description: BilingualTextValue
+        optionA: BilingualTextValue
+        optionB: BilingualTextValue
+      }
+    >,
+  },
+  starterGuide: {
+    title: bilingual('Getting Started', 'เริ่มต้นใช้งาน'),
+    step1: bilingual('Buy crude oil', 'ซื้อน้ำมันดิบ'),
+    step2: bilingual('Let refinery produce gasoline', 'ปล่อยให้โรงกลั่นผลิตเบนซิน'),
+    step3: bilingual('Complete your first contract', 'ทำสัญญาแรกให้สำเร็จ'),
+    dismissButton: bilingual('Dismiss', 'ปิด'),
+    allDone: bilingual("You know the basics — good luck!", 'คุณรู้พื้นฐานแล้ว — โชคดี!'),
+  },
+  goal: {
+    kicker: bilingual('Prototype', 'ต้นแบบ'),
+    title: bilingual('Prototype Goal', 'เป้าหมายต้นแบบ'),
+    refineryLevelItem: (current: number, target: number) =>
+      bilingual(
+        `Reach Refinery Level ${target}: ${current}/${target}`,
+        `ถึงระดับโรงกลั่น ${target}: ${current}/${target}`,
+      ),
+    reputationItem: (current: number, target: number) =>
+      bilingual(
+        `Reach Reputation ${target}: ${current}/${target}`,
+        `ถึงชื่อเสียง ${target}: ${current}/${target}`,
+      ),
+    contractItem: bilingual(
+      'Complete Petrochemical Complex',
+      'ทำสัญญา Petrochemical Complex ให้สำเร็จ',
+    ),
+    expansionItem: bilingual('Expand refinery to 5×5', 'ขยายโรงกลั่นเป็น 5×5'),
+    done: bilingual('Completed', 'สำเร็จแล้ว'),
+    notDone: bilingual('Not completed', 'ยังไม่สำเร็จ'),
+    allDone: bilingual(
+      'Prototype Complete! Your refinery is ready for the next phase.',
+      'ต้นแบบสมบูรณ์! โรงกลั่นของคุณพร้อมสำหรับขั้นตอนต่อไปแล้ว',
+    ),
+    completionLog: bilingual(
+      'Prototype Complete! All goals achieved.',
+      'ต้นแบบสมบูรณ์! บรรลุเป้าหมายทั้งหมดแล้ว',
+    ),
+  },
   logs: {
     refineryOnline: bilingual(
       'Refinery online. Place buildings to expand storage and output.',
@@ -528,12 +680,15 @@ export const text = {
         `Processed ${batches} crude into ${gasolineAmount} gasoline.`,
         `แปรรูปน้ำมันดิบ ${batches} หน่วยเป็นเบนซิน ${gasolineAmount} หน่วย`,
       ),
-    boughtCrude: (cost: number) =>
-      bilingual(`Bought 1 crude for $${cost}.`, `ซื้อน้ำมันดิบ 1 หน่วยในราคา $${cost}`),
-    soldGasoline: (price: number) =>
+    boughtCrude: (amount: number, totalCost: number) =>
       bilingual(
-        `Sold 1 gasoline for $${price}.`,
-        `ขายเบนซิน 1 หน่วยในราคา $${price}`,
+        `Bought ${amount} crude for $${totalCost}.`,
+        `ซื้อน้ำมันดิบ ${amount} หน่วยในราคา $${totalCost}`,
+      ),
+    soldGasoline: (amount: number, totalRevenue: number) =>
+      bilingual(
+        `Sold ${amount} gasoline for $${totalRevenue}.`,
+        `ขายเบนซิน ${amount} หน่วยได้ $${totalRevenue}`,
       ),
     upgradedRefinery: (level: number) =>
       bilingual(
@@ -564,6 +719,8 @@ export const text = {
       bilingual(`Hired ${name.en} for $${cost}.`, `จ้าง ${name.th} ในราคา $${cost}`),
     placedBuilding: (name: BilingualTextValue, cost: number) =>
       bilingual(`Placed ${name.en} for $${cost}.`, `วาง ${name.th} ในราคา $${cost}`),
+    removedBuilding: (name: BilingualTextValue) =>
+      bilingual(`Removed ${name.en}.`, `ถอด ${name.th} ออกแล้ว`),
     milestoneFirstFuel: bilingual(
       'Milestone completed: First Fuel. Reward: $300.',
       'ทำหมุดหมายสำเร็จ: First Fuel รับรางวัล $300',

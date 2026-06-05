@@ -17,6 +17,10 @@ function getSafeNumber(value: unknown, fallback: number) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
+function getSafeBoolean(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback
+}
+
 function getSafeString(value: unknown, fallback: string) {
   return typeof value === 'string' ? value : fallback
 }
@@ -110,6 +114,10 @@ function sanitizeLoadedGameState(value: unknown) {
     ) as GameState['unlockedResearchIds'],
     workerCounts: getSafeWorkerCounts(value.workerCounts, fallback.workerCounts),
     grid: getSafeGrid(value.grid, fallback.grid),
+    gridExpansionLevel: getSafeNumber(value.gridExpansionLevel, fallback.gridExpansionLevel),
+    prototypeCompleted: getSafeBoolean(value.prototypeCompleted, fallback.prototypeCompleted),
+    everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
+    starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
   }
 }
 

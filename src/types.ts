@@ -33,6 +33,10 @@ export type GameState = {
   unlockedResearchIds: ResearchKey[]
   workerCounts: WorkerCounts
   grid: GridCell[]
+  gridExpansionLevel: number
+  prototypeCompleted: boolean
+  everBoughtCrude: boolean
+  starterGuideDismissed: boolean
 }
 
 export type BuildingConfig = {
@@ -40,6 +44,7 @@ export type BuildingConfig = {
   shortName: string
   cost: number
   description: BilingualTextValue
+  unlockLevel?: number
 }
 
 export type ComboStats = {
@@ -123,6 +128,19 @@ export type RandomEvent = {
   key: RandomEventKey
   name: BilingualTextValue
   message: string
+}
+
+export type ChoiceEventKey =
+  | 'supplierNegotiation'
+  | 'researchGrant'
+  | 'workerRecruitment'
+
+export type ChoiceEvent = {
+  key: ChoiceEventKey
+  title: BilingualTextValue
+  description: BilingualTextValue
+  optionA: BilingualTextValue
+  optionB: BilingualTextValue
 }
 
 export type MilestoneKey =
