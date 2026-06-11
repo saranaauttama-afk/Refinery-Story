@@ -94,6 +94,9 @@ export function createInitialGameState(): GameState {
       safetyOfficer: 0,
       chemist: 0,
       logisticsCoordinator: 0,
+      fuelSpecialist: 0,
+      aviationSpecialist: 0,
+      chemicalEngineer: 0,
     },
     grid: Array(EXPANSION_BALANCE[0].cells).fill(null),
     gridLevels: Array(EXPANSION_BALANCE[0].cells).fill(1),
@@ -108,7 +111,7 @@ export function createInitialGameState(): GameState {
       asphalt: 0,
       jetFuel: 0,
       lubricants: 0,
-      plasticPellets: 0,
+      petrochemicals: 0,
     },
   }
 }
@@ -137,6 +140,9 @@ function getEmptyBuildingCounts(): BuildingCounts {
     laboratory: 0,
     maintenanceWorkshop: 0,
     salesOffice: 0,
+    lubricantPlant: 0,
+    jetFuelPlant: 0,
+    petrochemicalPlant: 0,
   }
 }
 
@@ -148,6 +154,9 @@ function getEmptyWorkerCounts(): WorkerCounts {
     safetyOfficer: 0,
     chemist: 0,
     logisticsCoordinator: 0,
+    fuelSpecialist: 0,
+    aviationSpecialist: 0,
+    chemicalEngineer: 0,
   }
 }
 
@@ -275,6 +284,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const salesAgentCount = game.workerCounts.salesAgent
   const chemistCount = game.workerCounts.chemist ?? 0
   const safetyOfficerCount = game.workerCounts.safetyOfficer ?? 0
+  const fuelSpecialistCount = game.workerCounts.fuelSpecialist ?? 0
   let crudeTankStorageTotal = 0
   let productTankStorageTotal = 0
   let distillationUpgradeBonusRate = 0
@@ -378,8 +388,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     : 0
   const workerSellPriceBonus =
     salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonus
+  const fuelSpecialistSellPriceMultiplier =
+    1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
   const sellPrice =
-    Math.round(ECONOMY_BALANCE.gasolinePrice * sellPriceMultiplier) +
+    Math.round(ECONOMY_BALANCE.gasolinePrice * sellPriceMultiplier * fuelSpecialistSellPriceMultiplier) +
     researchSellPriceBonus +
     workerSellPriceBonus
   const upgradeCost = getUpgradeCost(game.refineryLevel)

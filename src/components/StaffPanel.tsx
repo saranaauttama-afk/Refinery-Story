@@ -36,6 +36,18 @@ function getWorkerActiveBonus(key: WorkerType, count: number): BilingualTextValu
       return text.workforce.bonusLogistics(
         Math.round(count * BONUS_BALANCE.logisticsCoordinatorShipmentBonusRate * 100),
       )
+    case 'fuelSpecialist':
+      return text.workforce.bonusFuelSpecialist(
+        Math.round(count * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate * 100),
+      )
+    case 'aviationSpecialist':
+      return text.workforce.bonusAviationSpecialist(
+        Math.round(count * BONUS_BALANCE.aviationSpecialistJetFuelBonusRate * 100),
+      )
+    case 'chemicalEngineer':
+      return text.workforce.bonusChemicalEngineer(
+        Math.round(count * BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate * 100),
+      )
   }
 }
 

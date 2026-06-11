@@ -55,7 +55,44 @@ Recommended next for multi-product economy:
 
 ---
 
-## Phase 2 - Feel and Identity
+## Phase 2A — Product Expansion (Complete — v0.7)
+
+**Milestone: Refinery Story v0.7 — Full Product Expansion**
+
+Completed:
+
+- Multi-product inventory framework (ProductInventory types, productInventory in GameState, save migration)
+- Lubricants (Level 5, Lubricant Plant, sell panel, 3 one-time contracts IDs 21–23)
+- Jet Fuel (Level 10, Jet Fuel Plant, sell panel rework, consolidated to single production path)
+- Petrochemicals (Level 15, Petrochemical Plant, sell panel, 3 one-time contracts IDs 24–26)
+- Product-specific selling for all secondary products (sell 1/10/all with Sales Agent bonus)
+- Advanced production buildings (Lubricant Plant, Jet Fuel Plant, Petrochemical Plant)
+- Product System Cleanup 1.0 (removed dual Jet Fuel production path)
+
+Current product ladder:
+
+| Level | Product | Building | Price |
+|-------|---------|----------|-------|
+| 1 | Gasoline | Distillation Unit | $18/unit |
+| 5 | Lubricants | Lubricant Plant | $45/unit |
+| 10 | Jet Fuel | Jet Fuel Plant | $90/unit |
+| 15 | Petrochemicals | Petrochemical Plant | $150/unit |
+
+---
+
+## Phase 2B — Economy & Balance (Next Recommended)
+
+Suggested goals:
+
+- Sales Agent diminishing returns (flat bonus scales poorly with high-value products at late game)
+- Upgrade cost review (Level 10–15 gap may need cost/reward adjustment)
+- Contract reward review (petrochemical contracts vs gasoline T3 income comparison)
+- Product profitability review ($/crude across all 4 product lines at each unlock level)
+- Storage balance pass (all plant products at maxStorage 200 — may need per-product tuning)
+
+---
+
+## Phase 2 — Feel and Identity
 
 Completed:
 
@@ -64,8 +101,6 @@ Completed:
 
 Planned:
 
-- Multi-Product Balance Pass 2 (Asphalt 18 / Jet Fuel 19 profit/crude review)
-- Lubricants Prototype (third secondary product)
 - Staff Depth Lite (hiring tension, visual workers, midgame goal expansion)
 - Visual Workers / Pixel Placeholder
 - Building Identity Pass (icons or color coding per type)

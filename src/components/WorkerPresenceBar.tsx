@@ -11,6 +11,9 @@ const WORKER_ICONS: Record<WorkerType, string> = {
   safetyOfficer: '🦺',
   chemist: '🧪',
   logisticsCoordinator: '📦',
+  fuelSpecialist: '⛽',
+  aviationSpecialist: '✈️',
+  chemicalEngineer: '🏭',
 }
 
 type WorkerPresenceBarProps = {

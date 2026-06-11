@@ -2,7 +2,7 @@
 
 ## Known Issues
 
-None currently.
+None currently blocking. See Active Concerns below for post-v0.7 observations.
 
 ---
 
@@ -16,6 +16,38 @@ None currently.
 ---
 
 ## Active Concerns
+
+### ResourcePanel Layout Scale
+
+ResourcePanel now contains 8 resource cards (money, RP, reputation, crude, gasoline, lubricants, jet fuel, petrochemicals). On narrow viewports or when a 9th resource is added, the grid layout will require redesign. Currently using `repeat(8, minmax(0, 1fr))` — works on desktop but may wrap or compress on tablet.
+
+Fix when: a 9th resource card is added, or Mobile UI pass is promoted.
+
+---
+
+### Product Panel Code Duplication
+
+LubricantsPanel, JetFuelPanel, and PetrochemicalsPanel share near-identical structure (locked state, inventory display, sell 1/10/all buttons, no-plants hint, price footer). The pattern is copy-paste with product-specific props and CSS class names. This is intentional for now — explicit code over abstraction — but will become maintenance burden if a 5th product panel is added.
+
+Fix when: a 4th secondary product panel is added, or when the panel pattern changes significantly enough to warrant shared extraction.
+
+---
+
+### Economy Complexity with 4 Active Product Lines
+
+With Gasoline, Lubricants, Jet Fuel, and Petrochemicals all active simultaneously, economy balancing now requires simulating crude allocation across 4 competing consumers (gasoline auto-loop + 3 plant types). Contract rewards, sell prices, Sales Agent bonuses, and production rates interact in ways that are harder to reason about than the single-product prototype.
+
+Fix when: Economy Balance Pass (Option A in BACKLOG.md) is promoted.
+
+---
+
+### Sales Agent Bonus Scales Poorly with High-Value Products
+
+The `workerSellPriceBonus` is a flat dollar amount per Sales Agent applied uniformly across all products. At $18 gasoline, each bonus point is ~5–6% of base price. At $150 petrochemicals, the same bonus point is ~2% — proportionally less, but the absolute dollar bonus is still the same per unit, making Sales Agents disproportionately valuable when selling high-volume petrochemicals.
+
+Fix when: Economy Balance Pass or Worker System Expansion is promoted. Review whether bonus should be a percentage rate rather than a flat value, or whether product-specific sell price multipliers are needed.
+
+---
 
 ### ContractsPanel Vertical Length
 

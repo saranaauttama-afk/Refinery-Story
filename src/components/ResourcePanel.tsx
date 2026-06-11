@@ -9,6 +9,9 @@ type ResourcePanelProps = {
   maxCrudeStorage: number
   gasoline: number
   maxGasolineStorage: number
+  lubricants: number
+  jetFuel: number
+  petrochemicals: number
 }
 
 function ResourcePanel({
@@ -19,6 +22,9 @@ function ResourcePanel({
   maxCrudeStorage,
   gasoline,
   maxGasolineStorage,
+  lubricants,
+  jetFuel,
+  petrochemicals,
 }: ResourcePanelProps) {
   return (
     <section
@@ -76,6 +82,36 @@ function ResourcePanel({
         </strong>
         <p>
           <BilingualText text={text.resources.gasolineDescription} />
+        </p>
+      </article>
+
+      <article className="resource-card">
+        <span className="resource-label">
+          <BilingualText text={text.resources.lubricants} />
+        </span>
+        <strong>{lubricants}</strong>
+        <p>
+          <BilingualText text={text.resources.lubricantsDescription} />
+        </p>
+      </article>
+
+      <article className="resource-card">
+        <span className="resource-label">
+          <BilingualText text={text.resources.jetFuel} />
+        </span>
+        <strong>{jetFuel}</strong>
+        <p>
+          <BilingualText text={text.resources.jetFuelDescription} />
+        </p>
+      </article>
+
+      <article className="resource-card">
+        <span className="resource-label">
+          <BilingualText text={text.resources.petrochemicals} />
+        </span>
+        <strong>{petrochemicals}</strong>
+        <p>
+          <BilingualText text={text.resources.petrochemicalsDescription} />
         </p>
       </article>
     </section>

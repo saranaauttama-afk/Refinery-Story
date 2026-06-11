@@ -44,7 +44,10 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
       cell === 'productTank' ||
       cell === 'laboratory' ||
       cell === 'maintenanceWorkshop' ||
-      cell === 'salesOffice',
+      cell === 'salesOffice' ||
+      cell === 'lubricantPlant' ||
+      cell === 'jetFuelPlant' ||
+      cell === 'petrochemicalPlant',
   )
     ? value
     : fallback
@@ -85,6 +88,9 @@ function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
     safetyOfficer: getSafeNumber(value.safetyOfficer, fallback.safetyOfficer),
     chemist: getSafeNumber(value.chemist, fallback.chemist),
     logisticsCoordinator: getSafeNumber(value.logisticsCoordinator, fallback.logisticsCoordinator),
+    fuelSpecialist: getSafeNumber(value.fuelSpecialist, 0),
+    aviationSpecialist: getSafeNumber(value.aviationSpecialist, 0),
+    chemicalEngineer: getSafeNumber(value.chemicalEngineer, 0),
   }
 }
 
@@ -157,7 +163,7 @@ function sanitizeLoadedGameState(value: unknown) {
       asphalt: 0,
       jetFuel: 0,
       lubricants: 0,
-      plasticPellets: 0,
+      petrochemicals: 0,
     },
   }
 }

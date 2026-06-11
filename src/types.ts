@@ -3,9 +3,8 @@ export type BilingualTextValue = {
   th: string
 }
 
-// Product types — only gasoline is actively used in Phase A.
-// asphalt, jetFuel, lubricants, plasticPellets are placeholders for future phases.
-export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'plasticPellets'
+// Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
+export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals'
 
 export type ProductInventory = Record<ProductKey, number>
 
@@ -16,6 +15,9 @@ export type BuildingType =
   | 'laboratory'
   | 'maintenanceWorkshop'
   | 'salesOffice'
+  | 'lubricantPlant'
+  | 'jetFuelPlant'
+  | 'petrochemicalPlant'
 
 export type GridCell = BuildingType | null
 
@@ -78,6 +80,10 @@ export type Contract = {
   asphaltRequired?: number
   // Phase C: jet fuel contracts
   jetFuelRequired?: number
+  // Phase D: lubricant contracts
+  lubricantsRequired?: number
+  // Phase E: petrochemical contracts
+  petrochemicalsRequired?: number
   reward: number
   rpReward: number
   reputationReward: number
@@ -133,6 +139,9 @@ export type WorkerType =
   | 'chemist'
   | 'logisticsCoordinator'
   | 'safetyOfficer'
+  | 'fuelSpecialist'
+  | 'aviationSpecialist'
+  | 'chemicalEngineer'
 
 export type WorkerCounts = Record<WorkerType, number>
 

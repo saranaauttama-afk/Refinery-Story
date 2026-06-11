@@ -227,7 +227,7 @@
 }
 
 .resource-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .resource-card {
@@ -640,6 +640,18 @@
   background: rgba(30, 80, 160, 0.1);
   color: #1a4fa0;
   border: 1px solid rgba(30, 80, 160, 0.2);
+}
+
+.contract-product-badge--lubricants {
+  background: rgba(30, 120, 60, 0.1);
+  color: #1a6635;
+  border: 1px solid rgba(30, 120, 60, 0.2);
+}
+
+.contract-product-badge--petrochemicals {
+  background: rgba(100, 30, 140, 0.1);
+  color: #6a1a8a;
+  border: 1px solid rgba(100, 30, 140, 0.2);
 }
 
 /* Structured requires / rewards rows inside a contract card */
@@ -1653,6 +1665,126 @@
   flex-wrap: wrap;
 }
 
+/* ─── Lubricants Panel ─── */
+
+.lubricants-panel {
+  padding: 12px 16px;
+}
+
+.lubricants-panel--locked {
+  opacity: 0.6;
+}
+
+.lubricants-locked-hint {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  opacity: 0.65;
+}
+
+.lubricants-inventory {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #2e5e2e;
+}
+
+.lubricants-no-plants {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.lubricants-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lubricants-price-note {
+  margin: 8px 0 0;
+}
+
+/* ─── Jet Fuel Plant Panel ─── */
+
+.jetfuel-plant-panel {
+  padding: 12px 16px;
+}
+
+.jetfuel-plant-panel--locked {
+  opacity: 0.6;
+}
+
+.jetfuel-plant-locked-hint {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  opacity: 0.65;
+}
+
+.jetfuel-plant-inventory {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1a4a6e;
+}
+
+.jetfuel-plant-no-plants {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.jetfuel-plant-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.jetfuel-plant-price-note {
+  margin: 8px 0 0;
+}
+
+/* ─── Petrochemicals Panel ─── */
+
+.petrochemicals-panel {
+  padding: 12px 16px;
+}
+
+.petrochemicals-panel--locked {
+  opacity: 0.6;
+}
+
+.petrochemicals-locked-hint {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  opacity: 0.65;
+}
+
+.petrochemicals-inventory {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #6a1a8a;
+}
+
+.petrochemicals-no-plants {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.petrochemicals-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.petrochemicals-price-note {
+  margin: 8px 0 0;
+}
+
 /* ─── Jet Fuel Panel ─── */
 
 .jetfuel-panel {
@@ -1663,26 +1795,10 @@
   opacity: 0.6;
 }
 
-.jetfuel-panel--done {
-  opacity: 0.75;
-}
-
 .jetfuel-locked-hint {
   margin: 4px 0 0;
   font-size: 0.82rem;
   opacity: 0.65;
-}
-
-.jetfuel-done-message {
-  margin: 4px 0 0;
-  font-size: 0.82rem;
-  opacity: 0.65;
-}
-
-.jetfuel-hint {
-  margin: 4px 0 6px;
-  font-size: 0.8rem;
-  opacity: 0.6;
 }
 
 .jetfuel-inventory {
@@ -1692,9 +1808,10 @@
   color: #1a4fa0;
 }
 
-.jetfuel-crude-available {
-  font-weight: 400;
-  font-size: 0.85rem;
+.jetfuel-no-plants {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
   opacity: 0.75;
 }
 
@@ -1702,5 +1819,9 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.jetfuel-price-note {
+  margin: 8px 0 0;
 }
 

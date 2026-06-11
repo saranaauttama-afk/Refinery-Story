@@ -116,6 +116,21 @@ export const text = {
       'Product Tanks raise finished fuel storage.',
       'ถังเก็บผลิตภัณฑ์ช่วยเพิ่มความจุเชื้อเพลิงที่ผลิตแล้ว',
     ),
+    lubricants: bilingual('Lubricants', 'สารหล่อลื่น'),
+    lubricantsDescription: bilingual(
+      'Produced by Lubricant Plants. Sell manually for income.',
+      'ผลิตจากโรงผลิตสารหล่อลื่น ขายด้วยตนเองเพื่อสร้างรายได้',
+    ),
+    jetFuel: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
+    jetFuelDescription: bilingual(
+      'Produced by Jet Fuel Plants. Sell manually for premium income.',
+      'ผลิตจากโรงผลิตเชื้อเพลิงอากาศยาน ขายด้วยตนเองเพื่อสร้างรายได้พรีเมียม',
+    ),
+    petrochemicals: bilingual('Petrochemicals', 'ปิโตรเคมี'),
+    petrochemicalsDescription: bilingual(
+      'Produced by Petrochemical Plants. Highest-value product.',
+      'ผลิตจากโรงผลิตปิโตรเคมี ผลิตภัณฑ์มูลค่าสูงสุด',
+    ),
   },
   production: {
     kicker: bilingual('Automation', 'ระบบอัตโนมัติ'),
@@ -350,39 +365,100 @@ export const text = {
       bilingual(`+${pct}% RP from contracts`, `+${pct}% RP จากสัญญา`),
     bonusLogistics: (pct: number) =>
       bilingual(`+${pct}% crude per shipment`, `+${pct}% น้ำมันดิบต่อการจัดส่ง`),
+    bonusFuelSpecialist: (pct: number) =>
+      bilingual(`+${pct}% gasoline sell price`, `+${pct}% ราคาขายน้ำมันเบนซิน`),
+    bonusAviationSpecialist: (pct: number) =>
+      bilingual(`+${pct}% jet fuel production`, `+${pct}% การผลิตเชื้อเพลิงอากาศยาน`),
+    bonusChemicalEngineer: (pct: number) =>
+      bilingual(`+${pct}% petrochemical production`, `+${pct}% การผลิตปิโตรเคมี`),
   },
   jetFuel: {
     kicker: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
-    title: bilingual('Jet Fuel Processing', 'การผลิตเชื้อเพลิงอากาศยาน'),
-    inventory: (current: number, max: number) =>
-      bilingual(`Jet Fuel: ${current} / ${max}`, `เชื้อเพลิงอากาศยาน: ${current} / ${max}`),
-    produceButton: (amount: number) =>
-      bilingual(
-        `Process ×${amount} (${amount} crude)`,
-        `แปรรูป ×${amount} (${amount} น้ำมันดิบ)`,
-      ),
+    title: bilingual('Jet Fuel Market', 'ตลาดเชื้อเพลิงอากาศยาน'),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
     lockedMessage: (level: number) =>
       bilingual(
-        `Unlocks at Refinery Level ${level}`,
-        `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
+        `Unlocks at Refinery Level ${level}. Build Jet Fuel Plants to produce jet fuel automatically.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงผลิตเชื้อเพลิงอากาศยานเพื่อผลิตอัตโนมัติ`,
       ),
-    hint: bilingual(
-      'Jet Fuel uses crude from the same supply as gasoline and asphalt.',
-      'เชื้อเพลิงอากาศยานใช้น้ำมันดิบจากคลังเดียวกับเบนซินและแอสฟัลต์',
+    noPlants: bilingual(
+      'No Jet Fuel Plants placed. Add plants to the grid to begin production.',
+      'ยังไม่มีโรงผลิตเชื้อเพลิงอากาศยาน วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
     ),
-    crudeAvailable: (n: number) => bilingual(`Crude available: ${n}`, `น้ำมันดิบคงเหลือ: ${n}`),
-    disabledNoCrude: (needed: number) =>
-      bilingual(`Need ${needed} crude`, `ต้องการน้ำมันดิบ ${needed} หน่วย`),
-    disabledFull: bilingual('Storage full', 'คลังเต็ม'),
-    allContractsDone: bilingual(
-      'All jet fuel contracts fulfilled.',
-      'สัญญาเชื้อเพลิงอากาศยานทั้งหมดสำเร็จแล้ว',
-    ),
-    logProduced: (amount: number) =>
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+  },
+  lubricants: {
+    kicker: bilingual('Lubricants', 'สารหล่อลื่น'),
+    title: bilingual('Lubricant Market', 'ตลาดสารหล่อลื่น'),
+    lockedMessage: (level: number) =>
       bilingual(
-        `Processed ${amount} crude into jet fuel.`,
-        `แปรรูปน้ำมันดิบ ${amount} หน่วยเป็นเชื้อเพลิงอากาศยาน`,
+        `Unlocks at Refinery Level ${level}. Build Lubricant Plants to produce lubricants.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงผลิตสารหล่อลื่นเพื่อเริ่มผลิต`,
       ),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+    noPlants: bilingual(
+      'No Lubricant Plants placed. Add plants to the grid to begin production.',
+      'ยังไม่มีโรงผลิตสารหล่อลื่น วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
+    ),
+  },
+  jetFuelPlant: {
+    kicker: bilingual('Jet Fuel Plant', 'โรงผลิตเชื้อเพลิงอากาศยาน'),
+    title: bilingual('Jet Fuel Market', 'ตลาดเชื้อเพลิงอากาศยาน'),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}. Build Jet Fuel Plants to produce jet fuel automatically.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงผลิตเชื้อเพลิงอากาศยานเพื่อผลิตอัตโนมัติ`,
+      ),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+    noPlants: bilingual(
+      'No Jet Fuel Plants placed. Add plants to the grid to begin production.',
+      'ยังไม่มีโรงผลิตเชื้อเพลิงอากาศยาน วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
+    ),
+  },
+  petrochemicals: {
+    kicker: bilingual('Petrochemicals', 'ปิโตรเคมี'),
+    title: bilingual('Petrochemical Market', 'ตลาดปิโตรเคมี'),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}. Build Petrochemical Plants to produce petrochemicals automatically.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงผลิตปิโตรเคมีเพื่อผลิตอัตโนมัติ`,
+      ),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+    noPlants: bilingual(
+      'No Petrochemical Plants placed. Add plants to the grid to begin production.',
+      'ยังไม่มีโรงผลิตปิโตรเคมี วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
+    ),
   },
   asphalt: {
     kicker: bilingual('Asphalt', 'แอสฟัลต์'),
@@ -453,11 +529,15 @@ export const text = {
     needGasoline: (n: number) => bilingual(`Need ${n} more gasoline`, `ต้องการเบนซินอีก ${n} หน่วย`),
     needAsphalt: (n: number) => bilingual(`Need ${n} more asphalt`, `ต้องการแอสฟัลต์อีก ${n} หน่วย`),
     needJetFuel: (n: number) => bilingual(`Need ${n} more jet fuel`, `ต้องการเชื้อเพลิงอากาศยานอีก ${n} หน่วย`),
+    needLubricants: (n: number) => bilingual(`Need ${n} more lubricants`, `ต้องการสารหล่อลื่นอีก ${n} หน่วย`),
+    needPetrochemicals: (n: number) => bilingual(`Need ${n} more petrochemicals`, `ต้องการปิโตรเคมีอีก ${n} หน่วย`),
     // Structured contract card fields (replaces prose summary)
     productLabels: {
       gasoline: bilingual('Gasoline', 'เบนซิน'),
       asphalt: bilingual('Asphalt', 'แอสฟัลต์'),
       jetFuel: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
+      lubricants: bilingual('Lubricants', 'สารหล่อลื่น'),
+      petrochemicals: bilingual('Petrochemicals', 'ปิโตรเคมี'),
     },
     requires: (amount: number, product: BilingualTextValue) =>
       bilingual(
@@ -602,6 +682,30 @@ export const text = {
           '+10% รางวัลจากสัญญา ปิดดีลได้ดีขึ้นในทุกระดับสัญญา',
         ),
       },
+      lubricantPlant: {
+        name: bilingual('Lubricant Plant', 'โรงผลิตสารหล่อลื่น'),
+        role: bilingual('Secondary Production', 'การผลิตรอง'),
+        description: bilingual(
+          'Converts crude into lubricants. 10 crude → 5 lubricants every 5s per plant.',
+          'แปลงน้ำมันดิบเป็นสารหล่อลื่น 10 น้ำมันดิบ → 5 สารหล่อลื่น ทุก 5 วินาทีต่อโรงงาน',
+        ),
+      },
+      jetFuelPlant: {
+        name: bilingual('Jet Fuel Plant', 'โรงผลิตเชื้อเพลิงอากาศยาน'),
+        role: bilingual('Premium Production', 'การผลิตพรีเมียม'),
+        description: bilingual(
+          'Converts crude into jet fuel. 20 crude → 5 jet fuel every 5s per plant.',
+          'แปลงน้ำมันดิบเป็นเชื้อเพลิงอากาศยาน 20 น้ำมันดิบ → 5 เชื้อเพลิง ทุก 5 วินาทีต่อโรงงาน',
+        ),
+      },
+      petrochemicalPlant: {
+        name: bilingual('Petrochemical Plant', 'โรงผลิตปิโตรเคมี'),
+        role: bilingual('Apex Production', 'การผลิตสูงสุด'),
+        description: bilingual(
+          'Converts crude into petrochemicals. 30 crude → 5 petrochemicals every 5s per plant.',
+          'แปลงน้ำมันดิบเป็นปิโตรเคมี 30 น้ำมันดิบ → 5 ปิโตรเคมี ทุก 5 วินาทีต่อโรงงาน',
+        ),
+      },
     } satisfies Record<
       BuildingType,
       { name: BilingualTextValue; description: BilingualTextValue; role: BilingualTextValue }
@@ -633,6 +737,18 @@ export const text = {
       logisticsCoordinator: {
         name: bilingual('Logistics Coordinator', 'ผู้ประสานงานโลจิสติกส์'),
         description: bilingual('+10% shipment crude received', '+10% น้ำมันดิบที่รับจากการขนส่ง'),
+      },
+      fuelSpecialist: {
+        name: bilingual('Fuel Specialist', 'ผู้เชี่ยวชาญเชื้อเพลิง'),
+        description: bilingual('+5% gasoline sell price per worker', '+5% ราคาขายน้ำมันเบนซินต่อคนงาน'),
+      },
+      aviationSpecialist: {
+        name: bilingual('Aviation Specialist', 'ผู้เชี่ยวชาญการบิน'),
+        description: bilingual('+20% jet fuel production per worker', '+20% การผลิตเชื้อเพลิงอากาศยานต่อคนงาน'),
+      },
+      chemicalEngineer: {
+        name: bilingual('Chemical Engineer', 'วิศวกรเคมี'),
+        description: bilingual('+20% petrochemical production per worker', '+20% การผลิตปิโตรเคมีต่อคนงาน'),
       },
     } satisfies Record<
       WorkerType,
@@ -754,6 +870,26 @@ export const text = {
       },
       20: {
         name: bilingual('Regional Airport Reserve', 'สำรองเชื้อเพลิงสนามบินภูมิภาค'),
+      },
+      // Lubricant contracts
+      21: {
+        name: bilingual('Auto Repair Chain', 'เครือข่ายศูนย์ซ่อมรถยนต์'),
+      },
+      22: {
+        name: bilingual('Heavy Machinery Supplier', 'ผู้จัดหาเครื่องจักรกลหนัก'),
+      },
+      23: {
+        name: bilingual('Industrial Maintenance Group', 'กลุ่มบำรุงรักษาอุตสาหกรรม'),
+      },
+      // Petrochemical contracts
+      24: {
+        name: bilingual('Plastic Manufacturer', 'ผู้ผลิตพลาสติก'),
+      },
+      25: {
+        name: bilingual('Chemical Processing Group', 'กลุ่มแปรรูปสารเคมี'),
+      },
+      26: {
+        name: bilingual('Industrial Materials Consortium', 'สมาคมวัสดุอุตสาหกรรม'),
       },
     } satisfies Record<number, { name: BilingualTextValue }>,
     milestones: {
@@ -1296,6 +1432,36 @@ export const text = {
       bilingual(
         `Processed ${batches} crude into ${gasolineAmount} gasoline.`,
         `แปรรูปน้ำมันดิบ ${batches} หน่วยเป็นเบนซิน ${gasolineAmount} หน่วย`,
+      ),
+    producedLubricants: (plants: number, amount: number) =>
+      bilingual(
+        `${plants} lubricant plant${plants > 1 ? 's' : ''} produced ${amount} lubricants.`,
+        `โรงผลิต ${plants} แห่งผลิตสารหล่อลื่น ${amount} หน่วย`,
+      ),
+    soldLubricants: (amount: number, totalRevenue: number) =>
+      bilingual(
+        `Sold ${amount} lubricants for $${totalRevenue.toLocaleString()}.`,
+        `ขายสารหล่อลื่น ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
+      ),
+    producedJetFuelPlant: (plants: number, amount: number) =>
+      bilingual(
+        `${plants} jet fuel plant${plants > 1 ? 's' : ''} produced ${amount} jet fuel.`,
+        `โรงผลิต ${plants} แห่งผลิตเชื้อเพลิงอากาศยาน ${amount} หน่วย`,
+      ),
+    soldJetFuel: (amount: number, totalRevenue: number) =>
+      bilingual(
+        `Sold ${amount} jet fuel for $${totalRevenue.toLocaleString()}.`,
+        `ขายเชื้อเพลิงอากาศยาน ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
+      ),
+    producedPetrochemicals: (plants: number, amount: number) =>
+      bilingual(
+        `${plants} petrochemical plant${plants > 1 ? 's' : ''} produced ${amount} petrochemicals.`,
+        `โรงผลิต ${plants} แห่งผลิตปิโตรเคมี ${amount} หน่วย`,
+      ),
+    soldPetrochemicals: (amount: number, totalRevenue: number) =>
+      bilingual(
+        `Sold ${amount} petrochemicals for $${totalRevenue.toLocaleString()}.`,
+        `ขายปิโตรเคมี ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
       ),
     boughtCrude: (amount: number, totalCost: number) =>
       bilingual(

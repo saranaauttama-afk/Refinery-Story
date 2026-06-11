@@ -1,5 +1,57 @@
 # Playtest Notes
 
+## 2026-06-11 — v0.7 Product Expansion Complete
+
+**Milestone:** Refinery Story v0.7 — Full Product Expansion
+**Method:** Documentation pass. No source changes. Reflects full state after Product Expansion 1.0–1.5 and Product System Cleanup 1.0.
+
+---
+
+### Completed Features
+
+- Multi Product Framework (ProductInventory types, productInventory in GameState, save migration defaults)
+- Lubricants resource (ProductKey renamed from plasticPellets placeholder)
+- Lubricant Plant (Level 5, $3,000, auto: 10 crude → 5 lubricants every 5s per plant)
+- Lubricant selling ($45/unit + Sales Agent bonus, manual sell 1/10/all)
+- Lubricant contracts (IDs 21–23, Tier 2–3, unlock Level 5)
+- Jet Fuel Plant (Level 10, $8,000, auto: 20 crude → 5 jet fuel every 5s per plant)
+- Jet Fuel selling rework (removed dual production path; JetFuelPanel is now sell-only)
+- Petrochemical Plant (Level 15, $15,000, auto: 30 crude → 5 petrochemicals every 5s per plant)
+- Petrochemical selling ($150/unit + Sales Agent bonus, manual sell 1/10/all)
+- Petrochemical contracts (IDs 24–26, Tier 3, unlock Level 15)
+- Product System Cleanup 1.0 (consolidated Jet Fuel to single auto-production path)
+
+---
+
+### Current Product Progression
+
+| Level | Product | Building | Price | Production |
+|-------|---------|----------|-------|-----------|
+| 1 | Gasoline | Distillation Unit | $18/unit | Auto-loop (1/tick) |
+| 5 | Lubricants | Lubricant Plant ($3,000) | $45/unit | Auto: 10 crude → 5 lubricants / 5s |
+| 10 | Jet Fuel | Jet Fuel Plant ($8,000) | $90/unit | Auto: 20 crude → 5 jet fuel / 5s |
+| 15 | Petrochemicals | Petrochemical Plant ($15,000) | $150/unit | Auto: 30 crude → 5 petrochemicals / 5s |
+
+---
+
+### Known Balance Concerns
+
+1. **Sales Agents scale too well in late game.** The flat `workerSellPriceBonus` applies equally to all products including $150 petrochemicals — the bonus becomes proportionally larger at higher base prices.
+2. **Advanced product contract rewards may create excessive income.** Petrochemical Contract 26 (200 units, $75,000) is the largest reward in the game and may outpace gasoline income significantly at Level 15.
+3. **Refinery upgrades above Level 10 feel less meaningful.** Cost continues to scale but no new production mechanic unlocks until Level 15. The gap between Jet Fuel Plant (Level 10) and Petrochemical Plant (Level 15) may feel empty.
+4. **Advanced product storage limits may require tuning.** All three plant products share maxStorage: 200. With multiple plants, storage fills fast and crude demand spikes.
+
+---
+
+### Recommended Next Playtest Focus
+
+- Product profitability comparison (gasoline vs lubricants vs jet fuel vs petrochemicals $/crude at each stage)
+- Contract progression pacing (do petrochemical contracts reward too much relative to gasoline T3?)
+- Late-game economy (Level 10–15 income balance, crude pressure with 3 competing plants)
+- Worker balance (Sales Agent and Operator bonuses at maximum hire count)
+
+---
+
 ## 2026-06-11 — Prototype v0.4 Milestone Closeout
 
 **Milestone:** Refinery Story Prototype v0.4 — Multi-Product Economy

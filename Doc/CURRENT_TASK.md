@@ -1,16 +1,105 @@
-# CURRENT TASK: (none)
+# Worker System Expansion 2.0 - Product Specialists
 
-Prototype v0.4 Milestone Closeout is complete.
+## Goal
 
-## What Was Documented
+Make workforce decisions more strategic by introducing product-specific specialist workers.
 
-- PLAYTEST_NOTES.md: Added v0.4 milestone summary (full system table, economic snapshot, open concerns, recommended next)
-- ROADMAP.md: Phase 1B marked Complete — Prototype v0.4; remaining concerns updated; Phase 2 planned list updated
-- BACKLOG.md: Recommended next options reorganized (removed completed Options B and D, added Final Playtest and Mobile UI Later)
-- TECH_DEBT.md: ContractsPanel concern updated to note partial improvement from Final Web Polish
+Workers should begin supporting different business strategies instead of providing only generic bonuses.
 
-## No Source Code Changed
+## Rules
 
-## What's Next
+1. Preserve save compatibility.
 
-See BACKLOG.md for recommended next options (Multi-Product Balance Pass 2, Lubricants Prototype, Staff Depth Lite, Final Playtest).
+2. Keep existing workers unchanged:
+
+   * Sales Agent
+   * Mechanic
+   * Safety Officer
+
+3. Reuse existing workforce patterns.
+
+4. Avoid large architecture rewrites.
+
+## Requirements
+
+### A. New Worker
+
+Fuel Specialist
+
+Unlock:
+
+* Refinery Level 5
+
+Cost:
+
+* $1500
+
+Effect:
+
+* Gasoline sell price +5% per worker
+
+### B. New Worker
+
+Aviation Specialist
+
+Unlock:
+
+* Refinery Level 10
+
+Cost:
+
+* $3000
+
+Effect:
+
+* Jet Fuel production +20% per worker
+
+### C. New Worker
+
+Chemical Engineer
+
+Unlock:
+
+* Refinery Level 15
+
+Cost:
+
+* $5000
+
+Effect:
+
+* Petrochemical production +20% per worker
+
+### D. Workforce UI
+
+Display all new workers in WorkforcePanel.
+
+Show:
+
+* Name
+* Cost
+* Effect
+* Current count
+
+Use existing worker display patterns.
+
+### E. Save Compatibility
+
+Old saves must load safely.
+
+Missing worker counts should default to 0.
+
+### F. Code Quality
+
+* Reuse workforce systems.
+* Maintain TypeScript typing.
+* Keep implementation simple.
+
+## Success Criteria
+
+* Existing saves load.
+* New workers appear at correct levels.
+* WorkforcePanel displays all workers.
+* Effects apply correctly.
+* Existing workers continue working.
+* No gameplay regressions.

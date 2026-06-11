@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import ActivityLog from './components/ActivityLog'
 import AsphaltPanel from './components/AsphaltPanel'
 import JetFuelPanel from './components/JetFuelPanel'
+import LubricantsPanel from './components/LubricantsPanel'
+import PetrochemicalsPanel from './components/PetrochemicalsPanel'
 import BilingualText from './components/BilingualText'
 import BuildingGrid from './components/BuildingGrid'
 import CrudeShipmentsPanel from './components/CrudeShipmentsPanel'
@@ -25,7 +27,7 @@ import WorkerPresenceBar from './components/WorkerPresenceBar'
 import RefineryProgressionPanel from './components/RefineryProgressionPanel'
 import ChoiceEventModal from './components/ChoiceEventModal'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, JET_FUEL_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, BONUS_BALANCE, ECONOMY_BALANCE, JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE, LUBRICANT_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { serializeBilingualText, text } from './translations'
@@ -83,7 +85,13 @@ function App() {
     statusLabel,
     upgradeCost,
     workerProductionMultiplier,
+    workerSellPriceBonus,
+    buildingCounts,
   } = calculateDerivedStats(game)
+
+  const lubricantSellPrice = ECONOMY_BALANCE.lubricantPrice + workerSellPriceBonus
+  const jetFuelSellPrice = ECONOMY_BALANCE.jetFuelPrice + workerSellPriceBonus
+  const petrochemicalsSellPrice = ECONOMY_BALANCE.petrochemicalsPrice + workerSellPriceBonus
 
   const petrochemicalDone = game.completedContractIds.includes(7)
 
@@ -98,11 +106,112 @@ function App() {
         const currentStats = calculateDerivedStats(current)
         const currentMaxGasoline = currentStats.maxGasolineStorage
 
-        if (current.crudeOil < 1 || current.gasoline >= currentMaxGasoline) {
+        // --- Lubricant Plant production ---
+        // Fires every LUBRICANT_PLANT_BALANCE.intervalTicks ticks.
+        // Each plant consumes crudePerCycle crude and produces lubricantsPerCycle lubricants.
+        let crudeOil = current.crudeOil
+        let productInventory = current.productInventory
+        let lubricantLog: string | null = null
+
+        const lubricantPlantCount = currentStats.buildingCounts.lubricantPlant
+        if (
+          lubricantPlantCount > 0 &&
+          nextTick % LUBRICANT_PLANT_BALANCE.intervalTicks === 0
+        ) {
+          const crudeNeeded = lubricantPlantCount * LUBRICANT_PLANT_BALANCE.crudePerCycle
+          const lubricantsSpace =
+            LUBRICANT_PLANT_BALANCE.maxStorage - current.productInventory.lubricants
+          if (crudeOil >= crudeNeeded && lubricantsSpace > 0) {
+            const lubricantsProduced = Math.min(
+              lubricantPlantCount * LUBRICANT_PLANT_BALANCE.lubricantsPerCycle,
+              lubricantsSpace,
+            )
+            crudeOil -= crudeNeeded
+            productInventory = {
+              ...productInventory,
+              lubricants: productInventory.lubricants + lubricantsProduced,
+            }
+            lubricantLog = serializeBilingualText(
+              text.logs.producedLubricants(lubricantPlantCount, lubricantsProduced),
+            )
+          }
+        }
+
+        // --- Jet Fuel Plant production ---
+        // Fires every JET_FUEL_PLANT_BALANCE.intervalTicks ticks.
+        // Each plant consumes crudePerCycle crude and produces jetFuelPerCycle jet fuel.
+        let jetFuelPlantLog: string | null = null
+
+        const jetFuelPlantCount = currentStats.buildingCounts.jetFuelPlant
+        if (
+          jetFuelPlantCount > 0 &&
+          nextTick % JET_FUEL_PLANT_BALANCE.intervalTicks === 0
+        ) {
+          const crudeNeeded = jetFuelPlantCount * JET_FUEL_PLANT_BALANCE.crudePerCycle
+          const jetFuelSpace = JET_FUEL_BALANCE.maxStorage - productInventory.jetFuel
+          if (crudeOil >= crudeNeeded && jetFuelSpace > 0) {
+            const aviationSpecialistCount = current.workerCounts.aviationSpecialist ?? 0
+            const aviationMultiplier = 1 + aviationSpecialistCount * BONUS_BALANCE.aviationSpecialistJetFuelBonusRate
+            const jetFuelProduced = Math.min(
+              Math.round(jetFuelPlantCount * JET_FUEL_PLANT_BALANCE.jetFuelPerCycle * aviationMultiplier),
+              jetFuelSpace,
+            )
+            crudeOil -= crudeNeeded
+            productInventory = {
+              ...productInventory,
+              jetFuel: productInventory.jetFuel + jetFuelProduced,
+            }
+            jetFuelPlantLog = serializeBilingualText(
+              text.logs.producedJetFuelPlant(jetFuelPlantCount, jetFuelProduced),
+            )
+          }
+        }
+
+        // --- Petrochemical Plant production ---
+        // Fires every PETROCHEMICAL_PLANT_BALANCE.intervalTicks ticks.
+        // Each plant consumes crudePerCycle crude and produces petrochemicalsPerCycle petrochemicals.
+        let petrochemicalsLog: string | null = null
+
+        const petrochemicalPlantCount = currentStats.buildingCounts.petrochemicalPlant
+        if (
+          petrochemicalPlantCount > 0 &&
+          nextTick % PETROCHEMICAL_PLANT_BALANCE.intervalTicks === 0
+        ) {
+          const crudeNeeded = petrochemicalPlantCount * PETROCHEMICAL_PLANT_BALANCE.crudePerCycle
+          const petrochemicalsSpace = PETROCHEMICAL_PLANT_BALANCE.maxStorage - productInventory.petrochemicals
+          if (crudeOil >= crudeNeeded && petrochemicalsSpace > 0) {
+            const chemicalEngineerCount = current.workerCounts.chemicalEngineer ?? 0
+            const chemicalEngineerMultiplier = 1 + chemicalEngineerCount * BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate
+            const petrochemicalsProduced = Math.min(
+              Math.round(petrochemicalPlantCount * PETROCHEMICAL_PLANT_BALANCE.petrochemicalsPerCycle * chemicalEngineerMultiplier),
+              petrochemicalsSpace,
+            )
+            crudeOil -= crudeNeeded
+            productInventory = {
+              ...productInventory,
+              petrochemicals: productInventory.petrochemicals + petrochemicalsProduced,
+            }
+            petrochemicalsLog = serializeBilingualText(
+              text.logs.producedPetrochemicals(petrochemicalPlantCount, petrochemicalsProduced),
+            )
+          }
+        }
+
+        // --- Combine plant logs ---
+        let plantActivityLog = current.activityLog
+        if (lubricantLog) plantActivityLog = addLog(plantActivityLog, lubricantLog)
+        if (jetFuelPlantLog) plantActivityLog = addLog(plantActivityLog, jetFuelPlantLog)
+        if (petrochemicalsLog) plantActivityLog = addLog(plantActivityLog, petrochemicalsLog)
+
+        // --- Gasoline production ---
+        if (crudeOil < 1 || current.gasoline >= currentMaxGasoline) {
           return {
             ...current,
             tickCount: nextTick,
             productionProgress: 0,
+            crudeOil,
+            productInventory,
+            activityLog: plantActivityLog,
           }
         }
 
@@ -114,13 +223,16 @@ function App() {
             ...current,
             tickCount: nextTick,
             productionProgress: nextProgress,
+            crudeOil,
+            productInventory,
+            activityLog: plantActivityLog,
           }
         }
 
         const storageRoom = currentMaxGasoline - current.gasoline
         const batchesProduced = Math.min(
           Math.floor(nextProgress / interval),
-          current.crudeOil,
+          crudeOil,
           storageRoom,
         )
 
@@ -129,15 +241,22 @@ function App() {
             ...current,
             tickCount: nextTick,
             productionProgress: 0,
+            crudeOil,
+            productInventory,
+            activityLog: plantActivityLog,
           }
         }
 
-        const crudeRemaining = current.crudeOil - batchesProduced
+        const crudeRemaining = crudeOil - batchesProduced
         const gasolineTotal = current.gasoline + batchesProduced
         const leftoverProgress =
           crudeRemaining > 0 && gasolineTotal < currentMaxGasoline
             ? nextProgress - batchesProduced * interval
             : 0
+
+        const gasolineLog = serializeBilingualText(
+          text.logs.processedCrude(batchesProduced, batchesProduced),
+        )
 
         return applyMilestones({
           ...current,
@@ -146,12 +265,8 @@ function App() {
           gasoline: gasolineTotal,
           totalGasolineProduced: current.totalGasolineProduced + batchesProduced,
           productionProgress: leftoverProgress,
-          activityLog: addLog(
-            current.activityLog,
-            serializeBilingualText(
-              text.logs.processedCrude(batchesProduced, batchesProduced),
-            ),
-          ),
+          productInventory,
+          activityLog: addLog(plantActivityLog, gasolineLog),
         })
       })
     }, TICK_MS)
@@ -238,6 +353,54 @@ function App() {
     })
   }
 
+  function handleSellLubricants(amount: number) {
+    setGame((current) => {
+      const actualAmount = Math.min(amount, current.productInventory.lubricants)
+      if (actualAmount <= 0) return current
+
+      const currentWorkerBonus = calculateDerivedStats(current).workerSellPriceBonus
+      const price = ECONOMY_BALANCE.lubricantPrice + currentWorkerBonus
+      const totalRevenue = actualAmount * price
+
+      return {
+        ...current,
+        money: current.money + totalRevenue,
+        productInventory: {
+          ...current.productInventory,
+          lubricants: current.productInventory.lubricants - actualAmount,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.soldLubricants(actualAmount, totalRevenue)),
+        ),
+      }
+    })
+  }
+
+  function handleSellJetFuel(amount: number) {
+    setGame((current) => {
+      const actualAmount = Math.min(amount, current.productInventory.jetFuel)
+      if (actualAmount <= 0) return current
+
+      const currentWorkerBonus = calculateDerivedStats(current).workerSellPriceBonus
+      const price = ECONOMY_BALANCE.jetFuelPrice + currentWorkerBonus
+      const totalRevenue = actualAmount * price
+
+      return {
+        ...current,
+        money: current.money + totalRevenue,
+        productInventory: {
+          ...current.productInventory,
+          jetFuel: current.productInventory.jetFuel - actualAmount,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.soldJetFuel(actualAmount, totalRevenue)),
+        ),
+      }
+    })
+  }
+
   function handleUpgradeRefinery() {
     setGame((current) => {
       const nextUpgradeCost = getUpgradeCost(current.refineryLevel)
@@ -270,10 +433,20 @@ function App() {
         return current
       }
 
-      const isJetFuelContract = (contract.jetFuelRequired ?? 0) > 0
-      const isAsphaltContract = !isJetFuelContract && (contract.asphaltRequired ?? 0) > 0
+      const isPetrochemicalsContract = (contract.petrochemicalsRequired ?? 0) > 0
+      const isLubricantsContract = !isPetrochemicalsContract && (contract.lubricantsRequired ?? 0) > 0
+      const isJetFuelContract = !isPetrochemicalsContract && !isLubricantsContract && (contract.jetFuelRequired ?? 0) > 0
+      const isAsphaltContract = !isPetrochemicalsContract && !isLubricantsContract && !isJetFuelContract && (contract.asphaltRequired ?? 0) > 0
 
-      if (isJetFuelContract) {
+      if (isPetrochemicalsContract) {
+        if (current.productInventory.petrochemicals < (contract.petrochemicalsRequired ?? 0)) {
+          return current
+        }
+      } else if (isLubricantsContract) {
+        if (current.productInventory.lubricants < (contract.lubricantsRequired ?? 0)) {
+          return current
+        }
+      } else if (isJetFuelContract) {
         if (current.productInventory.jetFuel < (contract.jetFuelRequired ?? 0)) {
           return current
         }
@@ -296,21 +469,31 @@ function App() {
       )
       const currentContractReputationReward = contract.reputationReward
 
-      const nextProductInventory = isJetFuelContract
+      const nextProductInventory = isPetrochemicalsContract
         ? {
             ...current.productInventory,
-            jetFuel: current.productInventory.jetFuel - (contract.jetFuelRequired ?? 0),
+            petrochemicals: current.productInventory.petrochemicals - (contract.petrochemicalsRequired ?? 0),
           }
-        : isAsphaltContract
+        : isLubricantsContract
           ? {
               ...current.productInventory,
-              asphalt: current.productInventory.asphalt - (contract.asphaltRequired ?? 0),
+              lubricants: current.productInventory.lubricants - (contract.lubricantsRequired ?? 0),
             }
-          : current.productInventory
+          : isJetFuelContract
+            ? {
+                ...current.productInventory,
+                jetFuel: current.productInventory.jetFuel - (contract.jetFuelRequired ?? 0),
+              }
+            : isAsphaltContract
+              ? {
+                  ...current.productInventory,
+                  asphalt: current.productInventory.asphalt - (contract.asphaltRequired ?? 0),
+                }
+              : current.productInventory
 
       return applyWinGoal(applyMilestones({
         ...current,
-        gasoline: isAsphaltContract || isJetFuelContract
+        gasoline: isAsphaltContract || isJetFuelContract || isLubricantsContract || isPetrochemicalsContract
           ? current.gasoline
           : current.gasoline - contract.gasolineRequired,
         productInventory: nextProductInventory,
@@ -607,22 +790,25 @@ function App() {
     })
   }
 
-  function handleProduceJetFuel(amount: number) {
+  function handleSellPetrochemicals(amount: number) {
     setGame((current) => {
-      if (current.refineryLevel < JET_FUEL_BALANCE.unlockLevel) return current
-      const space = JET_FUEL_BALANCE.maxStorage - current.productInventory.jetFuel
-      const actualAmount = Math.min(amount, current.crudeOil, space)
+      const actualAmount = Math.min(amount, current.productInventory.petrochemicals)
       if (actualAmount <= 0) return current
+
+      const currentWorkerBonus = calculateDerivedStats(current).workerSellPriceBonus
+      const price = ECONOMY_BALANCE.petrochemicalsPrice + currentWorkerBonus
+      const totalRevenue = actualAmount * price
+
       return {
         ...current,
-        crudeOil: current.crudeOil - actualAmount,
+        money: current.money + totalRevenue,
         productInventory: {
           ...current.productInventory,
-          jetFuel: current.productInventory.jetFuel + actualAmount,
+          petrochemicals: current.productInventory.petrochemicals - actualAmount,
         },
         activityLog: addLog(
           current.activityLog,
-          serializeBilingualText(text.jetFuel.logProduced(actualAmount)),
+          serializeBilingualText(text.logs.soldPetrochemicals(actualAmount, totalRevenue)),
         ),
       }
     })
@@ -744,6 +930,9 @@ function App() {
           maxCrudeStorage={maxCrudeStorage}
           gasoline={game.gasoline}
           maxGasolineStorage={maxGasolineStorage}
+          lubricants={game.productInventory.lubricants}
+          jetFuel={game.productInventory.jetFuel}
+          petrochemicals={game.productInventory.petrochemicals}
         />
       </div>
 
@@ -797,9 +986,23 @@ function App() {
           <JetFuelPanel
             refineryLevel={game.refineryLevel}
             jetFuel={game.productInventory.jetFuel}
-            crudeOil={game.crudeOil}
-            completedContractIds={game.completedContractIds}
-            onProduceJetFuel={handleProduceJetFuel}
+            jetFuelSellPrice={jetFuelSellPrice}
+            jetFuelPlantCount={buildingCounts.jetFuelPlant}
+            onSellJetFuel={handleSellJetFuel}
+          />
+          <LubricantsPanel
+            refineryLevel={game.refineryLevel}
+            lubricants={game.productInventory.lubricants}
+            lubricantSellPrice={lubricantSellPrice}
+            lubricantPlantCount={buildingCounts.lubricantPlant}
+            onSellLubricants={handleSellLubricants}
+          />
+          <PetrochemicalsPanel
+            refineryLevel={game.refineryLevel}
+            petrochemicals={game.productInventory.petrochemicals}
+            petrochemicalsSellPrice={petrochemicalsSellPrice}
+            petrochemicalPlantCount={buildingCounts.petrochemicalPlant}
+            onSellPetrochemicals={handleSellPetrochemicals}
           />
         </div>
       </section>
@@ -852,6 +1055,8 @@ function App() {
             gasoline={game.gasoline}
             asphalt={game.productInventory.asphalt}
             jetFuel={game.productInventory.jetFuel}
+            lubricants={game.productInventory.lubricants}
+            petrochemicals={game.productInventory.petrochemicals}
             refineryLevel={game.refineryLevel}
             currentReputation={game.reputation}
             currentReputationTier={reputationTier}

@@ -47,4 +47,28 @@ export const WORKERS: WorkerConfig[] = [
     unlockLevel: 5,
     tier: 3,
   },
+  {
+    key: 'fuelSpecialist',
+    name: text.data.workers.fuelSpecialist.name,
+    cost: 1500,
+    description: text.data.workers.fuelSpecialist.description,
+    unlockLevel: 5,
+    tier: 3,
+  },
+  {
+    key: 'aviationSpecialist',
+    name: text.data.workers.aviationSpecialist.name,
+    cost: 3000,
+    description: text.data.workers.aviationSpecialist.description,
+    unlockLevel: 10,
+    tier: 3,
+  },
+  {
+    key: 'chemicalEngineer',
+    name: text.data.workers.chemicalEngineer.name,
+    cost: 5000,
+    description: text.data.workers.chemicalEngineer.description,
+    unlockLevel: 15,
+    tier: 3,
+  },
 ]

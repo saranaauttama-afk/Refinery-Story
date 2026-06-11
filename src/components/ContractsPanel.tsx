@@ -8,6 +8,8 @@ type ContractsPanelProps = {
   gasoline: number
   asphalt: number
   jetFuel: number
+  lubricants: number
+  petrochemicals: number
   refineryLevel: number
   currentReputation: number
   currentReputationTier: ReputationTier
@@ -25,7 +27,27 @@ function getContractRequirement(
   gasoline: number,
   asphalt: number,
   jetFuel: number,
+  lubricants: number,
+  petrochemicals: number,
 ) {
+  if ((contract.petrochemicalsRequired ?? 0) > 0) {
+    const required = contract.petrochemicalsRequired ?? 0
+    return {
+      product: text.contracts.productLabels.petrochemicals,
+      productKey: 'petrochemicals' as const,
+      required,
+      shortfall: Math.max(0, required - petrochemicals),
+    }
+  }
+  if ((contract.lubricantsRequired ?? 0) > 0) {
+    const required = contract.lubricantsRequired ?? 0
+    return {
+      product: text.contracts.productLabels.lubricants,
+      productKey: 'lubricants' as const,
+      required,
+      shortfall: Math.max(0, required - lubricants),
+    }
+  }
   if ((contract.jetFuelRequired ?? 0) > 0) {
     const required = contract.jetFuelRequired ?? 0
     return {
@@ -64,6 +86,8 @@ function ContractsPanel({
   gasoline,
   asphalt,
   jetFuel,
+  lubricants,
+  petrochemicals,
   refineryLevel,
   currentReputation,
   currentReputationTier,
@@ -125,7 +149,7 @@ function ContractsPanel({
             <div className="contracts-list">
               {tierContracts.map((contract) => {
                 const { product, productKey, required, shortfall } =
-                  getContractRequirement(contract, gasoline, asphalt, jetFuel)
+                  getContractRequirement(contract, gasoline, asphalt, jetFuel, lubricants, petrochemicals)
                 const canComplete =
                   contract.isUnlocked && !contract.isCompleted && shortfall === 0
 
@@ -136,11 +160,15 @@ function ContractsPanel({
                   buttonText = text.contracts.completedButton
                 } else if (shortfall > 0) {
                   buttonText =
-                    productKey === 'jetFuel'
-                      ? text.contracts.needJetFuel(shortfall)
-                      : productKey === 'asphalt'
-                        ? text.contracts.needAsphalt(shortfall)
-                        : text.contracts.needGasoline(shortfall)
+                    productKey === 'petrochemicals'
+                      ? text.contracts.needPetrochemicals(shortfall)
+                      : productKey === 'lubricants'
+                        ? text.contracts.needLubricants(shortfall)
+                        : productKey === 'jetFuel'
+                          ? text.contracts.needJetFuel(shortfall)
+                          : productKey === 'asphalt'
+                            ? text.contracts.needAsphalt(shortfall)
+                            : text.contracts.needGasoline(shortfall)
                 } else {
                   buttonText = text.contracts.fulfillButton
                 }

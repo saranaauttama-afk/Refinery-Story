@@ -6,81 +6,77 @@ Items stay here until promoted to CURRENT_TASK.md.
 
 ## Recommended Next Phase
 
-Prototype v0.4 — Multi-Product Economy is complete. Choose one of the following as the next task.
+v0.7 — Product Expansion is complete. Choose one of the following as the next task.
 
 ---
 
-### Option A — Multi-Product Balance Pass 2
+### Option A — Economy Balance Pass
 
-Review and optionally adjust Asphalt Contract 18 and Jet Fuel Contract 19 profit/crude ratios, which both sit 2–3× above gasoline T3 equivalents.
+Review and adjust economy balance across all four product lines now that the full product ladder is implemented.
 
 **Scope:**
-- Code-trace economic analysis with full multiplier simulation (research, reputation tier, workers)
-- Adjust up to 3 numeric values if analysis confirms significant imbalance at intended unlock level
-- No new contracts, no new products, no UI changes
+- Code-trace economic analysis with full multiplier simulation at key levels (5, 10, 15)
+- Review Sales Agent flat bonus impact on high-value products ($90 jet fuel, $150 petrochemicals)
+- Review petrochemical contract rewards vs gasoline T3 income
+- Adjust up to 5 numeric constants if analysis confirms imbalance
+- No new systems, no UI changes, no save migration
 
-**Why now:** Economy Review verdict was B. The Contract 20 storage bug is fixed. The Asphalt 18 / Jet Fuel 19 high profit/crude is the remaining open question.
+**Why now:** v0.7 introduces 3 new auto-production buildings and 6 new contracts. The balance has not been reviewed with all 4 products active simultaneously.
 
-**Risk:** Very low. Numeric constants only. No save migration.
-
----
-
-### Option B — Lubricants Prototype
-
-Add Lubricants as the third secondary product, following the established Asphalt/Jet Fuel + Standing Orders pattern.
-
-**Scope:**
-- `LUBRICANTS_BALANCE` constant (batchSize, largeBatchSize, maxStorage, unlockLevel)
-- LubricantsPanel (mirrors AsphaltPanel/JetFuelPanel — locked, active, done states)
-- 2 Lubricant contracts (one-time, Tier 3, unlock Level 9+)
-- 1 Lubricants standing order
-- ContractsPanel extension (lubricants branch in getContractRequirement)
-- App.tsx: handleProduceLubricants, completedContractIds check
-- Translations: text.lubricants.*
-- CSS: .lubricants-panel, .contract-product-badge--lubricants
-
-**Why now:** Lubricants is already defined in ProductKey. The implementation pattern is fully established.
-
-**Risk:** Low. Same pattern as Asphalt and Jet Fuel. Save-compatible via sanitizer defaults.
+**Risk:** Very low. Numeric constants only.
 
 ---
 
-### Option C — Staff Depth Lite
+### Option B — Worker System Expansion
 
-Add strategic tension to the worker system.
+Add strategic tension and visibility to the worker system.
 
 **Scope:**
 - Staff Hiring Pool Lite: cap hire count per worker type per refinery level
-- Midgame Goal Expansion: add 1–2 milestones between Tier 1 and Tier 2 contracts
 - Visual Workers: simple colored token or icon per worker type in StaffPanel
+- Midgame Goal Expansion: 1–2 milestones between Tier 1 and Tier 2
 
-**Why now:** Workers are rated 3/5 after the Feedback Pass. Hiring tension and visual presence are the top remaining gaps.
+**Why now:** Workers are rated 3/5. Hiring tension and visual presence are the top remaining gaps. Sales Agent and Operator interactions with 4 product lines make this more important.
 
 **Risk:** Low to medium. Hiring cap may require balance review on existing saves.
 
 ---
 
-### Option D — Final Playtest
+### Option C — Endgame Progression
 
-Structured play-through of the full game from Level 1 to win condition. Document findings before adding new systems.
+Add meaningful content and goals for the Level 10–15 range.
 
 **Scope:**
-- Code-trace analysis of v0.4 state (all three products, standing orders, 20 contracts)
-- Economic simulation with multipliers at key unlock levels (5, 7, 9)
-- Identify any new balance or UX issues introduced by the multi-product economy
-- Update PLAYTEST_NOTES.md with findings
+- 1–2 new milestones targeting Petrochemical Plant activity
+- Review win condition — does Level 15 need a new goal component?
+- Optional: new research items tied to advanced products (e.g. premium petrochemicals, efficient refining)
 
-**Why now:** The prototype has not had a full structured review since Phase 2A closeout. Multi-product economy + standing orders + final polish represent significant changes.
+**Why now:** The Level 10–15 gap currently has no new building unlocks except Petrochemical Plant at Level 15. Refinery upgrades in this range feel less purposeful.
 
-**Risk:** Zero. Documentation only.
+**Risk:** Low. Milestone and balance constants only. Save-compatible.
 
 ---
 
-### Option E — Mobile UI Redesign (Later)
+### Option D — Contract Expansion
+
+Add more contract variety for mid-to-late game, especially for the new product lines.
+
+**Scope:**
+- 1–2 additional Lubricant contracts (current: 3 one-time contracts, no standing order)
+- Review whether Jet Fuel needs a standing order now that manual batch is removed
+- Optional: mixed-product contract (requires both gasoline and one secondary product)
+
+**Why now:** Lubricants has no repeatable demand (no standing order). Jet Fuel lost its manual batch path — the standing order is the only repeatable demand.
+
+**Risk:** Low. Follows established contract patterns.
+
+---
+
+### Option E — Mobile UI (Later)
 
 Redesign the layout for mobile and tablet viewports.
 
-**Why later:** The current desktop-first layout is intentional for the prototype phase. Mobile is a future concern once content stabilizes.
+**Why later:** The current desktop-first layout is intentional for the prototype phase. ResourcePanel now has 8 cards — mobile layout needs dedicated planning before implementation.
 
 **Do not promote until:** Phase 3 content (Staff Training, Supplier Relationships) is planned or shipping.
 
@@ -173,6 +169,15 @@ These are out of scope for the current prototype phase.
 - Standing Orders UX/Balance Review (verdict A — Healthy; no balance pass needed)
 - Final Web Prototype Polish (number formatting, completed contract card compaction, contracts-list gap, standing orders visual separator)
 - Prototype v0.4 Milestone Closeout — Multi-Product Economy (documentation pass)
+- Product Expansion 1.0 — Multi-Product Framework (ProductInventory display, ResourcePanel extension)
+- Product Expansion 1.1 — Lubricant Plant (Level 5, $3,000, auto 10 crude→5 lubricants/5s, LubricantsPanel)
+- Product Expansion 1.2 — Lubricant Market (sell 1/10/all at $45/unit + Sales Agent bonus)
+- Product Expansion 1.3 — Lubricant Contracts (IDs 21–23, Tier 2–3, unlock Level 5)
+- Product Expansion 1.4 — Jet Fuel Plant (Level 10, $8,000, auto 20 crude→5 jet fuel/5s)
+- Product System Cleanup 1.0 — Jet Fuel production consolidated (removed manual batch, JetFuelPanel is now sell-only)
+- Product Expansion 1.5 — Petrochemical Plant (Level 15, $15,000, auto 30 crude→5 petrochemicals/5s, PetrochemicalsPanel)
+- Petrochemical Contracts (IDs 24–26, Tier 3, unlock Level 15, rewards $15k–$75k)
+- Documentation Update — Product Expansion Closeout v0.7
 
 # FUTURE DESIGN: Plant Module / Product Expansion System
 

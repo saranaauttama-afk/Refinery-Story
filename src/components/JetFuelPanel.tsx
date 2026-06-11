@@ -1,22 +1,23 @@
 import BilingualText from './BilingualText'
-import { JET_FUEL_BALANCE } from '../data/balance'
+import { JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE } from '../data/balance'
 import { text } from '../translations'
-
-// All jet fuel contract IDs. When every one is in completedContractIds the panel
-// collapses its production controls — there is no remaining demand for jet fuel.
-const JET_FUEL_CONTRACT_IDS = [19, 20]
 
 type JetFuelPanelProps = {
   refineryLevel: number
   jetFuel: number
-  crudeOil: number
-  completedContractIds: number[]
-  onProduceJetFuel: (amount: number) => void
+  jetFuelSellPrice: number
+  jetFuelPlantCount: number
+  onSellJetFuel: (amount: number) => void
 }
 
-function JetFuelPanel({ refineryLevel, jetFuel, crudeOil, completedContractIds, onProduceJetFuel }: JetFuelPanelProps) {
+function JetFuelPanel({
+  refineryLevel,
+  jetFuel,
+  jetFuelSellPrice,
+  jetFuelPlantCount,
+  onSellJetFuel,
+}: JetFuelPanelProps) {
   const isUnlocked = refineryLevel >= JET_FUEL_BALANCE.unlockLevel
-  const { batchSize, largeBatchSize, maxStorage } = JET_FUEL_BALANCE
 
   if (!isUnlocked) {
     return (
@@ -34,36 +35,8 @@ function JetFuelPanel({ refineryLevel, jetFuel, crudeOil, completedContractIds, 
     )
   }
 
-  const allContractsDone = JET_FUEL_CONTRACT_IDS.every((id) =>
-    completedContractIds.includes(id),
-  )
-
-  if (allContractsDone) {
-    return (
-      <section className="panel jetfuel-panel jetfuel-panel--done">
-        <p className="panel-kicker">
-          <BilingualText text={text.jetFuel.kicker} />
-        </p>
-        <h2>
-          <BilingualText text={text.jetFuel.title} />
-        </h2>
-        <p className="jetfuel-done-message">
-          <BilingualText text={text.jetFuel.allContractsDone} />
-        </p>
-        {jetFuel > 0 && (
-          <div className="jetfuel-inventory">
-            <BilingualText text={text.jetFuel.inventory(jetFuel, maxStorage)} />
-          </div>
-        )}
-      </section>
-    )
-  }
-
-  const isFull = jetFuel >= maxStorage
-  const spaceRemaining = maxStorage - jetFuel
-
-  const canProduceSmall = crudeOil >= batchSize && !isFull
-  const canProduceLarge = crudeOil >= largeBatchSize && spaceRemaining >= largeBatchSize
+  const canSellAny = jetFuel >= 1
+  const plantUnlocked = refineryLevel >= JET_FUEL_PLANT_BALANCE.unlockLevel
 
   return (
     <section className="panel jetfuel-panel">
@@ -74,52 +47,56 @@ function JetFuelPanel({ refineryLevel, jetFuel, crudeOil, completedContractIds, 
         <BilingualText text={text.jetFuel.title} />
       </h2>
 
-      <p className="jetfuel-hint">
-        <BilingualText text={text.jetFuel.hint} />
-      </p>
-
       <div className="jetfuel-inventory">
-        <BilingualText text={text.jetFuel.inventory(jetFuel, maxStorage)} />
-        <span className="jetfuel-crude-available">
-          {'  ·  '}
-          <BilingualText text={text.jetFuel.crudeAvailable(crudeOil)} />
-        </span>
+        <BilingualText text={text.jetFuel.inventory(jetFuel)} />
       </div>
+
+      {plantUnlocked && jetFuelPlantCount === 0 && (
+        <p className="jetfuel-no-plants">
+          <BilingualText text={text.jetFuel.noPlants} />
+        </p>
+      )}
 
       <div className="jetfuel-controls">
         <button
           type="button"
           className="action-button"
-          disabled={!canProduceSmall}
-          onClick={() => onProduceJetFuel(batchSize)}
+          disabled={!canSellAny}
+          onClick={() => onSellJetFuel(1)}
         >
           <BilingualText
-            text={
-              isFull
-                ? text.jetFuel.disabledFull
-                : !canProduceSmall
-                  ? text.jetFuel.disabledNoCrude(batchSize)
-                  : text.jetFuel.produceButton(batchSize)
-            }
+            text={canSellAny ? text.jetFuel.sell1Button : text.jetFuel.sellDisabledEmpty}
           />
         </button>
         <button
           type="button"
           className="action-button"
-          disabled={!canProduceLarge}
-          onClick={() => onProduceJetFuel(largeBatchSize)}
+          disabled={!canSellAny}
+          onClick={() => onSellJetFuel(10)}
+        >
+          <BilingualText
+            text={canSellAny ? text.jetFuel.sell10Button : text.jetFuel.sellDisabledEmpty}
+          />
+        </button>
+        <button
+          type="button"
+          className="action-button"
+          disabled={!canSellAny}
+          onClick={() => onSellJetFuel(jetFuel)}
         >
           <BilingualText
             text={
-              isFull
-                ? text.jetFuel.disabledFull
-                : !canProduceLarge
-                  ? text.jetFuel.disabledNoCrude(largeBatchSize)
-                  : text.jetFuel.produceButton(largeBatchSize)
+              canSellAny
+                ? text.jetFuel.sellAllButton(jetFuel)
+                : text.jetFuel.sellDisabledEmpty
             }
           />
         </button>
       </div>
+
+      <p className="jetfuel-price-note helper-text">
+        <BilingualText text={text.jetFuel.priceLabel(jetFuelSellPrice)} />
+      </p>
     </section>
   )
 }

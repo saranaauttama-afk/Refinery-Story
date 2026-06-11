@@ -30,6 +30,9 @@ export const STARTING_BALANCE = {
 
 export const ECONOMY_BALANCE = {
   gasolinePrice: 18,
+  lubricantPrice: 45,
+  jetFuelPrice: 90,
+  petrochemicalsPrice: 150,
   crudeCost: 10,
   refineryUpgradeBaseCost: 55,
   refineryUpgradeLevelStep: 35,
@@ -70,6 +73,9 @@ export const BONUS_BALANCE = {
   chemistRpBonusRate: 0.1,
   logisticsCoordinatorShipmentBonusRate: 0.1,
   safetyOfficerPenaltyRate: 0.85,
+  fuelSpecialistSellPriceBonusRate: 0.05,
+  aviationSpecialistJetFuelBonusRate: 0.20,
+  chemicalEngineerPetrochemicalsBonusRate: 0.20,
 } as const
 
 export const EVENT_BALANCE = {
@@ -309,6 +315,68 @@ export const CONTRACT_BALANCE = [
     rpReward: 30,
     reputationReward: 40,
   },
+  // Lubricant contracts — Phase D product expansion
+  {
+    id: 21,
+    tier: 2,
+    unlockLevel: 5,
+    gasolineRequired: 0,
+    lubricantsRequired: 50,
+    reward: 3000,
+    rpReward: 10,
+    reputationReward: 8,
+  },
+  {
+    id: 22,
+    tier: 3,
+    unlockLevel: 5,
+    gasolineRequired: 0,
+    lubricantsRequired: 100,
+    reward: 7000,
+    rpReward: 20,
+    reputationReward: 15,
+  },
+  {
+    id: 23,
+    tier: 3,
+    unlockLevel: 5,
+    gasolineRequired: 0,
+    lubricantsRequired: 180,
+    reward: 13000,
+    rpReward: 35,
+    reputationReward: 25,
+  },
+  // Petrochemical contracts — Phase E product expansion
+  {
+    id: 24,
+    tier: 3,
+    unlockLevel: 15,
+    gasolineRequired: 0,
+    petrochemicalsRequired: 50,
+    reward: 15000,
+    rpReward: 55,
+    reputationReward: 65,
+  },
+  {
+    id: 25,
+    tier: 3,
+    unlockLevel: 15,
+    gasolineRequired: 0,
+    petrochemicalsRequired: 100,
+    reward: 35000,
+    rpReward: 100,
+    reputationReward: 110,
+  },
+  {
+    id: 26,
+    tier: 3,
+    unlockLevel: 15,
+    gasolineRequired: 0,
+    petrochemicalsRequired: 200,
+    reward: 75000,
+    rpReward: 160,
+    reputationReward: 180,
+  },
 ] as const
 
 export const BUILDING_UPGRADE_BALANCE = {
@@ -325,6 +393,44 @@ export const BUILDING_UPGRADE_BALANCE = {
   maintenanceWorkshopPenaltyRateByLevel: [0, 0.5, 0.35, 0.20],
   salesOfficeContractBonusRateByLevel: [0, 0.1, 0.2, 0.35],
 }
+
+// 5 seconds = 25 ticks at 200ms per tick
+export const LUBRICANT_PLANT_BALANCE = {
+  unlockLevel: 5,
+  cost: 3000,
+  // Crude consumed per plant per production cycle
+  crudePerCycle: 10,
+  // Lubricants produced per plant per production cycle
+  lubricantsPerCycle: 5,
+  // Production fires every N game ticks (25 ticks = 5 seconds at 200ms/tick)
+  intervalTicks: 25,
+  // Maximum lubricants inventory
+  maxStorage: 200,
+} as const
+
+export const JET_FUEL_PLANT_BALANCE = {
+  unlockLevel: 10,
+  cost: 8000,
+  // Crude consumed per plant per production cycle
+  crudePerCycle: 20,
+  // Jet fuel produced per plant per production cycle
+  jetFuelPerCycle: 5,
+  // Production fires every N game ticks (25 ticks = 5 seconds at 200ms/tick)
+  intervalTicks: 25,
+} as const
+
+export const PETROCHEMICAL_PLANT_BALANCE = {
+  unlockLevel: 15,
+  cost: 15000,
+  // Crude consumed per plant per production cycle
+  crudePerCycle: 30,
+  // Petrochemicals produced per plant per production cycle
+  petrochemicalsPerCycle: 5,
+  // Production fires every N game ticks (25 ticks = 5 seconds at 200ms/tick)
+  intervalTicks: 25,
+  // Maximum petrochemicals inventory
+  maxStorage: 200,
+} as const
 
 export const JET_FUEL_BALANCE = {
   // Crude consumed (and jet fuel produced) per small production action
