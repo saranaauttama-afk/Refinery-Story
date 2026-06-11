@@ -42,4 +42,34 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     name: text.data.events.efficientBatch.name,
     message: serializeBilingualText(text.data.events.efficientBatch.message),
   },
+  {
+    key: 'localNewsCoverage',
+    name: text.data.events.localNewsCoverage.name,
+    message: serializeBilingualText(text.data.events.localNewsCoverage.message),
+  },
+  {
+    key: 'supplierDiscount',
+    name: text.data.events.supplierDiscount.name,
+    message: serializeBilingualText(text.data.events.supplierDiscount.message),
+  },
+  {
+    key: 'equipmentInspection',
+    name: text.data.events.equipmentInspection.name,
+    message: serializeBilingualText(text.data.events.equipmentInspection.message),
+  },
+  {
+    key: 'workerSuggestion',
+    name: text.data.events.workerSuggestion.name,
+    message: serializeBilingualText(text.data.events.workerSuggestion.message),
+  },
+  {
+    key: 'storageContamination',
+    name: text.data.events.storageContamination.name,
+    message: serializeBilingualText(text.data.events.storageContamination.message),
+  },
+  {
+    key: 'communityVisit',
+    name: text.data.events.communityVisit.name,
+    message: serializeBilingualText(text.data.events.communityVisit.message),
+  },
 ]

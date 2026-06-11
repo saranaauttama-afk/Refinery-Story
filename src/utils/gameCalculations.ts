@@ -91,6 +91,7 @@ export function createInitialGameState(): GameState {
       operator: 0,
       mechanic: 0,
       salesAgent: 0,
+      safetyOfficer: 0,
       chemist: 0,
       logisticsCoordinator: 0,
     },
@@ -101,6 +102,14 @@ export function createInitialGameState(): GameState {
     everBoughtCrude: false,
     starterGuideDismissed: false,
     pendingShipments: [],
+    standingOrderCooldowns: {},
+    productInventory: {
+      gasoline: 0,
+      asphalt: 0,
+      jetFuel: 0,
+      lubricants: 0,
+      plasticPellets: 0,
+    },
   }
 }
 
@@ -136,6 +145,7 @@ function getEmptyWorkerCounts(): WorkerCounts {
     operator: 0,
     mechanic: 0,
     salesAgent: 0,
+    safetyOfficer: 0,
     chemist: 0,
     logisticsCoordinator: 0,
   }
@@ -245,23 +255,32 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const hasBetterPumps = game.unlockedResearchIds.includes('betterPumps')
   const hasAdvancedDistillation =
     game.unlockedResearchIds.includes('advancedDistillation')
+  const hasAdvancedProcessing =
+    game.unlockedResearchIds.includes('advancedProcessing')
   const hasBiggerTanks = game.unlockedResearchIds.includes('biggerTanks')
   const hasIndustrialStorage =
     game.unlockedResearchIds.includes('industrialStorage')
+  const hasStorageOptimization =
+    game.unlockedResearchIds.includes('storageOptimization')
   const hasPremiumFuel = game.unlockedResearchIds.includes('premiumFuel')
   const hasPremiumContracts =
     game.unlockedResearchIds.includes('premiumContracts')
+  const hasContractAnalytics =
+    game.unlockedResearchIds.includes('contractAnalytics')
+  const hasSaferOperations =
+    game.unlockedResearchIds.includes('saferOperations')
   const activeWorkers = getActiveWorkers(game.workerCounts)
   const operatorCount = game.workerCounts.operator
   const mechanicCount = game.workerCounts.mechanic
   const salesAgentCount = game.workerCounts.salesAgent
   const chemistCount = game.workerCounts.chemist ?? 0
-  const laboratoryCount = buildingCounts.laboratory
-  const maintenanceWorkshopCount = buildingCounts.maintenanceWorkshop
-  const salesOfficeCount = buildingCounts.salesOffice
+  const safetyOfficerCount = game.workerCounts.safetyOfficer ?? 0
   let crudeTankStorageTotal = 0
   let productTankStorageTotal = 0
   let distillationUpgradeBonusRate = 0
+  let laboratoryRpBonusTotal = 0
+  let workshopPenaltyMultiplier = 1
+  let salesOfficeContractBonusTotal = 0
   for (let i = 0; i < game.grid.length; i++) {
     const cell = game.grid[i]
     if (!cell) continue
@@ -273,6 +292,15 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     } else if (cell === 'distillationUnit') {
       distillationUpgradeBonusRate +=
         BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel[level] ?? 0
+    } else if (cell === 'laboratory') {
+      laboratoryRpBonusTotal +=
+        BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[level] ?? 0.1
+    } else if (cell === 'maintenanceWorkshop') {
+      workshopPenaltyMultiplier *=
+        BUILDING_UPGRADE_BALANCE.maintenanceWorkshopPenaltyRateByLevel[level] ?? 0.5
+    } else if (cell === 'salesOffice') {
+      salesOfficeContractBonusTotal +=
+        BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1
     }
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
@@ -283,7 +311,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     1 + comboStats.crudeToProduct * BONUS_BALANCE.adjacencyBonusRate
   const researchStorageBonus =
     (hasBiggerTanks ? STORAGE_BALANCE.biggerTanksStorageBonus : 0) +
-    (hasIndustrialStorage ? STORAGE_BALANCE.industrialStorageBonus : 0)
+    (hasIndustrialStorage ? STORAGE_BALANCE.industrialStorageBonus : 0) +
+    (hasStorageOptimization ? STORAGE_BALANCE.storageOptimizationBonus : 0)
   const workerStorageBonus =
     mechanicCount * STORAGE_BALANCE.mechanicStorageBonus
   const maxCrudeStorage =
@@ -304,7 +333,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     (hasBetterPumps ? 1 + BONUS_BALANCE.betterPumpsBonusRate : 1) *
     (hasAdvancedDistillation
       ? 1 + BONUS_BALANCE.advancedDistillationBonusRate
-      : 1)
+      : 1) *
+    (hasAdvancedProcessing ? 1 + BONUS_BALANCE.advancedProcessingBonusRate : 1)
   const workerProductionMultiplier =
     1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate
   const productionInterval = Math.max(
@@ -326,19 +356,23 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     ? 1 + BONUS_BALANCE.premiumContractsBonusRate
     : 1
   const specialBuildingContractRewardMultiplier =
-    1 + salesOfficeCount * BONUS_BALANCE.salesOfficeContractBonusRate
+    1 + salesOfficeContractBonusTotal
   const contractRewardMultiplier =
     reputationContractRewardMultiplier *
     researchContractRewardMultiplier *
     specialBuildingContractRewardMultiplier
   const specialBuildingRpRewardMultiplier =
-    1 + laboratoryCount * BONUS_BALANCE.laboratoryRpBonusRate
+    1 + laboratoryRpBonusTotal
   const chemistRpMultiplier = 1 + chemistCount * BONUS_BALANCE.chemistRpBonusRate
-  const contractRpRewardMultiplier = specialBuildingRpRewardMultiplier * chemistRpMultiplier
-  const eventPenaltyMultiplier = Math.pow(
-    BONUS_BALANCE.maintenanceWorkshopPenaltyRate,
-    maintenanceWorkshopCount,
-  )
+  const researchContractRpMultiplier = hasContractAnalytics
+    ? 1 + BONUS_BALANCE.contractAnalyticsRpBonusRate
+    : 1
+  const contractRpRewardMultiplier =
+    specialBuildingRpRewardMultiplier * chemistRpMultiplier * researchContractRpMultiplier
+  const eventPenaltyMultiplier =
+    workshopPenaltyMultiplier *
+    Math.pow(BONUS_BALANCE.safetyOfficerPenaltyRate, safetyOfficerCount) *
+    (hasSaferOperations ? BONUS_BALANCE.saferOperationsPenaltyRate : 1)
   const researchSellPriceBonus = hasPremiumFuel
     ? BONUS_BALANCE.premiumFuelSellPriceBonus
     : 0
@@ -513,6 +547,117 @@ export function applyMilestones(game: GameState) {
     }
   }
 
+  if (
+    !nextGame.completedMilestoneKeys.includes('upgradeBuilder') &&
+    nextGame.gridLevels.some((l) => l >= 2)
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneUpgradeBuilder)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.upgradeBuilderMoneyReward,
+      researchPoints: nextGame.researchPoints + MILESTONE_BALANCE.upgradeBuilderRpReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'upgradeBuilder'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('reputedSupplier') &&
+    nextGame.reputation >= 50
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneReputedSupplier)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.reputedSupplierMoneyReward,
+      researchPoints: nextGame.researchPoints + MILESTONE_BALANCE.reputedSupplierRpReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'reputedSupplier'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('industrialProducer') &&
+    nextGame.totalGasolineProduced >= 500
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneIndustrialProducer)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.industrialProducerMoneyReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'industrialProducer'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('refineryLevel5') &&
+    nextGame.refineryLevel >= 5
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneRefineryLevel5)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.refineryLevel5MoneyReward,
+      reputation: nextGame.reputation + MILESTONE_BALANCE.refineryLevel5ReputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'refineryLevel5'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('researchAdvanced') &&
+    nextGame.unlockedResearchCount >= 3
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneResearchAdvanced)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.researchAdvancedMoneyReward,
+      reputation: nextGame.reputation + MILESTONE_BALANCE.researchAdvancedReputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'researchAdvanced'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('contractVeteran') &&
+    nextGame.completedContractCount >= 10
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneContractVeteran)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.contractVeteranMoneyReward,
+      researchPoints: nextGame.researchPoints + MILESTONE_BALANCE.contractVeteranRpReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'contractVeteran'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('tierThreeContractor') &&
+    CONTRACTS.some((c) => c.tier === 3 && nextGame.completedContractIds.includes(c.id))
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneTierThreeContractor)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.tierThreeContractorMoneyReward,
+      reputation: nextGame.reputation + MILESTONE_BALANCE.tierThreeContractorReputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'tierThreeContractor'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('fullWorkforce') &&
+    Object.values(nextGame.workerCounts).every((count) => count > 0)
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneFullWorkforce)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.fullWorkforceMoneyReward,
+      reputation: nextGame.reputation + MILESTONE_BALANCE.fullWorkforceReputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'fullWorkforce'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
   return nextGame
 }
 
@@ -604,13 +749,75 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     }
   }
 
-  // efficientBatch
+  if (event.key === 'efficientBatch') {
+    return {
+      ...game,
+      gasoline: Math.min(
+        stats.maxGasolineStorage,
+        game.gasoline + EVENT_BALANCE.efficientBatchGasolineAmount,
+      ),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'localNewsCoverage') {
+    return {
+      ...game,
+      reputation: game.reputation + EVENT_BALANCE.localNewsCoverageReputationGain,
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'supplierDiscount') {
+    return {
+      ...game,
+      crudeOil: Math.min(
+        stats.maxCrudeStorage,
+        game.crudeOil + EVENT_BALANCE.supplierDiscountCrudeAmount,
+      ),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'equipmentInspection') {
+    return {
+      ...game,
+      money: Math.max(0, game.money - EVENT_BALANCE.equipmentInspectionMoneyCost),
+      reputation: game.reputation + EVENT_BALANCE.equipmentInspectionReputationGain,
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'workerSuggestion') {
+    return {
+      ...game,
+      researchPoints: game.researchPoints + EVENT_BALANCE.workerSuggestionRpGain,
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'storageContamination') {
+    const gasolineLoss = Math.floor(
+      EVENT_BALANCE.storageContaminationGasolineLoss * stats.eventPenaltyMultiplier,
+    )
+    return {
+      ...game,
+      gasoline: Math.max(0, game.gasoline - gasolineLoss),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  // communityVisit
   return {
     ...game,
-    gasoline: Math.min(
-      stats.maxGasolineStorage,
-      game.gasoline + EVENT_BALANCE.efficientBatchGasolineAmount,
-    ),
+    money: Math.max(0, game.money - EVENT_BALANCE.communityVisitMoneyCost),
+    reputation: game.reputation + EVENT_BALANCE.communityVisitReputationGain,
     lastEventMessage: event.message,
     activityLog: addLog(game.activityLog, event.message),
   }
@@ -693,9 +900,9 @@ export function applyChoiceEventOption(
         ...game,
         crudeOil: Math.min(
           stats.maxCrudeStorage,
-          game.crudeOil + 100,
+          game.crudeOil + 50,
         ),
-        reputation: Math.max(0, game.reputation - 5),
+        reputation: Math.max(0, game.reputation - 8),
         activityLog: addLog(game.activityLog, logMessage),
       }
     }
@@ -722,25 +929,169 @@ export function applyChoiceEventOption(
     }
   }
 
-  // workerRecruitment
-  if (option === 'A') {
+  if (event.key === 'workerRecruitment') {
+    if (option === 'A') {
+      return applyMilestones({
+        ...game,
+        totalWorkersHired: game.totalWorkersHired + 1,
+        workerCounts: {
+          ...game.workerCounts,
+          operator: game.workerCounts.operator + 1,
+        },
+        activityLog: addLog(game.activityLog, logMessage),
+      })
+    }
     return applyMilestones({
       ...game,
       totalWorkersHired: game.totalWorkersHired + 1,
       workerCounts: {
         ...game.workerCounts,
-        operator: game.workerCounts.operator + 1,
+        mechanic: game.workerCounts.mechanic + 1,
       },
       activityLog: addLog(game.activityLog, logMessage),
     })
   }
-  return applyMilestones({
+
+  if (event.key === 'equipmentEmergency') {
+    const stats = calculateDerivedStats(game)
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 600),
+        gasoline: Math.min(stats.maxGasolineStorage, game.gasoline + 20),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      crudeOil: Math.max(0, game.crudeOil - 20),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'governmentIncentive') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: game.money + 1500,
+        reputation: Math.max(0, game.reputation - 10),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: game.reputation + 25,
+      researchPoints: game.researchPoints + 5,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'qualityAlert') {
+    if (option === 'A') {
+      return {
+        ...game,
+        gasoline: Math.max(0, game.gasoline - 20),
+        reputation: game.reputation + 15,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: Math.max(0, game.reputation - 10),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'supplyChainDelay') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 400),
+        crudeOil: Math.min(stats.maxCrudeStorage, game.crudeOil + 30),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: game.reputation + 5,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'investorVisit') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 300),
+        reputation: game.reputation + 20,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: Math.max(0, game.reputation - 5),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'oldEquipmentSale') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: game.money + 800,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      crudeOil: Math.min(stats.maxCrudeStorage, game.crudeOil + 30),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'trainingRequest') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 500),
+        researchPoints: game.researchPoints + 8,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'communityComplaint') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 350),
+        reputation: game.reputation + 15,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: Math.max(0, game.reputation - 12),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  // rushOrder
+  if (option === 'A') {
+    return {
+      ...game,
+      gasoline: Math.max(0, game.gasoline - 30),
+      money: game.money + 800,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+  return {
     ...game,
-    totalWorkersHired: game.totalWorkersHired + 1,
-    workerCounts: {
-      ...game.workerCounts,
-      mechanic: game.workerCounts.mechanic + 1,
-    },
+    reputation: game.reputation + 10,
     activityLog: addLog(game.activityLog, logMessage),
-  })
+  }
 }

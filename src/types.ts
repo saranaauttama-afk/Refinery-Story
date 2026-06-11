@@ -3,6 +3,12 @@ export type BilingualTextValue = {
   th: string
 }
 
+// Product types — only gasoline is actively used in Phase A.
+// asphalt, jetFuel, lubricants, plasticPellets are placeholders for future phases.
+export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'plasticPellets'
+
+export type ProductInventory = Record<ProductKey, number>
+
 export type BuildingType =
   | 'crudeTank'
   | 'distillationUnit'
@@ -19,6 +25,10 @@ export type GameState = {
   reputation: number
   crudeOil: number
   gasoline: number
+  // Phase A foundation: future product inventory.
+  // Only gasoline is active. Others are unused placeholders.
+  // game.gasoline remains the source of truth for all current gameplay.
+  productInventory: ProductInventory
   refineryLevel: number
   productionProgress: number
   tickCount: number
@@ -39,6 +49,9 @@ export type GameState = {
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
   pendingShipments: PendingShipment[]
+  // Maps standing order key → tick at which the order becomes available again.
+  // Absent key means the order is currently available (never fulfilled or cooldown expired).
+  standingOrderCooldowns: Partial<Record<StandingOrderKey, number>>
 }
 
 export type BuildingConfig = {
@@ -61,6 +74,10 @@ export type Contract = {
   tier: 1 | 2 | 3
   unlockLevel: number
   gasolineRequired: number
+  // Phase B: asphalt contracts use this field instead of gasolineRequired
+  asphaltRequired?: number
+  // Phase C: jet fuel contracts
+  jetFuelRequired?: number
   reward: number
   rpReward: number
   reputationReward: number
@@ -88,6 +105,10 @@ export type ResearchKey =
   | 'advancedDistillation'
   | 'industrialStorage'
   | 'premiumContracts'
+  | 'advancedProcessing'
+  | 'storageOptimization'
+  | 'contractAnalytics'
+  | 'saferOperations'
 
 export type ResearchItem = {
   key: ResearchKey
@@ -111,6 +132,7 @@ export type WorkerType =
   | 'salesAgent'
   | 'chemist'
   | 'logisticsCoordinator'
+  | 'safetyOfficer'
 
 export type WorkerCounts = Record<WorkerType, number>
 
@@ -120,6 +142,7 @@ export type WorkerConfig = {
   cost: number
   description: BilingualTextValue
   unlockLevel?: number
+  tier?: 1 | 2 | 3
 }
 
 export type ActiveWorkerItem = WorkerConfig & {
@@ -135,6 +158,12 @@ export type RandomEventKey =
   | 'safetyInspection'
   | 'equipmentWear'
   | 'efficientBatch'
+  | 'localNewsCoverage'
+  | 'supplierDiscount'
+  | 'equipmentInspection'
+  | 'workerSuggestion'
+  | 'storageContamination'
+  | 'communityVisit'
 
 export type RandomEvent = {
   key: RandomEventKey
@@ -146,6 +175,15 @@ export type ChoiceEventKey =
   | 'supplierNegotiation'
   | 'researchGrant'
   | 'workerRecruitment'
+  | 'equipmentEmergency'
+  | 'governmentIncentive'
+  | 'qualityAlert'
+  | 'supplyChainDelay'
+  | 'investorVisit'
+  | 'oldEquipmentSale'
+  | 'trainingRequest'
+  | 'communityComplaint'
+  | 'rushOrder'
 
 export type ChoiceEvent = {
   key: ChoiceEventKey
@@ -155,7 +193,12 @@ export type ChoiceEvent = {
   optionB: BilingualTextValue
 }
 
-export type ShipmentKey = 'localTruck' | 'coastalTanker' | 'importedShip'
+export type ShipmentKey =
+  | 'miniDelivery'
+  | 'localTruck'
+  | 'coastalTanker'
+  | 'importedShip'
+  | 'tankerConvoy'
 
 export type PendingShipment = {
   id: number
@@ -163,11 +206,21 @@ export type PendingShipment = {
   arrivesAt: number
 }
 
+export type StandingOrderKey = 'asphaltMaintenance' | 'jetFuelCharter'
+
 export type MilestoneKey =
   | 'firstFuel'
   | 'smallSupplier'
   | 'growingRefinery'
   | 'researchBeginner'
+  | 'upgradeBuilder'
+  | 'reputedSupplier'
+  | 'industrialProducer'
+  | 'refineryLevel5'
+  | 'researchAdvanced'
+  | 'contractVeteran'
+  | 'tierThreeContractor'
+  | 'fullWorkforce'
 
 export type Milestone = {
   key: MilestoneKey

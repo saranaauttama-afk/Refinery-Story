@@ -34,37 +34,27 @@ function StatsPanel({
       <dl className="stats-list">
         <div>
           <dt>
-            <BilingualText text={text.stats.productionRate} />
-          </dt>
-          <dd>
-            <BilingualText
-              text={text.stats.productionRateValue(productionRate.toFixed(2))}
-            />
-          </dd>
-        </div>
-        <div>
-          <dt>
             <BilingualText text={text.stats.sellPrice} />
           </dt>
-          <dd>${sellPrice}</dd>
+          <dd>${sellPrice.toLocaleString()}</dd>
         </div>
         <div>
           <dt>
             <BilingualText text={text.stats.maxCrude} />
           </dt>
-          <dd>{maxCrudeStorage}</dd>
+          <dd>{maxCrudeStorage.toLocaleString()}</dd>
         </div>
         <div>
           <dt>
             <BilingualText text={text.stats.maxGasoline} />
           </dt>
-          <dd>{maxGasolineStorage}</dd>
+          <dd>{maxGasolineStorage.toLocaleString()}</dd>
         </div>
         <div>
           <dt>
             <BilingualText text={text.stats.openCells} />
           </dt>
-          <dd>{availableSpace}</dd>
+          <dd>{availableSpace} cells</dd>
         </div>
       </dl>
     </article>

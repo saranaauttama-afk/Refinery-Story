@@ -51,10 +51,16 @@ function StarterGuidePanel({
       </div>
 
       <div className="starter-steps">
-        <Step label={text.starterGuide.step1} done={everBoughtCrude} />
-        <Step label={text.starterGuide.step2} done={hasProducedGasoline} />
+        <Step label={text.starterGuide.step1} done={hasProducedGasoline} />
+        <Step label={text.starterGuide.step2} done={everBoughtCrude} />
         <Step label={text.starterGuide.step3} done={hasCompletedContract} />
       </div>
+
+      {!allDone && (
+        <p className="starter-guide-hint">
+          <BilingualText text={text.starterGuide.hint} />
+        </p>
+      )}
 
       {allDone && (
         <p className="starter-guide-all-done">

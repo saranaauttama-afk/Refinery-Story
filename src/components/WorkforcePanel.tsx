@@ -1,9 +1,36 @@
-import type { ActiveWorkerItem } from '../types'
+import type { ActiveWorkerItem, BilingualTextValue, WorkerType } from '../types'
+import { BONUS_BALANCE, STORAGE_BALANCE } from '../data/balance'
 import BilingualText from './BilingualText'
 import { text } from '../translations'
 
 type WorkforcePanelProps = {
   activeWorkers: ActiveWorkerItem[]
+}
+
+function getWorkerActiveBonus(key: WorkerType, count: number): BilingualTextValue | null {
+  if (count === 0) return null
+  switch (key) {
+    case 'operator':
+      return text.workforce.bonusOperator(
+        Math.round(count * BONUS_BALANCE.operatorProductionBonusRate * 100),
+      )
+    case 'mechanic':
+      return text.workforce.bonusMechanic(count * STORAGE_BALANCE.mechanicStorageBonus)
+    case 'salesAgent':
+      return text.workforce.bonusSalesAgent(count * BONUS_BALANCE.salesAgentSellPriceBonus)
+    case 'safetyOfficer':
+      return text.workforce.bonusSafetyOfficer(
+        Math.round(Math.pow(BONUS_BALANCE.safetyOfficerPenaltyRate, count) * 100),
+      )
+    case 'chemist':
+      return text.workforce.bonusChemist(
+        Math.round(count * BONUS_BALANCE.chemistRpBonusRate * 100),
+      )
+    case 'logisticsCoordinator':
+      return text.workforce.bonusLogistics(
+        Math.round(count * BONUS_BALANCE.logisticsCoordinatorShipmentBonusRate * 100),
+      )
+  }
 }
 
 function WorkforcePanel({ activeWorkers }: WorkforcePanelProps) {
@@ -33,19 +60,27 @@ function WorkforcePanel({ activeWorkers }: WorkforcePanelProps) {
         <div className="workforce-list">
           {activeWorkers
             .filter((w) => w.count > 0)
-            .map((worker) => (
-              <div key={worker.key} className="workforce-row">
-                <div className="workforce-identity">
-                  <strong>
-                    <BilingualText text={worker.name} />
-                  </strong>
-                  <span className="workforce-count-badge">×{worker.count}</span>
+            .map((worker) => {
+              const bonus = getWorkerActiveBonus(worker.key, worker.count)
+              return (
+                <div key={worker.key} className="workforce-row">
+                  <div className="workforce-identity">
+                    <strong>
+                      <BilingualText text={worker.name} />
+                    </strong>
+                    <span className="workforce-count-badge">×{worker.count}</span>
+                  </div>
+                  <p className="workforce-bonus">
+                    <BilingualText text={worker.description} />
+                  </p>
+                  {bonus && (
+                    <p className="worker-active-bonus">
+                      <BilingualText text={bonus} />
+                    </p>
+                  )}
                 </div>
-                <p className="workforce-bonus">
-                  <BilingualText text={worker.description} />
-                </p>
-              </div>
-            ))}
+              )
+            })}
         </div>
       )}
     </section>

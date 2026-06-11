@@ -9,6 +9,8 @@ type DevToolsPanelProps = {
   onAddGasoline: () => void
   onSetLevel5: () => void
   onSetLevel10: () => void
+  onTriggerEvent: () => void
+  onTriggerChoiceEvent: () => void
 }
 
 function DevToolsPanel({
@@ -19,6 +21,8 @@ function DevToolsPanel({
   onAddGasoline,
   onSetLevel5,
   onSetLevel10,
+  onTriggerEvent,
+  onTriggerChoiceEvent,
 }: DevToolsPanelProps) {
   return (
     <aside className="dev-tools-panel">
@@ -49,6 +53,12 @@ function DevToolsPanel({
         </button>
         <button type="button" className="action-button dev-tools-button" onClick={onSetLevel10}>
           <BilingualText text={text.devTools.setLevel10} />
+        </button>
+        <button type="button" className="action-button dev-tools-button" onClick={onTriggerEvent}>
+          <BilingualText text={text.devTools.triggerEvent} />
+        </button>
+        <button type="button" className="action-button dev-tools-button" onClick={onTriggerChoiceEvent}>
+          <BilingualText text={text.devTools.triggerChoiceEvent} />
         </button>
       </div>
     </aside>

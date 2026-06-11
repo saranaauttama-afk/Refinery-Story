@@ -40,6 +40,10 @@ function ProductionPanel({
   const space = maxCrudeStorage - crudeOil
   const fillAmount = Math.max(0, Math.min(canAfford, space))
   const canBuyAny = fillAmount > 0
+  const buyDisabledLabel =
+    space <= 0
+      ? text.production.buyDisabledTankFull
+      : text.production.buyDisabledNoFunds
 
   const canSellAny = gasoline >= 1
 
@@ -99,7 +103,7 @@ function ProductionPanel({
           onClick={() => onBuyCrudeAmount(10)}
           disabled={!canBuyAny}
         >
-          <BilingualText text={text.production.buyCrude10Button} />
+          <BilingualText text={canBuyAny ? text.production.buyCrude10Button : buyDisabledLabel} />
         </button>
         <button
           type="button"
@@ -107,7 +111,7 @@ function ProductionPanel({
           onClick={() => onBuyCrudeAmount(50)}
           disabled={!canBuyAny}
         >
-          <BilingualText text={text.production.buyCrude50Button} />
+          <BilingualText text={canBuyAny ? text.production.buyCrude50Button : buyDisabledLabel} />
         </button>
         <button
           type="button"
@@ -115,7 +119,9 @@ function ProductionPanel({
           onClick={() => onBuyCrudeAmount(fillAmount)}
           disabled={!canBuyAny}
         >
-          <BilingualText text={text.production.fillTankButton(fillAmount)} />
+          <BilingualText
+            text={canBuyAny ? text.production.fillTankButton(fillAmount) : buyDisabledLabel}
+          />
         </button>
       </div>
 
@@ -126,7 +132,9 @@ function ProductionPanel({
           onClick={() => onSellGasolineAmount(10)}
           disabled={!canSellAny}
         >
-          <BilingualText text={text.production.sellGasoline10Button} />
+          <BilingualText
+            text={canSellAny ? text.production.sellGasoline10Button : text.production.sellDisabledEmpty}
+          />
         </button>
         <button
           type="button"
@@ -134,7 +142,9 @@ function ProductionPanel({
           onClick={() => onSellGasolineAmount(50)}
           disabled={!canSellAny}
         >
-          <BilingualText text={text.production.sellGasoline50Button} />
+          <BilingualText
+            text={canSellAny ? text.production.sellGasoline50Button : text.production.sellDisabledEmpty}
+          />
         </button>
         <button
           type="button"
@@ -142,7 +152,9 @@ function ProductionPanel({
           onClick={() => onSellGasolineAmount(gasoline)}
           disabled={!canSellAny}
         >
-          <BilingualText text={text.production.sellGasolineAllButton(gasoline)} />
+          <BilingualText
+            text={canSellAny ? text.production.sellGasolineAllButton(gasoline) : text.production.sellDisabledEmpty}
+          />
         </button>
       </div>
 

@@ -1,78 +1,16 @@
-# Current Task
+# CURRENT TASK: (none)
 
-Content Expansion 1: More Events and Staff.
+Prototype v0.4 Milestone Closeout is complete.
 
-## Overview
+## What Was Documented
 
-The game is playable, but events and staff feel too limited.
+- PLAYTEST_NOTES.md: Added v0.4 milestone summary (full system table, economic snapshot, open concerns, recommended next)
+- ROADMAP.md: Phase 1B marked Complete — Prototype v0.4; remaining concerns updated; Phase 2 planned list updated
+- BACKLOG.md: Recommended next options reorganized (removed completed Options B and D, added Final Playtest and Mobile UI Later)
+- TECH_DEBT.md: ContractsPanel concern updated to note partial improvement from Final Web Polish
 
-Goal:
-Add more variety without changing core systems.
+## No Source Code Changed
 
-## Add Random Events
+## What's Next
 
-Add 4 new simple random events:
-
-1. Market Demand Spike
-- +$750
-- Message: "Market demand increased. Money +$750."
-
-2. Safety Inspection
-- If reputation >= 50: +10 reputation
-- Else: -$300
-- Prevent money below 0
-
-3. Equipment Wear
-- -10 gasoline
-- Prevent gasoline below 0
-
-4. Efficient Batch
-- +30 gasoline
-- Clamp to max gasoline
-
-## Add Staff Types
-
-Add 2 new worker types:
-
-### Chemist
-Cost:
-$1500
-
-Bonus:
-+10% RP earned from contracts
-
-Unlock:
-Refinery Level 4
-
-### Logistics Coordinator
-Cost:
-$2000
-
-Bonus:
-+10% shipment crude received
-
-Unlock:
-Refinery Level 5
-
-## UI Requirements
-
-- Show new staff in Staff Panel
-- Show locked staff with unlock requirement
-- Show new staff in Workforce Summary after hiring
-- Update English and Thai labels
-
-## Technical Rules
-
-Keep existing systems working.
-
-Do not add:
-- Staff levels
-- Staff rarity
-- Staff salaries
-- Staff assignment
-- New shipment systems
-- Backend
-- Routing
-
-Build passes.
-Lint passes.
+See BACKLOG.md for recommended next options (Multi-Product Balance Pass 2, Lubricants Prototype, Staff Depth Lite, Final Playtest).

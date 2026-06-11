@@ -41,4 +41,32 @@ export const RESEARCH_ITEMS: ResearchItem[] = [
     cost: 100,
     description: text.data.researchItems.premiumContracts.description,
   },
+  // Tier 3 — late-midgame items
+  {
+    key: 'advancedProcessing',
+    name: text.data.researchItems.advancedProcessing.name,
+    prerequisite: 'advancedDistillation',
+    cost: 120,
+    description: text.data.researchItems.advancedProcessing.description,
+  },
+  {
+    key: 'storageOptimization',
+    name: text.data.researchItems.storageOptimization.name,
+    prerequisite: 'industrialStorage',
+    cost: 130,
+    description: text.data.researchItems.storageOptimization.description,
+  },
+  {
+    key: 'contractAnalytics',
+    name: text.data.researchItems.contractAnalytics.name,
+    prerequisite: 'premiumContracts',
+    cost: 150,
+    description: text.data.researchItems.contractAnalytics.description,
+  },
+  {
+    key: 'saferOperations',
+    name: text.data.researchItems.saferOperations.name,
+    cost: 90,
+    description: text.data.researchItems.saferOperations.description,
+  },
 ]

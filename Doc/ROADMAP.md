@@ -4,39 +4,88 @@
 
 Completed:
 
-* Buildings
-* Combos
-* Contracts
-* Research
-* Workers
-* Events
-* Milestones
-* Reputation
-* Save/Load
-* Expansion
-* Goal System
+- Buildings (place, remove, combo bonuses)
+- Contracts (3 tiers, 16 contracts)
+- Research (6 items, prerequisites)
+- Workers (6 types, tier grouping, locked states)
+- Random Events (14 events)
+- Choice Events (12 events)
+- Milestones (4)
+- Reputation (4 tiers, contract bonuses)
+- Save / Load (localStorage)
+- Grid Expansion (3x3, 4x4, 5x5)
+- Goal / Win Condition
+- Shipment System Phase 2 Lite (5 sizes, ETA, cost-per-unit, logistics bonus)
+- Building Upgrade Depth (Lv1–3 for all building types)
+- Balance Pass 1
+- Balance Pass 2 — Onboarding Fix (base storage raised, Starter Guide corrected)
+- Research Expansion Lite (10 research items total, 775 RP tree)
+- Balance Pass 3 — Post Research Expansion (storage optimization bonus, contract analytics RP rate)
+- Plant Module Foundation Phase A (ProductKey, ProductInventory types, productInventory in GameState, save migration defaults)
+- Product Expansion Prototype — Asphalt (AsphaltPanel, 2 contracts, manual batch, ContractsPanel multi-product support)
+- Asphalt Balance Pass (Contract 17 requirement 50→75, reward $3000→$2200, maxStorage 200→150)
+- Multi-product Contract Polish (product badges, structured Requires/Reward rows, getContractRequirement helper)
+- Product Expansion Prototype — Jet Fuel (JetFuelPanel, 2 contracts, manual batch, ContractsPanel + App.tsx extension)
+- Jet Fuel Balance Pass (maxStorage 150 → 200, unblocks Contract 20)
+- Secondary Product Idle UI Pass (AsphaltPanel and JetFuelPanel collapse to compact done state when all related contracts are fulfilled)
+- Standing Orders Phase 1 (asphaltMaintenance: 40 asphalt/3 min/$900; jetFuelCharter: 60 jet fuel/5 min/$2,200; cooldown saved in standingOrderCooldowns)
+- Standing Orders UX/Balance Review (verdict A — healthy; no balance pass needed)
+- Final Web Prototype Polish (toLocaleString formatting, completed contract cards compact, contracts-list gap 14→10px, standing orders amber separator)
 
 ---
 
-## Phase 2 - Depth
+## Phase 1B — Multi-Product Economy (Complete — Prototype v0.4)
 
-Planned:
+**Milestone: Refinery Story Prototype v0.4 — Multi-Product Economy**
 
-* Reputation Balance
-* Building Upgrade System
-* Staff Hiring Tier
-* Additional Choice Events
+Shipped: Gasoline (primary, auto-loop), Asphalt (Level 5, manual batch, 2 one-time contracts + 1 standing order), Jet Fuel (Level 7, manual batch, 2 one-time contracts + 1 standing order).
+
+Standing orders give asphalt and jet fuel persistent demand after one-time contracts are complete.
+
+Remaining open concerns (not blocking, deferred to next phase):
+- No full plant module selection UI (Kairosoft-style module picker per distillation unit)
+- Lubricants and Plastic Pellets are defined in ProductKey but are not yet playable
+- ContractsPanel vertical length (18+ cards at late game — partially improved by Final Polish)
+- Asphalt Contract 18 and Jet Fuel Contract 19 profit/crude are 2–3× above gasoline T3 (one-time, low impact; deferred to Multi-Product Balance Pass 2)
+
+Recommended next for multi-product economy:
+- Multi-Product Balance Pass 2 (review Asphalt 18 and Jet Fuel 19 profit/crude; optional if review deems healthy)
+- Lubricants Prototype (third secondary product, follows Asphalt/Jet Fuel + Standing Orders pattern)
+- Full Plant Module Selection Design (design doc — define per-cell module picker for future implementation)
 
 ---
 
-## Phase 3 - Management
+## Phase 2 - Feel and Identity
+
+Completed:
+
+- Worker Feedback Pass (visible bonus text per hire in WorkforcePanel and StaffPanel)
+- Polish Pass 1 — UI Clarity (disabled-reason labels, contract tier grouping, milestone badge cleanup, dev tools separation)
 
 Planned:
 
-* Crude Shipment System
-* Supplier System
-* Staff Training
-* Staff Levels
+- Multi-Product Balance Pass 2 (Asphalt 18 / Jet Fuel 19 profit/crude review)
+- Lubricants Prototype (third secondary product)
+- Staff Depth Lite (hiring tension, visual workers, midgame goal expansion)
+- Visual Workers / Pixel Placeholder
+- Building Identity Pass (icons or color coding per type)
+- Staff Hiring Pool Lite (limited hire slots per session)
+- Shipment Buy Button Reduction Plan (reduce clutter, promote shipments)
+- Midgame Goal Expansion (new milestone or mid-tier objective)
+- Final Playtest (structured play-through, document findings before Phase 3)
+
+---
+
+## Phase 3 - Depth
+
+Planned:
+
+- Staff Training System
+- Staff Level System
+- Rare / Specialist Employees
+- Worker Assignment to Buildings
+- Supplier Relationship System
+- Crude Shipment Enhancements
 
 ---
 
@@ -44,10 +93,10 @@ Planned:
 
 Planned:
 
-* Pixel Art Buildings
-* Pixel Workers
-* Animation
-* Better UI
+- Pixel Art Buildings
+- Pixel Workers on Grid
+- Animation (production cycle, events)
+- Better UI Layout and Icons
 
 ---
 
@@ -55,7 +104,7 @@ Planned:
 
 Planned:
 
-* Balance Pass
-* Content Expansion
-* Bug Fixing
-* Final UI
+- Final Balance Pass
+- Full Content Review
+- Bug Fixing
+- Final UI Polish

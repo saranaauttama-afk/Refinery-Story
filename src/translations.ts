@@ -144,10 +144,13 @@ export const text = {
     buyCrude50Button: bilingual('Buy 50 Crude', 'ซื้อน้ำมันดิบ 50 หน่วย'),
     fillTankButton: (amount: number) =>
       bilingual(`Fill Tank (+${amount})`, `เติมถัง (+${amount})`),
+    buyDisabledTankFull: bilingual('Tank Full', 'ถังเต็มแล้ว'),
+    buyDisabledNoFunds: bilingual('No Funds', 'ไม่มีเงิน'),
     sellGasoline10Button: bilingual('Sell 10 Gasoline', 'ขายเบนซิน 10 หน่วย'),
     sellGasoline50Button: bilingual('Sell 50 Gasoline', 'ขายเบนซิน 50 หน่วย'),
     sellGasolineAllButton: (amount: number) =>
       bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('No Gasoline', 'ไม่มีเบนซิน'),
     upgradeRefineryButton: (cost: number) =>
       bilingual(`Upgrade Refinery ($${cost})`, `อัปเกรดโรงกลั่น ($${cost})`),
   },
@@ -156,16 +159,16 @@ export const text = {
     title: (level: number) =>
       bilingual(`Refinery Level ${level}`, `ระดับโรงกลั่น ${level}`),
     helper: bilingual(
-      'Current production rate after buildings, upgrades, research, and staff.',
-      'อัตราการผลิตปัจจุบันหลังรวมอาคาร อัปเกรด วิจัย และพนักงาน',
+      'Rate includes all building, research & staff bonuses.',
+      'อัตราการผลิตรวมโบนัสจากอาคาร วิจัย และพนักงาน',
     ),
     productionRate: bilingual('Production rate', 'อัตราการผลิต'),
     productionRateValue: (value: string) =>
       bilingual(`${value} gasoline/sec`, `${value} เบนซินต่อวินาที`),
     sellPrice: bilingual('Sell price', 'ราคาขาย'),
-    maxCrude: bilingual('Max crude', 'ความจุน้ำมันดิบสูงสุด'),
-    maxGasoline: bilingual('Max gasoline', 'ความจุเบนซินสูงสุด'),
-    openCells: bilingual('Open cells', 'ช่องว่าง'),
+    maxCrude: bilingual('Crude cap', 'ความจุน้ำมันดิบ'),
+    maxGasoline: bilingual('Gasoline cap', 'ความจุเบนซิน'),
+    openCells: bilingual('Grid cells free', 'ช่องตารางว่าง'),
   },
   refineryProgression: {
     kicker: bilingual('Refinery', 'โรงกลั่น'),
@@ -251,8 +254,6 @@ export const text = {
     kicker: bilingual('Events', 'เหตุการณ์'),
     title: bilingual('Refinery Events', 'เหตุการณ์โรงกลั่น'),
     lastEvent: bilingual('Last event', 'เหตุการณ์ล่าสุด'),
-    triggerButton: bilingual('Trigger Test Event', 'เรียกเหตุการณ์ทดสอบ'),
-    triggerChoiceButton: bilingual('Trigger Choice Event', 'เรียกเหตุการณ์ตัดสินใจ'),
     noEvent: bilingual('No refinery event yet.', 'ยังไม่มีเหตุการณ์โรงกลั่น'),
   },
   save: {
@@ -288,6 +289,8 @@ export const text = {
       bilingual(`Reward: ${reward}`, `รางวัล: ${reward}`),
     completed: bilingual('Completed', 'สำเร็จแล้ว'),
     inProgress: bilingual('In Progress', 'กำลังดำเนินการ'),
+    progressBadge: (done: number, total: number) =>
+      bilingual(`${done}/${total} complete`, `${done}/${total} สำเร็จ`),
   },
   research: {
     kicker: bilingual('Research', 'วิจัย'),
@@ -311,27 +314,176 @@ export const text = {
     title: bilingual('Refinery Crew', 'ทีมงานโรงกลั่น'),
     count: (count: number) => bilingual(`Count: ${count}`, `จำนวน: ${count}`),
     cost: (cost: number) => bilingual(`Cost: $${cost}`, `ค่าใช้จ่าย: $${cost}`),
+    countAndCost: (count: number, cost: number) =>
+      bilingual(
+        `×${count} hired · $${cost.toLocaleString()} each`,
+        `จ้างแล้ว ×${count} · ค่าจ้าง $${cost.toLocaleString()}/คน`,
+      ),
     hireButton: bilingual('Hire', 'จ้าง'),
+    cantAfford: bilingual("Can't Afford", 'ไม่มีเงินพอ'),
     locked: bilingual('Locked', 'ถูกล็อก'),
     unlockAtLevel: (level: number) =>
       bilingual(
         `Unlock at Refinery Level ${level}`,
         `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
       ),
+    tiers: {
+      1: bilingual('Basic Staff', 'พนักงานพื้นฐาน'),
+      2: bilingual('Operations Staff', 'พนักงานปฏิบัติการ'),
+      3: bilingual('Specialist Staff', 'พนักงานเชี่ยวชาญ'),
+    },
   },
   workforce: {
     kicker: bilingual('Workforce', 'กำลังแรงงาน'),
     title: bilingual('Active Workforce', 'พนักงานที่ทำงาน'),
     totalStaff: (count: number) => bilingual(`${count} staff`, `${count} คน`),
     noStaff: bilingual('No staff hired yet.', 'ยังไม่มีพนักงาน'),
+    bonusOperator: (pct: number) =>
+      bilingual(`+${pct}% production speed`, `+${pct}% ความเร็วการผลิต`),
+    bonusMechanic: (storage: number) =>
+      bilingual(`+${storage} storage cap (crude & gasoline)`, `+${storage} ความจุเก็บน้ำมัน`),
+    bonusSalesAgent: (price: number) =>
+      bilingual(`+$${price} sell price per gasoline unit`, `+$${price} ต่อราคาขายเบนซิน`),
+    bonusSafetyOfficer: (pct: number) =>
+      bilingual(`Event penalties reduced to ${pct}%`, `ลดความเสียหายจากเหตุการณ์เหลือ ${pct}%`),
+    bonusChemist: (pct: number) =>
+      bilingual(`+${pct}% RP from contracts`, `+${pct}% RP จากสัญญา`),
+    bonusLogistics: (pct: number) =>
+      bilingual(`+${pct}% crude per shipment`, `+${pct}% น้ำมันดิบต่อการจัดส่ง`),
+  },
+  jetFuel: {
+    kicker: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
+    title: bilingual('Jet Fuel Processing', 'การผลิตเชื้อเพลิงอากาศยาน'),
+    inventory: (current: number, max: number) =>
+      bilingual(`Jet Fuel: ${current} / ${max}`, `เชื้อเพลิงอากาศยาน: ${current} / ${max}`),
+    produceButton: (amount: number) =>
+      bilingual(
+        `Process ×${amount} (${amount} crude)`,
+        `แปรรูป ×${amount} (${amount} น้ำมันดิบ)`,
+      ),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
+      ),
+    hint: bilingual(
+      'Jet Fuel uses crude from the same supply as gasoline and asphalt.',
+      'เชื้อเพลิงอากาศยานใช้น้ำมันดิบจากคลังเดียวกับเบนซินและแอสฟัลต์',
+    ),
+    crudeAvailable: (n: number) => bilingual(`Crude available: ${n}`, `น้ำมันดิบคงเหลือ: ${n}`),
+    disabledNoCrude: (needed: number) =>
+      bilingual(`Need ${needed} crude`, `ต้องการน้ำมันดิบ ${needed} หน่วย`),
+    disabledFull: bilingual('Storage full', 'คลังเต็ม'),
+    allContractsDone: bilingual(
+      'All jet fuel contracts fulfilled.',
+      'สัญญาเชื้อเพลิงอากาศยานทั้งหมดสำเร็จแล้ว',
+    ),
+    logProduced: (amount: number) =>
+      bilingual(
+        `Processed ${amount} crude into jet fuel.`,
+        `แปรรูปน้ำมันดิบ ${amount} หน่วยเป็นเชื้อเพลิงอากาศยาน`,
+      ),
+  },
+  asphalt: {
+    kicker: bilingual('Asphalt', 'แอสฟัลต์'),
+    title: bilingual('Asphalt Processing', 'การผลิตแอสฟัลต์'),
+    inventory: (current: number, max: number) =>
+      bilingual(`Asphalt: ${current} / ${max}`, `แอสฟัลต์: ${current} / ${max}`),
+    produceButton: (amount: number) =>
+      bilingual(
+        `Process ×${amount} (${amount} crude)`,
+        `แปรรูป ×${amount} (${amount} น้ำมันดิบ)`,
+      ),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level}`,
+      ),
+    hint: bilingual(
+      'Asphalt uses crude from the same supply as gasoline.',
+      'แอสฟัลต์ใช้น้ำมันดิบจากคลังเดียวกับเบนซิน',
+    ),
+    crudeAvailable: (n: number) => bilingual(`Crude available: ${n}`, `น้ำมันดิบคงเหลือ: ${n}`),
+    disabledNoCrude: (needed: number) =>
+      bilingual(`Need ${needed} crude`, `ต้องการน้ำมันดิบ ${needed} หน่วย`),
+    disabledFull: bilingual('Storage full', 'คลังเต็ม'),
+    allContractsDone: bilingual(
+      'All asphalt contracts fulfilled.',
+      'สัญญาแอสฟัลต์ทั้งหมดสำเร็จแล้ว',
+    ),
+    logProduced: (amount: number) =>
+      bilingual(
+        `Processed ${amount} crude into asphalt.`,
+        `แปรรูปน้ำมันดิบ ${amount} หน่วยเป็นแอสฟัลต์`,
+      ),
+  },
+  standingOrders: {
+    sectionTitle: bilingual('Standing Orders', 'คำสั่งซื้อประจำ'),
+    restocking: (minutes: number, seconds: number) =>
+      bilingual(
+        `Restocking — ${minutes}m ${seconds}s`,
+        `เติมสต็อก — ${minutes}น ${seconds}วิ`,
+      ),
+    fulfilled: (name: BilingualTextValue, reward: number) =>
+      bilingual(
+        `${name.en} order fulfilled. +$${reward.toLocaleString()}`,
+        `ส่งมอบคำสั่งซื้อ ${name.th} เรียบร้อย +$${reward.toLocaleString()}`,
+      ),
+    orders: {
+      asphaltMaintenance: {
+        name: bilingual('City Road Maintenance Bureau', 'สำนักงานบำรุงรักษาถนนเทศบาล'),
+        flavor: bilingual(
+          'Standing contract for municipal road repair crews.',
+          'สัญญาประจำสำหรับทีมซ่อมบำรุงถนนเทศบาล',
+        ),
+      },
+      jetFuelCharter: {
+        name: bilingual('Regional Air Charter Service', 'บริการเช่าเหมาลำอากาศยานภูมิภาค'),
+        flavor: bilingual(
+          'Standing fuel supply agreement with a regional charter operator.',
+          'สัญญาจัดหาเชื้อเพลิงประจำกับผู้ประกอบการเช่าเหมาลำภูมิภาค',
+        ),
+      },
+    },
   },
   contracts: {
     kicker: bilingual('Orders', 'คำสั่งซื้อ'),
-    title: bilingual('Fuel Contracts', 'สัญญาจัดส่งเชื้อเพลิง'),
+    title: bilingual('Supply Contracts', 'สัญญาจัดส่ง'),
     fulfillButton: bilingual('Fulfill Order', 'ส่งมอบสัญญา'),
+    needGasoline: (n: number) => bilingual(`Need ${n} more gasoline`, `ต้องการเบนซินอีก ${n} หน่วย`),
+    needAsphalt: (n: number) => bilingual(`Need ${n} more asphalt`, `ต้องการแอสฟัลต์อีก ${n} หน่วย`),
+    needJetFuel: (n: number) => bilingual(`Need ${n} more jet fuel`, `ต้องการเชื้อเพลิงอากาศยานอีก ${n} หน่วย`),
+    // Structured contract card fields (replaces prose summary)
+    productLabels: {
+      gasoline: bilingual('Gasoline', 'เบนซิน'),
+      asphalt: bilingual('Asphalt', 'แอสฟัลต์'),
+      jetFuel: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
+    },
+    requires: (amount: number, product: BilingualTextValue) =>
+      bilingual(
+        `Requires: ${amount} ${product.en}`,
+        `ต้องการ: ${product.th} ${amount} หน่วย`,
+      ),
+    rewards: (money: number, rp: number, rep: number) =>
+      bilingual(
+        `Reward: $${money.toLocaleString()} · ${rp} RP · ${rep} rep`,
+        `รางวัล: $${money.toLocaleString()} · ${rp} RP · ชื่อเสียง ${rep}`,
+      ),
+    asphaltSummary: (
+      asphaltRequired: number,
+      reward: number,
+      rpReward: number,
+      reputationReward: number,
+    ) =>
+      bilingual(
+        `Deliver ${asphaltRequired} asphalt for $${reward.toLocaleString()}, ${rpReward} RP, and ${reputationReward} reputation.`,
+        `ส่งมอบแอสฟัลต์ ${asphaltRequired} หน่วย เพื่อรับ $${reward.toLocaleString()}, ${rpReward} RP และชื่อเสียง ${reputationReward}`,
+      ),
     completedButton: bilingual('Completed', 'สำเร็จแล้ว'),
     lockedButton: bilingual('Locked', 'ยังล็อกอยู่'),
     tierLabel: (tier: number) => bilingual(`Tier ${tier}`, `ระดับ ${tier}`),
+    tierHeading: (tier: number) =>
+      bilingual(`── Tier ${tier} Contracts`, `── สัญญาระดับ ${tier}`),
     unlockAtLevel: (level: number) =>
       bilingual(
         `Unlock at Refinery Level ${level}`,
@@ -344,8 +496,8 @@ export const text = {
       reputationReward: number,
     ) =>
       bilingual(
-        `Deliver ${gasolineRequired} gasoline for $${reward}, ${rpReward} RP, and ${reputationReward} reputation.`,
-        `ส่งมอบเบนซิน ${gasolineRequired} หน่วย เพื่อรับ $${reward}, ${rpReward} RP และชื่อเสียง ${reputationReward}`,
+        `Deliver ${gasolineRequired} gasoline for $${reward.toLocaleString()}, ${rpReward} RP, and ${reputationReward} reputation.`,
+        `ส่งมอบเบนซิน ${gasolineRequired} หน่วย เพื่อรับ $${reward.toLocaleString()}, ${rpReward} RP และชื่อเสียง ${reputationReward}`,
       ),
     reputationStatusTitle: bilingual('Reputation Status', 'สถานะชื่อเสียง'),
     currentTier: (name: BilingualTextValue) =>
@@ -404,40 +556,55 @@ export const text = {
     buildings: {
       crudeTank: {
         name: bilingual('Crude Tank', 'ถังน้ำมันดิบ'),
-        description: bilingual('+25 max crude storage', '+25 ความจุน้ำมันดิบสูงสุด'),
+        role: bilingual('Storage Specialist', 'ผู้เชี่ยวชาญด้านการเก็บ'),
+        description: bilingual(
+          '+25 crude capacity. Stack multiples to buy in bulk and keep production fed.',
+          '+25 ความจุน้ำมันดิบ สร้างหลายถังเพื่อซื้อจำนวนมากและป้อนการผลิตต่อเนื่อง',
+        ),
       },
       distillationUnit: {
         name: bilingual('Distillation Unit', 'หน่วยกลั่น'),
-        description: bilingual('-120ms production time', '-120ms เวลาการผลิต'),
+        role: bilingual('Production Specialist', 'ผู้เชี่ยวชาญด้านการผลิต'),
+        description: bilingual(
+          '-120ms per cycle. Stack units to approach the minimum production limit.',
+          '-120ms ต่อรอบ สร้างหลายหน่วยเพื่อเข้าใกล้ขีดจำกัดการผลิตขั้นต่ำ',
+        ),
       },
       productTank: {
         name: bilingual('Product Tank', 'ถังเก็บผลิตภัณฑ์'),
-        description: bilingual('+25 max gasoline storage', '+25 ความจุเบนซินสูงสุด'),
+        role: bilingual('Distribution Specialist', 'ผู้เชี่ยวชาญด้านการจัดจำหน่าย'),
+        description: bilingual(
+          '+25 gasoline capacity. Larger inventory lets you fulfil bigger contracts.',
+          '+25 ความจุเบนซิน คลังขนาดใหญ่ช่วยให้รับสัญญาขนาดใหญ่ได้',
+        ),
       },
       laboratory: {
         name: bilingual('Laboratory', 'ห้องปฏิบัติการ'),
+        role: bilingual('Technology Specialist', 'ผู้เชี่ยวชาญด้านเทคโนโลยี'),
         description: bilingual(
-          '+10% research points earned from contracts',
-          '+10% คะแนนวิจัยที่ได้รับจากสัญญา',
+          '+10% RP from contracts. Upgrade for stronger research acceleration.',
+          '+10% RP จากสัญญา อัปเกรดเพื่อเร่งการวิจัยให้แรงขึ้น',
         ),
       },
       maintenanceWorkshop: {
         name: bilingual('Maintenance Workshop', 'โรงซ่อมบำรุง'),
+        role: bilingual('Reliability Specialist', 'ผู้เชี่ยวชาญด้านความน่าเชื่อถือ'),
         description: bilingual(
-          'Reduces negative event penalties by 50%',
-          'ลดผลเสียจากเหตุการณ์เชิงลบลง 50%',
+          'Absorbs operational shocks. Reduces negative event penalties by 50%.',
+          'รองรับแรงกระทบจากเหตุการณ์ ลดผลเสียจากเหตุการณ์เชิงลบลง 50%',
         ),
       },
       salesOffice: {
         name: bilingual('Sales Office', 'สำนักงานขาย'),
+        role: bilingual('Commercial Specialist', 'ผู้เชี่ยวชาญด้านการพาณิชย์'),
         description: bilingual(
-          '+10% contract money rewards',
-          '+10% รางวัลเงินจากสัญญา',
+          '+10% contract rewards. Closes deals at better rates across all tiers.',
+          '+10% รางวัลจากสัญญา ปิดดีลได้ดีขึ้นในทุกระดับสัญญา',
         ),
       },
     } satisfies Record<
       BuildingType,
-      { name: BilingualTextValue; description: BilingualTextValue }
+      { name: BilingualTextValue; description: BilingualTextValue; role: BilingualTextValue }
     >,
     workers: {
       operator: {
@@ -454,6 +621,10 @@ export const text = {
       salesAgent: {
         name: bilingual('Sales Agent', 'เจ้าหน้าที่ฝ่ายขาย'),
         description: bilingual('+3 gasoline sell price', '+3 ราคาขายเบนซิน'),
+      },
+      safetyOfficer: {
+        name: bilingual('Safety Officer', 'เจ้าหน้าที่ความปลอดภัย'),
+        description: bilingual('-15% event penalties per officer', '-15% ผลเสียจากเหตุการณ์ต่อคน'),
       },
       chemist: {
         name: bilingual('Chemist', 'นักเคมี'),
@@ -498,6 +669,22 @@ export const text = {
         name: bilingual('Premium Contracts', 'สัญญาพรีเมียม'),
         description: bilingual('+20% contract rewards', '+20% รางวัลจากสัญญา'),
       },
+      advancedProcessing: {
+        name: bilingual('Advanced Processing', 'การประมวลผลขั้นสูง'),
+        description: bilingual('+10% additional production rate', '+10% อัตราการผลิตเพิ่มเติม'),
+      },
+      storageOptimization: {
+        name: bilingual('Storage Optimization', 'การปรับคลังให้เหมาะสม'),
+        description: bilingual('+75 max crude and +75 max gasoline', '+75 ความจุน้ำมันดิบ และ +75 ความจุเบนซิน'),
+      },
+      contractAnalytics: {
+        name: bilingual('Contract Analytics', 'การวิเคราะห์สัญญา'),
+        description: bilingual('+15% RP from contracts', '+15% RP จากสัญญา'),
+      },
+      saferOperations: {
+        name: bilingual('Safer Operations', 'การดำเนินงานที่ปลอดภัยขึ้น'),
+        description: bilingual('Event penalties reduced by 15%', 'ลดผลเสียจากเหตุการณ์ 15%'),
+      },
     } satisfies Record<
       ResearchKey,
       { name: BilingualTextValue; description: BilingualTextValue }
@@ -526,6 +713,47 @@ export const text = {
       },
       7: {
         name: bilingual('Petrochemical Complex', 'ศูนย์ปิโตรเคมีครบวงจร'),
+      },
+      8: {
+        name: bilingual('Neighborhood Fuel Stop', 'ปั๊มน้ำมันในละแวกบ้าน'),
+      },
+      9: {
+        name: bilingual('Small Factory Supply', 'โรงงานขนาดเล็ก'),
+      },
+      10: {
+        name: bilingual('Emergency Fuel Request', 'คำสั่งซื้อฉุกเฉิน'),
+      },
+      11: {
+        name: bilingual('Regional Distributor Deal', 'ดีลผู้จัดจำหน่ายระดับภูมิภาค'),
+      },
+      12: {
+        name: bilingual('Government Reserve Order', 'คำสั่งซื้อสำรองราชการ'),
+      },
+      13: {
+        name: bilingual('Industrial Client Contract', 'สัญญาลูกค้าอุตสาหกรรม'),
+      },
+      14: {
+        name: bilingual('Export Trial Shipment', 'การส่งออกทดลอง'),
+      },
+      15: {
+        name: bilingual('High Reputation Partner', 'พันธมิตรชื่อเสียงสูง'),
+      },
+      16: {
+        name: bilingual('National Energy Supply', 'สัญญาพลังงานแห่งชาติ'),
+      },
+      // Asphalt contracts
+      17: {
+        name: bilingual('Road Repair Supplier', 'ผู้จัดหาวัสดุซ่อมถนน'),
+      },
+      18: {
+        name: bilingual('Airport Runway Project', 'โครงการลาดยางสนามบิน'),
+      },
+      // Jet Fuel contracts
+      19: {
+        name: bilingual('Charter Airline Supply', 'สัญญาเชื้อเพลิงสายการบินเช่าเหมาลำ'),
+      },
+      20: {
+        name: bilingual('Regional Airport Reserve', 'สำรองเชื้อเพลิงสนามบินภูมิภาค'),
       },
     } satisfies Record<number, { name: BilingualTextValue }>,
     milestones: {
@@ -559,7 +787,71 @@ export const text = {
           'Unlock 1 research item',
           'ปลดล็อกงานวิจัย 1 รายการ',
         ),
-        reward: '$500',
+        reward: '$500, +20 Rep',
+      },
+      upgradeBuilder: {
+        name: bilingual('First Upgrade', 'การอัปเกรดครั้งแรก'),
+        requirement: bilingual(
+          'Upgrade any building to Level 2',
+          'อัปเกรดอาคารใดก็ได้เป็นระดับ 2',
+        ),
+        reward: '$500, 5 RP',
+      },
+      reputedSupplier: {
+        name: bilingual('Trusted Name', 'ชื่อเสียงที่น่าเชื่อถือ'),
+        requirement: bilingual(
+          'Reach 50 reputation',
+          'สะสมชื่อเสียงให้ครบ 50',
+        ),
+        reward: '$800, 10 RP',
+      },
+      industrialProducer: {
+        name: bilingual('Industrial Producer', 'ผู้ผลิตระดับอุตสาหกรรม'),
+        requirement: bilingual(
+          'Produce 500 total gasoline',
+          'ผลิตเบนซินรวมให้ครบ 500 หน่วย',
+        ),
+        reward: '$1,200',
+      },
+      refineryLevel5: {
+        name: bilingual('Mid-Scale Operations', 'การดำเนินงานระดับกลาง'),
+        requirement: bilingual(
+          'Reach Refinery Level 5',
+          'พัฒนาโรงกลั่นถึงระดับ 5',
+        ),
+        reward: '$1,500, +20 Rep',
+      },
+      researchAdvanced: {
+        name: bilingual('Research Pioneer', 'ผู้บุกเบิกการวิจัย'),
+        requirement: bilingual(
+          'Unlock 3 research items',
+          'ปลดล็อกงานวิจัย 3 รายการ',
+        ),
+        reward: '$1,000, +15 Rep',
+      },
+      contractVeteran: {
+        name: bilingual('Contract Veteran', 'ทหารผ่านศึกสัญญา'),
+        requirement: bilingual(
+          'Complete 10 contracts',
+          'ทำสัญญาให้สำเร็จ 10 ฉบับ',
+        ),
+        reward: '$2,000, 15 RP',
+      },
+      tierThreeContractor: {
+        name: bilingual('Premium Contractor', 'ผู้รับสัญญาระดับพรีเมียม'),
+        requirement: bilingual(
+          'Complete a Tier 3 contract',
+          'ทำสัญญาระดับ 3 ให้สำเร็จ',
+        ),
+        reward: '$3,000, +40 Rep',
+      },
+      fullWorkforce: {
+        name: bilingual('Full Crew', 'ทีมงานครบชุด'),
+        requirement: bilingual(
+          'Hire at least one of every worker type',
+          'จ้างพนักงานทุกประเภทอย่างน้อย 1 คน',
+        ),
+        reward: '$3,000, +35 Rep',
       },
     } satisfies Record<
       MilestoneKey,
@@ -622,6 +914,48 @@ export const text = {
           'กระบวนการผลิตมีประสิทธิภาพสูง เบนซิน +30',
         ),
       },
+      localNewsCoverage: {
+        name: bilingual('Local News Coverage', 'สื่อท้องถิ่นรายงานข่าว'),
+        message: bilingual(
+          'Local news featured your refinery positively. Reputation +15.',
+          'สื่อท้องถิ่นรายงานข่าวโรงกลั่นของคุณในแง่บวก ชื่อเสียง +15',
+        ),
+      },
+      supplierDiscount: {
+        name: bilingual('Supplier Discount', 'ส่วนลดจากซัพพลายเออร์'),
+        message: bilingual(
+          'Supplier sent a bonus crude shipment. Crude +15.',
+          'ซัพพลายเออร์ส่งน้ำมันดิบโบนัสมาให้ น้ำมันดิบ +15',
+        ),
+      },
+      equipmentInspection: {
+        name: bilingual('Equipment Inspection', 'การตรวจสอบอุปกรณ์'),
+        message: bilingual(
+          'Scheduled inspection passed. Money −$150, Reputation +10.',
+          'ผ่านการตรวจสอบตามกำหนด เงิน −$150, ชื่อเสียง +10',
+        ),
+      },
+      workerSuggestion: {
+        name: bilingual('Worker Suggestion', 'ข้อเสนอแนะจากพนักงาน'),
+        message: bilingual(
+          'A worker submitted a process improvement idea. Research Points +3.',
+          'พนักงานเสนอแนวทางปรับปรุงกระบวนการผลิต คะแนนวิจัย +3',
+        ),
+      },
+      storageContamination: {
+        name: bilingual('Storage Contamination', 'การปนเปื้อนในถังเก็บ'),
+        message: bilingual(
+          'Contamination detected in a storage tank. Gasoline −15.',
+          'ตรวจพบการปนเปื้อนในถังเก็บผลิตภัณฑ์ เบนซิน −15',
+        ),
+      },
+      communityVisit: {
+        name: bilingual('Community Visit', 'กิจกรรมชุมชน'),
+        message: bilingual(
+          'Community open day hosted. Money −$200, Reputation +20.',
+          'จัดวันเปิดบ้านให้ชุมชน เงิน −$200, ชื่อเสียง +20',
+        ),
+      },
     } satisfies Record<
       RandomEventKey,
       { name: BilingualTextValue; message: BilingualTextValue }
@@ -673,6 +1007,141 @@ export const text = {
         optionA: bilingual('Hire Operator (+1 Operator)', 'จ้างโอเปอเรเตอร์ (+1 คน)'),
         optionB: bilingual('Hire Mechanic (+1 Mechanic)', 'จ้างช่างเทคนิค (+1 คน)'),
       },
+      equipmentEmergency: {
+        title: bilingual('Equipment Emergency', 'ฉุกเฉินด้านอุปกรณ์'),
+        description: bilingual(
+          'A critical pump has failed. Immediate action required.',
+          'ปั๊มหลักเกิดขัดข้อง ต้องดำเนินการทันที',
+        ),
+        optionA: bilingual(
+          'Call emergency service (−$600, +20 gasoline recovered)',
+          'เรียกช่างฉุกเฉิน (−$600, +20 เบนซินที่กู้คืนได้)',
+        ),
+        optionB: bilingual(
+          'Defer repair (−20 crude lost to contamination)',
+          'เลื่อนการซ่อม (−20 น้ำมันดิบปนเปื้อน)',
+        ),
+      },
+      governmentIncentive: {
+        title: bilingual('Government Incentive', 'แรงจูงใจจากภาครัฐ'),
+        description: bilingual(
+          'A government energy program offers your refinery a benefit.',
+          'โปรแกรมพลังงานภาครัฐเสนอผลประโยชน์ให้โรงกลั่นของคุณ',
+        ),
+        optionA: bilingual(
+          'Accept cash grant (+$1500, −10 reputation)',
+          'รับเงินอุดหนุน (+$1500, −10 ชื่อเสียง)',
+        ),
+        optionB: bilingual(
+          'Accept industry award (+25 reputation, +5 RP)',
+          'รับรางวัลอุตสาหกรรม (+25 ชื่อเสียง, +5 RP)',
+        ),
+      },
+      qualityAlert: {
+        title: bilingual('Quality Alert', 'การแจ้งเตือนคุณภาพ'),
+        description: bilingual(
+          'Quality control has flagged a suspect batch of gasoline.',
+          'ฝ่ายควบคุมคุณภาพตรวจพบล็อตเบนซินที่น่าสงสัย',
+        ),
+        optionA: bilingual(
+          'Replace the batch (−20 gasoline, +15 reputation)',
+          'เปลี่ยนล็อตใหม่ (−20 เบนซิน, +15 ชื่อเสียง)',
+        ),
+        optionB: bilingual(
+          'Ship as-is (−10 reputation, keep gasoline)',
+          'ส่งตามเดิม (−10 ชื่อเสียง, คงเบนซินไว้)',
+        ),
+      },
+      supplyChainDelay: {
+        title: bilingual('Supply Chain Delay', 'ความล่าช้าของห่วงโซ่อุปทาน'),
+        description: bilingual(
+          'An upstream supplier reports a crude delivery delay.',
+          'ซัพพลายเออร์ต้นน้ำรายงานความล่าช้าในการส่งน้ำมันดิบ',
+        ),
+        optionA: bilingual(
+          'Pay express fee (−$400, +30 crude delivered now)',
+          'จ่ายค่าด่วน (−$400, +30 น้ำมันดิบส่งทันที)',
+        ),
+        optionB: bilingual(
+          'Manage with reserves (+5 reputation for preparedness)',
+          'บริหารด้วยสต็อกที่มี (+5 ชื่อเสียงจากความพร้อม)',
+        ),
+      },
+      investorVisit: {
+        title: bilingual('Investor Visit', 'นักลงทุนมาเยือน'),
+        description: bilingual(
+          'A potential investor wants a tour of your refinery.',
+          'นักลงทุนที่มีแนวโน้มต้องการเยี่ยมชมโรงกลั่นของคุณ',
+        ),
+        optionA: bilingual(
+          'Host tour (−$300, +20 reputation)',
+          'จัดทัวร์เยี่ยมชม (−$300, +20 ชื่อเสียง)',
+        ),
+        optionB: bilingual(
+          'Politely decline (−5 reputation)',
+          'ปฏิเสธอย่างสุภาพ (−5 ชื่อเสียง)',
+        ),
+      },
+      oldEquipmentSale: {
+        title: bilingual('Old Equipment Sale', 'ขายอุปกรณ์เก่า'),
+        description: bilingual(
+          'You have a stockpile of old parts. What will you do with them?',
+          'คุณมีอุปกรณ์เก่าสะสมอยู่ จะจัดการอย่างไร?',
+        ),
+        optionA: bilingual(
+          'Sell for scrap (+$800)',
+          'ขายเป็นเศษเหล็ก (+$800)',
+        ),
+        optionB: bilingual(
+          'Repurpose as crude reserves (+15 crude)',
+          'นำไปใช้เป็นสำรองน้ำมันดิบ (+15 น้ำมันดิบ)',
+        ),
+      },
+      trainingRequest: {
+        title: bilingual('Training Request', 'คำขอฝึกอบรม'),
+        description: bilingual(
+          'A staff member requests budget for an external training course.',
+          'พนักงานขอเงินสนับสนุนการฝึกอบรมภายนอก',
+        ),
+        optionA: bilingual(
+          'Fund the training (−$500, +8 RP)',
+          'สนับสนุนการฝึกอบรม (−$500, +8 RP)',
+        ),
+        optionB: bilingual(
+          'Skip this time (no change)',
+          'ข้ามครั้งนี้ (ไม่มีการเปลี่ยนแปลง)',
+        ),
+      },
+      communityComplaint: {
+        title: bilingual('Community Complaint', 'ข้อร้องเรียนจากชุมชน'),
+        description: bilingual(
+          'Residents near the refinery have filed a noise complaint.',
+          'ผู้อยู่อาศัยใกล้โรงกลั่นยื่นข้อร้องเรียนเรื่องเสียงรบกวน',
+        ),
+        optionA: bilingual(
+          'Address the complaint (−$350, +15 reputation)',
+          'แก้ไขปัญหา (−$350, +15 ชื่อเสียง)',
+        ),
+        optionB: bilingual(
+          'Ignore it (−12 reputation)',
+          'เพิกเฉย (−12 ชื่อเสียง)',
+        ),
+      },
+      rushOrder: {
+        title: bilingual('Rush Order', 'คำสั่งซื้อด่วน'),
+        description: bilingual(
+          'A client needs an emergency fuel delivery by end of day.',
+          'ลูกค้าต้องการส่งมอบเชื้อเพลิงฉุกเฉินภายในวันนี้',
+        ),
+        optionA: bilingual(
+          'Accept rush order (−30 gasoline, +$800)',
+          'รับคำสั่งด่วน (−30 เบนซิน, +$800)',
+        ),
+        optionB: bilingual(
+          'Decline politely (+5 reputation for reliability)',
+          'ปฏิเสธอย่างสุภาพ (+5 ชื่อเสียงจากความน่าเชื่อถือ)',
+        ),
+      },
     } satisfies Record<
       ChoiceEventKey,
       {
@@ -685,10 +1154,14 @@ export const text = {
   },
   starterGuide: {
     title: bilingual('Getting Started', 'เริ่มต้นใช้งาน'),
-    step1: bilingual('Buy crude oil', 'ซื้อน้ำมันดิบ'),
-    step2: bilingual('Let refinery produce gasoline', 'ปล่อยให้โรงกลั่นผลิตเบนซิน'),
+    step1: bilingual('Refine crude oil into gasoline', 'กลั่นน้ำมันดิบเป็นเบนซิน'),
+    step2: bilingual('Buy more crude oil to keep refining', 'ซื้อน้ำมันดิบเพิ่มเพื่อกลั่นต่อ'),
     step3: bilingual('Complete your first contract', 'ทำสัญญาแรกให้สำเร็จ'),
     dismissButton: bilingual('Dismiss', 'ปิด'),
+    hint: bilingual(
+      'Tip: Build a Product Tank to store gasoline · Build a Crude Tank for more crude capacity',
+      'เคล็ดลับ: สร้าง Product Tank เพื่อเก็บเบนซิน · สร้าง Crude Tank เพื่อเพิ่มความจุน้ำมันดิบ',
+    ),
     allDone: bilingual("You know the basics — good luck!", 'คุณรู้พื้นฐานแล้ว — โชคดี!'),
   },
   goal: {
@@ -724,28 +1197,58 @@ export const text = {
     kicker: bilingual('Supply', 'การจัดหา'),
     title: bilingual('Crude Shipments', 'การสั่งซื้อน้ำมันดิบ'),
     names: {
+      miniDelivery: bilingual('Mini Delivery', 'ส่งขนาดเล็ก'),
       localTruck: bilingual('Local Truck Delivery', 'รถบรรทุกท้องถิ่น'),
       coastalTanker: bilingual('Coastal Tanker', 'เรือบรรทุกชายฝั่ง'),
       importedShip: bilingual('Imported Crude Ship', 'เรือนำเข้าน้ำมันดิบ'),
+      tankerConvoy: bilingual('Tanker Convoy', 'กองเรือบรรทุก'),
     },
     amount: (n: number) => bilingual(`${n} crude`, `น้ำมันดิบ ${n} หน่วย`),
     cost: (n: number) =>
       bilingual(`$${n.toLocaleString()}`, `$${n.toLocaleString()}`),
-    delaySecs: (s: number) =>
-      bilingual(`${s}s delivery`, `ส่งใน ${s} วินาที`),
+    delaySecs: (s: number) => {
+      if (s >= 60) {
+        const m = Math.round(s / 60)
+        return bilingual(`${m}m delivery`, `ส่งใน ${m} นาที`)
+      }
+      return bilingual(`${s}s delivery`, `ส่งใน ${s} วินาที`)
+    },
+    costPerUnit: (n: number) =>
+      bilingual(`$${n.toFixed(1)}/crude`, `$${n.toFixed(1)}/หน่วย`),
+    effectiveAmount: (base: number, bonus: number) =>
+      bilingual(
+        `+${bonus} logistics bonus → ${base + bonus} crude`,
+        `+${bonus} โบนัสโลจิสติกส์ → ${base + bonus} หน่วย`,
+      ),
+    lowCapacityWarning: bilingual(
+      'Low tank space — some crude may be discarded.',
+      'พื้นที่ถังเหลือน้อย — น้ำมันดิบบางส่วนอาจถูกทิ้ง',
+    ),
     orderButton: bilingual('Order', 'สั่งซื้อ'),
+    orderCantAfford: bilingual("Can't Afford", 'ไม่มีเงินพอ'),
     pendingTitle: bilingual('In Transit', 'ระหว่างการขนส่ง'),
-    countdown: (s: number) => bilingual(`${s}s`, `${s} วิ`),
+    countdown: (s: number) => {
+      if (s >= 60) {
+        const m = Math.floor(s / 60)
+        const rem = s % 60
+        const pad = rem.toString().padStart(2, '0')
+        return bilingual(`${m}:${pad}`, `${m}:${pad}`)
+      }
+      return bilingual(`0:${s.toString().padStart(2, '0')}`, `0:${s.toString().padStart(2, '0')}`)
+    },
     logOrdered: (
       name: BilingualTextValue,
       amount: number,
       cost: number,
       delaySecs: number,
-    ) =>
-      bilingual(
-        `Ordered ${name.en}: ${amount} crude for $${cost}. ETA ${delaySecs}s.`,
-        `สั่งซื้อ ${name.th}: น้ำมันดิบ ${amount} หน่วย ราคา $${cost} ถึงใน ${delaySecs}s`,
-      ),
+    ) => {
+      const etaEn = delaySecs >= 60 ? `${Math.round(delaySecs / 60)}m` : `${delaySecs}s`
+      const etaTh = delaySecs >= 60 ? `${Math.round(delaySecs / 60)} นาที` : `${delaySecs}s`
+      return bilingual(
+        `Ordered ${name.en}: ${amount} crude for $${cost}. ETA ${etaEn}.`,
+        `สั่งซื้อ ${name.th}: น้ำมันดิบ ${amount} หน่วย ราคา $${cost} ถึงใน ${etaTh}`,
+      )
+    },
     logArrived: (delivered: number, excess: number) =>
       excess > 0
         ? bilingual(
@@ -766,6 +1269,8 @@ export const text = {
     addGasoline: bilingual('Add 500 Gasoline', 'เพิ่มเบนซิน 500'),
     setLevel5: bilingual('Set Level 5', 'ตั้งระดับ 5'),
     setLevel10: bilingual('Set Level 10', 'ตั้งระดับ 10'),
+    triggerEvent: bilingual('Random Event', 'เหตุการณ์สุ่ม'),
+    triggerChoiceEvent: bilingual('Choice Event', 'เหตุการณ์ตัดสินใจ'),
     logAddMoney: (amount: number) =>
       bilingual(`[Dev] Added $${amount}.`, `[Dev] เพิ่ม $${amount}`),
     logAddRP: (amount: number) =>
@@ -854,5 +1359,41 @@ export const text = {
       'Milestone completed: Research Beginner. Reward: $500, +20 reputation.',
       'ทำหมุดหมายสำเร็จ: Research Beginner รับรางวัล $500 และชื่อเสียง +20',
     ),
+    milestoneUpgradeBuilder: bilingual(
+      'Milestone completed: First Upgrade. Reward: $500, 5 RP.',
+      'ทำหมุดหมายสำเร็จ: First Upgrade รับรางวัล $500 และ 5 RP',
+    ),
+    milestoneReputedSupplier: bilingual(
+      'Milestone completed: Trusted Name. Reward: $800, 10 RP.',
+      'ทำหมุดหมายสำเร็จ: Trusted Name รับรางวัล $800 และ 10 RP',
+    ),
+    milestoneIndustrialProducer: bilingual(
+      'Milestone completed: Industrial Producer. Reward: $1,200.',
+      'ทำหมุดหมายสำเร็จ: Industrial Producer รับรางวัล $1,200',
+    ),
+    milestoneRefineryLevel5: bilingual(
+      'Milestone completed: Mid-Scale Operations. Reward: $1,500, +20 reputation.',
+      'ทำหมุดหมายสำเร็จ: Mid-Scale Operations รับรางวัล $1,500 และชื่อเสียง +20',
+    ),
+    milestoneResearchAdvanced: bilingual(
+      'Milestone completed: Research Pioneer. Reward: $1,000, +15 reputation.',
+      'ทำหมุดหมายสำเร็จ: Research Pioneer รับรางวัล $1,000 และชื่อเสียง +15',
+    ),
+    milestoneContractVeteran: bilingual(
+      'Milestone completed: Contract Veteran. Reward: $2,000, 15 RP.',
+      'ทำหมุดหมายสำเร็จ: Contract Veteran รับรางวัล $2,000 และ 15 RP',
+    ),
+    milestoneTierThreeContractor: bilingual(
+      'Milestone completed: Premium Contractor. Reward: $3,000, +40 reputation.',
+      'ทำหมุดหมายสำเร็จ: Premium Contractor รับรางวัล $3,000 และชื่อเสียง +40',
+    ),
+    milestoneFullWorkforce: bilingual(
+      'Milestone completed: Full Crew. Reward: $3,000, +35 reputation.',
+      'ทำหมุดหมายสำเร็จ: Full Crew รับรางวัล $3,000 และชื่อเสียง +35',
+    ),
+  },
+  workerPresence: {
+    decorativeNote: bilingual('Your crew — decorative', 'ทีมงานของคุณ (ตกแต่ง)'),
+    overflow: (n: number) => bilingual(`+${n} more`, `+${n} คน`),
   },
 } as const

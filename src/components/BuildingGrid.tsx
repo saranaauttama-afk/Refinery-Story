@@ -9,6 +9,9 @@ const UPGRADEABLE_TYPES: ReadonlySet<BuildingType> = new Set([
   'crudeTank',
   'productTank',
   'distillationUnit',
+  'laboratory',
+  'maintenanceWorkshop',
+  'salesOffice',
 ])
 
 const UPGRADE_COST_BY_LEVEL = [
@@ -87,6 +90,9 @@ function BuildingGrid({
                     ) : (
                       <span>${building.cost}</span>
                     )}
+                  </span>
+                  <span className="build-option-role">
+                    <BilingualText text={text.data.buildings[key].role} />
                   </span>
                   <span className="build-option-copy">
                     <BilingualText text={building.description} />

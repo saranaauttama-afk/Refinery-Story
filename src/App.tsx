@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ActivityLog from './components/ActivityLog'
+import AsphaltPanel from './components/AsphaltPanel'
+import JetFuelPanel from './components/JetFuelPanel'
 import BilingualText from './components/BilingualText'
 import BuildingGrid from './components/BuildingGrid'
 import CrudeShipmentsPanel from './components/CrudeShipmentsPanel'
@@ -19,14 +21,15 @@ import SavePanel from './components/SavePanel'
 import StaffPanel from './components/StaffPanel'
 import StatsPanel from './components/StatsPanel'
 import WorkforcePanel from './components/WorkforcePanel'
+import WorkerPresenceBar from './components/WorkerPresenceBar'
 import RefineryProgressionPanel from './components/RefineryProgressionPanel'
 import ChoiceEventModal from './components/ChoiceEventModal'
 import { BUILDINGS } from './data/buildings'
-import { BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, JET_FUEL_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { serializeBilingualText, text } from './translations'
-import type { BuildingType, ChoiceEvent, Contract, ResearchItem, WorkerConfig } from './types'
+import type { BuildingType, ChoiceEvent, Contract, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
 import {
   CRUDE_COST,
   RANDOM_EVENT_INTERVAL_MS,
@@ -267,8 +270,21 @@ function App() {
         return current
       }
 
-      if (current.gasoline < contract.gasolineRequired) {
-        return current
+      const isJetFuelContract = (contract.jetFuelRequired ?? 0) > 0
+      const isAsphaltContract = !isJetFuelContract && (contract.asphaltRequired ?? 0) > 0
+
+      if (isJetFuelContract) {
+        if (current.productInventory.jetFuel < (contract.jetFuelRequired ?? 0)) {
+          return current
+        }
+      } else if (isAsphaltContract) {
+        if (current.productInventory.asphalt < (contract.asphaltRequired ?? 0)) {
+          return current
+        }
+      } else {
+        if (current.gasoline < contract.gasolineRequired) {
+          return current
+        }
       }
 
       const currentStats = calculateDerivedStats(current)
@@ -280,9 +296,24 @@ function App() {
       )
       const currentContractReputationReward = contract.reputationReward
 
+      const nextProductInventory = isJetFuelContract
+        ? {
+            ...current.productInventory,
+            jetFuel: current.productInventory.jetFuel - (contract.jetFuelRequired ?? 0),
+          }
+        : isAsphaltContract
+          ? {
+              ...current.productInventory,
+              asphalt: current.productInventory.asphalt - (contract.asphaltRequired ?? 0),
+            }
+          : current.productInventory
+
       return applyWinGoal(applyMilestones({
         ...current,
-        gasoline: current.gasoline - contract.gasolineRequired,
+        gasoline: isAsphaltContract || isJetFuelContract
+          ? current.gasoline
+          : current.gasoline - contract.gasolineRequired,
+        productInventory: nextProductInventory,
         money: current.money + currentContractReward,
         researchPoints: current.researchPoints + currentContractRpReward,
         reputation: current.reputation + currentContractReputationReward,
@@ -555,6 +586,86 @@ function App() {
     })
   }
 
+  function handleProduceAsphalt(amount: number) {
+    setGame((current) => {
+      if (current.refineryLevel < ASPHALT_BALANCE.unlockLevel) return current
+      const space = ASPHALT_BALANCE.maxStorage - current.productInventory.asphalt
+      const actualAmount = Math.min(amount, current.crudeOil, space)
+      if (actualAmount <= 0) return current
+      return {
+        ...current,
+        crudeOil: current.crudeOil - actualAmount,
+        productInventory: {
+          ...current.productInventory,
+          asphalt: current.productInventory.asphalt + actualAmount,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.asphalt.logProduced(actualAmount)),
+        ),
+      }
+    })
+  }
+
+  function handleProduceJetFuel(amount: number) {
+    setGame((current) => {
+      if (current.refineryLevel < JET_FUEL_BALANCE.unlockLevel) return current
+      const space = JET_FUEL_BALANCE.maxStorage - current.productInventory.jetFuel
+      const actualAmount = Math.min(amount, current.crudeOil, space)
+      if (actualAmount <= 0) return current
+      return {
+        ...current,
+        crudeOil: current.crudeOil - actualAmount,
+        productInventory: {
+          ...current.productInventory,
+          jetFuel: current.productInventory.jetFuel + actualAmount,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.jetFuel.logProduced(actualAmount)),
+        ),
+      }
+    })
+  }
+
+  function handleFulfillStandingOrder(key: StandingOrderKey) {
+    setGame((current) => {
+      const order = STANDING_ORDER_BALANCE.find((o) => o.key === key)
+      if (!order) return current
+      if (current.refineryLevel < order.unlockLevel) return current
+
+      // Guard: still on cooldown
+      const cooldownAt = current.standingOrderCooldowns[key]
+      if (cooldownAt !== undefined && cooldownAt > current.tickCount) return current
+
+      // Guard: insufficient inventory
+      const inventory = current.productInventory[order.productKey]
+      if (inventory < order.required) return current
+
+      const orderText = text.standingOrders.orders[key]
+      return applyMilestones({
+        ...current,
+        money: current.money + order.reward,
+        researchPoints: current.researchPoints + order.rpReward,
+        reputation: current.reputation + order.reputationReward,
+        productInventory: {
+          ...current.productInventory,
+          [order.productKey]: inventory - order.required,
+        },
+        standingOrderCooldowns: {
+          ...current.standingOrderCooldowns,
+          [key]: current.tickCount + order.cooldownTicks,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(
+            text.standingOrders.fulfilled(orderText.name, order.reward),
+          ),
+        ),
+      })
+    })
+  }
+
   function handleDevSetLevel(level: number) {
     setGame((current) => {
       if (current.refineryLevel === level) return current
@@ -671,7 +782,24 @@ function App() {
             money={game.money}
             pendingShipments={game.pendingShipments}
             tickCount={game.tickCount}
+            crudeOil={game.crudeOil}
+            maxCrudeStorage={maxCrudeStorage}
+            logisticsCount={game.workerCounts.logisticsCoordinator}
             onOrder={handleOrderShipment}
+          />
+          <AsphaltPanel
+            refineryLevel={game.refineryLevel}
+            asphalt={game.productInventory.asphalt}
+            crudeOil={game.crudeOil}
+            completedContractIds={game.completedContractIds}
+            onProduceAsphalt={handleProduceAsphalt}
+          />
+          <JetFuelPanel
+            refineryLevel={game.refineryLevel}
+            jetFuel={game.productInventory.jetFuel}
+            crudeOil={game.crudeOil}
+            completedContractIds={game.completedContractIds}
+            onProduceJetFuel={handleProduceJetFuel}
           />
         </div>
       </section>
@@ -689,6 +817,7 @@ function App() {
           onRemoveBuilding={handleRemoveBuilding}
           onUpgradeBuilding={handleUpgradeBuilding}
         />
+        <WorkerPresenceBar workerCounts={game.workerCounts} />
         <ExpansionPanel
           gridExpansionLevel={game.gridExpansionLevel}
           refineryLevel={game.refineryLevel}
@@ -721,10 +850,16 @@ function App() {
           <ContractsPanel
             activeContracts={activeContracts}
             gasoline={game.gasoline}
+            asphalt={game.productInventory.asphalt}
+            jetFuel={game.productInventory.jetFuel}
+            refineryLevel={game.refineryLevel}
             currentReputation={game.reputation}
             currentReputationTier={reputationTier}
             nextReputationTier={nextReputationTier}
+            standingOrderCooldowns={game.standingOrderCooldowns}
+            tickCount={game.tickCount}
             onCompleteContract={handleCompleteContract}
+            onFulfillStandingOrder={handleFulfillStandingOrder}
           />
           <ResearchPanel
             researchPoints={game.researchPoints}
@@ -746,8 +881,6 @@ function App() {
           <div className="system-side">
             <EventsPanel
               lastEventMessage={game.lastEventMessage}
-              onTriggerEvent={handleTriggerTestEvent}
-              onTriggerChoiceEvent={handleTriggerChoiceEvent}
             />
             <SavePanel
               statusMessage={saveStatusMessage}
@@ -767,6 +900,8 @@ function App() {
         onAddGasoline={handleDevAddGasoline}
         onSetLevel5={() => handleDevSetLevel(5)}
         onSetLevel10={() => handleDevSetLevel(10)}
+        onTriggerEvent={handleTriggerTestEvent}
+        onTriggerChoiceEvent={handleTriggerChoiceEvent}
       />
 
       {pendingChoiceEvent && (

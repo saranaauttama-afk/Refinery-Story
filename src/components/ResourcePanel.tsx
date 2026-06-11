@@ -29,7 +29,7 @@ function ResourcePanel({
         <span className="resource-label">
           <BilingualText text={text.resources.money} />
         </span>
-        <strong>${money}</strong>
+        <strong>${money.toLocaleString()}</strong>
         <p>
           <BilingualText text={text.resources.moneyDescription} />
         </p>

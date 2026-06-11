@@ -1,4 +1,4 @@
-import type { BilingualTextValue, GameState, PendingShipment, WorkerCounts } from '../types'
+import type { BilingualTextValue, GameState, PendingShipment, StandingOrderKey, WorkerCounts } from '../types'
 import { text } from '../translations'
 import { createInitialGameState } from './gameCalculations'
 
@@ -82,6 +82,7 @@ function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
     operator: getSafeNumber(value.operator, fallback.operator),
     mechanic: getSafeNumber(value.mechanic, fallback.mechanic),
     salesAgent: getSafeNumber(value.salesAgent, fallback.salesAgent),
+    safetyOfficer: getSafeNumber(value.safetyOfficer, fallback.safetyOfficer),
     chemist: getSafeNumber(value.chemist, fallback.chemist),
     logisticsCoordinator: getSafeNumber(value.logisticsCoordinator, fallback.logisticsCoordinator),
   }
@@ -147,6 +148,17 @@ function sanitizeLoadedGameState(value: unknown) {
     everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
     pendingShipments: getSafePendingShipments(value.pendingShipments),
+    standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
+    // Phase A foundation: productInventory defaults to all zeros.
+    // gasoline mirrors value.gasoline so Phase B can promote it cleanly.
+    // All non-gasoline products default to 0 (unused in Phase A).
+    productInventory: {
+      gasoline: getSafeNumber(value.gasoline, fallback.gasoline),
+      asphalt: 0,
+      jetFuel: 0,
+      lubricants: 0,
+      plasticPellets: 0,
+    },
   }
 }
 
@@ -154,6 +166,22 @@ function getSafeNumberArray(value: unknown, fallback: number[]) {
   return Array.isArray(value) && value.every((item) => typeof item === 'number')
     ? value
     : fallback
+}
+
+const STANDING_ORDER_KEYS: StandingOrderKey[] = ['asphaltMaintenance', 'jetFuelCharter']
+
+function getSafeStandingOrderCooldowns(
+  value: unknown,
+): Partial<Record<StandingOrderKey, number>> {
+  if (!isRecord(value)) return {}
+  const result: Partial<Record<StandingOrderKey, number>> = {}
+  for (const key of STANDING_ORDER_KEYS) {
+    const entry = value[key]
+    if (typeof entry === 'number' && Number.isFinite(entry)) {
+      result[key] = entry
+    }
+  }
+  return result
 }
 
 export function loadStoredGameState(): LoadResult {

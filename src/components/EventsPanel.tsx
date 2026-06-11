@@ -3,15 +3,9 @@ import { parseBilingualText, text } from '../translations'
 
 type EventsPanelProps = {
   lastEventMessage: string
-  onTriggerEvent: () => void
-  onTriggerChoiceEvent: () => void
 }
 
-function EventsPanel({
-  lastEventMessage,
-  onTriggerEvent,
-  onTriggerChoiceEvent,
-}: EventsPanelProps) {
+function EventsPanel({ lastEventMessage }: EventsPanelProps) {
   return (
     <section className="panel events-panel">
       <div className="panel-heading">
@@ -32,23 +26,6 @@ function EventsPanel({
         <p>
           <BilingualText text={parseBilingualText(lastEventMessage)} />
         </p>
-      </div>
-
-      <div className="event-trigger-row">
-        <button
-          type="button"
-          className="action-button"
-          onClick={onTriggerEvent}
-        >
-          <BilingualText text={text.events.triggerButton} />
-        </button>
-        <button
-          type="button"
-          className="action-button primary"
-          onClick={onTriggerChoiceEvent}
-        >
-          <BilingualText text={text.events.triggerChoiceButton} />
-        </button>
       </div>
     </section>
   )

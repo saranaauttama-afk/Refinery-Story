@@ -7,6 +7,15 @@ type MilestonesPanelProps = {
 }
 
 function MilestonesPanel({ activeMilestones }: MilestonesPanelProps) {
+  const completedCount = activeMilestones.filter((m) => m.isCompleted).length
+  const total = activeMilestones.length
+
+  // Show incomplete milestones first, completed ones at the bottom
+  const sorted = [...activeMilestones].sort((a, b) => {
+    if (a.isCompleted === b.isCompleted) return 0
+    return a.isCompleted ? 1 : -1
+  })
+
   return (
     <section className="panel milestones-panel">
       <div className="panel-heading">
@@ -18,10 +27,13 @@ function MilestonesPanel({ activeMilestones }: MilestonesPanelProps) {
             <BilingualText text={text.milestones.title} />
           </h2>
         </div>
+        <span className="status-badge">
+          <BilingualText text={text.milestones.progressBadge(completedCount, total)} />
+        </span>
       </div>
 
       <div className="milestones-list">
-        {activeMilestones.map((milestone) => (
+        {sorted.map((milestone) => (
           <article
             key={milestone.key}
             className={`milestone-card ${milestone.isCompleted ? 'completed' : ''}`}
@@ -37,15 +49,11 @@ function MilestonesPanel({ activeMilestones }: MilestonesPanelProps) {
                 <BilingualText text={text.milestones.rewardLabel(milestone.reward)} />
               </p>
             </div>
-            <span className="status-badge">
-              <BilingualText
-                text={
-                  milestone.isCompleted
-                    ? text.milestones.completed
-                    : text.milestones.inProgress
-                }
-              />
-            </span>
+            {milestone.isCompleted && (
+              <span className="status-badge active">
+                <BilingualText text={text.milestones.completed} />
+              </span>
+            )}
           </article>
         ))}
       </div>

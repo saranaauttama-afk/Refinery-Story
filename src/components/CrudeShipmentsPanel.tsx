@@ -8,6 +8,9 @@ type CrudeShipmentsPanelProps = {
   money: number
   pendingShipments: PendingShipment[]
   tickCount: number
+  crudeOil: number
+  maxCrudeStorage: number
+  logisticsCount: number
   onOrder: (option: ShipmentOption) => void
 }
 
@@ -18,8 +21,14 @@ function secondsRemaining(arrivesAt: number) {
 function CrudeShipmentsPanel({
   money,
   pendingShipments,
+  crudeOil,
+  maxCrudeStorage,
+  logisticsCount,
   onOrder,
 }: CrudeShipmentsPanelProps) {
+  const availableSpace = maxCrudeStorage - crudeOil
+  const logisticsBonusRate = logisticsCount * 0.1
+
   return (
     <section className="panel shipments-panel">
       <div className="panel-heading">
@@ -38,9 +47,16 @@ function CrudeShipmentsPanel({
           const canAfford = money >= option.cost
           const delaySecs = option.delayMs / 1000
           const name = text.shipments.names[option.key]
+          const costPerUnit = option.cost / option.amount
+          const bonusAmount = Math.floor(option.amount * logisticsBonusRate)
+          const effectiveTotal = option.amount + bonusAmount
+          const isLowCapacity = availableSpace < effectiveTotal
 
           return (
-            <div key={option.key} className="shipment-option-card">
+            <div
+              key={option.key}
+              className={`shipment-option-card${isLowCapacity ? ' shipment-low-capacity' : ''}`}
+            >
               <div className="shipment-option-info">
                 <strong className="shipment-option-name">
                   <BilingualText text={name} />
@@ -52,6 +68,22 @@ function CrudeShipmentsPanel({
                   {' · '}
                   <BilingualText text={text.shipments.delaySecs(delaySecs)} />
                 </span>
+                <span className="shipment-option-detail">
+                  <BilingualText text={text.shipments.costPerUnit(costPerUnit)} />
+                  {bonusAmount > 0 && (
+                    <>
+                      {' · '}
+                      <span className="shipment-logistics-bonus">
+                        <BilingualText text={text.shipments.effectiveAmount(option.amount, bonusAmount)} />
+                      </span>
+                    </>
+                  )}
+                </span>
+                {isLowCapacity && (
+                  <span className="shipment-warning">
+                    <BilingualText text={text.shipments.lowCapacityWarning} />
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -59,7 +91,9 @@ function CrudeShipmentsPanel({
                 disabled={!canAfford}
                 onClick={() => onOrder(option)}
               >
-                <BilingualText text={text.shipments.orderButton} />
+                <BilingualText
+                  text={canAfford ? text.shipments.orderButton : text.shipments.orderCantAfford}
+                />
               </button>
             </div>
           )
