@@ -1,3 +1,12 @@
+> **ARCHIVED — fully implemented.** This was a pre-implementation design
+> proposal (2026-06-11). Everything proposed here shipped in later passes —
+> see GAME_DESIGN.md for the current system, ROADMAP.md / PLAYTEST_NOTES.md
+> for what was actually built and any deviations. Kept for historical design
+> rationale only; do not treat the "Status: Design only / not implemented"
+> notes below as current.
+
+---
+
 # Repeatable Secondary Product Demand — Design Document
 
 **Author:** Design session, 2026-06-11

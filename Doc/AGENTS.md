@@ -95,9 +95,10 @@ Always read:
 
 1. AGENTS.md
 2. CURRENT_TASK.md
-3. GAME_DESIGN.md
+3. GAME_DESIGN.md (rewritten to match current state — trust this over memory)
 
-before implementing changes.
+`Doc/archive/` holds superseded design proposals (kept for historical
+rationale only — do not treat their "not implemented yet" notes as current).
 
 ---
 

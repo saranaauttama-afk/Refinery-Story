@@ -84,6 +84,14 @@ Definitely not needed.
 
 ---
 
+## Mobile / Expo App
+
+Deferred to a later phase, not excluded. Gameplay depth and balance come
+first; mobile UX/UI is a planned final phase once the core loop and meta
+systems feel right. (Confirmed 2026-06-13.)
+
+---
+
 Reason:
 
 Current focus is finding the fun.
