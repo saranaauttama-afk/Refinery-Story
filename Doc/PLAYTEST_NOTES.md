@@ -1,5 +1,71 @@
 # Playtest Notes
 
+## 2026-06-12 — Demand & Goals Pass 1.0
+
+**Method:** Code-trace analysis + implementation pass. Branch `feature/demand-goals-pass`.
+
+---
+
+### Bugs Found and Fixed
+
+1. **Secondary product inventory wiped on every load.** `sanitizeLoadedGameState`
+   still contained the Phase A placeholder that reset asphalt, jet fuel, lubricants,
+   and petrochemicals to 0. Any player who saved with stock in a plant product lost
+   it on reload. Fixed: amounts are now read from the save with a safe 0 default.
+
+2. **Jet Fuel Charter became a trap after the v0.7 production rework.**
+   With the new 20 crude → 5 jet fuel ratio, 60 jet fuel sells for $5,400 base
+   directly — but the standing order only paid $2,200. Fulfilling it lost the
+   player $3,200 versus just pressing sell. It also unlocked at Level 7, three
+   levels before jet fuel can be produced (plant unlocks at 10).
+   Fixed: unlock 7 → 10, reward $2,200 → $7,000, RP 15 → 20, Rep 10 → 15.
+
+---
+
+### Standing Order Economics (all four orders, base prices)
+
+| Order | Required | Crude cost | Direct sell value | Order reward | Premium vs selling |
+|-------|----------|-----------|-------------------|-------------|--------------------|
+| City Road Maintenance (asphalt, Lv5) | 40 | $400 | n/a (no direct sell) | $900 | — |
+| Industrial Machinery Co-op (lubricants, Lv6) | 60 | $1,200 | $2,700 | $3,800 | +$1,100 + 12 RP + 8 Rep |
+| Regional Air Charter (jet fuel, Lv10) | 60 | $2,400 | $5,400 | $7,000 | +$1,600 + 20 RP + 15 Rep |
+| Overseas Petrochem Export (petrochem, Lv15) | 40 | $2,400 | $6,000 | $8,500 | +$2,500 + 35 RP + 30 Rep |
+
+Premiums stay ahead of direct selling until roughly 5–8 Sales Agents (+$3/unit
+each), at which point the player has a genuine optimization choice rather than
+an always-correct button. This is intentional.
+
+---
+
+### New Milestones (Level 10–15 gap)
+
+Before this pass, nothing happened between Jet Fuel Plant (Lv10) and
+Petrochemical Plant (Lv15) except refinery upgrade costs. The gap now has a
+goal ladder:
+
+- **Jet Fuel Pioneer** — build a Jet Fuel Plant ($2,500, +25 Rep) — fires at Lv10
+- **Aviation Partner** — complete any jet fuel contract ($4,000, 30 RP) — Lv10–12
+- **Petrochemical Pioneer** — build a Petrochemical Plant ($5,000, +50 Rep) — Lv15
+- **Product Mogul** — complete a contract in every product line ($10,000, +75 Rep)
+  — endgame collection goal, Kairosoft-style "complete the set" payoff
+
+Total milestone count: 12 → 16.
+
+---
+
+### Remaining Concerns (carried forward)
+
+- Sales Agent flat bonus still scales linearly into high-value products
+  (BACKLOG Option A — diminishing returns review still recommended).
+- Asphalt remains the only product with no direct sell path; its standing order
+  is its only repeatable income. Acceptable for now.
+- Petrochemical Contract 26 ($75,000) still dwarfs everything; review with
+  Option A.
+- Mixed-product contract (gasoline + jet fuel) deferred — needs multi-requirement
+  completion logic in App.tsx and ContractsPanel.
+
+---
+
 ## 2026-06-11 — v0.7 Product Expansion Complete
 
 **Milestone:** Refinery Story v0.7 — Full Product Expansion

@@ -1,105 +1,67 @@
-# Worker System Expansion 2.0 - Product Specialists
+# Demand & Goals Pass 1.0 — Late-Game Progression + Repeatable Demand
 
 ## Goal
 
-Make workforce decisions more strategic by introducing product-specific specialist workers.
+Fill the Level 10–15 "empty gap" with meaningful goals and give every secondary
+product a repeatable income path, so the late game keeps the short/medium/long
+goal rhythm that makes Kairosoft games fun.
 
-Workers should begin supporting different business strategies instead of providing only generic bonuses.
+Sources: BACKLOG Option C (Endgame Progression) + Option D (Contract Expansion),
+plus playtest concern #3 from the 2026-06-11 v0.7 notes.
 
 ## Rules
 
 1. Preserve save compatibility.
-
-2. Keep existing workers unchanged:
-
-   * Sales Agent
-   * Mechanic
-   * Safety Officer
-
-3. Reuse existing workforce patterns.
-
-4. Avoid large architecture rewrites.
+2. Reuse existing standing order and milestone patterns.
+3. No new architecture. Numeric constants + pattern repetition only.
 
 ## Requirements
 
-### A. New Worker
+### A. Bug Fix — Secondary inventory wiped on load
 
-Fuel Specialist
+`sanitizeLoadedGameState` reset asphalt/jetFuel/lubricants/petrochemicals to 0
+on every load (Phase A leftover). Load them safely with a 0 default instead.
 
-Unlock:
+### B. Bug Fix — Jet Fuel Charter is a trap after the v0.7 rework
 
-* Refinery Level 5
+- unlockLevel 7 → 10 (jet fuel cannot be produced before Level 10 now)
+- reward $2,200 → $7,000 (direct sell of 60 jet fuel is $5,400 base; the old
+  reward was strictly worse than selling)
+- rpReward 15 → 20, reputationReward 10 → 15
 
-Cost:
+### C. New Standing Order — Lubricant Supply
 
-* $1500
+60 lubricants / $3,800 / 12 RP / +8 Rep / 4 min cooldown / unlock Level 6.
+Gives lubricants repeatable demand after contracts 21–23 are done.
 
-Effect:
+### D. New Standing Order — Petrochem Export
 
-* Gasoline sell price +5% per worker
+40 petrochemicals / $8,500 / 35 RP / +30 Rep / 5 min cooldown / unlock Level 15.
+Gives petrochemicals repeatable demand after contracts 24–26 are done.
 
-### B. New Worker
+### E. Four Late-Game Milestones (Level 10–15 gap)
 
-Aviation Specialist
+| Key | Requirement | Reward |
+|-----|-------------|--------|
+| jetFuelPioneer | Build a Jet Fuel Plant | $2,500, +25 Rep |
+| aviationPartner | Complete a jet fuel contract | $4,000, 30 RP |
+| petrochemicalPioneer | Build a Petrochemical Plant | $5,000, +50 Rep |
+| productMogul | Complete a contract for every product line | $10,000, +75 Rep |
 
-Unlock:
+### F. ContractsPanel
 
-* Refinery Level 10
-
-Cost:
-
-* $3000
-
-Effect:
-
-* Jet Fuel production +20% per worker
-
-### C. New Worker
-
-Chemical Engineer
-
-Unlock:
-
-* Refinery Level 15
-
-Cost:
-
-* $5000
-
-Effect:
-
-* Petrochemical production +20% per worker
-
-### D. Workforce UI
-
-Display all new workers in WorkforcePanel.
-
-Show:
-
-* Name
-* Cost
-* Effect
-* Current count
-
-Use existing worker display patterns.
-
-### E. Save Compatibility
-
-Old saves must load safely.
-
-Missing worker counts should default to 0.
-
-### F. Code Quality
-
-* Reuse workforce systems.
-* Maintain TypeScript typing.
-* Keep implementation simple.
+Generalize standing order inventory lookup and shortfall text so any ProductKey
+works (was hardcoded to asphalt/jetFuel).
 
 ## Success Criteria
 
-* Existing saves load.
-* New workers appear at correct levels.
-* WorkforcePanel displays all workers.
-* Effects apply correctly.
-* Existing workers continue working.
-* No gameplay regressions.
+- Existing saves load, including secondary product stock (no longer wiped).
+- Jet Fuel Charter appears at Level 10 and pays better than direct selling.
+- Lubricant Supply appears at Level 6, Petrochem Export at Level 15.
+- 16 milestones display; the 4 new ones complete and reward correctly.
+- Build, lint, and typecheck pass.
+
+## Status — COMPLETE (2026-06-12)
+
+All requirements implemented. Build, eslint, and tsc all pass.
+See PLAYTEST_NOTES.md 2026-06-12 entry for balance reasoning.

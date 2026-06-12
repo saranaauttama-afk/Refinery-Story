@@ -75,4 +75,29 @@ export const MILESTONES: Milestone[] = [
     requirement: text.data.milestones.fullWorkforce.requirement,
     reward: '$3,000, +35 Rep',
   },
+  // Late-game milestones (Level 10–15 gap)
+  {
+    key: 'jetFuelPioneer',
+    name: text.data.milestones.jetFuelPioneer.name,
+    requirement: text.data.milestones.jetFuelPioneer.requirement,
+    reward: '$2,500, +25 Rep',
+  },
+  {
+    key: 'aviationPartner',
+    name: text.data.milestones.aviationPartner.name,
+    requirement: text.data.milestones.aviationPartner.requirement,
+    reward: '$4,000, 30 RP',
+  },
+  {
+    key: 'petrochemicalPioneer',
+    name: text.data.milestones.petrochemicalPioneer.name,
+    requirement: text.data.milestones.petrochemicalPioneer.requirement,
+    reward: '$5,000, +50 Rep',
+  },
+  {
+    key: 'productMogul',
+    name: text.data.milestones.productMogul.name,
+    requirement: text.data.milestones.productMogul.requirement,
+    reward: '$10,000, +75 Rep',
+  },
 ]

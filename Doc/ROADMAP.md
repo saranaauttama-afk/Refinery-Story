@@ -82,6 +82,13 @@ Current product ladder:
 
 ## Phase 2B — Economy & Balance (Next Recommended)
 
+Completed:
+
+- Demand & Goals Pass 1.0 (save-load inventory bug fix, Jet Fuel Charter rework
+  Lv7→10 / $2,200→$7,000, Lubricant Supply standing order Lv6, Petrochem Export
+  standing order Lv15, 4 late-game milestones: Jet Fuel Pioneer, Aviation
+  Partner, Petrochemical Pioneer, Product Mogul)
+
 Suggested goals:
 
 - Sales Agent diminishing returns (flat bonus scales poorly with high-value products at late game)

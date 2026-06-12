@@ -232,7 +232,14 @@ function ContractsPanel({
             {unlockedStandingOrders.map((order) => {
               const orderText = text.standingOrders.orders[order.key]
               const productLabel = text.contracts.productLabels[order.productKey]
-              const inventory = order.productKey === 'asphalt' ? asphalt : jetFuel
+              const inventoryByProduct = {
+                gasoline,
+                asphalt,
+                jetFuel,
+                lubricants,
+                petrochemicals,
+              } as const
+              const inventory = inventoryByProduct[order.productKey]
               const shortfall = Math.max(0, order.required - inventory)
 
               const cooldownAt = standingOrderCooldowns[order.key]
@@ -245,9 +252,13 @@ function ContractsPanel({
                 buttonText = text.standingOrders.restocking(minutes, seconds)
               } else if (shortfall > 0) {
                 buttonText =
-                  order.productKey === 'asphalt'
-                    ? text.contracts.needAsphalt(shortfall)
-                    : text.contracts.needJetFuel(shortfall)
+                  order.productKey === 'petrochemicals'
+                    ? text.contracts.needPetrochemicals(shortfall)
+                    : order.productKey === 'lubricants'
+                      ? text.contracts.needLubricants(shortfall)
+                      : order.productKey === 'jetFuel'
+                        ? text.contracts.needJetFuel(shortfall)
+                        : text.contracts.needAsphalt(shortfall)
               } else {
                 buttonText = text.contracts.fulfillButton
               }

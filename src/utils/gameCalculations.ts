@@ -670,6 +670,81 @@ export function applyMilestones(game: GameState) {
     }
   }
 
+  if (
+    !nextGame.completedMilestoneKeys.includes('jetFuelPioneer') &&
+    nextGame.grid.includes('jetFuelPlant')
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneJetFuelPioneer)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.jetFuelPioneerMoneyReward,
+      reputation: nextGame.reputation + MILESTONE_BALANCE.jetFuelPioneerReputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'jetFuelPioneer'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('aviationPartner') &&
+    CONTRACTS.some(
+      (c) => (c.jetFuelRequired ?? 0) > 0 && nextGame.completedContractIds.includes(c.id),
+    )
+  ) {
+    const message = serializeBilingualText(text.logs.milestoneAviationPartner)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.aviationPartnerMoneyReward,
+      researchPoints: nextGame.researchPoints + MILESTONE_BALANCE.aviationPartnerRpReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'aviationPartner'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (
+    !nextGame.completedMilestoneKeys.includes('petrochemicalPioneer') &&
+    nextGame.grid.includes('petrochemicalPlant')
+  ) {
+    const message = serializeBilingualText(text.logs.milestonePetrochemicalPioneer)
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + MILESTONE_BALANCE.petrochemicalPioneerMoneyReward,
+      reputation:
+        nextGame.reputation + MILESTONE_BALANCE.petrochemicalPioneerReputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'petrochemicalPioneer'],
+      activityLog: addLog(nextGame.activityLog, message),
+    }
+  }
+
+  if (!nextGame.completedMilestoneKeys.includes('productMogul')) {
+    const completedIds = nextGame.completedContractIds
+    const hasGasoline = CONTRACTS.some(
+      (c) => c.gasolineRequired > 0 && completedIds.includes(c.id),
+    )
+    const hasAsphalt = CONTRACTS.some(
+      (c) => (c.asphaltRequired ?? 0) > 0 && completedIds.includes(c.id),
+    )
+    const hasJetFuel = CONTRACTS.some(
+      (c) => (c.jetFuelRequired ?? 0) > 0 && completedIds.includes(c.id),
+    )
+    const hasLubricants = CONTRACTS.some(
+      (c) => (c.lubricantsRequired ?? 0) > 0 && completedIds.includes(c.id),
+    )
+    const hasPetrochemicals = CONTRACTS.some(
+      (c) => (c.petrochemicalsRequired ?? 0) > 0 && completedIds.includes(c.id),
+    )
+
+    if (hasGasoline && hasAsphalt && hasJetFuel && hasLubricants && hasPetrochemicals) {
+      const message = serializeBilingualText(text.logs.milestoneProductMogul)
+      nextGame = {
+        ...nextGame,
+        money: nextGame.money + MILESTONE_BALANCE.productMogulMoneyReward,
+        reputation: nextGame.reputation + MILESTONE_BALANCE.productMogulReputationReward,
+        completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'productMogul'],
+        activityLog: addLog(nextGame.activityLog, message),
+      }
+    }
+  }
+
   return nextGame
 }
 

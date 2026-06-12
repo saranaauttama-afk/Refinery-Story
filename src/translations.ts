@@ -520,6 +520,20 @@ export const text = {
           'สัญญาจัดหาเชื้อเพลิงประจำกับผู้ประกอบการเช่าเหมาลำภูมิภาค',
         ),
       },
+      lubricantSupply: {
+        name: bilingual('Industrial Machinery Cooperative', 'สหกรณ์เครื่องจักรอุตสาหกรรม'),
+        flavor: bilingual(
+          'Standing lubricant supply agreement with local factories.',
+          'สัญญาจัดหาสารหล่อลื่นประจำกับโรงงานในพื้นที่',
+        ),
+      },
+      petrochemExport: {
+        name: bilingual('Overseas Petrochemical Exporter', 'ผู้ส่งออกปิโตรเคมีต่างประเทศ'),
+        flavor: bilingual(
+          'Standing export agreement for refined petrochemical products.',
+          'สัญญาส่งออกประจำสำหรับผลิตภัณฑ์ปิโตรเคมี',
+        ),
+      },
     },
   },
   contracts: {
@@ -988,6 +1002,38 @@ export const text = {
           'จ้างพนักงานทุกประเภทอย่างน้อย 1 คน',
         ),
         reward: '$3,000, +35 Rep',
+      },
+      jetFuelPioneer: {
+        name: bilingual('Jet Fuel Pioneer', 'ผู้บุกเบิกเชื้อเพลิงอากาศยาน'),
+        requirement: bilingual(
+          'Build a Jet Fuel Plant',
+          'สร้างโรงงานเชื้อเพลิงอากาศยาน',
+        ),
+        reward: '$2,500, +25 Rep',
+      },
+      aviationPartner: {
+        name: bilingual('Aviation Partner', 'พันธมิตรการบิน'),
+        requirement: bilingual(
+          'Complete a jet fuel contract',
+          'ทำสัญญาเชื้อเพลิงอากาศยานสำเร็จ 1 ฉบับ',
+        ),
+        reward: '$4,000, 30 RP',
+      },
+      petrochemicalPioneer: {
+        name: bilingual('Petrochemical Pioneer', 'ผู้บุกเบิกปิโตรเคมี'),
+        requirement: bilingual(
+          'Build a Petrochemical Plant',
+          'สร้างโรงงานปิโตรเคมี',
+        ),
+        reward: '$5,000, +50 Rep',
+      },
+      productMogul: {
+        name: bilingual('Product Mogul', 'เจ้าพ่อผลิตภัณฑ์'),
+        requirement: bilingual(
+          'Complete a contract for every product line',
+          'ทำสัญญาสำเร็จครบทุกสายผลิตภัณฑ์',
+        ),
+        reward: '$10,000, +75 Rep',
       },
     } satisfies Record<
       MilestoneKey,
@@ -1556,6 +1602,22 @@ export const text = {
     milestoneFullWorkforce: bilingual(
       'Milestone completed: Full Crew. Reward: $3,000, +35 reputation.',
       'ทำหมุดหมายสำเร็จ: Full Crew รับรางวัล $3,000 และชื่อเสียง +35',
+    ),
+    milestoneJetFuelPioneer: bilingual(
+      'Milestone completed: Jet Fuel Pioneer. Reward: $2,500, +25 reputation.',
+      'ทำหมุดหมายสำเร็จ: Jet Fuel Pioneer รับรางวัล $2,500 และชื่อเสียง +25',
+    ),
+    milestoneAviationPartner: bilingual(
+      'Milestone completed: Aviation Partner. Reward: $4,000, 30 RP.',
+      'ทำหมุดหมายสำเร็จ: Aviation Partner รับรางวัล $4,000 และ 30 RP',
+    ),
+    milestonePetrochemicalPioneer: bilingual(
+      'Milestone completed: Petrochemical Pioneer. Reward: $5,000, +50 reputation.',
+      'ทำหมุดหมายสำเร็จ: Petrochemical Pioneer รับรางวัล $5,000 และชื่อเสียง +50',
+    ),
+    milestoneProductMogul: bilingual(
+      'Milestone completed: Product Mogul. Reward: $10,000, +75 reputation.',
+      'ทำหมุดหมายสำเร็จ: Product Mogul รับรางวัล $10,000 และชื่อเสียง +75',
     ),
   },
   workerPresence: {

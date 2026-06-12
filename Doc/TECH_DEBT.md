@@ -116,6 +116,12 @@ Future improvements:
 - Better responsive layout for narrow screens
 - Number formatting (k/M abbreviations for large values)
 
+### Per-product ternary chains
+
+ContractsPanel maps `productKey → needX text` twice (contract cards and standing
+orders) with nested ternaries. Acceptable at 5 products; if a 6th product line
+is added, replace both with a single `needText(productKey, shortfall)` helper.
+
 ---
 
 ## Rule

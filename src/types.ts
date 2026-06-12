@@ -215,7 +215,11 @@ export type PendingShipment = {
   arrivesAt: number
 }
 
-export type StandingOrderKey = 'asphaltMaintenance' | 'jetFuelCharter'
+export type StandingOrderKey =
+  | 'asphaltMaintenance'
+  | 'jetFuelCharter'
+  | 'lubricantSupply'
+  | 'petrochemExport'
 
 export type MilestoneKey =
   | 'firstFuel'
@@ -230,6 +234,10 @@ export type MilestoneKey =
   | 'contractVeteran'
   | 'tierThreeContractor'
   | 'fullWorkforce'
+  | 'jetFuelPioneer'
+  | 'aviationPartner'
+  | 'petrochemicalPioneer'
+  | 'productMogul'
 
 export type Milestone = {
   key: MilestoneKey

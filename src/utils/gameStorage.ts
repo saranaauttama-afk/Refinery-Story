@@ -155,15 +155,16 @@ function sanitizeLoadedGameState(value: unknown) {
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
     pendingShipments: getSafePendingShipments(value.pendingShipments),
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
-    // Phase A foundation: productInventory defaults to all zeros.
-    // gasoline mirrors value.gasoline so Phase B can promote it cleanly.
-    // All non-gasoline products default to 0 (unused in Phase A).
+    // productInventory is now live gameplay state for all secondary products.
+    // gasoline mirrors value.gasoline (source of truth for the primary product).
+    // Previously asphalt/jetFuel/lubricants/petrochemicals were reset to 0 on
+    // every load, wiping the player's secondary product stock — now preserved.
     productInventory: {
       gasoline: getSafeNumber(value.gasoline, fallback.gasoline),
-      asphalt: 0,
-      jetFuel: 0,
-      lubricants: 0,
-      petrochemicals: 0,
+      asphalt: getSafeProductAmount(value.productInventory, 'asphalt'),
+      jetFuel: getSafeProductAmount(value.productInventory, 'jetFuel'),
+      lubricants: getSafeProductAmount(value.productInventory, 'lubricants'),
+      petrochemicals: getSafeProductAmount(value.productInventory, 'petrochemicals'),
     },
   }
 }
@@ -174,7 +175,22 @@ function getSafeNumberArray(value: unknown, fallback: number[]) {
     : fallback
 }
 
-const STANDING_ORDER_KEYS: StandingOrderKey[] = ['asphaltMaintenance', 'jetFuelCharter']
+const STANDING_ORDER_KEYS: StandingOrderKey[] = [
+  'asphaltMaintenance',
+  'jetFuelCharter',
+  'lubricantSupply',
+  'petrochemExport',
+]
+
+// Reads a single product amount from a saved productInventory record.
+// Missing or invalid values default to 0 so old saves load safely.
+function getSafeProductAmount(value: unknown, key: string): number {
+  if (!isRecord(value)) return 0
+  const amount = value[key]
+  return typeof amount === 'number' && Number.isFinite(amount) && amount >= 0
+    ? amount
+    : 0
+}
 
 function getSafeStandingOrderCooldowns(
   value: unknown,

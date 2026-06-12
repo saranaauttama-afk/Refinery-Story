@@ -123,6 +123,15 @@ export const MILESTONE_BALANCE = {
   tierThreeContractorReputationReward: 40,
   fullWorkforceMoneyReward: 3000,
   fullWorkforceReputationReward: 35,
+  // Late-game milestones (Level 10–15 gap)
+  jetFuelPioneerMoneyReward: 2500,
+  jetFuelPioneerReputationReward: 25,
+  aviationPartnerMoneyReward: 4000,
+  aviationPartnerRpReward: 30,
+  petrochemicalPioneerMoneyReward: 5000,
+  petrochemicalPioneerReputationReward: 50,
+  productMogulMoneyReward: 10000,
+  productMogulReputationReward: 75,
 } as const
 
 export const CONTRACT_BALANCE = [
@@ -456,6 +465,7 @@ export const ASPHALT_BALANCE = {
 
 // Cooldowns expressed in game ticks (1 tick = CORE_BALANCE.tickMs ms = 200ms).
 // 3 min = 180,000ms / 200ms = 900 ticks
+// 4 min = 240,000ms / 200ms = 1200 ticks
 // 5 min = 300,000ms / 200ms = 1500 ticks
 export const STANDING_ORDER_BALANCE = [
   {
@@ -469,14 +479,40 @@ export const STANDING_ORDER_BALANCE = [
     unlockLevel: 5,
   },
   {
+    // Reworked alongside Jet Fuel Plant consolidation:
+    // unlockLevel 7 → 10 (jet fuel cannot be produced before the plant unlocks at Level 10)
+    // reward 2,200 → 7,000 (direct sell of 60 jet fuel is $5,400 base — the old
+    // reward was strictly worse than just selling, making the order a trap)
     key: 'jetFuelCharter' as const,
     productKey: 'jetFuel' as const,
     required: 60,
-    reward: 2200,
-    rpReward: 15,
-    reputationReward: 10,
+    reward: 7000,
+    rpReward: 20,
+    reputationReward: 15,
     cooldownTicks: 1500,
-    unlockLevel: 7,
+    unlockLevel: 10,
+  },
+  {
+    // Direct sell of 60 lubricants is $2,700 base — the order pays a premium plus RP/rep.
+    key: 'lubricantSupply' as const,
+    productKey: 'lubricants' as const,
+    required: 60,
+    reward: 3800,
+    rpReward: 12,
+    reputationReward: 8,
+    cooldownTicks: 1200,
+    unlockLevel: 6,
+  },
+  {
+    // Direct sell of 40 petrochemicals is $6,000 base — the order pays a premium plus RP/rep.
+    key: 'petrochemExport' as const,
+    productKey: 'petrochemicals' as const,
+    required: 40,
+    reward: 8500,
+    rpReward: 35,
+    reputationReward: 30,
+    cooldownTicks: 1500,
+    unlockLevel: 15,
   },
 ] as const
 
