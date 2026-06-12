@@ -111,6 +111,20 @@ export const text = {
       'Crude Tanks raise the storage cap.',
       'ถังน้ำมันดิบช่วยเพิ่มความจุสูงสุด',
     ),
+    feedstock: bilingual('Feedstock', 'วัตถุดิบกลั่น'),
+    feedstockDescription: bilingual(
+      'Distillation Units refine crude into feedstock. Jet fuel, lubricants & petrochemical plants run on it.',
+      'หน่วยกลั่นเปลี่ยนน้ำมันดิบเป็นวัตถุดิบกลั่น โรงเชื้อเพลิงอากาศยาน สารหล่อลื่น และปิโตรเคมีใช้สิ่งนี้',
+    ),
+    feedstockRate: (n: number) =>
+      bilingual(
+        `Distilling +${n} feedstock per cycle. Feeds the advanced plants.`,
+        `กลั่นได้ +${n} วัตถุดิบต่อรอบ ป้อนโรงงานขั้นสูง`,
+      ),
+    feedstockStarved: bilingual(
+      'No feedstock — build/feed Distillation Units to supply this plant.',
+      'ไม่มีวัตถุดิบกลั่น — สร้าง/ป้อนหน่วยกลั่นเพื่อจ่ายให้โรงงานนี้',
+    ),
     gasoline: bilingual('Gasoline', 'น้ำมันเบนซิน'),
     gasolineDescription: bilingual(
       'Product Tanks raise finished fuel storage.',
@@ -1617,6 +1631,22 @@ export const text = {
         `${plants} lubricant plant${plants > 1 ? 's' : ''} produced ${amount} lubricants.`,
         `โรงผลิต ${plants} แห่งผลิตสารหล่อลื่น ${amount} หน่วย`,
       ),
+    producedPlant: (
+      productKey: 'lubricants' | 'jetFuel' | 'petrochemicals',
+      plants: number,
+      amount: number,
+    ) => {
+      const names: Record<typeof productKey, { en: string; th: string }> = {
+        lubricants: { en: 'lubricants', th: 'สารหล่อลื่น' },
+        jetFuel: { en: 'jet fuel', th: 'เชื้อเพลิงอากาศยาน' },
+        petrochemicals: { en: 'petrochemicals', th: 'ปิโตรเคมี' },
+      }
+      const n = names[productKey]
+      return bilingual(
+        `${plants} plant${plants > 1 ? 's' : ''} produced ${amount} ${n.en} from feedstock.`,
+        `โรงผลิต ${plants} แห่งผลิต${n.th} ${amount} หน่วยจากวัตถุดิบกลั่น`,
+      )
+    },
     soldLubricants: (amount: number, totalRevenue: number) =>
       bilingual(
         `Sold ${amount} lubricants for $${totalRevenue.toLocaleString()}.`,

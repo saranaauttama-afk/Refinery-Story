@@ -7,6 +7,9 @@ type ResourcePanelProps = {
   reputation: number
   crudeOil: number
   maxCrudeStorage: number
+  feedstock: number
+  maxFeedstockStorage: number
+  feedstockPerCycle: number
   gasoline: number
   maxGasolineStorage: number
   lubricants: number
@@ -20,6 +23,9 @@ function ResourcePanel({
   reputation,
   crudeOil,
   maxCrudeStorage,
+  feedstock,
+  maxFeedstockStorage,
+  feedstockPerCycle,
   gasoline,
   maxGasolineStorage,
   lubricants,
@@ -70,6 +76,24 @@ function ResourcePanel({
         </strong>
         <p>
           <BilingualText text={text.resources.crudeDescription} />
+        </p>
+      </article>
+
+      <article className="resource-card resource-card--feedstock">
+        <span className="resource-label">
+          <BilingualText text={text.resources.feedstock} />
+        </span>
+        <strong>
+          {feedstock}/{maxFeedstockStorage}
+        </strong>
+        <p>
+          {feedstockPerCycle > 0 ? (
+            <BilingualText
+              text={text.resources.feedstockRate(Math.floor(feedstockPerCycle))}
+            />
+          ) : (
+            <BilingualText text={text.resources.feedstockDescription} />
+          )}
         </p>
       </article>
 

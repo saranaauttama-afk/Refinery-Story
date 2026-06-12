@@ -626,3 +626,66 @@ export const WAGE_BALANCE = {
   // reputation hit (gentle — no hard bankruptcy in this prototype).
   unpaidReputationPenalty: 10,
 } as const
+
+// --- Refinery Process Chain: feedstock layer ---
+// Distillation Units convert crude → feedstock; downstream plants consume it.
+export const FEEDSTOCK_BALANCE = {
+  // Distillation fires every N ticks (5 ticks = 1s at 200ms/tick).
+  distillationIntervalTicks: 5,
+  // Per distillation unit, per cycle: consume this much crude...
+  crudePerDistillationCycle: 3,
+  // ...to produce this much feedstock (base).
+  feedstockPerDistillationCycle: 2,
+  // Each crude→distillation adjacency pair adds this much feedstock per cycle
+  // (reuses the existing combo system — placing distillation next to crude tanks
+  // pays off in the chain, not just in speed).
+  feedstockPerAdjacency: 0.5,
+  // Feedstock storage cap = base + per-distillation-unit.
+  baseFeedstockStorage: 40,
+  feedstockStoragePerDistillationUnit: 25,
+} as const
+
+// Unified downstream-plant production. These three plants now consume FEEDSTOCK
+// (not raw crude). One config-driven tick loop replaces three duplicated blocks.
+export type PlantProductionConfig = {
+  buildingKey: 'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant'
+  productKey: 'lubricants' | 'jetFuel' | 'petrochemicals'
+  feedstockPerCycle: number
+  outputPerCycle: number
+  intervalTicks: number
+  maxStorage: number
+  // Optional specialist worker that multiplies this plant's output.
+  specialistWorker?: 'aviationSpecialist' | 'chemicalEngineer'
+  specialistBonusRate?: number
+}
+
+export const PLANT_PRODUCTION: PlantProductionConfig[] = [
+  {
+    buildingKey: 'lubricantPlant',
+    productKey: 'lubricants',
+    feedstockPerCycle: 6,
+    outputPerCycle: 5,
+    intervalTicks: 25,
+    maxStorage: 200,
+  },
+  {
+    buildingKey: 'jetFuelPlant',
+    productKey: 'jetFuel',
+    feedstockPerCycle: 8,
+    outputPerCycle: 5,
+    intervalTicks: 25,
+    maxStorage: 200,
+    specialistWorker: 'aviationSpecialist',
+    specialistBonusRate: BONUS_BALANCE.aviationSpecialistJetFuelBonusRate,
+  },
+  {
+    buildingKey: 'petrochemicalPlant',
+    productKey: 'petrochemicals',
+    feedstockPerCycle: 10,
+    outputPerCycle: 5,
+    intervalTicks: 25,
+    maxStorage: 200,
+    specialistWorker: 'chemicalEngineer',
+    specialistBonusRate: BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate,
+  },
+]

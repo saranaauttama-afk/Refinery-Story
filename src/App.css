@@ -2151,3 +2151,12 @@
   text-align: center;
   box-shadow: 0 0 0 1.5px var(--panel);
 }
+
+/* Process chain: feedstock */
+.resource-card--feedstock strong { color: #b8702a; }
+.product-no-feedstock {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: #b8702a;
+  font-weight: 600;
+}

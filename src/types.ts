@@ -27,6 +27,9 @@ export type GameState = {
   reputation: number
   crudeOil: number
   gasoline: number
+  // Intermediate refined feedstock: Distillation Units make it from crude;
+  // downstream plants (jet fuel / lubricants / petrochemicals) consume it.
+  feedstock: number
   // Phase A foundation: future product inventory.
   // Only gasoline is active. Others are unused placeholders.
   // game.gasoline remains the source of truth for all current gameplay.
@@ -374,6 +377,9 @@ export type DerivedStats = {
   nextEra?: EraConfig
   eraSellPriceBonusRate: number
   eraResearchRateBonusRate: number
+  // Refinery process chain (feedstock layer)
+  maxFeedstockStorage: number
+  feedstockPerDistillationCycle: number
   productionMultiplier: number
   productionRate: number
   progressPercent: number

@@ -6,6 +6,7 @@ import {
   ECONOMY_BALANCE,
   EVENT_BALANCE,
   EXPANSION_BALANCE,
+  FEEDSTOCK_BALANCE,
   MILESTONE_BALANCE,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
@@ -87,6 +88,7 @@ export function createInitialGameState(): GameState {
     reputation: STARTING_BALANCE.reputation,
     crudeOil: STARTING_CRUDE,
     gasoline: 0,
+    feedstock: 0,
     refineryLevel: 1,
     productionProgress: 0,
     tickCount: 0,
@@ -418,6 +420,18 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
 
+  // --- Process chain: feedstock storage + distillation output ---
+  // Feedstock cap scales with how much distillation capacity you've built.
+  const distillationUnitCount = buildingCounts.distillationUnit
+  const maxFeedstockStorage =
+    FEEDSTOCK_BALANCE.baseFeedstockStorage +
+    distillationUnitCount * FEEDSTOCK_BALANCE.feedstockStoragePerDistillationUnit
+  // Feedstock produced per distillation cycle across all units, boosted by
+  // crude→distillation adjacency (reuses the combo system).
+  const feedstockPerDistillationCycle =
+    distillationUnitCount * FEEDSTOCK_BALANCE.feedstockPerDistillationCycle +
+    comboStats.crudeToDistillation * FEEDSTOCK_BALANCE.feedstockPerAdjacency
+
   const baseCrudeStorage = STORAGE_BALANCE.baseCrudeStorage + crudeTankStorageTotal
   const baseGasolineStorage = STORAGE_BALANCE.baseGasolineStorage + productTankStorageTotal
   const storageMultiplier =
@@ -596,6 +610,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     nextEra,
     eraSellPriceBonusRate,
     eraResearchRateBonusRate,
+    maxFeedstockStorage,
+    feedstockPerDistillationCycle,
     productionMultiplier,
     productionRate,
     progressPercent,

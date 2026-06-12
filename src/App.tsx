@@ -28,7 +28,7 @@ import EraPanel from './components/EraPanel'
 import AwardsPanel from './components/AwardsPanel'
 import AwardCeremonyModal from './components/AwardCeremonyModal'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, AWARDS_BALANCE, BONUS_BALANCE, JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE, LUBRICANT_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, AWARDS_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
@@ -97,6 +97,8 @@ function App() {
     buildingCounts,
     currentEra,
     nextEra,
+    maxFeedstockStorage,
+    feedstockPerDistillationCycle,
   } = calculateDerivedStats(game)
 
   const productSellPrices: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
@@ -128,110 +130,76 @@ function App() {
         const currentStats = calculateDerivedStats(current)
         const currentMaxGasoline = currentStats.maxGasolineStorage
 
-        // --- Lubricant Plant production ---
-        // Fires every LUBRICANT_PLANT_BALANCE.intervalTicks ticks.
-        // Each plant consumes crudePerCycle crude and produces lubricantsPerCycle lubricants.
         let crudeOil = current.crudeOil
+        let feedstock = current.feedstock
         let productInventory = current.productInventory
-        let lubricantLog: string | null = null
-
-        const lubricantPlantCount = currentStats.buildingCounts.lubricantPlant
-        if (
-          lubricantPlantCount > 0 &&
-          nextTick % LUBRICANT_PLANT_BALANCE.intervalTicks === 0
-        ) {
-          const crudeNeeded = lubricantPlantCount * LUBRICANT_PLANT_BALANCE.crudePerCycle
-          const lubricantsSpace =
-            LUBRICANT_PLANT_BALANCE.maxStorage - current.productInventory.lubricants
-          if (crudeOil >= crudeNeeded && lubricantsSpace > 0) {
-            const lubricantsProduced = Math.min(
-              lubricantPlantCount * LUBRICANT_PLANT_BALANCE.lubricantsPerCycle,
-              lubricantsSpace,
-            )
-            crudeOil -= crudeNeeded
-            productInventory = {
-              ...productInventory,
-              lubricants: productInventory.lubricants + lubricantsProduced,
-            }
-            lubricantLog = serializeBilingualText(
-              text.logs.producedLubricants(lubricantPlantCount, lubricantsProduced),
-            )
-          }
-        }
-
-        // --- Jet Fuel Plant production ---
-        // Fires every JET_FUEL_PLANT_BALANCE.intervalTicks ticks.
-        // Each plant consumes crudePerCycle crude and produces jetFuelPerCycle jet fuel.
-        let jetFuelPlantLog: string | null = null
-
-        const jetFuelPlantCount = currentStats.buildingCounts.jetFuelPlant
-        if (
-          jetFuelPlantCount > 0 &&
-          nextTick % JET_FUEL_PLANT_BALANCE.intervalTicks === 0
-        ) {
-          const crudeNeeded = jetFuelPlantCount * JET_FUEL_PLANT_BALANCE.crudePerCycle
-          const jetFuelSpace = JET_FUEL_BALANCE.maxStorage - productInventory.jetFuel
-          if (crudeOil >= crudeNeeded && jetFuelSpace > 0) {
-            const aviationSpecialistCount = current.workerCounts.aviationSpecialist ?? 0
-            const aviationMultiplier = 1 + aviationSpecialistCount * BONUS_BALANCE.aviationSpecialistJetFuelBonusRate
-            const jetFuelProduced = Math.min(
-              Math.round(jetFuelPlantCount * JET_FUEL_PLANT_BALANCE.jetFuelPerCycle * aviationMultiplier),
-              jetFuelSpace,
-            )
-            crudeOil -= crudeNeeded
-            productInventory = {
-              ...productInventory,
-              jetFuel: productInventory.jetFuel + jetFuelProduced,
-            }
-            jetFuelPlantLog = serializeBilingualText(
-              text.logs.producedJetFuelPlant(jetFuelPlantCount, jetFuelProduced),
-            )
-          }
-        }
-
-        // --- Petrochemical Plant production ---
-        // Fires every PETROCHEMICAL_PLANT_BALANCE.intervalTicks ticks.
-        // Each plant consumes crudePerCycle crude and produces petrochemicalsPerCycle petrochemicals.
-        let petrochemicalsLog: string | null = null
-
-        const petrochemicalPlantCount = currentStats.buildingCounts.petrochemicalPlant
-        if (
-          petrochemicalPlantCount > 0 &&
-          nextTick % PETROCHEMICAL_PLANT_BALANCE.intervalTicks === 0
-        ) {
-          const crudeNeeded = petrochemicalPlantCount * PETROCHEMICAL_PLANT_BALANCE.crudePerCycle
-          const petrochemicalsSpace = PETROCHEMICAL_PLANT_BALANCE.maxStorage - productInventory.petrochemicals
-          if (crudeOil >= crudeNeeded && petrochemicalsSpace > 0) {
-            const chemicalEngineerCount = current.workerCounts.chemicalEngineer ?? 0
-            const chemicalEngineerMultiplier = 1 + chemicalEngineerCount * BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate
-            const petrochemicalsProduced = Math.min(
-              Math.round(petrochemicalPlantCount * PETROCHEMICAL_PLANT_BALANCE.petrochemicalsPerCycle * chemicalEngineerMultiplier),
-              petrochemicalsSpace,
-            )
-            crudeOil -= crudeNeeded
-            productInventory = {
-              ...productInventory,
-              petrochemicals: productInventory.petrochemicals + petrochemicalsProduced,
-            }
-            petrochemicalsLog = serializeBilingualText(
-              text.logs.producedPetrochemicals(petrochemicalPlantCount, petrochemicalsProduced),
-            )
-          }
-        }
-
-        // --- Combine plant logs ---
         let plantActivityLog = current.activityLog
-        if (lubricantLog) plantActivityLog = addLog(plantActivityLog, lubricantLog)
-        if (jetFuelPlantLog) plantActivityLog = addLog(plantActivityLog, jetFuelPlantLog)
-        if (petrochemicalsLog) plantActivityLog = addLog(plantActivityLog, petrochemicalsLog)
 
-        // --- Gasoline production ---
+        // --- Distillation: crude → feedstock ---
+        // Each distillation cycle converts crude into feedstock (capped by storage).
+        // This is the heart of the chain: downstream plants run on feedstock.
+        if (
+          currentStats.feedstockPerDistillationCycle > 0 &&
+          nextTick % FEEDSTOCK_BALANCE.distillationIntervalTicks === 0
+        ) {
+          const distillationUnits = currentStats.buildingCounts.distillationUnit
+          const crudeNeeded = distillationUnits * FEEDSTOCK_BALANCE.crudePerDistillationCycle
+          const feedstockSpace = currentStats.maxFeedstockStorage - feedstock
+          if (crudeOil >= crudeNeeded && feedstockSpace > 0) {
+            const feedstockMade = Math.min(
+              Math.floor(currentStats.feedstockPerDistillationCycle),
+              feedstockSpace,
+            )
+            if (feedstockMade > 0) {
+              crudeOil -= crudeNeeded
+              feedstock += feedstockMade
+            }
+          }
+        }
+
+        // --- Downstream plants: feedstock → product (unified loop) ---
+        // Replaces three near-identical blocks. Each plant consumes feedstock and
+        // produces its product, scaled by an optional specialist worker.
+        for (const plant of PLANT_PRODUCTION) {
+          const plantCount = currentStats.buildingCounts[plant.buildingKey]
+          if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) continue
+
+          const feedstockNeeded = plantCount * plant.feedstockPerCycle
+          const productSpace = plant.maxStorage - productInventory[plant.productKey]
+          if (feedstock < feedstockNeeded || productSpace <= 0) continue
+
+          let specialistMultiplier = 1
+          if (plant.specialistWorker && plant.specialistBonusRate) {
+            const specialistCount = current.workerCounts[plant.specialistWorker] ?? 0
+            specialistMultiplier = 1 + specialistCount * plant.specialistBonusRate
+          }
+          const produced = Math.min(
+            Math.round(plantCount * plant.outputPerCycle * specialistMultiplier),
+            productSpace,
+          )
+          if (produced <= 0) continue
+
+          feedstock -= feedstockNeeded
+          productInventory = {
+            ...productInventory,
+            [plant.productKey]: productInventory[plant.productKey] + produced,
+          }
+          plantActivityLog = addLog(
+            plantActivityLog,
+            serializeBilingualText(
+              text.logs.producedPlant(plant.productKey, plantCount, produced),
+            ),
+          )
+        }
+
+        // --- Gasoline production (Tier 1: crude-direct, unchanged) ---
         if (crudeOil < 1 || current.gasoline >= currentMaxGasoline) {
           return {
             ...current,
             tickCount: nextTick,
             productionProgress: 0,
             crudeOil,
+            feedstock,
             productInventory,
             activityLog: plantActivityLog,
           }
@@ -246,6 +214,7 @@ function App() {
             tickCount: nextTick,
             productionProgress: nextProgress,
             crudeOil,
+            feedstock,
             productInventory,
             activityLog: plantActivityLog,
           }
@@ -264,6 +233,7 @@ function App() {
             tickCount: nextTick,
             productionProgress: 0,
             crudeOil,
+            feedstock,
             productInventory,
             activityLog: plantActivityLog,
           }
@@ -284,6 +254,7 @@ function App() {
           ...current,
           tickCount: nextTick,
           crudeOil: crudeRemaining,
+          feedstock,
           gasoline: gasolineTotal,
           totalGasolineProduced: current.totalGasolineProduced + batchesProduced,
           productionProgress: leftoverProgress,
@@ -1058,6 +1029,9 @@ function App() {
           reputation={game.reputation}
           crudeOil={game.crudeOil}
           maxCrudeStorage={maxCrudeStorage}
+          feedstock={game.feedstock}
+          maxFeedstockStorage={maxFeedstockStorage}
+          feedstockPerCycle={feedstockPerDistillationCycle}
           gasoline={game.gasoline}
           maxGasolineStorage={maxGasolineStorage}
           lubricants={game.productInventory.lubricants}
@@ -1121,6 +1095,7 @@ function App() {
               inventory={game.productInventory[product.key]}
               sellPrice={productSellPrices[product.key]}
               plantCount={productPlantCounts[product.key]}
+              feedstock={game.feedstock}
               onSell={productSellHandlers[product.key]}
             />
           ))}

@@ -23,10 +23,10 @@ Principle: few mechanics that multiply (Kairosoft), progressive disclosure.
 config-driven loop (data/plants.ts). Removes ~100 lines while adding feedstock.
 
 ## Tasks
-### Task 1 — feedstock resource + state  [ ]
-### Task 2 — Distillation produces feedstock  [ ]
-### Task 3 — Unify downstream plants on feedstock (data/plants.ts)  [ ]
-### Task 4 — UI (feedstock card, chain hints)  [ ]
+### Task 1 — feedstock resource + state  [x]
+### Task 2 — Distillation produces feedstock  [x]
+### Task 3 — Unify downstream plants on feedstock (data/plants.ts)  [x]
+### Task 4 — UI (feedstock card, chain hints)  [x]
 ### Task 5 — Re-anchor meta to refinery (light)  [ ]
 ### Task 6 — Balance pass  [ ]
 ### Task 7 — Docs + verify + push  [ ]
