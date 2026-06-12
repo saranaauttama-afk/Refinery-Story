@@ -7,6 +7,7 @@ import type {
   StandingOrderKey,
   WorkerCounts,
   WorkerLevels,
+  WorkerType,
   WorkerXp,
   YearStats,
 } from '../types'
@@ -14,9 +15,11 @@ import { text } from '../translations'
 import {
   createInitialGameState,
   DEFAULT_REFINERY_NAME,
+  getEmptyWorkerNames,
   getEmptyWorkerXp,
   getInitialWorkerLevels,
 } from './gameCalculations'
+import { getStaffName } from '../data/staffNames'
 
 const STORAGE_KEY = 'refinery-story-save'
 
@@ -147,6 +150,24 @@ function getSafeWorkerXp(value: unknown): WorkerXp {
   return result
 }
 
+// Roster flavor names, added in the Charm Pass. Backfills missing names (old
+// saves, or saves from before this feature) up to each type's current
+// headcount, so every hired worker has a name immediately on load.
+function getSafeWorkerNames(value: unknown, workerCounts: WorkerCounts): Record<WorkerType, string[]> {
+  const result = getEmptyWorkerNames()
+  for (const key of WORKER_TYPE_KEYS) {
+    const saved = isRecord(value) ? value[key] : undefined
+    const names = Array.isArray(saved)
+      ? saved.filter((n): n is string => typeof n === 'string').slice(0, workerCounts[key])
+      : []
+    while (names.length < workerCounts[key]) {
+      names.push(getStaffName(names.length))
+    }
+    result[key] = names
+  }
+  return result
+}
+
 // System 2: only keep recognized perk keys.
 const PERK_KEYS: PerkKey[] = [
   'efficiency1', 'efficiency2', 'efficiency3',
@@ -200,6 +221,7 @@ function sanitizeLoadedGameState(value: unknown) {
   }
 
   const grid = getSafeGrid(value.grid, fallback.grid)
+  const workerCounts = getSafeWorkerCounts(value.workerCounts, fallback.workerCounts)
 
   return {
     ...fallback,
@@ -245,9 +267,10 @@ function sanitizeLoadedGameState(value: unknown) {
       value.unlockedResearchIds,
       fallback.unlockedResearchIds,
     ) as GameState['unlockedResearchIds'],
-    workerCounts: getSafeWorkerCounts(value.workerCounts, fallback.workerCounts),
+    workerCounts,
     workerLevels: getSafeWorkerLevels(value.workerLevels),
     workerXp: getSafeWorkerXp(value.workerXp),
+    workerNames: getSafeWorkerNames(value.workerNames, workerCounts),
     upgradePoints: getSafeNumber(value.upgradePoints, 0),
     unlockedPerks: getSafePerks(value.unlockedPerks),
     highestEraIndex: getSafeNumber(value.highestEraIndex, 0),

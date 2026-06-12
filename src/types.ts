@@ -50,6 +50,9 @@ export type GameState = {
   // System 1: Staff Training & Levels
   workerLevels: WorkerLevels
   workerXp: WorkerXp
+  // Flavor roster: names assigned to hired staff in hire order, per type.
+  // Cycles through STAFF_NAME_POOL — see getStaffName.
+  workerNames: Record<WorkerType, string[]>
   // System 2: Refinery Upgrade Perk Tree
   upgradePoints: number
   unlockedPerks: PerkKey[]

@@ -127,6 +127,7 @@ export function createInitialGameState(): GameState {
     },
     workerLevels: getInitialWorkerLevels(),
     workerXp: getEmptyWorkerXp(),
+    workerNames: getEmptyWorkerNames(),
     upgradePoints: 0,
     unlockedPerks: [],
     highestEraIndex: 0,
@@ -222,6 +223,20 @@ export function getEmptyWorkerXp(): WorkerXp {
     fuelSpecialist: 0,
     aviationSpecialist: 0,
     chemicalEngineer: 0,
+  }
+}
+
+export function getEmptyWorkerNames(): Record<WorkerType, string[]> {
+  return {
+    operator: [],
+    mechanic: [],
+    salesAgent: [],
+    safetyOfficer: [],
+    chemist: [],
+    logisticsCoordinator: [],
+    fuelSpecialist: [],
+    aviationSpecialist: [],
+    chemicalEngineer: [],
   }
 }
 

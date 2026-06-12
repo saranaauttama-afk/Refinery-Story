@@ -2279,3 +2279,11 @@
   font-size: 0.85rem;
   color: rgba(246, 239, 227, 0.78);
 }
+
+/* Staff roster names */
+.staff-roster {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--muted);
+}

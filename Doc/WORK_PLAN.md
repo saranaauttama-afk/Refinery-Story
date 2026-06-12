@@ -24,7 +24,7 @@ Goal: small, cheap, build/test-verifiable additions that increase Kairosoft
 - Save migration: default name; title derived via pure function (no stored
   field needed for title).
 
-### 3. Named staff  [ ]
+### 3. Named staff  [x]
 - Workers are counts, not individuals -- keep simple: curated name pool,
   `workerNames: Record<WorkerType, string[]>` in GameState. On hire, append
   next name (cycling through pool, deterministic by index).

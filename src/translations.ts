@@ -442,6 +442,11 @@ export const text = {
         `×${count} hired · $${cost.toLocaleString()} each`,
         `จ้างแล้ว ×${count} · ค่าจ้าง $${cost.toLocaleString()}/คน`,
       ),
+    roster: (names: string[], extra: number) =>
+      bilingual(
+        `Team: ${names.join(', ')}${extra > 0 ? ` +${extra} more` : ''}`,
+        `ทีม: ${names.join(', ')}${extra > 0 ? ` และอีก ${extra} คน` : ''}`,
+      ),
     hireButton: bilingual('Hire', 'จ้าง'),
     cantAfford: bilingual("Can't Afford", 'ไม่มีเงินพอ'),
     locked: bilingual('Locked', 'ถูกล็อก'),

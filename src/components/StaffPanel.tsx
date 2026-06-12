@@ -1,4 +1,4 @@
-import type { ActiveWorkerItem, WorkerConfig, WorkerLevels, WorkerXp } from '../types'
+import type { ActiveWorkerItem, WorkerConfig, WorkerLevels, WorkerType, WorkerXp } from '../types'
 import { STAFF_LEVEL_BALANCE } from '../data/balance'
 import { getTrainingCost, getWorkerLevelMultiplier } from '../utils/gameCalculations'
 import { getWorkerActiveBonus } from '../utils/workerBonusText'
@@ -12,12 +12,14 @@ type StaffPanelProps = {
   activeWorkers: ActiveWorkerItem[]
   workerLevels: WorkerLevels
   workerXp: WorkerXp
+  workerNames: Record<WorkerType, string[]>
   onHireWorker: (worker: WorkerConfig) => void
   onTrainWorker: (worker: WorkerConfig) => void
 }
 
 const TIER_ORDER = [1, 2, 3] as const
 type Tier = (typeof TIER_ORDER)[number]
+const ROSTER_VISIBLE_COUNT = 3
 
 function StaffPanel({
   money,
@@ -26,6 +28,7 @@ function StaffPanel({
   activeWorkers,
   workerLevels,
   workerXp,
+  workerNames,
   onHireWorker,
   onTrainWorker,
 }: StaffPanelProps) {
@@ -71,6 +74,17 @@ function StaffPanel({
                     <p className="staff-meta">
                       <BilingualText text={text.staff.countAndCost(worker.count, worker.cost)} />
                     </p>
+                    {!isLocked && worker.count > 0 && (() => {
+                      const names = workerNames[worker.key] ?? []
+                      if (names.length === 0) return null
+                      const visible = names.slice(0, ROSTER_VISIBLE_COUNT)
+                      const extra = names.length - visible.length
+                      return (
+                        <p className="staff-roster">
+                          <BilingualText text={text.staff.roster(visible, extra)} />
+                        </p>
+                      )
+                    })()}
                     <p>
                       <BilingualText text={worker.description} />
                     </p>

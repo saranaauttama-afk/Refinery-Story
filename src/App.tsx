@@ -33,6 +33,7 @@ import { ASPHALT_BALANCE, AWARDS_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, S
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
+import { getStaffName } from './data/staffNames'
 import { serializeBilingualText, text } from './translations'
 import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
 import {
@@ -617,6 +618,13 @@ function App() {
         workerCounts: {
           ...current.workerCounts,
           [worker.key]: current.workerCounts[worker.key] + 1,
+        },
+        workerNames: {
+          ...current.workerNames,
+          [worker.key]: [
+            ...current.workerNames[worker.key],
+            getStaffName(current.workerNames[worker.key].length),
+          ],
         },
         activityLog: addLog(
           current.activityLog,
@@ -1230,6 +1238,7 @@ function App() {
             activeWorkers={activeWorkers}
             workerLevels={game.workerLevels}
             workerXp={game.workerXp}
+            workerNames={game.workerNames}
             onHireWorker={handleHireWorker}
             onTrainWorker={handleTrainWorker}
           />
