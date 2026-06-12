@@ -427,10 +427,15 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     FEEDSTOCK_BALANCE.baseFeedstockStorage +
     distillationUnitCount * FEEDSTOCK_BALANCE.feedstockStoragePerDistillationUnit
   // Feedstock produced per distillation cycle across all units, boosted by
-  // crude→distillation adjacency (reuses the combo system).
+  // crude→distillation adjacency (reuses the combo system) AND by Distillation
+  // Unit level upgrades. distillationUpgradeProductionMultiplier already boosts
+  // gasoline production speed for the same upgrades — applying it here too means
+  // upgrading a Distillation Unit (the "heart of the chain") helps the feedstock
+  // chain just as much as it helps gasoline, instead of doing nothing for it.
   const feedstockPerDistillationCycle =
-    distillationUnitCount * FEEDSTOCK_BALANCE.feedstockPerDistillationCycle +
-    comboStats.crudeToDistillation * FEEDSTOCK_BALANCE.feedstockPerAdjacency
+    (distillationUnitCount * FEEDSTOCK_BALANCE.feedstockPerDistillationCycle +
+      comboStats.crudeToDistillation * FEEDSTOCK_BALANCE.feedstockPerAdjacency) *
+    distillationUpgradeProductionMultiplier
 
   const baseCrudeStorage = STORAGE_BALANCE.baseCrudeStorage + crudeTankStorageTotal
   const baseGasolineStorage = STORAGE_BALANCE.baseGasolineStorage + productTankStorageTotal
@@ -1007,6 +1012,7 @@ export function closeBusinessYear(game: GameState): {
     cashReward,
     payroll,
     netProfit,
+    couldNotAfford,
     gasolineProduced: stats.gasolineProduced,
     moneyEarned: stats.moneyEarned,
     contractsCompleted: stats.contractsCompleted,

@@ -2170,3 +2170,13 @@
   border-radius: 10px;
   border-left: 3px solid rgba(184, 112, 42, 0.4);
 }
+.award-unpaid-warning {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #b8702a;
+  background: rgba(184, 112, 42, 0.1);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+}

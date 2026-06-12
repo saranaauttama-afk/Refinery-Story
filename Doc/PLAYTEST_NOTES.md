@@ -1,5 +1,40 @@
 # Playtest Notes
 
+## 2026-06-13 — Rough Edges Audit
+
+**Method:** Static code audit (dead exports, orphaned translations) + targeted
+fixes. Branch `feature/rough-edges-audit`. 6 new unit assertions, 37 prior pass.
+
+### Found and fixed
+
+1. **Silent reputation penalty.** The payroll system (Economy Pass) computed
+   `couldNotAfford` when cash fell short of wages and docked reputation, but
+   never exposed this on `AwardRecord`. The `unpaidWarning` translation existed
+   but was dead code — players had no idea why reputation dropped some years.
+   Now surfaced in the awards ceremony.
+
+2. **Distillation Unit upgrades were a dead end for the feedstock chain.**
+   Found while re-checking the process-chain math from the previous session:
+   `distillationUnitBonusRateByLevel` ([0, 0, 0.25, 0.5]) boosts gasoline speed
+   when you upgrade a Distillation Unit's level (L2=$3,500, L3=$10,000), but
+   `feedstockPerDistillationCycle` only read unit COUNT, not level — so the
+   same $10k upgrade that makes gasoline 50% faster did nothing for jet
+   fuel/lubricants/petrochemicals. Now both scale together (Lv3 = Lv1 × 1.5,
+   verified).
+
+3. Removed 3 dead translation keys from the plant-loop unification
+   (`producedLubricants`, `producedJetFuelPlant`, `producedPetrochemicals`).
+
+### Flagged, not fixed (see CURRENT_TASK.md)
+
+~10 more possibly-orphaned translation keys, plus a 41-line orphaned UI-spec
+block (`heroCopy` + section descriptions) that doesn't map to any component.
+Lower confidence/value than the two fixes above — left for a dedicated cleanup
+pass after confirming each is truly unused (some dynamic-key patterns can look
+orphaned to grep but aren't).
+
+---
+
 ## 2026-06-12 — Refinery Process Chain (Feedstock Layer)
 
 **Method:** Redesign + scenario balancing. Branch `feature/refinery-process-chain`.

@@ -186,6 +186,7 @@ function getSafeAwardHistory(value: unknown): AwardRecord[] {
       payroll: typeof item.payroll === 'number' ? item.payroll : 0,
       netProfit:
         typeof item.netProfit === 'number' ? item.netProfit : item.moneyEarned ?? 0,
+      couldNotAfford: typeof item.couldNotAfford === 'boolean' ? item.couldNotAfford : false,
     }))
     .slice(0, 12)
 }

@@ -51,6 +51,12 @@ function AwardCeremonyModal({ record, onClose }: AwardCeremonyModalProps) {
           </div>
         </div>
 
+        {record.couldNotAfford && (
+          <p className="award-unpaid-warning">
+            <BilingualText text={text.awards.unpaidWarning} />
+          </p>
+        )}
+
         <button type="button" className="action-button primary" onClick={onClose}>
           <BilingualText text={text.awards.ceremonyClose} />
         </button>

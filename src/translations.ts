@@ -1630,11 +1630,6 @@ export const text = {
         `Processed ${batches} crude into ${gasolineAmount} gasoline.`,
         `แปรรูปน้ำมันดิบ ${batches} หน่วยเป็นเบนซิน ${gasolineAmount} หน่วย`,
       ),
-    producedLubricants: (plants: number, amount: number) =>
-      bilingual(
-        `${plants} lubricant plant${plants > 1 ? 's' : ''} produced ${amount} lubricants.`,
-        `โรงผลิต ${plants} แห่งผลิตสารหล่อลื่น ${amount} หน่วย`,
-      ),
     producedPlant: (
       productKey: 'lubricants' | 'jetFuel' | 'petrochemicals',
       plants: number,
@@ -1656,20 +1651,10 @@ export const text = {
         `Sold ${amount} lubricants for $${totalRevenue.toLocaleString()}.`,
         `ขายสารหล่อลื่น ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
       ),
-    producedJetFuelPlant: (plants: number, amount: number) =>
-      bilingual(
-        `${plants} jet fuel plant${plants > 1 ? 's' : ''} produced ${amount} jet fuel.`,
-        `โรงผลิต ${plants} แห่งผลิตเชื้อเพลิงอากาศยาน ${amount} หน่วย`,
-      ),
     soldJetFuel: (amount: number, totalRevenue: number) =>
       bilingual(
         `Sold ${amount} jet fuel for $${totalRevenue.toLocaleString()}.`,
         `ขายเชื้อเพลิงอากาศยาน ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
-      ),
-    producedPetrochemicals: (plants: number, amount: number) =>
-      bilingual(
-        `${plants} petrochemical plant${plants > 1 ? 's' : ''} produced ${amount} petrochemicals.`,
-        `โรงผลิต ${plants} แห่งผลิตปิโตรเคมี ${amount} หน่วย`,
       ),
     soldPetrochemicals: (amount: number, totalRevenue: number) =>
       bilingual(
