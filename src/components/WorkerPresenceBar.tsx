@@ -1,4 +1,4 @@
-import type { WorkerCounts, WorkerType } from '../types'
+import type { WorkerCounts, WorkerLevels, WorkerType } from '../types'
 import BilingualText from './BilingualText'
 import { text } from '../translations'
 
@@ -18,14 +18,16 @@ const WORKER_ICONS: Record<WorkerType, string> = {
 
 type WorkerPresenceBarProps = {
   workerCounts: WorkerCounts
+  workerLevels: WorkerLevels
 }
 
-function WorkerPresenceBar({ workerCounts }: WorkerPresenceBarProps) {
-  const tokens: Array<{ type: WorkerType; icon: string }> = []
+function WorkerPresenceBar({ workerCounts, workerLevels }: WorkerPresenceBarProps) {
+  const tokens: Array<{ type: WorkerType; icon: string; level: number }> = []
 
   for (const [type, count] of Object.entries(workerCounts) as [WorkerType, number][]) {
+    const level = workerLevels[type] ?? 1
     for (let i = 0; i < count; i++) {
-      tokens.push({ type, icon: WORKER_ICONS[type] })
+      tokens.push({ type, icon: WORKER_ICONS[type], level })
     }
   }
 
@@ -42,8 +44,12 @@ function WorkerPresenceBar({ workerCounts }: WorkerPresenceBarProps) {
             key={`${token.type}-${i}`}
             className={`worker-token worker-token--${token.type}`}
             aria-hidden="true"
+            title={`Lv ${token.level}`}
           >
             {token.icon}
+            {token.level > 1 && (
+              <span className="worker-token-level">{token.level}</span>
+            )}
           </span>
         ))}
         {overflow > 0 && (

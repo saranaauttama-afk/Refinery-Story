@@ -39,6 +39,16 @@ function AwardCeremonyModal({ record, onClose }: AwardCeremonyModalProps) {
             <span><BilingualText text={text.awards.statContracts} /></span>
             <strong>{record.contractsCompleted}</strong>
           </div>
+          <div className="award-stat-row award-stat-row--payroll">
+            <span><BilingualText text={text.awards.statPayroll} /></span>
+            <strong>−${record.payroll.toLocaleString()}</strong>
+          </div>
+          <div className="award-stat-row award-stat-row--net">
+            <span><BilingualText text={text.awards.statNet} /></span>
+            <strong className={record.netProfit < 0 ? 'award-net-negative' : ''}>
+              ${record.netProfit.toLocaleString()}
+            </strong>
+          </div>
         </div>
 
         <button type="button" className="action-button primary" onClick={onClose}>

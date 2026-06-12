@@ -12,6 +12,7 @@ import {
   STAFF_LEVEL_BALANCE,
   STARTING_BALANCE,
   STORAGE_BALANCE,
+  WAGE_BALANCE,
 } from '../data/balance'
 import type { ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
@@ -924,10 +925,29 @@ export function getTrainingCost(currentLevel: number): { money: number; rp: numb
 }
 
 // --- System 4: Annual Awards ---
-export function getAwardScore(stats: YearStats): number {
+
+// Total wages owed for one business year, given current headcount and crew levels.
+export function getYearlyPayroll(game: GameState): number {
+  const levels = game.workerLevels ?? getInitialWorkerLevels()
+  let total = 0
+  for (const worker of WORKERS) {
+    const count = game.workerCounts[worker.key] ?? 0
+    if (count <= 0) continue
+    const wage = WAGE_BALANCE.perWorker[worker.key] ?? 0
+    const level = levels[worker.key] ?? 1
+    const levelFactor = 1 + (level - 1) * WAGE_BALANCE.levelWageRate
+    total += count * wage * levelFactor
+  }
+  return Math.round(total)
+}
+
+// Award score uses NET profit (revenue − payroll) for the money component, so
+// over-hiring directly lowers the grade. gasoline & contracts are unaffected.
+export function getAwardScore(stats: YearStats, payroll = 0): number {
+  const netMoney = Math.max(0, stats.moneyEarned - payroll)
   return Math.round(
     stats.gasolineProduced * AWARDS_BALANCE.weights.perGasoline +
-      (stats.moneyEarned / 1000) * AWARDS_BALANCE.weights.perThousandMoney +
+      (netMoney / 1000) * AWARDS_BALANCE.weights.perThousandMoney +
       stats.contractsCompleted * AWARDS_BALANCE.weights.perContract,
   )
 }
@@ -947,16 +967,30 @@ export function closeBusinessYear(game: GameState): {
   record: AwardRecord
 } {
   const stats = game.yearStats
-  const score = getAwardScore(stats)
+  const payroll = getYearlyPayroll(game)
+  const netProfit = stats.moneyEarned - payroll
+  const score = getAwardScore(stats, payroll)
   const grade = getAwardGrade(score)
   const cashReward = AWARDS_BALANCE.cashByGrade[grade]
   const reputationReward = AWARDS_BALANCE.reputationByGrade[grade]
+
+  // Pay wages out of cash. If short, pay what's available and take a small
+  // reputation hit (no hard bankruptcy in this prototype).
+  const moneyAfterPayroll = game.money - payroll
+  const couldNotAfford = moneyAfterPayroll < 0
+  const moneyAfterWages = Math.max(0, moneyAfterPayroll)
+  const reputationAfter =
+    game.reputation +
+    reputationReward -
+    (couldNotAfford ? WAGE_BALANCE.unpaidReputationPenalty : 0)
 
   const record: AwardRecord = {
     year: game.businessYear,
     grade,
     score,
     cashReward,
+    payroll,
+    netProfit,
     gasolineProduced: stats.gasolineProduced,
     moneyEarned: stats.moneyEarned,
     contractsCompleted: stats.contractsCompleted,
@@ -969,8 +1003,8 @@ export function closeBusinessYear(game: GameState): {
   return {
     game: {
       ...game,
-      money: game.money + cashReward,
-      reputation: game.reputation + reputationReward,
+      money: moneyAfterWages + cashReward,
+      reputation: Math.max(0, reputationAfter),
       businessYear: game.businessYear + 1,
       yearStartTick: game.tickCount,
       yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },

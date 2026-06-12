@@ -353,6 +353,16 @@ export const text = {
     statGasoline: bilingual('Gasoline produced', 'เบนซินที่ผลิต'),
     statMoney: bilingual('Money earned', 'เงินที่หาได้'),
     statContracts: bilingual('Contracts completed', 'สัญญาที่สำเร็จ'),
+    statPayroll: bilingual('Annual payroll', 'ค่าจ้างต่อปี'),
+    statNet: bilingual('Net profit', 'กำไรสุทธิ'),
+    payrollHint: bilingual(
+      'Wages are paid at year end. Net profit (after wages) drives your grade.',
+      'จ่ายค่าจ้างตอนสิ้นปี กำไรสุทธิ (หลังหักค่าจ้าง) เป็นตัวกำหนดเกรด',
+    ),
+    unpaidWarning: bilingual(
+      'Not enough cash for payroll — reputation took a hit.',
+      'เงินไม่พอจ่ายค่าจ้าง — ชื่อเสียงลดลง',
+    ),
     projectedGrade: (grade: string) =>
       bilingual(`Projected grade: ${grade}`, `เกรดที่คาดการณ์: ${grade}`),
     history: bilingual('Past Awards', 'รางวัลที่ผ่านมา'),

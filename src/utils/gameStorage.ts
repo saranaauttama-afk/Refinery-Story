@@ -180,6 +180,13 @@ function getSafeAwardHistory(value: unknown): AwardRecord[] {
         typeof item.score === 'number' &&
         (item.grade === 'S' || item.grade === 'A' || item.grade === 'B' || item.grade === 'C'),
     )
+    .map((item) => ({
+      ...item,
+      // payroll/netProfit added in the Economy Pass; default for older records.
+      payroll: typeof item.payroll === 'number' ? item.payroll : 0,
+      netProfit:
+        typeof item.netProfit === 'number' ? item.netProfit : item.moneyEarned ?? 0,
+    }))
     .slice(0, 12)
 }
 

@@ -8,6 +8,7 @@ type AwardsPanelProps = {
   businessYear: number
   yearStats: YearStats
   yearProgressPercent: number
+  projectedPayroll: number
   awardHistory: AwardRecord[]
 }
 
@@ -15,10 +16,12 @@ function AwardsPanel({
   businessYear,
   yearStats,
   yearProgressPercent,
+  projectedPayroll,
   awardHistory,
 }: AwardsPanelProps) {
-  const projectedScore = getAwardScore(yearStats)
+  const projectedScore = getAwardScore(yearStats, projectedPayroll)
   const projectedGrade = getAwardGrade(projectedScore)
+  const netProfit = yearStats.moneyEarned - projectedPayroll
 
   return (
     <section className="panel awards-panel">
@@ -66,6 +69,19 @@ function AwardsPanel({
           <span><BilingualText text={text.awards.statContracts} /></span>
           <strong>{yearStats.contractsCompleted}</strong>
         </div>
+        <div className="award-stat-row award-stat-row--payroll">
+          <span><BilingualText text={text.awards.statPayroll} /></span>
+          <strong>−${projectedPayroll.toLocaleString()}</strong>
+        </div>
+        <div className="award-stat-row award-stat-row--net">
+          <span><BilingualText text={text.awards.statNet} /></span>
+          <strong className={netProfit < 0 ? 'award-net-negative' : ''}>
+            ${netProfit.toLocaleString()}
+          </strong>
+        </div>
+        <p className="award-payroll-hint helper-text">
+          <BilingualText text={text.awards.payrollHint} />
+        </p>
         <p className="award-projected">
           <BilingualText text={text.awards.projectedGrade(projectedGrade)} />
           {' '}({projectedScore} / {AWARDS_BALANCE.gradeThresholds.S})

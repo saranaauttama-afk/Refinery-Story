@@ -2125,3 +2125,29 @@
   padding: 10px 0;
 }
 .award-ceremony--S { box-shadow: 0 0 0 3px rgba(247, 208, 70, 0.4), var(--shadow); }
+
+/* Economy Pass — payroll / net rows in awards */
+.award-stat-row--payroll strong { color: #b5462f; }
+.award-stat-row--net { border-top: 1px dashed var(--border); padding-top: 6px; margin-top: 2px; }
+.award-stat-row--net strong { color: #1f7a4d; }
+.award-net-negative { color: #b5462f !important; }
+.award-payroll-hint { margin: 6px 0 0; font-size: 0.74rem; }
+
+/* Crew level pip on presence tokens */
+.worker-token { position: relative; }
+.worker-token-level {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 2px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f6b73c, #e8902f);
+  color: #2a1c08;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+  box-shadow: 0 0 0 1.5px var(--panel);
+}

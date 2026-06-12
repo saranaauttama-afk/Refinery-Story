@@ -49,6 +49,7 @@ import {
   closeBusinessYear,
   getTrainingCost,
   getProductSellPrice,
+  getYearlyPayroll,
   getRandomEvent,
   getUpgradeCost,
   orderShipment,
@@ -1139,7 +1140,7 @@ function App() {
           onRemoveBuilding={handleRemoveBuilding}
           onUpgradeBuilding={handleUpgradeBuilding}
         />
-        <WorkerPresenceBar workerCounts={game.workerCounts} />
+        <WorkerPresenceBar workerCounts={game.workerCounts} workerLevels={game.workerLevels} />
         <ExpansionPanel
           gridExpansionLevel={game.gridExpansionLevel}
           refineryLevel={game.refineryLevel}
@@ -1219,6 +1220,7 @@ function App() {
                 ((game.tickCount - game.yearStartTick) / AWARDS_BALANCE.yearLengthTicks) * 100,
               ),
             )}
+            projectedPayroll={getYearlyPayroll(game)}
             awardHistory={game.awardHistory}
           />
           <MilestonesPanel activeMilestones={activeMilestones} />

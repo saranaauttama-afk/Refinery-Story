@@ -35,7 +35,7 @@ A focused "make it clean" pass — NOT new big systems. Four jobs + a balance pa
   (salesAgent% + quality perks% + era%), so perks/era now lift EVERY product,
   not just gasoline. Fixes a real inconsistency.
 
-### Task 4 — Wages / Payroll tied to Annual Awards  [ ]
+### Task 4 — Wages / Payroll tied to Annual Awards  [x]
 - Each worker type has a wage. Payroll = Σ count × wage × levelFactor
   (leveled crews cost more — ties the systems together).
 - Deducted at year-end inside `closeBusinessYear`. The Awards score's money
@@ -44,7 +44,7 @@ A focused "make it clean" pass — NOT new big systems. Four jobs + a balance pa
 - Awards panel shows live projected payroll + net. Ceremony shows the breakdown.
 - If cash can't cover payroll: pay what you can, small reputation hit.
 
-### Task 5 — WorkerPresenceBar reflects crew level  [ ]
+### Task 5 — WorkerPresenceBar reflects crew level  [x]
 - Token bar now shows level pips/stars so the decorative crew ties to System 1.
 
 ### Task 6 — Combined Balance Pass  [ ]

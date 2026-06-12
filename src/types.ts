@@ -220,6 +220,8 @@ export type AwardRecord = {
   grade: AwardGrade
   score: number
   cashReward: number
+  payroll: number
+  netProfit: number
   gasolineProduced: number
   moneyEarned: number
   contractsCompleted: number

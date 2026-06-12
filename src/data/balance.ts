@@ -590,3 +590,28 @@ export const AWARDS_BALANCE = {
     perContract: 60,       // 60 points per contract completed this year
   },
 } as const
+
+// --- Staff wages / payroll (Economy Pass) ---
+// Annual wage per worker by type (deducted each business year, see
+// closeBusinessYear). Roughly 15% of hire cost, so a worker "pays rent" but
+// still earns out over several years. Leveled crews cost more (see levelWageRate),
+// tying the leveling system to ongoing upkeep — the missing hiring tension.
+export const WAGE_BALANCE = {
+  perWorker: {
+    operator: 80,
+    mechanic: 120,
+    salesAgent: 150,
+    safetyOfficer: 180,
+    chemist: 220,
+    logisticsCoordinator: 300,
+    fuelSpecialist: 220,
+    aviationSpecialist: 450,
+    chemicalEngineer: 700,
+  } as Record<string, number>,
+  // Each crew level above 1 adds this fraction to that type's wage.
+  // Level 5 crew costs 1 + 4*0.1 = 1.4x wage.
+  levelWageRate: 0.1,
+  // If cash can't cover payroll, the player pays what they can and takes this
+  // reputation hit (gentle — no hard bankruptcy in this prototype).
+  unpaidReputationPenalty: 10,
+} as const
