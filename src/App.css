@@ -2160,3 +2160,13 @@
   color: #b8702a;
   font-weight: 600;
 }
+.refinery-chain-note {
+  margin: 4px 0 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+  padding: 8px 10px;
+  background: rgba(184, 112, 42, 0.08);
+  border-radius: 10px;
+  border-left: 3px solid rgba(184, 112, 42, 0.4);
+}

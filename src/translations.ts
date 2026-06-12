@@ -202,6 +202,10 @@ export const text = {
   refineryProgression: {
     kicker: bilingual('Refinery', 'โรงกลั่น'),
     title: bilingual('Level Progression', 'ความก้าวหน้าของระดับ'),
+    chainExplainer: bilingual(
+      'Crude → Gasoline directly. For advanced products, Distillation Units refine crude into feedstock that jet fuel, lubricant & petrochemical plants consume.',
+      'น้ำมันดิบ → เบนซินโดยตรง ส่วนผลิตภัณฑ์ขั้นสูง หน่วยกลั่นจะเปลี่ยนน้ำมันดิบเป็นวัตถุดิบกลั่นที่โรงเชื้อเพลิงอากาศยาน สารหล่อลื่น และปิโตรเคมีใช้',
+    ),
     currentLabel: bilingual('Current', 'ปัจจุบัน'),
     nextLabel: (level: number) =>
       bilingual(`Next: Level ${level}`, `ถัดไป: ระดับ ${level}`),

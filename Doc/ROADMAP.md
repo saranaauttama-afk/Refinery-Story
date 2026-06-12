@@ -99,6 +99,18 @@ Suggested goals:
 
 ---
 
+## Phase 3 — Refinery Process Chain (Complete — v1.0)
+
+The refinery becomes the star. Inserted a feedstock intermediate so production is
+a chain: crude → (Distillation) → feedstock → advanced plants. Gasoline/asphalt
+stay crude-direct (tutorial tier). Distillation is now the economic engine;
+grid layout & feedstock routing are real decisions. Three duplicated plant tick
+blocks unified into one config-driven loop.
+
+See Doc/WORK_PLAN.md and PLAYTEST_NOTES 2026-06-12 "Process Chain".
+
+---
+
 ## Phase 2D — Staff Cleanup & Economy (Complete — v0.9)
 
 - Removed redundant WorkforcePanel; deduped worker bonus text into a shared util

@@ -58,6 +58,10 @@ function RefineryProgressionPanel({ refineryLevel }: RefineryProgressionPanelPro
         </p>
       )}
 
+      <p className="refinery-chain-note">
+        <BilingualText text={text.refineryProgression.chainExplainer} />
+      </p>
+
       <div className="progression-highlights">
         <div className="progression-highlight-card">
           <span className="progression-highlight-label">

@@ -27,9 +27,9 @@ config-driven loop (data/plants.ts). Removes ~100 lines while adding feedstock.
 ### Task 2 — Distillation produces feedstock  [x]
 ### Task 3 — Unify downstream plants on feedstock (data/plants.ts)  [x]
 ### Task 4 — UI (feedstock card, chain hints)  [x]
-### Task 5 — Re-anchor meta to refinery (light)  [ ]
-### Task 6 — Balance pass  [ ]
-### Task 7 — Docs + verify + push  [ ]
+### Task 5 — Re-anchor meta to refinery (light)  [x]
+### Task 6 — Balance pass  [x]
+### Task 7 — Docs + verify + push  [x]
 
 ## Save compat: feedstock defaults 0. Downstream plants now need feedstock;
 distillation unlocks early & is needed for gasoline, so most players have it.

@@ -1,5 +1,66 @@
 # Playtest Notes
 
+## 2026-06-12 — Refinery Process Chain (Feedstock Layer)
+
+**Method:** Redesign + scenario balancing. Branch `feature/refinery-process-chain`.
+13 unit assertions (chain throughput + save migration).
+
+### What changed (the refinery is now the star)
+
+The game was themed "develop a refinery" but every product was a one-step
+crude → product. Inserted ONE intermediate — **feedstock** — so production is a
+real chain:
+
+- **Tier 1 (crude-direct, unchanged):** gasoline, asphalt. The early game is
+  identical — a simple tutorial loop on a 9-cell grid.
+- **Tier 2 (needs feedstock):** jet fuel, lubricants, petrochemicals. These plants
+  now consume feedstock instead of raw crude.
+- **Distillation Unit is now the heart of the economy:** each cycle it refines
+  crude → feedstock, boosted by adjacency to crude tanks (reuses the existing combo
+  system). More distillation + smart grid layout = more feedstock throughput.
+
+### Routing tension (the new strategic depth)
+
+Scenario math (1 distillation unit = ~10 feedstock per 25-tick plant window):
+
+| Plant | feedstock/cycle | plants 1 distil sustains |
+|-------|-----------------|--------------------------|
+| Lubricants | 6 | ~1.7 |
+| Jet fuel | 8 | ~1.25 |
+| Petrochemicals | 10 | ~1.0 |
+
+Running all three plants at once (24 feedstock/window) needs ~2.4 distillation
+units. So feedstock is a shared, limited stream the three advanced plants compete
+for — the player decides what to route where, and builds/places distillation to
+scale. This is the depth that was missing: the refinery layout and throughput now
+*are* the game mid-to-late, not a backdrop.
+
+### Also cleaned up
+
+The three downstream-plant tick blocks (~95% duplicated) collapsed into one
+config-driven loop (`PLANT_PRODUCTION` in balance.ts). ~100 lines removed while
+adding the feature.
+
+### Save compatibility / balance shift
+
+`feedstock` defaults 0 on load. Existing saves with downstream plants now need a
+Distillation Unit feeding feedstock before those plants produce. Since distillation
+unlocks early and is required for the gasoline line anyway, virtually all players
+already have it — the migration is gentle. Acceptable for a prototype.
+
+### Carried forward / future depth
+
+- Multi-cut chain (naphtha / distillate / residue + reformer / cracker) — the
+  natural next layer if more refinery depth is wanted. Deliberately NOT done now
+  to avoid bloat (one intermediate is the Kairosoft-style sweet spot).
+- Per-plant levels / throughput upgrades.
+- Deeper meta re-anchoring (award score rewarding feedstock throughput; an era gate
+  on distillation capacity) — only a light chain explainer added this pass.
+- Tune feedstock rates after live play; current numbers make petrochem (1:1 with a
+  single distil) the tightest — intended, as it's the top-tier product.
+
+---
+
 ## 2026-06-12 — Staff Cleanup & Economy Pass
 
 **Method:** Refactor + balance pass. Branch `feature/staff-cleanup-and-economy`.

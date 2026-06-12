@@ -1,28 +1,25 @@
-# Staff Cleanup & Economy Pass — COMPLETE (2026-06-12)
+# Refinery Process Chain — COMPLETE (2026-06-12)
 
-Branch: `feature/staff-cleanup-and-economy` (on top of gameplay-systems-expansion).
-Full task breakdown + checkboxes in WORK_PLAN.md (all 7 done).
+Branch: `feature/refinery-process-chain`. All 7 tasks done (see WORK_PLAN.md).
 
 ## What shipped
 
-1. Removed redundant WorkforcePanel; shared `utils/workerBonusText.ts`.
-2. Consolidated JetFuel/Lubricants/Petrochemicals → config-driven `ProductPanel`
-   + `data/products.ts`. Asphalt kept separate (manual produce, no direct sell).
-3. Sales Agent flat +$3 → +4%/worker; unified `productSellMultiplier`
-   (salesAgent% + quality perks% + era%) across ALL products.
-4. Wages/Payroll tied to Annual Awards — payroll deducted at year-end, award
-   grade uses NET (revenue − payroll). The missing hiring tension.
-5. WorkerPresenceBar shows crew level badges.
-6. Balance pass: production floor 250→180ms; verified stacked multipliers healthy
-   (sell ~2.5x over game, product mult ≤~1.9x, payroll as a real sink).
+Inserted a **feedstock** intermediate so the refinery is a real process chain:
+- Tier 1 (crude-direct, unchanged): gasoline, asphalt — the simple tutorial loop.
+- Tier 2 (needs feedstock): jet fuel, lubricants, petrochemicals.
+- Distillation Units refine crude → feedstock (adjacency-boosted via the combo
+  system). Downstream plants consume feedstock. Routing the shared feedstock
+  stream + scaling distillation is the new mid/late-game depth.
+- Unified the 3 duplicated plant tick blocks into one config-driven loop.
+- Feedstock resource card + throughput + feedstock-starved hints + chain explainer.
 
 ## Verification
-
-build ✓ / eslint ✓ / tsc ✓ / 40 unit assertions (economy + save migration) ✓.
+build ✓ / eslint ✓ / tsc ✓ / 13 unit assertions (throughput + save migration) ✓ /
+dev server clean. Save-compatible (feedstock defaults 0).
 
 ## Recommended next
-
-- Perk differentiation (Efficiency branch overlaps operators at the production
-  floor — repurpose to yield-per-batch).
-- Then mobile/Expo layout pass when gameplay feels locked.
-- Optional: save export/import, rival/competitive flavor for Awards.
+- Multi-cut chain (naphtha/distillate/residue + reformer/cracker) IF more refinery
+  depth is wanted — biggest lever, but watch for bloat.
+- Per-plant levels/throughput upgrades.
+- Then mobile/Expo layout once gameplay feels locked.
+- Cleanup: dead production fields on the old *_PLANT_BALANCE constants (TECH_DEBT).
