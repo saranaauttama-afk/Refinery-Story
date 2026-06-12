@@ -89,6 +89,15 @@ export const text = {
       },
     },
   },
+  refinery: {
+    nameLabel: bilingual('Refinery Name', 'ชื่อโรงกลั่น'),
+    editButton: bilingual('Rename', 'เปลี่ยนชื่อ'),
+    saveButton: bilingual('Save', 'บันทึก'),
+    titleLocalRefinery: bilingual('Local Refinery', 'โรงกลั่นท้องถิ่น'),
+    titleRegionalSupplier: bilingual('Regional Supplier', 'ผู้จัดส่งระดับภูมิภาค'),
+    titleNationalProducer: bilingual('National Producer', 'ผู้ผลิตระดับประเทศ'),
+    titleIndustryLeader: bilingual('Industry Leader', 'ผู้นำอุตสาหกรรม'),
+  },
   resources: {
     section: bilingual('Resources', 'ทรัพยากร'),
     money: bilingual('Money', 'เงิน'),

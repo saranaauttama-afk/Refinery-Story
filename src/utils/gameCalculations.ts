@@ -51,6 +51,19 @@ export const GRID_SIZE = CORE_BALANCE.gridSize
 export const STARTING_MONEY = STARTING_BALANCE.money
 export const STARTING_CRUDE = STARTING_BALANCE.crudeOil
 export const CRUDE_COST = ECONOMY_BALANCE.crudeCost
+
+// Default name shown until the player renames their refinery from the hero panel.
+export const DEFAULT_REFINERY_NAME = 'Sunrise Refinery'
+
+// Refinery "title" — a Kairosoft-style company rank shown next to the name in
+// the hero panel, derived purely from refinery level (no extra save state).
+// Thresholds line up with the advanced-plant unlock levels (5/10/15).
+export function getRefineryTitle(level: number): BilingualTextValue {
+  if (level >= 15) return text.refinery.titleIndustryLeader
+  if (level >= 10) return text.refinery.titleNationalProducer
+  if (level >= 5) return text.refinery.titleRegionalSupplier
+  return text.refinery.titleLocalRefinery
+}
 export const RANDOM_EVENT_INTERVAL_MS = CORE_BALANCE.randomEventIntervalMs
 
 export const REPUTATION_TIERS: ReputationTier[] = [
@@ -127,6 +140,7 @@ export function createInitialGameState(): GameState {
     prototypeCompleted: false,
     everBoughtCrude: false,
     starterGuideDismissed: false,
+    refineryName: DEFAULT_REFINERY_NAME,
     pendingShipments: [],
     standingOrderCooldowns: {},
     productInventory: {

@@ -2229,3 +2229,53 @@
   cursor: pointer;
   padding: 2px 4px;
 }
+
+/* Hero panel: editable refinery name + level title */
+.hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 0;
+  flex-wrap: wrap;
+}
+.hero-name {
+  margin: 0;
+  max-width: 16ch;
+}
+.hero-name-input {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: #f6efe3;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  padding: 4px 10px;
+  max-width: 16ch;
+}
+.hero-rename-button {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1b2430;
+  background: rgba(248, 178, 74, 0.85);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hero-title {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f8b24a;
+}
+.hero-tagline {
+  margin: 4px 0 0;
+  max-width: 32ch;
+  font-size: 0.85rem;
+  color: rgba(246, 239, 227, 0.78);
+}

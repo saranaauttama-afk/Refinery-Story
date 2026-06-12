@@ -47,6 +47,7 @@ import {
   applyStaffXp,
   applyWinGoal,
   calculateDerivedStats,
+  getRefineryTitle,
   closeBusinessYear,
   getTrainingCost,
   getProductSellPrice,
@@ -70,6 +71,8 @@ function App() {
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState(initialLoad.game.refineryName)
   const gameRef = useRef(game)
   const {
     activeContracts,
@@ -803,6 +806,18 @@ function App() {
     setGame((current) => ({ ...current, starterGuideDismissed: true }))
   }
 
+  function handleRenameRefinery(name: string) {
+    const trimmed = name.trim().slice(0, 40)
+    if (trimmed.length === 0) {
+      setNameDraft(game.refineryName)
+      setIsEditingName(false)
+      return
+    }
+    setGame((current) => ({ ...current, refineryName: trimmed }))
+    setNameDraft(trimmed)
+    setIsEditingName(false)
+  }
+
   function handleDevAddMoney() {
     setGame((current) => ({
       ...current,
@@ -1011,9 +1026,49 @@ function App() {
         <p className="eyebrow">
           <BilingualText text={text.app.eyebrow} />
         </p>
-        <h1>
+        <div className="hero-name-row">
+          {isEditingName ? (
+            <input
+              className="hero-name-input"
+              value={nameDraft}
+              autoFocus
+              maxLength={40}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={() => handleRenameRefinery(nameDraft)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRenameRefinery(nameDraft)
+                if (e.key === 'Escape') {
+                  setNameDraft(game.refineryName)
+                  setIsEditingName(false)
+                }
+              }}
+            />
+          ) : (
+            <h1 className="hero-name">{game.refineryName}</h1>
+          )}
+          <button
+            type="button"
+            className="hero-rename-button"
+            onClick={() => {
+              if (isEditingName) {
+                handleRenameRefinery(nameDraft)
+              } else {
+                setNameDraft(game.refineryName)
+                setIsEditingName(true)
+              }
+            }}
+          >
+            <BilingualText
+              text={isEditingName ? text.refinery.saveButton : text.refinery.editButton}
+            />
+          </button>
+        </div>
+        <p className="hero-title">
+          <BilingualText text={getRefineryTitle(game.refineryLevel)} />
+        </p>
+        <p className="hero-tagline">
           <BilingualText text={text.app.title} />
-        </h1>
+        </p>
       </section>
 
       {!game.starterGuideDismissed && (

@@ -16,7 +16,7 @@ Goal: small, cheap, build/test-verifiable additions that increase Kairosoft
 - New component `EraBannerToast.tsx`. State: `pendingEraBanner: EraConfig | null`
   in App.tsx, set alongside the existing eraAdvanced log.
 
-### 2. Refinery name + title progression  [ ]
+### 2. Refinery name + title progression  [x]
 - `refineryName: string` in GameState (default translatable), editable via a
   small input in the hero panel.
 - Title progression: lookup table by refinery level -> title string, shown

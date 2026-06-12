@@ -13,6 +13,7 @@ import type {
 import { text } from '../translations'
 import {
   createInitialGameState,
+  DEFAULT_REFINERY_NAME,
   getEmptyWorkerXp,
   getInitialWorkerLevels,
 } from './gameCalculations'
@@ -260,6 +261,7 @@ function sanitizeLoadedGameState(value: unknown) {
     prototypeCompleted: getSafeBoolean(value.prototypeCompleted, fallback.prototypeCompleted),
     everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
+    refineryName: getSafeString(value.refineryName, DEFAULT_REFINERY_NAME).trim().slice(0, 40) || DEFAULT_REFINERY_NAME,
     pendingShipments: getSafePendingShipments(value.pendingShipments),
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
     // productInventory is now live gameplay state for all secondary products.

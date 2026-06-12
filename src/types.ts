@@ -66,6 +66,9 @@ export type GameState = {
   prototypeCompleted: boolean
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
+  // Player-chosen name for their refinery, shown in the hero panel alongside
+  // a level-based title (see getRefineryTitle).
+  refineryName: string
   pendingShipments: PendingShipment[]
   // Maps standing order key → tick at which the order becomes available again.
   // Absent key means the order is currently available (never fulfilled or cooldown expired).
