@@ -165,9 +165,14 @@ export function addLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, CORE_BALANCE.maxLogItems)
 }
 
-export function getRandomEvent() {
-  const randomIndex = Math.floor(Math.random() * RANDOM_EVENTS.length)
-  return RANDOM_EVENTS[randomIndex]
+export function getRandomEvent(game: GameState) {
+  const hasDistillationChain =
+    calculateDerivedStats(game).maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage
+  const eligible = RANDOM_EVENTS.filter(
+    (event) => !event.requiresFeedstockChain || hasDistillationChain,
+  )
+  const randomIndex = Math.floor(Math.random() * eligible.length)
+  return eligible[randomIndex]
 }
 
 function getEmptyBuildingCounts(): BuildingCounts {
@@ -1213,6 +1218,29 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     return {
       ...game,
       gasoline: Math.max(0, game.gasoline - gasolineLoss),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'distillationHiccup') {
+    const feedstockLoss = Math.floor(
+      EVENT_BALANCE.distillationHiccupFeedstockLoss * stats.eventPenaltyMultiplier,
+    )
+    return {
+      ...game,
+      feedstock: Math.max(0, game.feedstock - feedstockLoss),
+      lastEventMessage: event.message,
+      activityLog: addLog(game.activityLog, event.message),
+    }
+  }
+
+  if (event.key === 'feedstockSurplus') {
+    const converted = Math.min(game.feedstock, EVENT_BALANCE.feedstockSurplusConvertAmount)
+    return {
+      ...game,
+      feedstock: game.feedstock - converted,
+      money: game.money + converted * EVENT_BALANCE.feedstockSurplusCashPerUnit,
       lastEventMessage: event.message,
       activityLog: addLog(game.activityLog, event.message),
     }

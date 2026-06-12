@@ -104,6 +104,11 @@ export const EVENT_BALANCE = {
   storageContaminationGasolineLoss: 15,
   communityVisitMoneyCost: 150,
   communityVisitReputationGain: 20,
+  // Feedstock-chain events (Charm Pass) — only fire once the player has built
+  // distillation (maxFeedstockStorage > baseFeedstockStorage).
+  distillationHiccupFeedstockLoss: 8,
+  feedstockSurplusConvertAmount: 12,
+  feedstockSurplusCashPerUnit: 15,
 } as const
 
 export const MILESTONE_BALANCE = {

@@ -279,7 +279,7 @@ function App() {
 
   useEffect(() => {
     const eventTimer = window.setInterval(() => {
-      setGame((current) => applyRandomEvent(current, getRandomEvent()))
+      setGame((current) => applyRandomEvent(current, getRandomEvent(current)))
     }, RANDOM_EVENT_INTERVAL_MS)
 
     return () => window.clearInterval(eventTimer)
@@ -994,7 +994,7 @@ function App() {
   }
 
   function handleTriggerTestEvent() {
-    setGame((current) => applyRandomEvent(current, getRandomEvent()))
+    setGame((current) => applyRandomEvent(current, getRandomEvent(current)))
   }
 
   function handleTriggerChoiceEvent() {

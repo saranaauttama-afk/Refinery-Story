@@ -72,4 +72,16 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     name: text.data.events.communityVisit.name,
     message: serializeBilingualText(text.data.events.communityVisit.message),
   },
+  {
+    key: 'distillationHiccup',
+    name: text.data.events.distillationHiccup.name,
+    message: serializeBilingualText(text.data.events.distillationHiccup.message),
+    requiresFeedstockChain: true,
+  },
+  {
+    key: 'feedstockSurplus',
+    name: text.data.events.feedstockSurplus.name,
+    message: serializeBilingualText(text.data.events.feedstockSurplus.message),
+    requiresFeedstockChain: true,
+  },
 ]

@@ -1303,6 +1303,20 @@ export const text = {
           'จัดวันเปิดบ้านให้ชุมชน เงิน −$200, ชื่อเสียง +20',
         ),
       },
+      distillationHiccup: {
+        name: bilingual('Distillation Hiccup', 'หน่วยกลั่นสะดุด'),
+        message: bilingual(
+          'A Distillation Unit sputtered for a moment. Feedstock −8.',
+          'หน่วยกลั่นทำงานสะดุดชั่วครู่ วัตถุดิบกลั่น −8',
+        ),
+      },
+      feedstockSurplus: {
+        name: bilingual('Feedstock Surplus', 'วัตถุดิบกลั่นล้นสต็อก'),
+        message: bilingual(
+          'Sold off surplus feedstock to a neighboring plant for a quick bonus.',
+          'ขายวัตถุดิบกลั่นส่วนเกินให้โรงงานข้างเคียง ได้โบนัสด่วน',
+        ),
+      },
     } satisfies Record<
       RandomEventKey,
       { name: BilingualTextValue; message: BilingualTextValue }

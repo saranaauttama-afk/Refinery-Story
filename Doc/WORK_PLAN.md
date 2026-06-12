@@ -31,7 +31,7 @@ Goal: small, cheap, build/test-verifiable additions that increase Kairosoft
 - StaffPanel shows a small "roster" line (first few names + "+N more").
 - Save migration: backfill names for existing headcount on load.
 
-### 4. Feedstock-themed random events  [ ]
+### 4. Feedstock-themed random events  [x]
 - 2 new RANDOM_EVENTS entries gated on
   maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage (player has
   distillation). e.g. "Distillation Hiccup" (small feedstock loss) and

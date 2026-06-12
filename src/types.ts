@@ -268,11 +268,17 @@ export type RandomEventKey =
   | 'workerSuggestion'
   | 'storageContamination'
   | 'communityVisit'
+  | 'distillationHiccup'
+  | 'feedstockSurplus'
 
 export type RandomEvent = {
   key: RandomEventKey
   name: BilingualTextValue
   message: string
+  // If true, this event only fires once the player has built distillation
+  // (maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage) — keeps
+  // feedstock-chain flavor events from showing up for Tier-1-only players.
+  requiresFeedstockChain?: boolean
 }
 
 export type ChoiceEventKey =
