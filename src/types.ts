@@ -358,7 +358,9 @@ export type DerivedStats = {
   specialBuildingContractRewardMultiplier: number
   specialBuildingRpRewardMultiplier: number
   workerProductionMultiplier: number
-  workerSellPriceBonus: number
+  // Global product sell multiplier (Sales Agents % + quality perks + era).
+  // Applies to every product's sell price.
+  productSellMultiplier: number
   workerStorageBonus: number
   // System 2 + 3 derived contributions (already folded into the multipliers
   // above, exposed here for UI display)

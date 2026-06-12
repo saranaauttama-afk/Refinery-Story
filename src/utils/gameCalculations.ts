@@ -215,6 +215,23 @@ export function getWorkerLevelMultiplier(level: number): number {
   return 1 + (safeLevel - 1) * STAFF_LEVEL_BALANCE.bonusPerLevelRate
 }
 
+// Base sell price per secondary product (gasoline has its own combo-aware price).
+const PRODUCT_BASE_PRICE: Record<string, number> = {
+  lubricants: ECONOMY_BALANCE.lubricantPrice,
+  jetFuel: ECONOMY_BALANCE.jetFuelPrice,
+  petrochemicals: ECONOMY_BALANCE.petrochemicalsPrice,
+}
+
+// Sell price for a secondary product = base × global product sell multiplier.
+// Used by both the sell handlers and the ProductPanel so they never drift.
+export function getProductSellPrice(
+  productKey: string,
+  productSellMultiplier: number,
+): number {
+  const base = PRODUCT_BASE_PRICE[productKey] ?? 0
+  return Math.round(base * productSellMultiplier)
+}
+
 function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem[] {
   const safeCounts = {
     ...getEmptyWorkerCounts(),
@@ -479,23 +496,26 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const researchSellPriceBonus = hasPremiumFuel
     ? BONUS_BALANCE.premiumFuelSellPriceBonus
     : 0
-  const workerSellPriceBonus = Math.round(
-    salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonus,
-  )
+  // Global product sell multiplier — Sales Agents (now %), quality perks, and the
+  // current tech era. Applies to EVERY product, not just gasoline, so the player's
+  // sell-side investments lift their whole catalogue consistently.
+  const productSellMultiplier =
+    1 +
+    salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonusRate +
+    perkSellPriceBonusRate +
+    eraSellPriceBonusRate
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
-  // Perk quality branch and current tech era both add multiplicative sell-price bonuses.
-  const perkEraSellPriceMultiplier =
-    1 + perkSellPriceBonusRate + eraSellPriceBonusRate
+  // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier,
+  // plus the flat premium-fuel research bonus.
   const sellPrice =
     Math.round(
       ECONOMY_BALANCE.gasolinePrice *
         sellPriceMultiplier *
         fuelSpecialistSellPriceMultiplier *
-        perkEraSellPriceMultiplier,
+        productSellMultiplier,
     ) +
-    researchSellPriceBonus +
-    workerSellPriceBonus
+    researchSellPriceBonus
   const upgradeCost = getUpgradeCost(game.refineryLevel)
   const availableSpace = game.grid.filter((cell) => cell === null).length
   const activeContracts = CONTRACTS.map((contract) => ({
@@ -565,7 +585,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     specialBuildingContractRewardMultiplier,
     specialBuildingRpRewardMultiplier,
     workerProductionMultiplier,
-    workerSellPriceBonus,
+    productSellMultiplier,
     workerStorageBonus,
     perkProductionBonusRate,
     perkStorageBonusRate,

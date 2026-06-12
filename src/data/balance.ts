@@ -69,7 +69,9 @@ export const BONUS_BALANCE = {
   saferOperationsPenaltyRate: 0.85,
   operatorProductionBonusRate: 0.1,
   premiumFuelSellPriceBonus: 5,
-  salesAgentSellPriceBonus: 3,
+  // Sales Agent now gives a PERCENTAGE sell-price bonus applied to every product
+  // (was a flat +$3 that was huge on gasoline and meaningless on $150 petrochem).
+  salesAgentSellPriceBonusRate: 0.04,
   chemistRpBonusRate: 0.1,
   logisticsCoordinatorShipmentBonusRate: 0.1,
   safetyOfficerPenaltyRate: 0.85,

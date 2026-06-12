@@ -1825,6 +1825,36 @@
   margin: 8px 0 0;
 }
 
+/* Generic ProductPanel inner classes (jetFuel / lubricants / petrochemicals) */
+.product-locked-hint {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  opacity: 0.65;
+}
+.product-inventory {
+  margin: 4px 0 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.jetfuel-panel .product-inventory { color: #1a4fa0; }
+.lubricants-panel .product-inventory { color: #8a5a16; }
+.petrochemicals-panel .product-inventory { color: #6b2f8a; }
+.product-no-plants {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  opacity: 0.75;
+}
+.product-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.product-price-note {
+  margin: 8px 0 0;
+}
+
+
 
 /* ===== System 1: Staff Training & Levels ===== */
 .staff-level-block {

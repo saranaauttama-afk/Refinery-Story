@@ -14,20 +14,20 @@ then continue the first unchecked item.
 
 A focused "make it clean" pass — NOT new big systems. Four jobs + a balance pass.
 
-### Task 1 — Remove redundant WorkforcePanel, dedupe bonus text  [ ]
+### Task 1 — Remove redundant WorkforcePanel, dedupe bonus text  [x]
 - WorkforcePanel duplicated StaffPanel's worker list. Removed it.
 - `getWorkerActiveBonus` was copy-pasted in StaffPanel + WorkforcePanel.
   Moved to a single shared helper in `utils/workerBonusText.ts`.
 - StaffPanel is now the one place workers live (hire + level + XP + bonus).
 
-### Task 2 — Consolidate 4 product panels into one ProductPanel  [ ]
+### Task 2 — Consolidate 4 product panels into one ProductPanel  [x]
 - AsphaltPanel / JetFuelPanel / LubricantsPanel / PetrochemicalsPanel were
   ~95% identical. Replaced with a single config-driven `ProductPanel`.
 - Product config lives in `data/products.ts` (key, unlock level, base price,
   plant building, sell handler wiring).
 - Old panels deleted.
 
-### Task 3 — Convert Sales Agent flat bonus → percentage  [ ]
+### Task 3 — Convert Sales Agent flat bonus → percentage  [x]
 - `salesAgentSellPriceBonus: 3` (flat) was the long-flagged problem: +$3 on a
   $150 product is meaningless; on gasoline it's huge.
 - Replaced with `salesAgentSellPriceBonusRate` (%) applied as a multiplier.

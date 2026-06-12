@@ -428,8 +428,8 @@ export const text = {
       bilingual(`+${pct}% production speed`, `+${pct}% ความเร็วการผลิต`),
     bonusMechanic: (storage: number) =>
       bilingual(`+${storage} storage cap (crude & gasoline)`, `+${storage} ความจุเก็บน้ำมัน`),
-    bonusSalesAgent: (price: number) =>
-      bilingual(`+$${price} sell price per gasoline unit`, `+$${price} ต่อราคาขายเบนซิน`),
+    bonusSalesAgent: (pct: number) =>
+      bilingual(`+${pct}% sell price on all products`, `+${pct}% ราคาขายทุกผลิตภัณฑ์`),
     bonusSafetyOfficer: (pct: number) =>
       bilingual(`Event penalties reduced to ${pct}%`, `ลดความเสียหายจากเหตุการณ์เหลือ ${pct}%`),
     bonusChemist: (pct: number) =>

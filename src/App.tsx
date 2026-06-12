@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ActivityLog from './components/ActivityLog'
 import AsphaltPanel from './components/AsphaltPanel'
-import JetFuelPanel from './components/JetFuelPanel'
-import LubricantsPanel from './components/LubricantsPanel'
-import PetrochemicalsPanel from './components/PetrochemicalsPanel'
+import ProductPanel from './components/ProductPanel'
 import BilingualText from './components/BilingualText'
 import BuildingGrid from './components/BuildingGrid'
 import CrudeShipmentsPanel from './components/CrudeShipmentsPanel'
@@ -22,7 +20,6 @@ import ResourcePanel from './components/ResourcePanel'
 import SavePanel from './components/SavePanel'
 import StaffPanel from './components/StaffPanel'
 import StatsPanel from './components/StatsPanel'
-import WorkforcePanel from './components/WorkforcePanel'
 import WorkerPresenceBar from './components/WorkerPresenceBar'
 import RefineryProgressionPanel from './components/RefineryProgressionPanel'
 import ChoiceEventModal from './components/ChoiceEventModal'
@@ -31,9 +28,10 @@ import EraPanel from './components/EraPanel'
 import AwardsPanel from './components/AwardsPanel'
 import AwardCeremonyModal from './components/AwardCeremonyModal'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, AWARDS_BALANCE, BONUS_BALANCE, ECONOMY_BALANCE, JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE, LUBRICANT_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, AWARDS_BALANCE, BONUS_BALANCE, JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE, LUBRICANT_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
+import { SELLABLE_PRODUCTS } from './data/products'
 import { serializeBilingualText, text } from './translations'
 import type { AwardRecord, BuildingType, ChoiceEvent, Contract, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
 import {
@@ -50,6 +48,7 @@ import {
   calculateDerivedStats,
   closeBusinessYear,
   getTrainingCost,
+  getProductSellPrice,
   getRandomEvent,
   getUpgradeCost,
   orderShipment,
@@ -93,15 +92,27 @@ function App() {
     statusLabel,
     upgradeCost,
     workerProductionMultiplier,
-    workerSellPriceBonus,
+    productSellMultiplier,
     buildingCounts,
     currentEra,
     nextEra,
   } = calculateDerivedStats(game)
 
-  const lubricantSellPrice = ECONOMY_BALANCE.lubricantPrice + workerSellPriceBonus
-  const jetFuelSellPrice = ECONOMY_BALANCE.jetFuelPrice + workerSellPriceBonus
-  const petrochemicalsSellPrice = ECONOMY_BALANCE.petrochemicalsPrice + workerSellPriceBonus
+  const productSellPrices: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
+    jetFuel: getProductSellPrice('jetFuel', productSellMultiplier),
+    lubricants: getProductSellPrice('lubricants', productSellMultiplier),
+    petrochemicals: getProductSellPrice('petrochemicals', productSellMultiplier),
+  }
+  const productPlantCounts: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
+    jetFuel: buildingCounts.jetFuelPlant,
+    lubricants: buildingCounts.lubricantPlant,
+    petrochemicals: buildingCounts.petrochemicalPlant,
+  }
+  const productSellHandlers: Record<'jetFuel' | 'lubricants' | 'petrochemicals', (amount: number) => void> = {
+    jetFuel: handleSellJetFuel,
+    lubricants: handleSellLubricants,
+    petrochemicals: handleSellPetrochemicals,
+  }
 
   const petrochemicalDone = game.completedContractIds.includes(7)
 
@@ -420,8 +431,8 @@ function App() {
       const actualAmount = Math.min(amount, current.productInventory.lubricants)
       if (actualAmount <= 0) return current
 
-      const currentWorkerBonus = calculateDerivedStats(current).workerSellPriceBonus
-      const price = ECONOMY_BALANCE.lubricantPrice + currentWorkerBonus
+      const mult = calculateDerivedStats(current).productSellMultiplier
+      const price = getProductSellPrice('lubricants', mult)
       const totalRevenue = actualAmount * price
 
       return {
@@ -445,8 +456,8 @@ function App() {
       const actualAmount = Math.min(amount, current.productInventory.jetFuel)
       if (actualAmount <= 0) return current
 
-      const currentWorkerBonus = calculateDerivedStats(current).workerSellPriceBonus
-      const price = ECONOMY_BALANCE.jetFuelPrice + currentWorkerBonus
+      const mult = calculateDerivedStats(current).productSellMultiplier
+      const price = getProductSellPrice('jetFuel', mult)
       const totalRevenue = actualAmount * price
 
       return {
@@ -908,8 +919,8 @@ function App() {
       const actualAmount = Math.min(amount, current.productInventory.petrochemicals)
       if (actualAmount <= 0) return current
 
-      const currentWorkerBonus = calculateDerivedStats(current).workerSellPriceBonus
-      const price = ECONOMY_BALANCE.petrochemicalsPrice + currentWorkerBonus
+      const mult = calculateDerivedStats(current).productSellMultiplier
+      const price = getProductSellPrice('petrochemicals', mult)
       const totalRevenue = actualAmount * price
 
       return {
@@ -1101,27 +1112,17 @@ function App() {
             completedContractIds={game.completedContractIds}
             onProduceAsphalt={handleProduceAsphalt}
           />
-          <JetFuelPanel
-            refineryLevel={game.refineryLevel}
-            jetFuel={game.productInventory.jetFuel}
-            jetFuelSellPrice={jetFuelSellPrice}
-            jetFuelPlantCount={buildingCounts.jetFuelPlant}
-            onSellJetFuel={handleSellJetFuel}
-          />
-          <LubricantsPanel
-            refineryLevel={game.refineryLevel}
-            lubricants={game.productInventory.lubricants}
-            lubricantSellPrice={lubricantSellPrice}
-            lubricantPlantCount={buildingCounts.lubricantPlant}
-            onSellLubricants={handleSellLubricants}
-          />
-          <PetrochemicalsPanel
-            refineryLevel={game.refineryLevel}
-            petrochemicals={game.productInventory.petrochemicals}
-            petrochemicalsSellPrice={petrochemicalsSellPrice}
-            petrochemicalPlantCount={buildingCounts.petrochemicalPlant}
-            onSellPetrochemicals={handleSellPetrochemicals}
-          />
+          {SELLABLE_PRODUCTS.map((product) => (
+            <ProductPanel
+              key={product.key}
+              config={product}
+              refineryLevel={game.refineryLevel}
+              inventory={game.productInventory[product.key]}
+              sellPrice={productSellPrices[product.key]}
+              plantCount={productPlantCounts[product.key]}
+              onSell={productSellHandlers[product.key]}
+            />
+          ))}
         </div>
       </section>
 
@@ -1155,7 +1156,6 @@ function App() {
           researchProductionMultiplier={researchProductionMultiplier}
           workerProductionMultiplier={workerProductionMultiplier}
         />
-        <WorkforcePanel activeWorkers={activeWorkers} />
       </section>
 
       <section className="app-section">
