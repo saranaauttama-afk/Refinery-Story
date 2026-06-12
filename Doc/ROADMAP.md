@@ -99,6 +99,25 @@ Suggested goals:
 
 ---
 
+## Phase 2C — Depth Systems (Complete — v0.8)
+
+**Milestone: Refinery Story v0.8 — Gameplay Systems Expansion**
+
+Four Kairosoft-style systems added (all save-compatible):
+
+- Staff Training & Levels — per-type crew Level 1–5 with passive XP and paid
+  instant training; level scales bonus effectiveness ×1.0 → ×1.6
+- Refinery Upgrade Perk Tree — 1 point per level-up, spent across Efficiency /
+  Capacity / Quality branches (3 directional tiers each)
+- Tech Eras — Foundation → Expansion → Modern with cumulative global bonuses and
+  a one-time advancement banner
+- Annual Awards — 12-minute business year graded S/A/B/C with cash + reputation
+  rewards, ceremony modal, and rolling 12-year history
+
+See Doc/GAMEPLAY_SYSTEMS_EXPANSION.md for design rationale.
+
+---
+
 ## Phase 2 — Feel and Identity
 
 Completed:

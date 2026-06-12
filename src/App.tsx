@@ -26,12 +26,16 @@ import WorkforcePanel from './components/WorkforcePanel'
 import WorkerPresenceBar from './components/WorkerPresenceBar'
 import RefineryProgressionPanel from './components/RefineryProgressionPanel'
 import ChoiceEventModal from './components/ChoiceEventModal'
+import RefineryUpgradesPanel from './components/RefineryUpgradesPanel'
+import EraPanel from './components/EraPanel'
+import AwardsPanel from './components/AwardsPanel'
+import AwardCeremonyModal from './components/AwardCeremonyModal'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, BONUS_BALANCE, ECONOMY_BALANCE, JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE, LUBRICANT_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, AWARDS_BALANCE, BONUS_BALANCE, ECONOMY_BALANCE, JET_FUEL_BALANCE, JET_FUEL_PLANT_BALANCE, LUBRICANT_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { serializeBilingualText, text } from './translations'
-import type { BuildingType, ChoiceEvent, Contract, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
+import type { AwardRecord, BuildingType, ChoiceEvent, Contract, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
 import {
   CRUDE_COST,
   RANDOM_EVENT_INTERVAL_MS,
@@ -41,8 +45,11 @@ import {
   applyMilestones,
   applyRandomEvent,
   applyShipmentArrivals,
+  applyStaffXp,
   applyWinGoal,
   calculateDerivedStats,
+  closeBusinessYear,
+  getTrainingCost,
   getRandomEvent,
   getUpgradeCost,
   orderShipment,
@@ -60,6 +67,7 @@ function App() {
   const [saveStatusMessage, setSaveStatusMessage] = useState(initialLoad.message)
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingType>('crudeTank')
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
+  const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const gameRef = useRef(game)
   const {
     activeContracts,
@@ -87,6 +95,8 @@ function App() {
     workerProductionMultiplier,
     workerSellPriceBonus,
     buildingCounts,
+    currentEra,
+    nextEra,
   } = calculateDerivedStats(game)
 
   const lubricantSellPrice = ECONOMY_BALANCE.lubricantPrice + workerSellPriceBonus
@@ -266,6 +276,10 @@ function App() {
           totalGasolineProduced: current.totalGasolineProduced + batchesProduced,
           productionProgress: leftoverProgress,
           productInventory,
+          yearStats: {
+            ...current.yearStats,
+            gasolineProduced: current.yearStats.gasolineProduced + batchesProduced,
+          },
           activityLog: addLog(plantActivityLog, gasolineLog),
         })
       })
@@ -298,6 +312,53 @@ function App() {
       })
     }, 1000)
     return () => window.clearInterval(deliveryTimer)
+  }, [])
+
+  // System 1 + 4: staff XP accrual and annual-award evaluation.
+  // Runs on the same cadence as the production tick but kept separate so it
+  // does not complicate the production return paths.
+  useEffect(() => {
+    const staffTimer = window.setInterval(() => {
+      setGame((current) => {
+        let next = current
+
+        // Staff XP / level-ups
+        const { workerLevels, workerXp, levelUpLog } = applyStaffXp(next)
+        if (levelUpLog) {
+          next = {
+            ...next,
+            workerLevels,
+            workerXp,
+            activityLog: addLog(next.activityLog, levelUpLog),
+          }
+        } else {
+          next = { ...next, workerLevels, workerXp }
+        }
+
+        // Annual award check
+        if (next.tickCount - next.yearStartTick >= AWARDS_BALANCE.yearLengthTicks) {
+          const { game: afterAward, record } = closeBusinessYear(next)
+          next = afterAward
+          setPendingAward(record)
+        }
+
+        // System 3: detect era advancement and announce it once.
+        const era = calculateDerivedStats(next).currentEra
+        if (era.index > next.highestEraIndex) {
+          next = {
+            ...next,
+            highestEraIndex: era.index,
+            activityLog: addLog(
+              next.activityLog,
+              serializeBilingualText(text.logs.eraAdvanced(era.name)),
+            ),
+          }
+        }
+
+        return next
+      })
+    }, TICK_MS)
+    return () => window.clearInterval(staffTimer)
   }, [])
 
   useEffect(() => {
@@ -345,6 +406,7 @@ function App() {
         ...current,
         gasoline: current.gasoline - actualAmount,
         money: current.money + totalRevenue,
+        yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + totalRevenue },
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(text.logs.soldGasoline(actualAmount, totalRevenue)),
@@ -365,6 +427,7 @@ function App() {
       return {
         ...current,
         money: current.money + totalRevenue,
+        yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + totalRevenue },
         productInventory: {
           ...current.productInventory,
           lubricants: current.productInventory.lubricants - actualAmount,
@@ -389,6 +452,7 @@ function App() {
       return {
         ...current,
         money: current.money + totalRevenue,
+        yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + totalRevenue },
         productInventory: {
           ...current.productInventory,
           jetFuel: current.productInventory.jetFuel - actualAmount,
@@ -413,6 +477,7 @@ function App() {
         ...current,
         money: current.money - nextUpgradeCost,
         refineryLevel: current.refineryLevel + 1,
+        upgradePoints: current.upgradePoints + 1,
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(
@@ -502,6 +567,11 @@ function App() {
         reputation: current.reputation + currentContractReputationReward,
         completedContractCount: current.completedContractCount + 1,
         completedContractIds: [...current.completedContractIds, contract.id],
+        yearStats: {
+          ...current.yearStats,
+          moneyEarned: current.yearStats.moneyEarned + currentContractReward,
+          contractsCompleted: current.yearStats.contractsCompleted + 1,
+        },
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(
@@ -564,6 +634,49 @@ function App() {
           serializeBilingualText(text.logs.hiredWorker(worker.name, worker.cost)),
         ),
       })
+    })
+  }
+
+  function handleTrainWorker(worker: WorkerConfig) {
+    setGame((current) => {
+      const level = current.workerLevels[worker.key] ?? 1
+      if (level >= 5) return current
+      const cost = getTrainingCost(level)
+      if (current.money < cost.money || current.researchPoints < cost.rp) {
+        return current
+      }
+      const newLevel = level + 1
+      return {
+        ...current,
+        money: current.money - cost.money,
+        researchPoints: current.researchPoints - cost.rp,
+        workerLevels: { ...current.workerLevels, [worker.key]: newLevel },
+        // Carry leftover XP into the new level (start fresh toward next threshold).
+        workerXp: { ...current.workerXp, [worker.key]: 0 },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.staffTrained(worker.name, newLevel)),
+        ),
+      }
+    })
+  }
+
+  function handleInstallPerk(perk: PerkConfig) {
+    setGame((current) => {
+      if (current.unlockedPerks.includes(perk.key)) return current
+      if (current.upgradePoints < perk.cost) return current
+      if (perk.prerequisite && !current.unlockedPerks.includes(perk.prerequisite)) {
+        return current
+      }
+      return {
+        ...current,
+        upgradePoints: current.upgradePoints - perk.cost,
+        unlockedPerks: [...current.unlockedPerks, perk.key],
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.perkUnlocked(perk.name)),
+        ),
+      }
     })
   }
 
@@ -802,6 +915,7 @@ function App() {
       return {
         ...current,
         money: current.money + totalRevenue,
+        yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + totalRevenue },
         productInventory: {
           ...current.productInventory,
           petrochemicals: current.productInventory.petrochemicals - actualAmount,
@@ -834,6 +948,10 @@ function App() {
         money: current.money + order.reward,
         researchPoints: current.researchPoints + order.rpReward,
         reputation: current.reputation + order.reputationReward,
+        yearStats: {
+          ...current.yearStats,
+          moneyEarned: current.yearStats.moneyEarned + order.reward,
+        },
         productInventory: {
           ...current.productInventory,
           [order.productKey]: inventory - order.required,
@@ -1073,9 +1191,35 @@ function App() {
           />
           <StaffPanel
             money={game.money}
+            researchPoints={game.researchPoints}
             refineryLevel={game.refineryLevel}
             activeWorkers={activeWorkers}
+            workerLevels={game.workerLevels}
+            workerXp={game.workerXp}
             onHireWorker={handleHireWorker}
+            onTrainWorker={handleTrainWorker}
+          />
+          <RefineryUpgradesPanel
+            upgradePoints={game.upgradePoints}
+            unlockedPerks={game.unlockedPerks}
+            onInstallPerk={handleInstallPerk}
+          />
+          <EraPanel
+            currentEra={currentEra}
+            nextEra={nextEra}
+            unlockedResearchCount={game.unlockedResearchCount}
+            refineryLevel={game.refineryLevel}
+          />
+          <AwardsPanel
+            businessYear={game.businessYear}
+            yearStats={game.yearStats}
+            yearProgressPercent={Math.min(
+              100,
+              Math.round(
+                ((game.tickCount - game.yearStartTick) / AWARDS_BALANCE.yearLengthTicks) * 100,
+              ),
+            )}
+            awardHistory={game.awardHistory}
           />
           <MilestonesPanel activeMilestones={activeMilestones} />
         </section>
@@ -1113,6 +1257,13 @@ function App() {
         <ChoiceEventModal
           event={pendingChoiceEvent}
           onChoose={handleChooseOption}
+        />
+      )}
+
+      {pendingAward && (
+        <AwardCeremonyModal
+          record={pendingAward}
+          onClose={() => setPendingAward(null)}
         />
       )}
     </main>

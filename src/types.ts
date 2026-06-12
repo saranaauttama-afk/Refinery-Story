@@ -44,6 +44,19 @@ export type GameState = {
   completedMilestoneKeys: MilestoneKey[]
   unlockedResearchIds: ResearchKey[]
   workerCounts: WorkerCounts
+  // System 1: Staff Training & Levels
+  workerLevels: WorkerLevels
+  workerXp: WorkerXp
+  // System 2: Refinery Upgrade Perk Tree
+  upgradePoints: number
+  unlockedPerks: PerkKey[]
+  // System 3: Tech Eras (highestEraIndex drives the "new era" banner)
+  highestEraIndex: number
+  // System 4: Annual Awards
+  businessYear: number
+  yearStartTick: number
+  yearStats: YearStats
+  awardHistory: AwardRecord[]
   grid: GridCell[]
   gridLevels: number[]
   gridExpansionLevel: number
@@ -144,6 +157,73 @@ export type WorkerType =
   | 'chemicalEngineer'
 
 export type WorkerCounts = Record<WorkerType, number>
+
+// --- System 1: Staff Training & Levels ---
+// Each worker TYPE has a shared crew level (1–5) and accumulated XP.
+// Level multiplies that type's bonus effectiveness. XP accrues passively
+// per tick (scaled by headcount) and can be bought instantly via training.
+export type WorkerLevels = Record<WorkerType, number>
+export type WorkerXp = Record<WorkerType, number>
+
+// --- System 2: Refinery Upgrade Perk Tree ---
+// Spend upgradePoints (earned on refinery level-up) on perks across 3 branches.
+export type PerkBranch = 'efficiency' | 'capacity' | 'quality'
+
+export type PerkKey =
+  | 'efficiency1'
+  | 'efficiency2'
+  | 'efficiency3'
+  | 'capacity1'
+  | 'capacity2'
+  | 'capacity3'
+  | 'quality1'
+  | 'quality2'
+  | 'quality3'
+
+export type PerkConfig = {
+  key: PerkKey
+  branch: PerkBranch
+  tier: 1 | 2 | 3
+  cost: number
+  name: BilingualTextValue
+  description: BilingualTextValue
+  prerequisite?: PerkKey
+}
+
+// --- System 3: Tech Eras ---
+export type EraKey = 'foundation' | 'expansion' | 'modern'
+
+export type EraConfig = {
+  key: EraKey
+  index: number
+  name: BilingualTextValue
+  tagline: BilingualTextValue
+  // Unlock requirements (both must be met to advance into this era)
+  requiredResearch: number
+  requiredLevel: number
+  // Global bonuses granted while in this era
+  sellPriceBonusRate: number
+  researchRateBonusRate: number
+}
+
+// --- System 4: Annual Awards ---
+export type AwardGrade = 'S' | 'A' | 'B' | 'C'
+
+export type YearStats = {
+  gasolineProduced: number
+  moneyEarned: number
+  contractsCompleted: number
+}
+
+export type AwardRecord = {
+  year: number
+  grade: AwardGrade
+  score: number
+  cashReward: number
+  gasolineProduced: number
+  moneyEarned: number
+  contractsCompleted: number
+}
 
 export type WorkerConfig = {
   key: WorkerType
@@ -280,6 +360,16 @@ export type DerivedStats = {
   workerProductionMultiplier: number
   workerSellPriceBonus: number
   workerStorageBonus: number
+  // System 2 + 3 derived contributions (already folded into the multipliers
+  // above, exposed here for UI display)
+  perkProductionBonusRate: number
+  perkStorageBonusRate: number
+  perkSellPriceBonusRate: number
+  perkCrudeDiscountRate: number
+  currentEra: EraConfig
+  nextEra?: EraConfig
+  eraSellPriceBonusRate: number
+  eraResearchRateBonusRate: number
   productionMultiplier: number
   productionRate: number
   progressPercent: number

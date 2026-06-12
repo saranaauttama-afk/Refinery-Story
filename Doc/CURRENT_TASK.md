@@ -1,67 +1,46 @@
-# Demand & Goals Pass 1.0 — Late-Game Progression + Repeatable Demand
+# Gameplay Systems Expansion — Staff Levels, Perk Tree, Tech Eras, Annual Awards
 
 ## Goal
 
-Fill the Level 10–15 "empty gap" with meaningful goals and give every secondary
-product a repeatable income path, so the late game keeps the short/medium/long
-goal rhythm that makes Kairosoft games fun.
+Add four Kairosoft-style systems to deepen progression and fun beyond the product
+economy. All save-compatible, all reusing existing patterns.
 
-Sources: BACKLOG Option C (Endgame Progression) + Option D (Contract Expansion),
-plus playtest concern #3 from the 2026-06-11 v0.7 notes.
+See GAMEPLAY_SYSTEMS_EXPANSION.md for full design rationale.
 
-## Rules
+## Systems
 
-1. Preserve save compatibility.
-2. Reuse existing standing order and milestone patterns.
-3. No new architecture. Numeric constants + pattern repetition only.
+1. **Staff Training & Levels** — per-type crew Level 1–5 + XP bar; level scales
+   bonus effectiveness (×1.0 → ×1.6); pay money + RP to train instantly.
+2. **Refinery Upgrade Perk Tree** — 1 upgrade point per refinery level-up;
+   spend on Efficiency / Capacity / Quality branches (3 tiers each, directional).
+3. **Tech Eras** — Foundation → Expansion → Modern; advance on research + level
+   thresholds; cumulative sell-price and RP bonuses; one-time banner.
+4. **Annual Awards** — 12-minute business year, weighted S/A/B/C grade, cash +
+   reputation reward, ceremony modal, rolling history.
 
-## Requirements
+## Files
 
-### A. Bug Fix — Secondary inventory wiped on load
+New: data/perks.ts, data/eras.ts, components/RefineryUpgradesPanel.tsx,
+components/EraPanel.tsx, components/AwardsPanel.tsx, components/AwardCeremonyModal.tsx
 
-`sanitizeLoadedGameState` reset asphalt/jetFuel/lubricants/petrochemicals to 0
-on every load (Phase A leftover). Load them safely with a 0 default instead.
-
-### B. Bug Fix — Jet Fuel Charter is a trap after the v0.7 rework
-
-- unlockLevel 7 → 10 (jet fuel cannot be produced before Level 10 now)
-- reward $2,200 → $7,000 (direct sell of 60 jet fuel is $5,400 base; the old
-  reward was strictly worse than selling)
-- rpReward 15 → 20, reputationReward 10 → 15
-
-### C. New Standing Order — Lubricant Supply
-
-60 lubricants / $3,800 / 12 RP / +8 Rep / 4 min cooldown / unlock Level 6.
-Gives lubricants repeatable demand after contracts 21–23 are done.
-
-### D. New Standing Order — Petrochem Export
-
-40 petrochemicals / $8,500 / 35 RP / +30 Rep / 5 min cooldown / unlock Level 15.
-Gives petrochemicals repeatable demand after contracts 24–26 are done.
-
-### E. Four Late-Game Milestones (Level 10–15 gap)
-
-| Key | Requirement | Reward |
-|-----|-------------|--------|
-| jetFuelPioneer | Build a Jet Fuel Plant | $2,500, +25 Rep |
-| aviationPartner | Complete a jet fuel contract | $4,000, 30 RP |
-| petrochemicalPioneer | Build a Petrochemical Plant | $5,000, +50 Rep |
-| productMogul | Complete a contract for every product line | $10,000, +75 Rep |
-
-### F. ContractsPanel
-
-Generalize standing order inventory lookup and shortfall text so any ProductKey
-works (was hardcoded to asphalt/jetFuel).
-
-## Success Criteria
-
-- Existing saves load, including secondary product stock (no longer wiped).
-- Jet Fuel Charter appears at Level 10 and pays better than direct selling.
-- Lubricant Supply appears at Level 6, Petrochem Export at Level 15.
-- 16 milestones display; the 4 new ones complete and reward correctly.
-- Build, lint, and typecheck pass.
+Changed: types.ts, data/balance.ts, data/milestones.ts (n/a), utils/gameCalculations.ts,
+utils/gameStorage.ts, components/StaffPanel.tsx, App.tsx, App.css, translations.ts
 
 ## Status — COMPLETE (2026-06-12)
 
-All requirements implemented. Build, eslint, and tsc all pass.
-See PLAYTEST_NOTES.md 2026-06-12 entry for balance reasoning.
+Build ✓, eslint ✓, tsc ✓. 48 unit assertions pass (systems + save migration).
+Dev server serves without errors.
+
+## Manual Testing
+
+1. `npm run dev`
+2. Hire 2–3 operators → watch the XP bar fill in StaffPanel; crew levels up and
+   production speeds up. Try the Train button (needs money + RP).
+3. Upgrade refinery (DevTools or contracts) → spend the upgrade point in
+   Refinery Upgrades; confirm production/storage/sell-price changes.
+4. DevTools: set level 10 + unlock research → Era panel shows Expansion/Modern
+   progress; a banner logs on entering a new era.
+5. Wait ~12 min (or lower AWARDS_BALANCE.yearLengthTicks for testing) → awards
+   ceremony modal fires with a grade and prize; history fills.
+6. Reload mid-game → all state (levels, XP, perks, year progress) persists; old
+   saves load with defaults.

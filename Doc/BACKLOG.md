@@ -179,6 +179,7 @@ These are out of scope for the current prototype phase.
 - Petrochemical Contracts (IDs 24–26, Tier 3, unlock Level 15, rewards $15k–$75k)
 - Documentation Update — Product Expansion Closeout v0.7
 - Demand & Goals Pass 1.0 — secondary inventory save fix, Jet Fuel Charter rework (Lv10, $7,000), Lubricant Supply + Petrochem Export standing orders, 4 late-game milestones (covers most of Option C + Option D)
+- Gameplay Systems Expansion v0.8 — Staff Training & Levels, Refinery Upgrade Perk Tree, Tech Eras, Annual Awards (Option B Visual Workers / hiring tension addressed via leveling; new long-term + recurring goals)
 
 # FUTURE DESIGN: Plant Module / Product Expansion System
 

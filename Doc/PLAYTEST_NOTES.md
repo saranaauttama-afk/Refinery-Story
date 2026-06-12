@@ -1,5 +1,60 @@
 # Playtest Notes
 
+## 2026-06-12 — Gameplay Systems Expansion v0.8
+
+**Method:** Implementation pass + 48 unit assertions. Branch `feature/gameplay-systems-expansion`.
+
+Four new systems, each targeting a long-standing playtest complaint.
+
+### 1. Staff Training & Levels (fixes "workers feel passive/invisible")
+
+Workers now visibly grow. Each type's crew earns XP every tick (faster with more
+headcount), levels 1→5, and each level adds +15% bonus effectiveness (×1.6 at
+max). A Train button lets impatient players buy a level with money + RP. The XP
+bar in StaffPanel gives the constant low-level feedback the crew was missing.
+
+### 2. Refinery Upgrade Perk Tree (fixes "level-ups are just a number")
+
+Every refinery level-up now grants an upgrade point. Three directional branches
+(Efficiency / Capacity / Quality) with prerequisite gating mean you can't max
+everything — each playthrough specializes. This gives level-ups a *decision*.
+
+### 3. Tech Eras (fixes "research ends abruptly, no long-term goal")
+
+Foundation → Expansion → Modern, gated on research count + refinery level. Each
+era is a visible long-term target with a real payoff (+sell price, +RP) and a
+one-time banner moment. The Era panel shows dual progress bars toward the next era.
+
+### 4. Annual Awards (adds the Kairosoft recurring-hype beat)
+
+A 12-minute business year ends in a graded ceremony (S/A/B/C) with cash + rep.
+The Awards panel shows a live projected grade and the year's running stats, so
+players have a recurring medium-term target that pulls all the other systems
+together (produce more, earn more, complete more → better grade).
+
+### Balance Notes / Concerns
+
+- Staff XP pacing: Level 1→2 ≈ 80s for a crew of 3; full Lv5 is a long-haul
+  goal (~hours of idle, or paid training). Feels right for a chill management
+  game but worth re-checking once specialists are common.
+- Perk + era + crew-level bonuses now stack multiplicatively with research and
+  combos. Late-game sell price / production could compound fast — flagged for a
+  future combined Balance Pass (the Option A Sales Agent review should fold this in).
+- Awards score weights (1/gas, 8/$1k, 60/contract) are a first pass; the S
+  threshold (1000) is reachable but demanding in a 12-minute year — tune after
+  live play.
+- Year length (12 min) means a new player's first ceremony is ~12 min in. If
+  early retention testing shows that's too long for the first payoff, consider a
+  shorter first year.
+
+### Carried-forward (unchanged)
+
+- Sales Agent flat-bonus diminishing-returns review (now more urgent with crew
+  levels amplifying it) — BACKLOG Option A.
+- Petrochemical Contract 26 ($75k) still the largest single reward.
+
+---
+
 ## 2026-06-12 — Demand & Goals Pass 1.0
 
 **Method:** Code-trace analysis + implementation pass. Branch `feature/demand-goals-pass`.

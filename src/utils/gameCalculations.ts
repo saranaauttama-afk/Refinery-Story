@@ -1,4 +1,5 @@
 import {
+  AWARDS_BALANCE,
   BONUS_BALANCE,
   BUILDING_UPGRADE_BALANCE,
   CORE_BALANCE,
@@ -8,18 +9,23 @@ import {
   MILESTONE_BALANCE,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
+  STAFF_LEVEL_BALANCE,
   STARTING_BALANCE,
   STORAGE_BALANCE,
 } from '../data/balance'
 import type { ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
+import { getCurrentEra, getNextEra } from '../data/eras'
 import { RANDOM_EVENTS } from '../data/events'
 import { MILESTONES } from '../data/milestones'
+import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { WORKERS } from '../data/workers'
 import { serializeBilingualText, text } from '../translations'
 import type {
   ActiveWorkerItem,
+  AwardGrade,
+  AwardRecord,
   BuildingCounts,
   BilingualTextValue,
   ChoiceEvent,
@@ -28,9 +34,14 @@ import type {
   GameState,
   GridCell,
   PendingShipment,
+  PerkKey,
   RandomEvent,
   ReputationTier,
   WorkerCounts,
+  WorkerLevels,
+  WorkerType,
+  WorkerXp,
+  YearStats,
 } from '../types'
 
 export const TICK_MS = CORE_BALANCE.tickMs
@@ -98,6 +109,15 @@ export function createInitialGameState(): GameState {
       aviationSpecialist: 0,
       chemicalEngineer: 0,
     },
+    workerLevels: getInitialWorkerLevels(),
+    workerXp: getEmptyWorkerXp(),
+    upgradePoints: 0,
+    unlockedPerks: [],
+    highestEraIndex: 0,
+    businessYear: 1,
+    yearStartTick: 0,
+    yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },
+    awardHistory: [],
     grid: Array(EXPANSION_BALANCE[0].cells).fill(null),
     gridLevels: Array(EXPANSION_BALANCE[0].cells).fill(1),
     gridExpansionLevel: 0,
@@ -146,7 +166,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
   }
 }
 
-function getEmptyWorkerCounts(): WorkerCounts {
+export function getEmptyWorkerCounts(): WorkerCounts {
   return {
     operator: 0,
     mechanic: 0,
@@ -158,6 +178,41 @@ function getEmptyWorkerCounts(): WorkerCounts {
     aviationSpecialist: 0,
     chemicalEngineer: 0,
   }
+}
+
+export function getInitialWorkerLevels(): WorkerLevels {
+  return {
+    operator: 1,
+    mechanic: 1,
+    salesAgent: 1,
+    safetyOfficer: 1,
+    chemist: 1,
+    logisticsCoordinator: 1,
+    fuelSpecialist: 1,
+    aviationSpecialist: 1,
+    chemicalEngineer: 1,
+  }
+}
+
+export function getEmptyWorkerXp(): WorkerXp {
+  return {
+    operator: 0,
+    mechanic: 0,
+    salesAgent: 0,
+    safetyOfficer: 0,
+    chemist: 0,
+    logisticsCoordinator: 0,
+    fuelSpecialist: 0,
+    aviationSpecialist: 0,
+    chemicalEngineer: 0,
+  }
+}
+
+// Multiplier applied to a worker type's bonus based on its crew level.
+// Level 1 = 1.0x, each level above adds STAFF_LEVEL_BALANCE.bonusPerLevelRate.
+export function getWorkerLevelMultiplier(level: number): number {
+  const safeLevel = Math.max(1, Math.min(STAFF_LEVEL_BALANCE.maxLevel, level))
+  return 1 + (safeLevel - 1) * STAFF_LEVEL_BALANCE.bonusPerLevelRate
 }
 
 function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem[] {
@@ -279,12 +334,42 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const hasSaferOperations =
     game.unlockedResearchIds.includes('saferOperations')
   const activeWorkers = getActiveWorkers(game.workerCounts)
-  const operatorCount = game.workerCounts.operator
-  const mechanicCount = game.workerCounts.mechanic
-  const salesAgentCount = game.workerCounts.salesAgent
-  const chemistCount = game.workerCounts.chemist ?? 0
-  const safetyOfficerCount = game.workerCounts.safetyOfficer ?? 0
-  const fuelSpecialistCount = game.workerCounts.fuelSpecialist ?? 0
+  const workerLevels = game.workerLevels ?? getInitialWorkerLevels()
+  // Effective worker contribution = headcount × crew-level multiplier.
+  // A higher crew level makes each worker of that type more effective without
+  // touching the underlying bonus formulas below.
+  const effectiveWorkers = (type: WorkerType) =>
+    (game.workerCounts[type] ?? 0) * getWorkerLevelMultiplier(workerLevels[type] ?? 1)
+  const operatorCount = effectiveWorkers('operator')
+  const mechanicCount = effectiveWorkers('mechanic')
+  const salesAgentCount = effectiveWorkers('salesAgent')
+  const chemistCount = effectiveWorkers('chemist')
+  const safetyOfficerCount = effectiveWorkers('safetyOfficer')
+  const fuelSpecialistCount = effectiveWorkers('fuelSpecialist')
+
+  // --- System 2: Refinery Perk Tree bonuses ---
+  const unlockedPerks = game.unlockedPerks ?? []
+  let perkProductionBonusRate = 0
+  let perkStorageBonusRate = 0
+  let perkSellPriceBonusRate = 0
+  let perkCrudeDiscountRate = 0
+  for (const perkKey of unlockedPerks) {
+    const effect = PERK_EFFECTS[perkKey as PerkKey] as
+      | { production?: number; storage?: number; sellPrice?: number; crudeDiscount?: number }
+      | undefined
+    if (!effect) continue
+    perkProductionBonusRate += effect.production ?? 0
+    perkStorageBonusRate += effect.storage ?? 0
+    perkSellPriceBonusRate += effect.sellPrice ?? 0
+    perkCrudeDiscountRate += effect.crudeDiscount ?? 0
+  }
+
+  // --- System 3: Tech Era bonuses ---
+  const currentEra = getCurrentEra(game.unlockedResearchCount, game.refineryLevel)
+  const nextEra = getNextEra(currentEra.index)
+  const eraSellPriceBonusRate = currentEra.sellPriceBonusRate
+  const eraResearchRateBonusRate = currentEra.researchRateBonusRate
+
   let crudeTankStorageTotal = 0
   let productTankStorageTotal = 0
   let distillationUpgradeBonusRate = 0
@@ -323,14 +408,17 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     (hasBiggerTanks ? STORAGE_BALANCE.biggerTanksStorageBonus : 0) +
     (hasIndustrialStorage ? STORAGE_BALANCE.industrialStorageBonus : 0) +
     (hasStorageOptimization ? STORAGE_BALANCE.storageOptimizationBonus : 0)
-  const workerStorageBonus =
-    mechanicCount * STORAGE_BALANCE.mechanicStorageBonus
+  const workerStorageBonus = Math.round(
+    mechanicCount * STORAGE_BALANCE.mechanicStorageBonus,
+  )
+  // Perk capacity branch adds a multiplicative storage bonus on top of base+combo.
+  const perkStorageMultiplier = 1 + perkStorageBonusRate
   const maxCrudeStorage =
-    Math.round(baseCrudeStorage * storageMultiplier) +
+    Math.round(baseCrudeStorage * storageMultiplier * perkStorageMultiplier) +
     researchStorageBonus +
     workerStorageBonus
   const maxGasolineStorage =
-    Math.round(baseGasolineStorage * storageMultiplier) +
+    Math.round(baseGasolineStorage * storageMultiplier * perkStorageMultiplier) +
     researchStorageBonus +
     workerStorageBonus
   const baseProductionInterval = getBaseProductionInterval(
@@ -347,12 +435,14 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     (hasAdvancedProcessing ? 1 + BONUS_BALANCE.advancedProcessingBonusRate : 1)
   const workerProductionMultiplier =
     1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate
+  const perkProductionMultiplier = 1 + perkProductionBonusRate
   const productionInterval = Math.max(
     PRODUCTION_BALANCE.minProductionMs,
     baseProductionInterval /
       productionMultiplier /
       researchProductionMultiplier /
       workerProductionMultiplier /
+      perkProductionMultiplier /
       distillationUpgradeProductionMultiplier,
   )
   const productionRate = 1000 / productionInterval
@@ -378,7 +468,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     ? 1 + BONUS_BALANCE.contractAnalyticsRpBonusRate
     : 1
   const contractRpRewardMultiplier =
-    specialBuildingRpRewardMultiplier * chemistRpMultiplier * researchContractRpMultiplier
+    specialBuildingRpRewardMultiplier *
+    chemistRpMultiplier *
+    researchContractRpMultiplier *
+    (1 + eraResearchRateBonusRate)
   const eventPenaltyMultiplier =
     workshopPenaltyMultiplier *
     Math.pow(BONUS_BALANCE.safetyOfficerPenaltyRate, safetyOfficerCount) *
@@ -386,12 +479,21 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const researchSellPriceBonus = hasPremiumFuel
     ? BONUS_BALANCE.premiumFuelSellPriceBonus
     : 0
-  const workerSellPriceBonus =
-    salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonus
+  const workerSellPriceBonus = Math.round(
+    salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonus,
+  )
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
+  // Perk quality branch and current tech era both add multiplicative sell-price bonuses.
+  const perkEraSellPriceMultiplier =
+    1 + perkSellPriceBonusRate + eraSellPriceBonusRate
   const sellPrice =
-    Math.round(ECONOMY_BALANCE.gasolinePrice * sellPriceMultiplier * fuelSpecialistSellPriceMultiplier) +
+    Math.round(
+      ECONOMY_BALANCE.gasolinePrice *
+        sellPriceMultiplier *
+        fuelSpecialistSellPriceMultiplier *
+        perkEraSellPriceMultiplier,
+    ) +
     researchSellPriceBonus +
     workerSellPriceBonus
   const upgradeCost = getUpgradeCost(game.refineryLevel)
@@ -465,6 +567,14 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     workerProductionMultiplier,
     workerSellPriceBonus,
     workerStorageBonus,
+    perkProductionBonusRate,
+    perkStorageBonusRate,
+    perkSellPriceBonusRate,
+    perkCrudeDiscountRate,
+    currentEra,
+    nextEra,
+    eraSellPriceBonusRate,
+    eraResearchRateBonusRate,
     productionMultiplier,
     productionRate,
     progressPercent,
@@ -746,6 +856,109 @@ export function applyMilestones(game: GameState) {
   }
 
   return nextGame
+}
+
+// --- System 1: Staff XP accrual & training ---
+// Called once per production tick. Each worker of a type earns XP; when XP
+// crosses the threshold the crew levels up (capped at maxLevel). Returns the
+// updated levels/xp plus an optional level-up log message.
+export function applyStaffXp(game: GameState): {
+  workerLevels: WorkerLevels
+  workerXp: WorkerXp
+  levelUpLog: string | null
+} {
+  const levels = { ...(game.workerLevels ?? getInitialWorkerLevels()) }
+  const xp = { ...(game.workerXp ?? getEmptyWorkerXp()) }
+  let levelUpLog: string | null = null
+
+  for (const worker of WORKERS) {
+    const type = worker.key
+    const count = game.workerCounts[type] ?? 0
+    if (count <= 0) continue
+    const level = levels[type] ?? 1
+    if (level >= STAFF_LEVEL_BALANCE.maxLevel) continue
+
+    xp[type] = (xp[type] ?? 0) + count * STAFF_LEVEL_BALANCE.xpPerWorkerPerTick
+    const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[level] ?? Infinity
+    if (xp[type] >= threshold) {
+      levels[type] = level + 1
+      xp[type] = xp[type] - threshold
+      // Only surface the most recent level-up in the log to avoid spam.
+      levelUpLog = serializeBilingualText(
+        text.logs.staffLevelUp(worker.name, level + 1),
+      )
+    }
+  }
+
+  return { workerLevels: levels, workerXp: xp, levelUpLog }
+}
+
+// Cost to instantly train a worker type to its next level.
+export function getTrainingCost(currentLevel: number): { money: number; rp: number } {
+  return {
+    money:
+      STAFF_LEVEL_BALANCE.trainBaseCost +
+      currentLevel * STAFF_LEVEL_BALANCE.trainCostPerLevel,
+    rp: STAFF_LEVEL_BALANCE.trainRpCost,
+  }
+}
+
+// --- System 4: Annual Awards ---
+export function getAwardScore(stats: YearStats): number {
+  return Math.round(
+    stats.gasolineProduced * AWARDS_BALANCE.weights.perGasoline +
+      (stats.moneyEarned / 1000) * AWARDS_BALANCE.weights.perThousandMoney +
+      stats.contractsCompleted * AWARDS_BALANCE.weights.perContract,
+  )
+}
+
+export function getAwardGrade(score: number): AwardGrade {
+  if (score >= AWARDS_BALANCE.gradeThresholds.S) return 'S'
+  if (score >= AWARDS_BALANCE.gradeThresholds.A) return 'A'
+  if (score >= AWARDS_BALANCE.gradeThresholds.B) return 'B'
+  return 'C'
+}
+
+// Evaluates the just-finished business year, grants rewards, records the result,
+// and resets the per-year counters for the next year. Returns the updated game
+// plus the AwardRecord so the UI can show a ceremony modal.
+export function closeBusinessYear(game: GameState): {
+  game: GameState
+  record: AwardRecord
+} {
+  const stats = game.yearStats
+  const score = getAwardScore(stats)
+  const grade = getAwardGrade(score)
+  const cashReward = AWARDS_BALANCE.cashByGrade[grade]
+  const reputationReward = AWARDS_BALANCE.reputationByGrade[grade]
+
+  const record: AwardRecord = {
+    year: game.businessYear,
+    grade,
+    score,
+    cashReward,
+    gasolineProduced: stats.gasolineProduced,
+    moneyEarned: stats.moneyEarned,
+    contractsCompleted: stats.contractsCompleted,
+  }
+
+  const message = serializeBilingualText(
+    text.logs.annualAward(game.businessYear, grade, cashReward),
+  )
+
+  return {
+    game: {
+      ...game,
+      money: game.money + cashReward,
+      reputation: game.reputation + reputationReward,
+      businessYear: game.businessYear + 1,
+      yearStartTick: game.tickCount,
+      yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },
+      awardHistory: [record, ...game.awardHistory].slice(0, 12),
+      activityLog: addLog(game.activityLog, message),
+    },
+    record,
+  }
 }
 
 export function applyRandomEvent(game: GameState, event: RandomEvent) {

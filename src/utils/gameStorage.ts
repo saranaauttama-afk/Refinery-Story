@@ -1,6 +1,21 @@
-import type { BilingualTextValue, GameState, PendingShipment, StandingOrderKey, WorkerCounts } from '../types'
+import type {
+  AwardRecord,
+  BilingualTextValue,
+  GameState,
+  PendingShipment,
+  PerkKey,
+  StandingOrderKey,
+  WorkerCounts,
+  WorkerLevels,
+  WorkerXp,
+  YearStats,
+} from '../types'
 import { text } from '../translations'
-import { createInitialGameState } from './gameCalculations'
+import {
+  createInitialGameState,
+  getEmptyWorkerXp,
+  getInitialWorkerLevels,
+} from './gameCalculations'
 
 const STORAGE_KEY = 'refinery-story-save'
 
@@ -94,6 +109,80 @@ function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
   }
 }
 
+// System 1: worker levels default to 1, xp defaults to 0 for every type.
+const WORKER_TYPE_KEYS = [
+  'operator',
+  'mechanic',
+  'salesAgent',
+  'safetyOfficer',
+  'chemist',
+  'logisticsCoordinator',
+  'fuelSpecialist',
+  'aviationSpecialist',
+  'chemicalEngineer',
+] as const
+
+function getSafeWorkerLevels(value: unknown): WorkerLevels {
+  const result = getInitialWorkerLevels()
+  if (!isRecord(value)) return result
+  for (const key of WORKER_TYPE_KEYS) {
+    const lvl = value[key]
+    if (typeof lvl === 'number' && Number.isFinite(lvl) && lvl >= 1 && lvl <= 5) {
+      result[key] = Math.floor(lvl)
+    }
+  }
+  return result
+}
+
+function getSafeWorkerXp(value: unknown): WorkerXp {
+  const result = getEmptyWorkerXp()
+  if (!isRecord(value)) return result
+  for (const key of WORKER_TYPE_KEYS) {
+    const xp = value[key]
+    if (typeof xp === 'number' && Number.isFinite(xp) && xp >= 0) {
+      result[key] = xp
+    }
+  }
+  return result
+}
+
+// System 2: only keep recognized perk keys.
+const PERK_KEYS: PerkKey[] = [
+  'efficiency1', 'efficiency2', 'efficiency3',
+  'capacity1', 'capacity2', 'capacity3',
+  'quality1', 'quality2', 'quality3',
+]
+
+function getSafePerks(value: unknown): PerkKey[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((v): v is PerkKey => PERK_KEYS.includes(v as PerkKey))
+}
+
+// System 4: year stats and award history.
+function getSafeYearStats(value: unknown): YearStats {
+  if (!isRecord(value)) {
+    return { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 }
+  }
+  return {
+    gasolineProduced: getSafeNumber(value.gasolineProduced, 0),
+    moneyEarned: getSafeNumber(value.moneyEarned, 0),
+    contractsCompleted: getSafeNumber(value.contractsCompleted, 0),
+  }
+}
+
+function getSafeAwardHistory(value: unknown): AwardRecord[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (item): item is AwardRecord =>
+        isRecord(item) &&
+        typeof item.year === 'number' &&
+        typeof item.score === 'number' &&
+        (item.grade === 'S' || item.grade === 'A' || item.grade === 'B' || item.grade === 'C'),
+    )
+    .slice(0, 12)
+}
+
 function sanitizeLoadedGameState(value: unknown) {
   const fallback = createInitialGameState()
 
@@ -147,6 +236,15 @@ function sanitizeLoadedGameState(value: unknown) {
       fallback.unlockedResearchIds,
     ) as GameState['unlockedResearchIds'],
     workerCounts: getSafeWorkerCounts(value.workerCounts, fallback.workerCounts),
+    workerLevels: getSafeWorkerLevels(value.workerLevels),
+    workerXp: getSafeWorkerXp(value.workerXp),
+    upgradePoints: getSafeNumber(value.upgradePoints, 0),
+    unlockedPerks: getSafePerks(value.unlockedPerks),
+    highestEraIndex: getSafeNumber(value.highestEraIndex, 0),
+    businessYear: Math.max(1, getSafeNumber(value.businessYear, 1)),
+    yearStartTick: getSafeNumber(value.yearStartTick, 0),
+    yearStats: getSafeYearStats(value.yearStats),
+    awardHistory: getSafeAwardHistory(value.awardHistory),
     grid,
     gridLevels: getSafeGridLevels(value.gridLevels, grid.length),
     gridExpansionLevel: getSafeNumber(value.gridExpansionLevel, fallback.gridExpansionLevel),
@@ -181,7 +279,6 @@ const STANDING_ORDER_KEYS: StandingOrderKey[] = [
   'lubricantSupply',
   'petrochemExport',
 ]
-
 // Reads a single product amount from a saved productInventory record.
 // Missing or invalid values default to 0 so old saves load safely.
 function getSafeProductAmount(value: unknown, key: string): number {

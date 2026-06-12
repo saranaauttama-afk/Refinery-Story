@@ -550,3 +550,41 @@ export const REPUTATION_TIER_BALANCE = [
     contractRewardBonusRate: 0.2,
   },
 ] as const
+
+// --- System 1: Staff Training & Levels ---
+export const STAFF_LEVEL_BALANCE = {
+  maxLevel: 5,
+  // XP gained per worker of a type, per production tick. With 3 workers of a
+  // type the crew earns 3 XP/tick. At 200ms/tick that is ~15 XP/sec for a crew of 3.
+  xpPerWorkerPerTick: 1,
+  // XP required to advance from level N to N+1. Index = current level.
+  // Level 1→2 needs 1,200 XP (~80s for a crew of 3); ramps up after.
+  xpToNextLevel: [0, 1200, 3000, 6000, 12000],
+  // Each level above 1 multiplies that worker type's bonus effectiveness.
+  // Level 1 = 1.0x, Level 5 = 1.0 + 4*0.15 = 1.6x.
+  bonusPerLevelRate: 0.15,
+  // Instant training: cost to add one level worth of XP, scaled by target level.
+  trainBaseCost: 600,
+  trainCostPerLevel: 500,
+  trainRpCost: 5,
+} as const
+
+// --- System 4: Annual Awards ---
+// A "business year" is a fixed number of ticks. At year end performance is
+// graded and rewarded, then the per-year counters reset.
+export const AWARDS_BALANCE = {
+  // 3,600 ticks * 200ms = 720,000ms = 12 minutes per business year.
+  yearLengthTicks: 3600,
+  // Score thresholds for each grade (weighted sum of the year's stats).
+  gradeThresholds: { S: 1000, A: 600, B: 300, C: 0 },
+  // Cash reward by grade.
+  cashByGrade: { S: 12000, A: 6000, B: 3000, C: 1000 },
+  // Reputation reward by grade.
+  reputationByGrade: { S: 40, A: 25, B: 12, C: 5 },
+  // Score weights — tune what "a good year" means.
+  weights: {
+    perGasoline: 1,        // 1 point per gasoline produced this year
+    perThousandMoney: 8,   // 8 points per $1,000 earned this year
+    perContract: 60,       // 60 points per contract completed this year
+  },
+} as const

@@ -124,6 +124,19 @@ is added, replace both with a single `needText(productKey, shortfall)` helper.
 
 ---
 
+### Stacking multipliers
+
+Crew levels, perks, eras, research, and combos now all multiply into production /
+storage / sell price. Each is individually clamped/rounded, but the *combined*
+late-game curve has not had a dedicated balance pass. Review before v1.0.
+
+### Two tick intervals
+
+Production runs in one setInterval; staff XP + annual awards + era detection run
+in a second setInterval at the same cadence. Kept separate so production return
+paths stay simple. If a third per-tick system appears, consider consolidating
+into one tick with a post-process step.
+
 ## Rule
 
 Do not refactor these items unless they become a real problem.

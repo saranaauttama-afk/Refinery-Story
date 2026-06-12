@@ -297,6 +297,77 @@ export const text = {
       'ล้างเซฟในเครื่องแล้ว และเริ่มโรงกลั่นใหม่',
     ),
   },
+  perks: {
+    kicker: bilingual('Upgrades', 'อัปเกรด'),
+    title: bilingual('Refinery Upgrades', 'อัปเกรดโรงกลั่น'),
+    pointsAvailable: (n: number) =>
+      bilingual(
+        `${n} upgrade point${n === 1 ? '' : 's'} available`,
+        `มีแต้มอัปเกรด ${n} แต้ม`,
+      ),
+    noPoints: bilingual(
+      'Level up the refinery to earn upgrade points.',
+      'อัปเลเวลโรงกลั่นเพื่อรับแต้มอัปเกรด',
+    ),
+    branchEfficiency: bilingual('Efficiency', 'ประสิทธิภาพ'),
+    branchCapacity: bilingual('Capacity', 'ความจุ'),
+    branchQuality: bilingual('Quality', 'คุณภาพ'),
+    costLabel: (n: number) =>
+      bilingual(`${n} pt${n === 1 ? '' : 's'}`, `${n} แต้ม`),
+    installed: bilingual('Installed', 'ติดตั้งแล้ว'),
+    install: bilingual('Install', 'ติดตั้ง'),
+    lockedPrereq: bilingual('Locked', 'ถูกล็อก'),
+  },
+  eras: {
+    kicker: bilingual('Tech Era', 'ยุคเทคโนโลยี'),
+    currentLabel: bilingual('Current Era', 'ยุคปัจจุบัน'),
+    nextLabel: bilingual('Next Era', 'ยุคถัดไป'),
+    requirement: (research: number, level: number) =>
+      bilingual(
+        `Unlock at ${research} research + Level ${level}`,
+        `ปลดล็อกที่งานวิจัย ${research} + เลเวล ${level}`,
+      ),
+    maxReached: bilingual('Highest era reached', 'ถึงยุคสูงสุดแล้ว'),
+    bannerTitle: (name: BilingualTextValue) =>
+      bilingual(`Entering the ${name.en}`, `เข้าสู่${name.th}`),
+  },
+  staffTraining: {
+    levelLabel: (n: number) => bilingual(`Lv ${n}`, `ระดับ ${n}`),
+    maxLevel: bilingual('MAX', 'สูงสุด'),
+    xpProgress: (current: number, total: number) =>
+      bilingual(`${current} / ${total} XP`, `${current} / ${total} XP`),
+    trainButton: (money: number, rp: number) =>
+      bilingual(`Train ($${money.toLocaleString()} + ${rp} RP)`, `ฝึก ($${money.toLocaleString()} + ${rp} RP)`),
+    bonusLabel: (pct: number) =>
+      bilingual(`+${pct}% effectiveness`, `+${pct}% ประสิทธิภาพ`),
+  },
+  awards: {
+    kicker: bilingual('Awards', 'รางวัล'),
+    title: bilingual('Annual Awards', 'รางวัลประจำปี'),
+    yearProgress: (current: number, total: number) =>
+      bilingual(
+        `Year ${current} — ${total}% complete`,
+        `ปีที่ ${current} — ${total}% ของปี`,
+      ),
+    thisYear: bilingual('This Year So Far', 'ปีนี้จนถึงตอนนี้'),
+    statGasoline: bilingual('Gasoline produced', 'เบนซินที่ผลิต'),
+    statMoney: bilingual('Money earned', 'เงินที่หาได้'),
+    statContracts: bilingual('Contracts completed', 'สัญญาที่สำเร็จ'),
+    projectedGrade: (grade: string) =>
+      bilingual(`Projected grade: ${grade}`, `เกรดที่คาดการณ์: ${grade}`),
+    history: bilingual('Past Awards', 'รางวัลที่ผ่านมา'),
+    noHistory: bilingual(
+      'No awards yet — finish your first business year.',
+      'ยังไม่มีรางวัล — ทำให้ครบปีธุรกิจแรกก่อน',
+    ),
+    ceremonyTitle: (year: number) =>
+      bilingual(`Year ${year} Awards Ceremony`, `พิธีมอบรางวัลประจำปีที่ ${year}`),
+    ceremonyGrade: (grade: string) =>
+      bilingual(`Grade ${grade}`, `เกรด ${grade}`),
+    ceremonyReward: (cash: number) =>
+      bilingual(`Prize: $${cash.toLocaleString()}`, `รางวัล: $${cash.toLocaleString()}`),
+    ceremonyClose: bilingual('Continue', 'ดำเนินการต่อ'),
+  },
   milestones: {
     kicker: bilingual('Milestones', 'หมุดหมาย'),
     title: bilingual('Progress Goals', 'เป้าหมายความก้าวหน้า'),
@@ -647,6 +718,58 @@ export const text = {
     title: bilingual('Operations Log', 'บันทึกการดำเนินงาน'),
   },
   data: {
+    perks: {
+      efficiency1: {
+        name: bilingual('Streamlined Flow', 'การไหลที่ลื่นไหล'),
+        description: bilingual('+10% production speed', '+10% ความเร็วการผลิต'),
+      },
+      efficiency2: {
+        name: bilingual('Continuous Processing', 'การประมวลผลต่อเนื่อง'),
+        description: bilingual('+15% production speed', '+15% ความเร็วการผลิต'),
+      },
+      efficiency3: {
+        name: bilingual('Catalytic Mastery', 'เชี่ยวชาญตัวเร่งปฏิกิริยา'),
+        description: bilingual('+25% production speed', '+25% ความเร็วการผลิต'),
+      },
+      capacity1: {
+        name: bilingual('Expanded Tankage', 'ขยายถังเก็บ'),
+        description: bilingual('+10% storage capacity', '+10% ความจุการเก็บ'),
+      },
+      capacity2: {
+        name: bilingual('Smart Logistics', 'โลจิสติกส์อัจฉริยะ'),
+        description: bilingual('+15% storage, 5% cheaper crude', '+15% การเก็บ น้ำมันดิบถูกลง 5%'),
+      },
+      capacity3: {
+        name: bilingual('Strategic Reserves', 'คลังสำรองเชิงกลยุทธ์'),
+        description: bilingual('+25% storage, 10% cheaper crude', '+25% การเก็บ น้ำมันดิบถูกลง 10%'),
+      },
+      quality1: {
+        name: bilingual('Refined Output', 'ผลผลิตคุณภาพ'),
+        description: bilingual('+5% sell price', '+5% ราคาขาย'),
+      },
+      quality2: {
+        name: bilingual('Premium Grade', 'เกรดพรีเมียม'),
+        description: bilingual('+10% sell price', '+10% ราคาขาย'),
+      },
+      quality3: {
+        name: bilingual('Certified Excellence', 'รับรองความเป็นเลิศ'),
+        description: bilingual('+20% sell price', '+20% ราคาขาย'),
+      },
+    },
+    eras: {
+      foundation: {
+        name: bilingual('Foundation Era', 'ยุคก่อตั้ง'),
+        tagline: bilingual('A small refinery finds its footing.', 'โรงกลั่นเล็กๆ เริ่มตั้งหลัก'),
+      },
+      expansion: {
+        name: bilingual('Expansion Era', 'ยุคขยายตัว'),
+        tagline: bilingual('Growth unlocks better markets. +10% sell price, +15% RP.', 'การเติบโตเปิดตลาดที่ดีขึ้น +10% ราคาขาย, +15% RP'),
+      },
+      modern: {
+        name: bilingual('Modern Era', 'ยุคสมัยใหม่'),
+        tagline: bilingual('A world-class operation. +20% sell price, +30% RP.', 'การดำเนินงานระดับโลก +20% ราคาขาย, +30% RP'),
+      },
+    },
     buildings: {
       crudeTank: {
         name: bilingual('Crude Tank', 'ถังน้ำมันดิบ'),
@@ -1619,6 +1742,31 @@ export const text = {
       'Milestone completed: Product Mogul. Reward: $10,000, +75 reputation.',
       'ทำหมุดหมายสำเร็จ: Product Mogul รับรางวัล $10,000 และชื่อเสียง +75',
     ),
+    staffLevelUp: (name: BilingualTextValue, level: number) =>
+      bilingual(
+        `${name.en} crew reached Level ${level}!`,
+        `ทีม ${name.th} เลื่อนเป็นระดับ ${level} แล้ว!`,
+      ),
+    staffTrained: (name: BilingualTextValue, level: number) =>
+      bilingual(
+        `${name.en} crew trained to Level ${level}.`,
+        `ฝึก ${name.th} ขึ้นเป็นระดับ ${level}`,
+      ),
+    perkUnlocked: (name: BilingualTextValue) =>
+      bilingual(
+        `Refinery upgrade installed: ${name.en}.`,
+        `ติดตั้งอัปเกรดโรงกลั่น: ${name.th}`,
+      ),
+    eraAdvanced: (name: BilingualTextValue) =>
+      bilingual(
+        `New era reached: ${name.en}!`,
+        `เข้าสู่ยุคใหม่: ${name.th}!`,
+      ),
+    annualAward: (year: number, grade: string, cash: number) =>
+      bilingual(
+        `Year ${year} Awards: Grade ${grade}! +$${cash.toLocaleString()}`,
+        `รางวัลประจำปีที่ ${year}: เกรด ${grade}! +$${cash.toLocaleString()}`,
+      ),
   },
   workerPresence: {
     decorativeNote: bilingual('Your crew — decorative', 'ทีมงานของคุณ (ตกแต่ง)'),
