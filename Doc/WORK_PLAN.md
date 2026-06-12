@@ -1,77 +1,38 @@
-# WORK PLAN — Staff Cleanup & Economy Pass
+# WORK PLAN — Refinery Process Chain (Feedstock Layer)
 
-Branch: `feature/staff-cleanup-and-economy`
-Started: 2026-06-12. Built on top of `feature/gameplay-systems-expansion` (which
-itself sits on `feature/demand-goals-pass`).
+Branch: `feature/refinery-process-chain` (off `feature/staff-cleanup-and-economy`).
+Started 2026-06-12. This note exists so work can resume in a fresh session if the
+chat is cut off. `git log --oneline` shows what landed; continue first unchecked item.
 
-This note exists so the work can resume in a fresh session if the chat is cut off.
-Each task has a checkbox. When resuming: `git log --oneline` to see what landed,
-then continue the first unchecked item.
+## Why
+Game is themed "develop a refinery" but mechanically everything is one step:
+crude → product. This pass inserts ONE intermediate (feedstock) so production
+becomes a chain and the Distillation Unit becomes the heart of the economy.
+Principle: few mechanics that multiply (Kairosoft), progressive disclosure.
 
----
+## The chain
+- Tier 1 (crude-direct, simple, unchanged): gasoline, asphalt.
+- Tier 2 (needs feedstock): jet fuel, lubricants, petrochemicals.
+- Distillation Unit: each cycle crude → feedstock; adjacency to crude tanks boosts
+  output (reuses combo system). More distillation = more feedstock throughput.
+- Downstream plants consume feedstock instead of raw crude → routing tension.
 
-## Scope (the agreed package)
+## Scope: ONE intermediate (feedstock). No naphtha/distillate/residue/reformer/cracker (too much).
 
-A focused "make it clean" pass — NOT new big systems. Four jobs + a balance pass.
+## Also cutting: unify the 3 duplicated downstream-plant tick blocks into one
+config-driven loop (data/plants.ts). Removes ~100 lines while adding feedstock.
 
-### Task 1 — Remove redundant WorkforcePanel, dedupe bonus text  [x]
-- WorkforcePanel duplicated StaffPanel's worker list. Removed it.
-- `getWorkerActiveBonus` was copy-pasted in StaffPanel + WorkforcePanel.
-  Moved to a single shared helper in `utils/workerBonusText.ts`.
-- StaffPanel is now the one place workers live (hire + level + XP + bonus).
+## Tasks
+### Task 1 — feedstock resource + state  [ ]
+### Task 2 — Distillation produces feedstock  [ ]
+### Task 3 — Unify downstream plants on feedstock (data/plants.ts)  [ ]
+### Task 4 — UI (feedstock card, chain hints)  [ ]
+### Task 5 — Re-anchor meta to refinery (light)  [ ]
+### Task 6 — Balance pass  [ ]
+### Task 7 — Docs + verify + push  [ ]
 
-### Task 2 — Consolidate 4 product panels into one ProductPanel  [x]
-- AsphaltPanel / JetFuelPanel / LubricantsPanel / PetrochemicalsPanel were
-  ~95% identical. Replaced with a single config-driven `ProductPanel`.
-- Product config lives in `data/products.ts` (key, unlock level, base price,
-  plant building, sell handler wiring).
-- Old panels deleted.
+## Save compat: feedstock defaults 0. Downstream plants now need feedstock;
+distillation unlocks early & is needed for gasoline, so most players have it.
+Acceptable balance shift for a prototype.
 
-### Task 3 — Convert Sales Agent flat bonus → percentage  [x]
-- `salesAgentSellPriceBonus: 3` (flat) was the long-flagged problem: +$3 on a
-  $150 product is meaningless; on gasoline it's huge.
-- Replaced with `salesAgentSellPriceBonusRate` (%) applied as a multiplier.
-- Unified all product selling through one `productSellMultiplier`
-  (salesAgent% + quality perks% + era%), so perks/era now lift EVERY product,
-  not just gasoline. Fixes a real inconsistency.
-
-### Task 4 — Wages / Payroll tied to Annual Awards  [x]
-- Each worker type has a wage. Payroll = Σ count × wage × levelFactor
-  (leveled crews cost more — ties the systems together).
-- Deducted at year-end inside `closeBusinessYear`. The Awards score's money
-  component uses NET (revenue − payroll), so over-hiring directly lowers your
-  grade — the missing "hiring tension" the playtests kept flagging.
-- Awards panel shows live projected payroll + net. Ceremony shows the breakdown.
-- If cash can't cover payroll: pay what you can, small reputation hit.
-
-### Task 5 — WorkerPresenceBar reflects crew level  [x]
-- Token bar now shows level pips/stars so the decorative crew ties to System 1.
-
-### Task 6 — Combined Balance Pass  [x]
-- Reviewed the stacked multiplier curve (crew level × perks × era × research ×
-  combos). Adjusted constants so late-game doesn't explode. See PLAYTEST_NOTES
-  2026-06-12 "Economy Pass" entry for the numbers and reasoning.
-
-### Task 7 — Docs + verify + push  [x]
-- Update ROADMAP / BACKLOG / TECH_DEBT / PLAYTEST_NOTES / CURRENT_TASK.
-- build ✓ / eslint ✓ / tsc ✓ / unit tests ✓
-- Commit + push.
-
----
-
-## Deferred (noted, NOT in this pass)
-
-- Perk differentiation (make perks unlock new *capability* instead of % that
-  overlaps workers). Discussed but out of scope here — revisit after this lands.
-- Mobile / Expo layout. Explicitly later.
-- Save export/import. Nice QoL, low effort, future.
-- Rival company / competitive ranking flavor for Awards. Future juice.
-
-## Test commands
-
-```
-npx tsc -p tsconfig.app.json --noEmit
-npm run lint
-npm run build
-npx tsx /tmp/*.test.ts   # logic + save-migration suites (recreate if container reset)
-```
+## Deferred: multi-cut chain, per-plant levels, mobile/Expo, perk differentiation.
