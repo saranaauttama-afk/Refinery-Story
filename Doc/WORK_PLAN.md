@@ -8,7 +8,7 @@ Goal: small, cheap, build/test-verifiable additions that increase Kairosoft
 
 ## Items (in order)
 
-### 1. Era banner/toast  [ ]
+### 1. Era banner/toast  [x]
 - `bannerTitle` translation already exists (eras.bannerTitle).
 - On era advance (highestEraIndex increases, detected in the staff/awards
   tick), show a dismissible toast/banner (NOT a full modal like awards —

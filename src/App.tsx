@@ -27,13 +27,14 @@ import RefineryUpgradesPanel from './components/RefineryUpgradesPanel'
 import EraPanel from './components/EraPanel'
 import AwardsPanel from './components/AwardsPanel'
 import AwardCeremonyModal from './components/AwardCeremonyModal'
+import EraBannerToast from './components/EraBannerToast'
 import { BUILDINGS } from './data/buildings'
 import { ASPHALT_BALANCE, AWARDS_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
 import { serializeBilingualText, text } from './translations'
-import type { AwardRecord, BuildingType, ChoiceEvent, Contract, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
+import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
 import {
   CRUDE_COST,
   RANDOM_EVENT_INTERVAL_MS,
@@ -68,6 +69,7 @@ function App() {
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingType>('crudeTank')
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
+  const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
   const gameRef = useRef(game)
   const {
     activeContracts,
@@ -336,6 +338,7 @@ function App() {
               serializeBilingualText(text.logs.eraAdvanced(era.name)),
             ),
           }
+          setPendingEraBanner(era)
         }
 
         return next
@@ -1241,6 +1244,13 @@ function App() {
         <AwardCeremonyModal
           record={pendingAward}
           onClose={() => setPendingAward(null)}
+        />
+      )}
+
+      {pendingEraBanner && (
+        <EraBannerToast
+          era={pendingEraBanner}
+          onClose={() => setPendingEraBanner(null)}
         />
       )}
     </main>

@@ -2180,3 +2180,52 @@
   padding: 8px 10px;
   text-align: center;
 }
+
+/* Era advancement banner toast */
+@keyframes era-banner-in {
+  from { opacity: 0; transform: translate(-50%, -16px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.era-banner-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: 360px;
+  width: calc(100% - 32px);
+  padding: 14px 36px 14px 16px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(248, 178, 74, 0.22), var(--panel));
+  animation: era-banner-in 0.35s ease-out;
+}
+.era-banner-toast--expansion {
+  background: linear-gradient(135deg, rgba(120, 200, 160, 0.25), var(--panel));
+}
+.era-banner-toast--modern {
+  background: linear-gradient(135deg, rgba(120, 170, 230, 0.25), var(--panel));
+}
+.era-banner-title {
+  margin: 0 0 2px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.era-banner-tagline {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.era-banner-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+}
