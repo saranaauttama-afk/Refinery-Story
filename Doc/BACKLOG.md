@@ -4,6 +4,86 @@ Items stay here until promoted to CURRENT_TASK.md.
 
 ---
 
+## Next Session — Charm Pass Follow-ups + Strategic Differentiation (2026-06-13)
+
+Discussed but not started. The first three are a continuation of the Charm
+Pass (4 items done — see PLAYTEST_NOTES 2026-06-13). Recommended order: 3 → 4
+→ 2, then revisit the strategic-differentiation set below once gameplay
+feels locked.
+
+### 3. Rival Refineries / Annual Ranking (cheap, high charm)
+
+2-3 fictional rival companies (e.g. "Coastal Refining Co.", "Apex
+Petrochem") each get their own score every business year — a baseline that
+grows with the year number plus small randomness, tuned to track near the
+player's economy curve (see Economy Pass numbers in PLAYTEST_NOTES). Surface
+as "Ranked #X of 4" in the existing AwardCeremonyModal alongside the S/A/B/C
+grade. No new system — just an extra computed field on the award record.
+
+### 4. Hidden/discoverable combos (medium effort)
+
+3-5 NEW adjacency combos beyond the 3 already shown in the UI
+(crude↔distillation, distillation↔product, crude↔product). e.g. "Refining
+Triangle": Distillation Unit + Lubricant Plant + Petrochemical Plant in a row
+→ one-time RP/cash bonus + a discovery popup (reuse the era-banner-toast
+pattern). Track `discoveredCombos: string[]` in GameState; don't document
+these combos anywhere in-game — the player has to find them. Ties into the
+milestone/log system.
+
+### 2. Star employees (scoped down — avoids a big refactor)
+
+NOT full individual-employee stats (that would mean reworking the
+count-per-type architecture — a large refactor AGENTS.md says to avoid).
+Instead: ~5% chance on hire to get a "veteran" tag with a small permanent
+perk (e.g. +20% personal XP rate), shown with a star marker in the
+StaffPanel roster (built on top of the named-staff roster from the Charm
+Pass). Workers stay count+level per type underneath.
+
+---
+
+## Strategic Differentiation — "Better than Kairosoft" (2026-06-13)
+
+Kairosoft games rarely have real strategic tradeoffs — numbers only go up,
+and replays tend to converge on one best path. These four ideas hook into
+EXISTING systems (eras, perks, economy, awards) — no new silos — and lean
+into the refinery theme in ways generic Kairosoft clones don't.
+
+### 1. ESG / Safety as a second axis (highest value)
+
+An Environmental/Safety Score that's a real tradeoff: cheap/fast expansion =
+more output now but risk of fines, accidents, and reputation hits; investing
+in clean/safe operations = slower growth but unlocks premium contracts and
+reduces bad random-event frequency. Different players would genuinely build
+differently — not just "who expanded faster". The refinery theme is uniquely
+suited to this; most management sims (Kairosoft included) have no equivalent
+dimension.
+
+### 2. Eras that shift the meta, not just add bonuses
+
+Currently eras (foundation → expansion → modern) only add cumulative +sell
+price / +RP bonuses. A later era — e.g. "Energy Transition" — could instead
+SHIFT demand: gasoline demand slowly declines while petrochemicals/specialty
+chemicals demand rises, forcing a mid-game restructuring of the refinery
+instead of pure linear expansion. Kairosoft progression is static; this
+creates a real inflection point.
+
+### 3. Perk branch diversity / build diversity (balance pass only)
+
+Efficiency / Capacity / Quality perk branches may currently have one
+standout branch. A balance pass to make all three genuinely viable late-game
+(volume play vs premium play vs diversified play) would add real
+replayability for the cost of a numbers-only pass — no new code.
+
+### 4. Seasonal price/demand volatility within a business year
+
+Within the ~12-minute business year, introduce "seasons" where gasoline
+demand/price swings high and low on a cycle (like tourist-season vs
+off-season), so players time production/selling for short-term planning.
+Kairosoft games have static prices for the whole game — this adds a planning
+layer that doesn't exist there at all.
+
+---
+
 ## Recommended Next Phase
 
 v0.7 — Product Expansion is complete. Choose one of the following as the next task.
