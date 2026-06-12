@@ -1,38 +1,45 @@
-# WORK PLAN — Refinery Process Chain (Feedstock Layer)
+# WORK PLAN — Charm Pass (4 items, in order)
 
-Branch: `feature/refinery-process-chain` (off `feature/staff-cleanup-and-economy`).
-Started 2026-06-12. This note exists so work can resume in a fresh session if the
-chat is cut off. `git log --oneline` shows what landed; continue first unchecked item.
+Branch: `feature/charm-pass` (off `feature/docs-cleanup`). Started 2026-06-13.
+Resume note: `git log --oneline`, continue first unchecked item.
 
-## Why
-Game is themed "develop a refinery" but mechanically everything is one step:
-crude → product. This pass inserts ONE intermediate (feedstock) so production
-becomes a chain and the Distillation Unit becomes the heart of the economy.
-Principle: few mechanics that multiply (Kairosoft), progressive disclosure.
+Goal: small, cheap, build/test-verifiable additions that increase Kairosoft
+"charm" without new architecture. Each item independently committed.
 
-## The chain
-- Tier 1 (crude-direct, simple, unchanged): gasoline, asphalt.
-- Tier 2 (needs feedstock): jet fuel, lubricants, petrochemicals.
-- Distillation Unit: each cycle crude → feedstock; adjacency to crude tanks boosts
-  output (reuses combo system). More distillation = more feedstock throughput.
-- Downstream plants consume feedstock instead of raw crude → routing tension.
+## Items (in order)
 
-## Scope: ONE intermediate (feedstock). No naphtha/distillate/residue/reformer/cracker (too much).
+### 1. Era banner/toast  [ ]
+- `bannerTitle` translation already exists (eras.bannerTitle).
+- On era advance (highestEraIndex increases, detected in the staff/awards
+  tick), show a dismissible toast/banner (NOT a full modal like awards —
+  lighter touch) with the new era name + tagline.
+- New component `EraBannerToast.tsx`. State: `pendingEraBanner: EraConfig | null`
+  in App.tsx, set alongside the existing eraAdvanced log.
 
-## Also cutting: unify the 3 duplicated downstream-plant tick blocks into one
-config-driven loop (data/plants.ts). Removes ~100 lines while adding feedstock.
+### 2. Refinery name + title progression  [ ]
+- `refineryName: string` in GameState (default translatable), editable via a
+  small input in the hero panel.
+- Title progression: lookup table by refinery level -> title string, shown
+  next to the name in the hero panel.
+- Save migration: default name; title derived via pure function (no stored
+  field needed for title).
 
-## Tasks
-### Task 1 — feedstock resource + state  [x]
-### Task 2 — Distillation produces feedstock  [x]
-### Task 3 — Unify downstream plants on feedstock (data/plants.ts)  [x]
-### Task 4 — UI (feedstock card, chain hints)  [x]
-### Task 5 — Re-anchor meta to refinery (light)  [x]
-### Task 6 — Balance pass  [x]
-### Task 7 — Docs + verify + push  [x]
+### 3. Named staff  [ ]
+- Workers are counts, not individuals -- keep simple: curated name pool,
+  `workerNames: Record<WorkerType, string[]>` in GameState. On hire, append
+  next name (cycling through pool, deterministic by index).
+- StaffPanel shows a small "roster" line (first few names + "+N more").
+- Save migration: backfill names for existing headcount on load.
 
-## Save compat: feedstock defaults 0. Downstream plants now need feedstock;
-distillation unlocks early & is needed for gasoline, so most players have it.
-Acceptable balance shift for a prototype.
+### 4. Feedstock-themed random events  [ ]
+- 2 new RANDOM_EVENTS entries gated on
+  maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage (player has
+  distillation). e.g. "Distillation Hiccup" (small feedstock loss) and
+  "Feedstock Surplus" (convert feedstock to bonus cash). Follow existing
+  RANDOM_EVENTS pattern + applyRandomEvent branch.
 
-## Deferred: multi-cut chain, per-plant levels, mobile/Expo, perk differentiation.
+## Verification per item
+tsc / lint / build clean + targeted unit test. Commit each item separately.
+
+## Docs
+Update PLAYTEST_NOTES + CURRENT_TASK at the end covering all 4.
