@@ -40,7 +40,12 @@ export const ECONOMY_BALANCE = {
 
 export const PRODUCTION_BALANCE = {
   baseProductionMs: 1000,
-  minProductionMs: 250,
+  // Lowered 250 → 180 (Economy Pass). Operators + research were hitting the old
+  // 250ms floor by mid-game, leaving the Efficiency perk branch little room
+  // late-game. 180ms adds modest headroom without doubling max throughput.
+  // NOTE: Efficiency perks still overlap operators near the floor — a future
+  // pass could repurpose that branch to yield-per-batch instead of speed.
+  minProductionMs: 180,
   refineryUpgradeSpeedStepMs: 120,
   distillationUnitSpeedBonusMs: 120,
 } as const
@@ -577,17 +582,23 @@ export const STAFF_LEVEL_BALANCE = {
 export const AWARDS_BALANCE = {
   // 3,600 ticks * 200ms = 720,000ms = 12 minutes per business year.
   yearLengthTicks: 3600,
-  // Score thresholds for each grade (weighted sum of the year's stats).
-  gradeThresholds: { S: 1000, A: 600, B: 300, C: 0 },
+  // Base score thresholds for YEAR 1. The bar rises each year (see
+  // thresholdGrowthPerYear) so you must keep growing to hold a high grade —
+  // the classic Kairosoft rising-bar. Without this, late game is an automatic S.
+  gradeThresholds: { S: 1400, A: 850, B: 400, C: 0 },
+  // Each business year raises every threshold by this fraction of its base.
+  // Year N threshold = base * (1 + growth * (N - 1)). 0.4 => year 6 needs 3x.
+  thresholdGrowthPerYear: 0.4,
   // Cash reward by grade.
   cashByGrade: { S: 12000, A: 6000, B: 3000, C: 1000 },
   // Reputation reward by grade.
   reputationByGrade: { S: 40, A: 25, B: 12, C: 5 },
-  // Score weights — tune what "a good year" means.
+  // Score weights. Gasoline throughput self-caps (production floor) and would
+  // otherwise dominate, so it is weighted low; contracts (the skill goal) high.
   weights: {
-    perGasoline: 1,        // 1 point per gasoline produced this year
-    perThousandMoney: 8,   // 8 points per $1,000 earned this year
-    perContract: 60,       // 60 points per contract completed this year
+    perGasoline: 0.4,      // 0.4 points per gasoline produced this year
+    perThousandMoney: 7,   // 7 points per $1,000 NET earned this year
+    perContract: 80,       // 80 points per contract completed this year
   },
 } as const
 

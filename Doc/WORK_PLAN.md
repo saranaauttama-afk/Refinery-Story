@@ -47,12 +47,12 @@ A focused "make it clean" pass — NOT new big systems. Four jobs + a balance pa
 ### Task 5 — WorkerPresenceBar reflects crew level  [x]
 - Token bar now shows level pips/stars so the decorative crew ties to System 1.
 
-### Task 6 — Combined Balance Pass  [ ]
+### Task 6 — Combined Balance Pass  [x]
 - Reviewed the stacked multiplier curve (crew level × perks × era × research ×
   combos). Adjusted constants so late-game doesn't explode. See PLAYTEST_NOTES
   2026-06-12 "Economy Pass" entry for the numbers and reasoning.
 
-### Task 7 — Docs + verify + push  [ ]
+### Task 7 — Docs + verify + push  [x]
 - Update ROADMAP / BACKLOG / TECH_DEBT / PLAYTEST_NOTES / CURRENT_TASK.
 - build ✓ / eslint ✓ / tsc ✓ / unit tests ✓
 - Commit + push.

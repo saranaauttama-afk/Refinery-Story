@@ -1,5 +1,65 @@
 # Playtest Notes
 
+## 2026-06-12 — Staff Cleanup & Economy Pass
+
+**Method:** Refactor + balance pass. Branch `feature/staff-cleanup-and-economy`.
+40 unit assertions across economy + save migration.
+
+### Cleanup
+
+- **WorkforcePanel removed.** It duplicated StaffPanel's worker list; the leveled
+  StaffPanel is now the single home for hire + level + XP + bonus. The copy-pasted
+  `getWorkerActiveBonus` moved to `utils/workerBonusText.ts`.
+- **Product panels consolidated.** JetFuel / Lubricants / Petrochemicals were ~95%
+  identical → one config-driven `ProductPanel` + `data/products.ts`. Asphalt kept
+  its own panel (manual produce, no direct sell — genuinely different).
+
+### Economy changes
+
+- **Sales Agent: flat +$3 → +4%/worker.** The flat bonus was the long-flagged
+  problem (huge on gasoline, meaningless on a $150 product, and it leaked onto
+  every product equally). Now a clean percentage.
+- **Unified `productSellMultiplier`** (Sales Agent % + quality perks % + era %)
+  applies to EVERY product, not just gasoline. Fixes the old inconsistency where
+  perks/era only lifted gasoline. Secondary products now benefit too.
+- **Wages / Payroll (the missing hiring tension).** Each worker type has an annual
+  wage (~15% of hire cost); leveled crews cost +10%/level. Payroll is deducted at
+  year-end inside the awards ceremony, and the award score's money component now
+  uses NET (revenue − payroll). Over-hiring directly lowers your grade — hiring is
+  finally a real decision, not "always buy more." Can't-afford-payroll path pays
+  what it can and takes a small reputation hit (no hard bankruptcy).
+
+### Balance review (the stacked-multiplier concern)
+
+Computed early/mid/late scenarios for the combined crew-level × perk × era ×
+research curve:
+
+| Stage | Gasoline price | Product mult | Annual payroll |
+|-------|---------------|-------------|----------------|
+| Early | $18 | 1.00x | $0 |
+| Mid (~Lv8, expansion) | $26 | 1.29x | ~$1,600 |
+| Late (Lv15, modern, deep perks) | $46 | 1.93x | ~$6,800 |
+
+Conclusion: NOT exploding. Sell price ~2.5x across the whole game, product
+multiplier tops ~1.9x, and payroll scales as a real sink. The award weights were
+also tuned to 0.4/gas, 7/$1k NET, 80/contract.
+
+One genuine finding: **production interval hits the floor by mid-game** (operators
++ research overshoot it), so the Efficiency perk branch mostly helps *reach* the
+cap earlier rather than raise it. Lowered the floor 250 → 180ms for modest
+headroom. Flagged for a future pass: consider repurposing Efficiency perks to
+yield-per-batch so the branch stays meaningful late-game.
+
+### Carried forward
+
+- Efficiency-perk vs operator overlap near the production floor (see above).
+- Perk differentiation (perks unlock capability vs % that overlaps workers) —
+  still deferred.
+- Sales Agent diminishing-returns: now % based, so it scales multiplicatively;
+  re-check once crews are commonly Lv5.
+
+---
+
 ## 2026-06-12 — Gameplay Systems Expansion v0.8
 
 **Method:** Implementation pass + 48 unit assertions. Branch `feature/gameplay-systems-expansion`.

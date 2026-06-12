@@ -99,6 +99,18 @@ Suggested goals:
 
 ---
 
+## Phase 2D — Staff Cleanup & Economy (Complete — v0.9)
+
+- Removed redundant WorkforcePanel; deduped worker bonus text into a shared util
+- Consolidated 3 sell-product panels into one config-driven ProductPanel
+- Sales Agent flat bonus → percentage; unified productSellMultiplier across all products
+- Wages/Payroll system tied to Annual Awards (net profit drives the grade — real hiring tension)
+- Combined balance pass (production floor 250→180ms; verified the stacked-multiplier curve is healthy)
+
+See Doc/WORK_PLAN.md and PLAYTEST_NOTES 2026-06-12 "Economy Pass".
+
+---
+
 ## Phase 2C — Depth Systems (Complete — v0.8)
 
 **Milestone: Refinery Story v0.8 — Gameplay Systems Expansion**
