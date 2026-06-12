@@ -414,48 +414,21 @@ export const BUILDING_UPGRADE_BALANCE = {
 export const LUBRICANT_PLANT_BALANCE = {
   unlockLevel: 5,
   cost: 3000,
-  // Crude consumed per plant per production cycle
-  crudePerCycle: 10,
-  // Lubricants produced per plant per production cycle
-  lubricantsPerCycle: 5,
-  // Production fires every N game ticks (25 ticks = 5 seconds at 200ms/tick)
-  intervalTicks: 25,
-  // Maximum lubricants inventory
-  maxStorage: 200,
 } as const
 
 export const JET_FUEL_PLANT_BALANCE = {
   unlockLevel: 10,
   cost: 8000,
-  // Crude consumed per plant per production cycle
-  crudePerCycle: 20,
-  // Jet fuel produced per plant per production cycle
-  jetFuelPerCycle: 5,
-  // Production fires every N game ticks (25 ticks = 5 seconds at 200ms/tick)
-  intervalTicks: 25,
 } as const
 
 export const PETROCHEMICAL_PLANT_BALANCE = {
   unlockLevel: 15,
   cost: 15000,
-  // Crude consumed per plant per production cycle
-  crudePerCycle: 30,
-  // Petrochemicals produced per plant per production cycle
-  petrochemicalsPerCycle: 5,
-  // Production fires every N game ticks (25 ticks = 5 seconds at 200ms/tick)
-  intervalTicks: 25,
-  // Maximum petrochemicals inventory
-  maxStorage: 200,
 } as const
 
 export const JET_FUEL_BALANCE = {
-  // Crude consumed (and jet fuel produced) per small production action
-  batchSize: 25,
-  // Crude consumed (and jet fuel produced) per large production action
-  largeBatchSize: 75,
-  // Maximum jet fuel inventory — raised to 200 so Contract 20 (200 jet fuel) is reachable
-  maxStorage: 200,
-  // Refinery level required to unlock jet fuel processing
+  // Refinery level required to unlock jet fuel processing (panel visible; the
+  // Jet Fuel Plant itself unlocks later at JET_FUEL_PLANT_BALANCE.unlockLevel).
   unlockLevel: 7,
 } as const
 

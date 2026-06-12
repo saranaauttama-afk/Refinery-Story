@@ -137,15 +137,6 @@ in a second setInterval at the same cadence. Kept separate so production return
 paths stay simple. If a third per-tick system appears, consider consolidating
 into one tick with a post-process step.
 
-### Plant balance constants superseded
-
-LUBRICANT_PLANT_BALANCE / JET_FUEL_PLANT_BALANCE / PETROCHEMICAL_PLANT_BALANCE
-still define crudePerCycle/outputPerCycle used by the OLD model. The live plant
-loop now uses PLANT_PRODUCTION (feedstock-based). The old per-plant cost/unlock
-fields are still referenced (buildings.ts, products.ts), but the production
-fields on them are dead. Clean up when convenient — left in place to avoid a
-wide rename in this pass.
-
 ## Rule
 
 Do not refactor these items unless they become a real problem.
