@@ -1,5 +1,54 @@
 # Playtest Notes
 
+## 2026-06-13 — Charm Pass (4 items)
+
+**Method:** Four small, independently-verified additions, no architecture
+changes. Branch `feature/charm-pass`. 33 new unit assertions, 46 prior pass
+(79 total).
+
+### 1. Era advancement banner toast
+Lightweight, auto-dismissing (6s) banner when entering a new Tech Era —
+lighter than the Awards ceremony modal, doesn't block input. Brought the
+previously-dead `eras.bannerTitle` translation to life.
+
+### 2. Refinery name + level-based title
+Hero panel now shows a player-editable refinery name (default "Sunrise
+Refinery") plus a derived company title: Local Refinery -> Regional Supplier
+(Lv5) -> National Producer (Lv10) -> Industry Leader (Lv15), matching the
+advanced-plant unlock thresholds. Makes the hero panel feel like "your
+company" rather than a static header.
+
+### 3. Named staff roster
+Hired workers get a flavor name from a 30-name pool (cycled per type by hire
+order). StaffPanel shows "Team: A, B, C +N more" once a type has hires. Old
+saves backfill names to match existing headcount on load.
+
+Found and fixed along the way: a `WorkerType` import collision in
+gameStorage.ts — the DOM lib's built-in `WorkerType` ("classic" | "module",
+used for `new Worker()`) was being resolved instead of the game's own
+`WorkerType`, because it wasn't imported from `../types` in that file. Caused
+2 tsc errors once `Record<WorkerType, string[]>` was used there. Worth
+remembering for any future `WorkerType`-typed signature in gameStorage.ts.
+
+### 4. Feedstock-themed random events
+Two new events, gated on having built distillation (maxFeedstockStorage >
+baseFeedstockStorage) via a new `getRandomEvent(game)` filter:
+- **Distillation Hiccup** — small feedstock loss (-8, mitigated by Maintenance
+  Workshop / Safety Officers, same multiplier as Minor Leak).
+- **Feedstock Surplus** — converts up to 12 feedstock into cash ($15/unit).
+
+Tier-1-only players (no distillation) never see these — verified via 500-draw
+sampling in both directions.
+
+### Carried forward
+- PLAYTEST_NOTES.md is now ~1,150 lines / ~67KB — still flagged for an
+  archive/trim pass (not done this session either).
+- Next: multi-cut process chain (if more refinery depth wanted), per-plant
+  levels, save export/import, or the mobile/Expo UX phase (deferred,
+  confirmed not excluded).
+
+---
+
 ## 2026-06-13 — Rough Edges Audit
 
 **Method:** Static code audit (dead exports, orphaned translations) + targeted
