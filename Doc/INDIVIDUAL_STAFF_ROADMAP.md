@@ -62,3 +62,40 @@ per-type model, while the migration surface is still manageable.
 ## Phase 4 — Future
 - Traits / veteran tags / legendary hires (original BACKLOG #2 idea), now
   layered onto real individuals instead of type aggregates.
+
+## Phase 3 — Assign Specialists to Plants (SCOPED, this session)
+
+Scoped to the 2 EXISTING specialist-worker mechanics (not all 9 worker
+types — that would be a much larger redesign):
+- `aviationSpecialist` → `jetFuelPlant` (BONUS_BALANCE.aviationSpecialistJetFuelBonusRate = 0.20)
+- `chemicalEngineer` → `petrochemicalPlant` (BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate = 0.20)
+
+### Design
+- New `GameState.assignments: Partial<Record<WorkerType, string[]>>` — for
+  'aviationSpecialist'/'chemicalEngineer', the list of EMPLOYEE IDs currently
+  assigned to that plant. Capacity = `buildingCounts[plant.buildingKey]`
+  (1 plant = 1 slot).
+- **Balance shift (intentional, the actual "payoff")**: specialist bonus
+  formula changes from `1 + workerCounts[specialistWorker] * rate` (every
+  hire counts, flat rate) to `1 + sum(getEmployeeMultiplier(assigned
+  employee) * rate)` over ASSIGNED employees only, capped at plant count.
+  - UNASSIGNED specialists contribute ZERO to that plant's output.
+  - ASSIGNED specialists contribute `rate * their own multiplier` — a
+    leveled-up or Veteran specialist assigned is worth MORE than a fresh
+    rookie. This is the direct payoff of Phase 1+4 (individual level/veteran
+    now matters for WHERE you put someone, not just how many you have).
+- Migration / auto-assign: on load, if `assignments[type]` is empty/missing
+  but employees of that type exist, auto-fill up to plant capacity in hire
+  order. Keeps existing saves functional (not a sudden cliff to zero) while
+  introducing the cap going forward. Sanitized to valid employee IDs of the
+  correct type on every load.
+- UI: in StaffPanel, aviationSpecialist/chemicalEngineer roster rows get an
+  Assign/Unassign toggle, with an "X/Y assigned" counter per type. Disabled
+  when full (unless toggling off).
+
+### Out of scope (future)
+- Extending assignment to other worker types/buildings (chemist, operator,
+  etc.) — would need to first establish what each type's bonus even means
+  per-building (most are global, not per-plant, today).
+- Per-instance (per grid-cell) production — production stays aggregated by
+  building TYPE; assignment caps at plant COUNT, not specific cells.

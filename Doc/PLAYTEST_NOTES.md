@@ -1,5 +1,53 @@
 # Playtest Notes
 
+## 2026-06-13 — Individual Staff, Phase 3 (Assign Specialists to Plants)
+
+**Method:** Branch `feature/staff-assignments` (off staff-veteran-trait).
+Scoped to the 2 EXISTING specialist mechanics (aviationSpecialist ->
+jetFuelPlant, chemicalEngineer -> petrochemicalPlant) — not all 9 worker
+types, which would need a much larger redesign (most types' bonuses are
+global, not per-plant, today). 14 new unit assertions, 163 prior pass (177
+total).
+
+### What shipped — this is the Phase 1+4 payoff
+
+`GameState.assignments: Partial<Record<WorkerType, string[]>>` — employee IDs
+assigned to a specialist role, capacity = how many of that plant exist (1
+plant = 1 slot).
+
+**Balance shift (the actual point)**: specialist multiplier changed from
+`1 + workerCounts[type] * rate` (every hire counts, flat rate, uncapped) to
+`1 + sum(getEmployeeMultiplier(assigned employee) * rate)` over ASSIGNED
+employees only, capped at plant count.
+- Unassigned specialists contribute ZERO to that plant's output.
+- An assigned Lv5 Veteran specialist (multiplier 1.8x) is worth nearly 2x an
+  assigned Lv1 rookie (1.0x) at the same rate — individual level/veteran luck
+  now has a concrete payoff tied to WHERE you put someone, not just headcount.
+- Over-hiring specialists beyond plant count is now a real tradeoff (excess
+  sit "on the bench").
+
+StaffPanel: aviationSpecialist/chemicalEngineer cards show "Assigned to
+plants: X/Y" + each employee gets an Assign/Unassign button ("📌 Assigned"
+badge when active). Assign is disabled when full.
+
+### Migration — no sudden cliff
+
+On every load, if `assignments[type]` is empty (old saves, or saves from
+before this feature) but employees of that type exist, auto-assign in hire
+order up to plant capacity. Existing saves keep roughly their old bonus
+(assigned Lv-N employees ≈ old flat-rate-per-head at that shared level);
+EXCESS specialists beyond plant count quietly go unassigned going forward.
+Player-chosen assignments round-trip; invalid/stale employee IDs are dropped.
+
+### Carried forward
+- Phase 2b (retirement/turnover) still deferred pending design discussion.
+- Extending assignment to other worker types/buildings — future, needs
+  defining what each type's bonus means per-plant first.
+- TECH_DEBT: thresholdGrowthPerYear decision still open.
+- Watch: per-type roster list could get long with no hiring cap.
+
+---
+
 ## 2026-06-13 — Individual Staff, Phase 4 (Veteran Trait)
 
 **Method:** Skipped Phase 2b (retirement/turnover — not a dependency of 3/4,

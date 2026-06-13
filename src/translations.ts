@@ -368,6 +368,9 @@ export const text = {
     bonusLabel: (pct: number) =>
       bilingual(`+${pct}% effectiveness`, `+${pct}% ประสิทธิภาพ`),
     veteranBadge: bilingual('⭐ Veteran', '⭐ ผู้เชี่ยวชาญ'),
+    assignedBadge: bilingual('📌 Assigned', '📌 ประจำตำแหน่ง'),
+    assignButton: bilingual('Assign to plant', 'มอบหมายให้ประจำโรงงาน'),
+    unassignButton: bilingual('Unassign', 'ยกเลิกมอบหมาย'),
   },
   awards: {
     kicker: bilingual('Awards', 'รางวัล'),
@@ -446,6 +449,11 @@ export const text = {
       bilingual(
         `×${count} hired · $${cost.toLocaleString()} each`,
         `จ้างแล้ว ×${count} · ค่าจ้าง $${cost.toLocaleString()}/คน`,
+      ),
+    assignmentStatus: (assigned: number, capacity: number) =>
+      bilingual(
+        `Assigned to plants: ${assigned}/${capacity}`,
+        `มอบหมายให้ประจำโรงงาน: ${assigned}/${capacity}`,
       ),
     hireButton: bilingual('Hire', 'จ้าง'),
     cantAfford: bilingual("Can't Afford", 'ไม่มีเงินพอ'),

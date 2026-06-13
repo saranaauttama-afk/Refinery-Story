@@ -51,6 +51,11 @@ export type GameState = {
   // hired worker, in hire order. Invariant: for every WorkerType,
   // employees.filter(e => e.type === type).length === workerCounts[type].
   employees: Employee[]
+  // Individual Staff Phase 3: employee IDs assigned to plant-specialist
+  // roles, keyed by WorkerType ('aviationSpecialist' -> jetFuelPlant,
+  // 'chemicalEngineer' -> petrochemicalPlant). Capacity = that plant's
+  // building count. Unassigned specialists contribute no plant bonus.
+  assignments: Partial<Record<WorkerType, string[]>>
   // Keys of HIDDEN_COMBOS already discovered/rewarded (one-time each).
   discoveredCombos: string[]
   // System 2: Refinery Upgrade Perk Tree

@@ -8,6 +8,7 @@ import {
   EXPANSION_BALANCE,
   FEEDSTOCK_BALANCE,
   MILESTONE_BALANCE,
+  PLANT_PRODUCTION,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
   STAFF_LEVEL_BALANCE,
@@ -15,7 +16,7 @@ import {
   STORAGE_BALANCE,
   WAGE_BALANCE,
 } from '../data/balance'
-import type { ShipmentOption } from '../data/balance'
+import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
 import { getCurrentEra, getNextEra } from '../data/eras'
 import { RANDOM_EVENTS } from '../data/events'
@@ -130,6 +131,7 @@ export function createInitialGameState(): GameState {
       chemicalEngineer: 0,
     },
     employees: [],
+    assignments: {},
     discoveredCombos: [],
     upgradePoints: 0,
     unlockedPerks: [],
@@ -277,6 +279,36 @@ export function createNewEmployee(employees: Employee[], type: WorkerType): Empl
   }
 }
 
+// --- Individual Staff Phase 3: specialist plant assignments ---
+
+// How many specialist slots a plant has = how many of that building exist.
+// Returns 0 for worker types that aren't a plant specialist.
+export function getAssignmentCapacity(buildingCounts: BuildingCounts, type: WorkerType): number {
+  const plant = PLANT_PRODUCTION.find((p) => p.specialistWorker === type)
+  return plant ? buildingCounts[plant.buildingKey] : 0
+}
+
+// Specialist output multiplier for one plant config, based on ASSIGNED
+// employees only (capped at plantCount slots). Each assigned employee
+// contributes specialistBonusRate * their OWN effectiveness multiplier —
+// unassigned specialists of that type contribute nothing. Replaces the old
+// flat `1 + workerCounts[type] * rate`.
+export function getSpecialistMultiplier(
+  game: GameState,
+  plant: PlantProductionConfig,
+  plantCount: number,
+): number {
+  if (!plant.specialistWorker || !plant.specialistBonusRate) return 1
+  const assignedIds = (game.assignments[plant.specialistWorker] ?? []).slice(0, plantCount)
+  const bonus = assignedIds.reduce((sum, id) => {
+    const employee = game.employees.find(
+      (e) => e.id === id && e.type === plant.specialistWorker,
+    )
+    return employee ? sum + getEmployeeMultiplier(employee) * plant.specialistBonusRate! : sum
+  }, 0)
+  return 1 + bonus
+}
+
 // Base sell price per secondary product (gasoline has its own combo-aware price).
 const PRODUCT_BASE_PRICE: Record<string, number> = {
   lubricants: ECONOMY_BALANCE.lubricantPrice,
@@ -405,7 +437,7 @@ export function getNewlyDiscoveredCombos(
   return HIDDEN_COMBOS.filter((combo) => found.has(combo.key))
 }
 
-function countBuildings(grid: GridCell[]) {
+export function countBuildings(grid: GridCell[]) {
   return grid.reduce((counts, cell) => {
     if (cell) {
       counts[cell] += 1

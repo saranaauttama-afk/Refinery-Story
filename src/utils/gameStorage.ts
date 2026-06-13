@@ -7,10 +7,12 @@ import type {
   PerkKey,
   StandingOrderKey,
   WorkerCounts,
+  WorkerType,
   YearStats,
 } from '../types'
 import { text } from '../translations'
-import { createInitialGameState, DEFAULT_REFINERY_NAME } from './gameCalculations'
+import { countBuildings, createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
+import { PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
 
@@ -184,6 +186,46 @@ function clampLevel(level: number): number {
   return Math.max(1, Math.min(5, Math.floor(level)))
 }
 
+// Individual Staff Phase 3: sanitize plant-specialist assignments. For each
+// specialist worker type (aviationSpecialist -> jetFuelPlant,
+// chemicalEngineer -> petrochemicalPlant): keep only valid employee IDs of
+// the correct type, capped at plant capacity. If the saved list is empty but
+// employees of that type exist (old saves, or saves from before this
+// feature), auto-assign in hire order up to capacity — keeps existing saves
+// productive rather than a sudden cliff to zero specialist bonus.
+function getSafeAssignments(
+  value: unknown,
+  employees: Employee[],
+  grid: GameState['grid'],
+): Partial<Record<WorkerType, string[]>> {
+  const buildingCounts = countBuildings(grid)
+  const raw = isRecord(value) ? value.assignments : undefined
+  const result: Partial<Record<WorkerType, string[]>> = {}
+
+  for (const plant of PLANT_PRODUCTION) {
+    const type = plant.specialistWorker
+    if (!type) continue
+    const capacity = buildingCounts[plant.buildingKey]
+    const ofType = getEmployeesByType(employees, type)
+    const validIds = new Set(ofType.map((employee) => employee.id))
+    const saved = isRecord(raw) && Array.isArray(raw[type])
+      ? (raw[type] as unknown[]).filter(
+          (id): id is string => typeof id === 'string' && validIds.has(id),
+        )
+      : []
+
+    if (saved.length > 0) {
+      result[type] = saved.slice(0, capacity)
+    } else if (ofType.length > 0 && capacity > 0) {
+      result[type] = ofType.slice(0, capacity).map((employee) => employee.id)
+    } else {
+      result[type] = []
+    }
+  }
+
+  return result
+}
+
 // System 2: only keep recognized perk keys.
 const PERK_KEYS: PerkKey[] = [
   'efficiency1', 'efficiency2', 'efficiency3',
@@ -240,6 +282,7 @@ function sanitizeLoadedGameState(value: unknown) {
 
   const grid = getSafeGrid(value.grid, fallback.grid)
   const workerCounts = getSafeWorkerCounts(value.workerCounts, fallback.workerCounts)
+  const employees = getSafeEmployees(value, workerCounts)
 
   return {
     ...fallback,
@@ -286,7 +329,8 @@ function sanitizeLoadedGameState(value: unknown) {
       fallback.unlockedResearchIds,
     ) as GameState['unlockedResearchIds'],
     workerCounts,
-    employees: getSafeEmployees(value, workerCounts),
+    employees,
+    assignments: getSafeAssignments(value, employees, grid),
     discoveredCombos: getSafeStringArray(value.discoveredCombos, []).filter((key) =>
       HIDDEN_COMBOS.some((combo) => combo.key === key),
     ),

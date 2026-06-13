@@ -2379,3 +2379,21 @@
   background: linear-gradient(135deg, #ffe9a8, #f7c948);
   color: #5a3d05;
 }
+.staff-assignment-status {
+  margin: 0 0 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.staff-assigned-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(120, 200, 230, 0.25);
+  color: #2a7a9b;
+}
+.staff-assign-button {
+  font-size: 0.74rem;
+  padding: 4px 9px;
+}

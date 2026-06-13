@@ -37,7 +37,7 @@ import { SELLABLE_PRODUCTS } from './data/products'
 import type { HiddenComboConfig } from './data/hiddenCombos'
 import { WORKERS } from './data/workers'
 import { serializeBilingualText, text } from './translations'
-import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
+import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig, WorkerType } from './types'
 import {
   CRUDE_COST,
   RANDOM_EVENT_INTERVAL_MS,
@@ -55,6 +55,8 @@ import {
   closeBusinessYear,
   getTrainingCost,
   createNewEmployee,
+  getAssignmentCapacity,
+  getSpecialistMultiplier,
   getProductSellPrice,
   getYearlyPayroll,
   getRandomEvent,
@@ -179,11 +181,7 @@ function App() {
           const productSpace = plant.maxStorage - productInventory[plant.productKey]
           if (feedstock < feedstockNeeded || productSpace <= 0) continue
 
-          let specialistMultiplier = 1
-          if (plant.specialistWorker && plant.specialistBonusRate) {
-            const specialistCount = current.workerCounts[plant.specialistWorker] ?? 0
-            specialistMultiplier = 1 + specialistCount * plant.specialistBonusRate
-          }
+          const specialistMultiplier = getSpecialistMultiplier(current, plant, plantCount)
           const produced = Math.min(
             Math.round(plantCount * plant.outputPerCycle * specialistMultiplier),
             productSpace,
@@ -701,6 +699,27 @@ function App() {
           serializeBilingualText(text.logs.staffTrained(target.name, worker!.name, newLevel)),
         ),
       }
+    })
+  }
+
+  // Phase 3: assign/unassign a specific specialist employee to their plant.
+  // Capacity = how many of that plant exist; toggling on when full is a
+  // no-op (player must unassign someone else or build another plant).
+  function handleToggleAssignment(employeeId: string, type: WorkerType) {
+    setGame((current) => {
+      const employee = current.employees.find((e) => e.id === employeeId && e.type === type)
+      if (!employee) return current
+      const capacity = getAssignmentCapacity(calculateDerivedStats(current).buildingCounts, type)
+      const list = current.assignments[type] ?? []
+      const isAssigned = list.includes(employeeId)
+      let newList: string[]
+      if (isAssigned) {
+        newList = list.filter((id) => id !== employeeId)
+      } else {
+        if (list.length >= capacity) return current
+        newList = [...list, employeeId]
+      }
+      return { ...current, assignments: { ...current.assignments, [type]: newList } }
     })
   }
 
@@ -1283,8 +1302,11 @@ function App() {
             refineryLevel={game.refineryLevel}
             activeWorkers={activeWorkers}
             employees={game.employees}
+            assignments={game.assignments}
+            buildingCounts={buildingCounts}
             onHireWorker={handleHireWorker}
             onTrainEmployee={handleTrainEmployee}
+            onToggleAssignment={handleToggleAssignment}
           />
           <RefineryUpgradesPanel
             upgradePoints={game.upgradePoints}

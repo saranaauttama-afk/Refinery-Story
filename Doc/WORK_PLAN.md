@@ -44,3 +44,19 @@ design discussion (risk of feeling punitive).
 ### 4. StaffPanel: veteran badge + bonus% reflects it; hire log flavor line  [x]
 ### 5. Save migration: trait sanitize/round-trip  [x]
 ### 6. Tests + docs + push  [x]
+
+
+---
+
+# WORK PLAN — Individual Staff, Phase 3 (Assign Specialists to Plants)
+
+Branch: `feature/staff-assignments` (off staff-veteran-trait). Scoped to the
+2 existing specialist mechanics per Doc/INDIVIDUAL_STAFF_ROADMAP.md.
+
+## Tasks
+### 1. types.ts: GameState.assignments: Partial<Record<WorkerType, string[]>>  [x]
+### 2. gameCalculations.ts: getAssignmentCapacity, getSpecialistMultiplier, export countBuildings  [x]
+### 3. App.tsx: tick uses getSpecialistMultiplier; handleToggleAssignment handler  [x]
+### 4. StaffPanel.tsx: assignment status header + per-employee Assign/Unassign  [x]
+### 5. gameStorage.ts: getSafeAssignments with auto-assign-up-to-capacity fallback  [x]
+### 6. Tests + docs + push  [x]

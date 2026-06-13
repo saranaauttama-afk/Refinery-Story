@@ -1,6 +1,7 @@
-import type { ActiveWorkerItem, Employee, WorkerConfig } from '../types'
+import type { ActiveWorkerItem, BuildingCounts, Employee, WorkerConfig, WorkerType } from '../types'
 import { STAFF_LEVEL_BALANCE } from '../data/balance'
 import {
+  getAssignmentCapacity,
   getEmployeesByType,
   getEmployeeMultiplier,
   getTrainingCost,
@@ -15,8 +16,11 @@ type StaffPanelProps = {
   refineryLevel: number
   activeWorkers: ActiveWorkerItem[]
   employees: Employee[]
+  assignments: Partial<Record<WorkerType, string[]>>
+  buildingCounts: BuildingCounts
   onHireWorker: (worker: WorkerConfig) => void
   onTrainEmployee: (employeeId: string) => void
+  onToggleAssignment: (employeeId: string, type: WorkerType) => void
 }
 
 const TIER_ORDER = [1, 2, 3] as const
@@ -28,8 +32,11 @@ function StaffPanel({
   refineryLevel,
   activeWorkers,
   employees,
+  assignments,
+  buildingCounts,
   onHireWorker,
   onTrainEmployee,
+  onToggleAssignment,
 }: StaffPanelProps) {
   const grouped = new Map<Tier, ActiveWorkerItem[]>()
   for (const worker of activeWorkers) {
@@ -85,9 +92,19 @@ function StaffPanel({
                         </p>
                       ) : null
                     })()}
-                    {!isLocked && teamMembers.length > 0 && (
-                      <div className="staff-roster-list">
-                        {teamMembers.map((employee) => {
+                    {!isLocked && teamMembers.length > 0 && (() => {
+                      const capacity = getAssignmentCapacity(buildingCounts, worker.key)
+                      const assignedIds = (assignments[worker.key] ?? []).slice(0, capacity)
+                      return (
+                        <div className="staff-roster-list">
+                          {capacity > 0 && (
+                            <p className="staff-assignment-status">
+                              <BilingualText
+                                text={text.staff.assignmentStatus(assignedIds.length, capacity)}
+                              />
+                            </p>
+                          )}
+                          {teamMembers.map((employee) => {
                           const isMax = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
                           const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
                           const pct = isMax
@@ -101,6 +118,7 @@ function StaffPanel({
                             !isMax &&
                             money >= trainCost.money &&
                             researchPoints >= trainCost.rp
+                          const isAssigned = assignedIds.includes(employee.id)
                           return (
                             <div key={employee.id} className="staff-employee-row">
                               <div className="staff-level-row">
@@ -108,6 +126,11 @@ function StaffPanel({
                                 {employee.trait === 'veteran' && (
                                   <span className="staff-veteran-badge">
                                     <BilingualText text={text.staffTraining.veteranBadge} />
+                                  </span>
+                                )}
+                                {isAssigned && (
+                                  <span className="staff-assigned-badge">
+                                    <BilingualText text={text.staffTraining.assignedBadge} />
                                   </span>
                                 )}
                                 <span className="staff-level-badge">
@@ -144,11 +167,28 @@ function StaffPanel({
                                   </button>
                                 </>
                               )}
+                              {capacity > 0 && (
+                                <button
+                                  type="button"
+                                  className="action-button staff-assign-button"
+                                  onClick={() => onToggleAssignment(employee.id, worker.key)}
+                                  disabled={!isAssigned && assignedIds.length >= capacity}
+                                >
+                                  <BilingualText
+                                    text={
+                                      isAssigned
+                                        ? text.staffTraining.unassignButton
+                                        : text.staffTraining.assignButton
+                                    }
+                                  />
+                                </button>
+                              )}
                             </div>
                           )
-                        })}
-                      </div>
-                    )}
+                          })}
+                        </div>
+                      )
+                    })()}
                     {isLocked && (
                       <p className="staff-unlock-note">
                         <BilingualText text={text.staff.unlockAtLevel(worker.unlockLevel!)} />
