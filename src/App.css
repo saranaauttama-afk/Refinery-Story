@@ -227,7 +227,11 @@
 }
 
 .resource-grid {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  /* auto-fit instead of a fixed column count: any number of resource cards
+     wraps cleanly based on available width, so adding a 9th+ card (e.g. ESG
+     Score) never leaves a stray narrow card on its own row. Resolves the
+     "ResourcePanel Layout Scale" tech debt permanently. */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .resource-card {

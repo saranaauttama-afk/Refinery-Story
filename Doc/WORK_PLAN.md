@@ -111,3 +111,19 @@ Branch: `feature/energy-transition-era` (off esg-safety-axis).
 ### 7. gameStorage.ts: migration (default 1.0, clamp to floor/ceiling)  [x]
 ### 8. EraPanel: dynamic /N badge, energyTransition styling, Market Shift section  [x]
 ### 9. Tests + docs + BACKLOG update + push  [x]
+
+
+---
+
+# WORK PLAN — TECH_DEBT Cleanup (Session Item 4/4)
+
+Branch: `feature/tech-debt-cleanup` (off energy-transition-era).
+
+## Tasks
+### 1. Remove AWARDS_BALANCE.thresholdGrowthPerYear (dead config); document static-thresholds decision  [x]
+### 2. Fix ResourcePanel layout: repeat(8,...) -> repeat(auto-fit, minmax(140px,1fr))  [x]
+### 3. TECH_DEBT.md: move both entries to Resolved  [x]
+### 4. Verify + docs + push  [x]
+
+## Session status: ALL 4 PRIORITY ITEMS DONE (balance pass, ESG axis, Energy
+Transition era, this cleanup). Next: merge to main.

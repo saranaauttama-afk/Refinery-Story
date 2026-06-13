@@ -567,13 +567,14 @@ export const STAFF_LEVEL_BALANCE = {
 export const AWARDS_BALANCE = {
   // 3,600 ticks * 200ms = 720,000ms = 12 minutes per business year.
   yearLengthTicks: 3600,
-  // Base score thresholds for YEAR 1. The bar rises each year (see
-  // thresholdGrowthPerYear) so you must keep growing to hold a high grade —
-  // the classic Kairosoft rising-bar. Without this, late game is an automatic S.
+  // Score thresholds for each grade, fixed for the whole game (not
+  // year-scaled). This IS the intended design: rivals.ts is calibrated
+  // against these exact static thresholds, and ESG/Energy-Transition
+  // already provide ongoing late-game pressure (incident risk, demand
+  // shift) without a generic "rising score bar" stacking on top.
+  // (Previously had a dead `thresholdGrowthPerYear` field that
+  // `getAwardGrade` never read -- removed 2026-06-13, see TECH_DEBT.)
   gradeThresholds: { S: 1400, A: 850, B: 400, C: 0 },
-  // Each business year raises every threshold by this fraction of its base.
-  // Year N threshold = base * (1 + growth * (N - 1)). 0.4 => year 6 needs 3x.
-  thresholdGrowthPerYear: 0.4,
   // Cash reward by grade.
   cashByGrade: { S: 12000, A: 6000, B: 3000, C: 1000 },
   // Reputation reward by grade.

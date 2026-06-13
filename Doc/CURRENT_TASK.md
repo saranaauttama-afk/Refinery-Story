@@ -1,31 +1,32 @@
-# Energy Transition Era: Demand Shift — COMPLETE (2026-06-13)
+# TECH_DEBT Cleanup — COMPLETE (2026-06-13)
 
-Branch: `feature/energy-transition-era` (off esg-safety-axis). BACKLOG
-"Strategic Differentiation #2".
+Branch: `feature/tech-debt-cleanup` (off energy-transition-era). Last item
+of this session's 4-item priority punch list.
 
 ## What shipped
-- 4th era `energyTransition` (ERAS[3], index 3): requires 10 research + level
-  18. +30% sell price / +40% RP (largest flat bonus yet) AND
-  `demandShift: true`.
-- GameState.gasolineDemandMultiplier / petrochemicalsDemandMultiplier (both
-  start 1.0). getDemandShiftDelta(currentEra): zero unless demandShift, then
-  gasoline -shiftPerTick (0.0001), petrochemicals +shiftPerTick. Applied +
-  clamped each tick in App.tsx: gasoline -> floor 0.7 (only falls),
-  petrochemicals -> ceiling 1.3 (only rises). Monotonic.
-- getProductSellPrice gained an optional demandMultiplier param (default 1,
-  no behavior change for jetFuel/lubricants). Gasoline's sellPrice formula
-  and petrochemicals' price (App.tsx + handleSellPetrochemicals) now use
-  these.
-- EraPanel: dynamic '/4' badge (ERAS.length), energyTransition badge color,
-  new 'Market Shift' section showing live demand % when in this era.
-- Save migration: default 1.0, clamp gasoline to [0.7,1], petrochemicals to
-  [1,1.3].
+- Removed AWARDS_BALANCE.thresholdGrowthPerYear (dead config, never read by
+  getAwardGrade). DECISION: static gradeThresholds are intentional — rivals
+  already calibrated against them; ESG + Energy Transition era already add
+  late-game pressure, a 3rd rising-bar system would be redundant.
+- .resource-grid: repeat(8, minmax(0,1fr)) -> repeat(auto-fit,
+  minmax(140px,1fr)). Fixes the 9th-card (ESG Score) layout break, scales to
+  any count permanently.
+- TECH_DEBT.md: both entries moved to Resolved with rationale.
 
 ## Verification
-build/lint/tsc + dev server clean. 31 new assertions + 202 prior = 233 total
-pass.
+build/lint/tsc + dev server clean. No new assertions needed (config/CSS
+only); all 233 prior pass.
+
+## Session status: ALL 4 PRIORITY ITEMS DONE
+1. Post-Phase-3 balance pass (no changes needed)
+2. ESG/Safety axis
+3. Energy Transition era (demand shift)
+4. TECH_DEBT cleanup (this branch)
 
 ## Recommended next
-TECH_DEBT cleanup: thresholdGrowthPerYear decision (open since
-rival-refineries) -- last item in this session's priority list, then merge
-everything to main.
+Merge all outstanding feature branches to main:
+post-phase3-balance-pass, esg-safety-axis, energy-transition-era,
+tech-debt-cleanup (this session's chain), plus the earlier Individual Staff
+branches (individual-employees, staff-training-choice, staff-veteran-trait,
+staff-assignments — already merged per prior session). Confirm linear
+ancestry and fast-forward.

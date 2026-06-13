@@ -1,5 +1,47 @@
 # Playtest Notes
 
+## 2026-06-13 — TECH_DEBT Cleanup (Last Item of Session Punch List)
+
+**Method:** Branch `feature/tech-debt-cleanup` (off energy-transition-era).
+Resolves 2 entries from TECH_DEBT.md Active Concerns. No new assertions
+(refactor/config-only); 233 prior all still pass.
+
+### 1. AWARDS_BALANCE.thresholdGrowthPerYear — removed (dead config)
+
+`getAwardGrade(score)` never read this field; it described a "rising bar"
+that was never wired in. DECISION: static `gradeThresholds` are the intended
+design, kept as-is:
+- rivals.ts is already calibrated against these static thresholds (changing
+  them would need a rival recalibration pass).
+- ESG (incident-event risk) and the Energy Transition era (demand shift),
+  both shipped earlier this session, already provide ongoing late-game
+  pressure in ways more thematic to THIS game than a generic rising score
+  bar. A third "gets harder every year" system would be redundant and
+  uncoordinated with the other two.
+
+Removed the field and its stale comment; replaced with a comment explaining
+the static-thresholds decision for future readers.
+
+### 2. ResourcePanel Layout Scale — resolved (auto-fit grid)
+
+This entry predicted breakage "when a 9th resource is added" — which
+happened THIS SESSION (ESG Score card). `.resource-grid` changed from fixed
+`repeat(8, minmax(0,1fr))` to `repeat(auto-fit, minmax(140px,1fr))`. Now
+scales to any number of cards without redesign — permanently resolves the
+concern rather than just bumping 8->9.
+
+### Session complete
+
+All 4 priority items done: balance pass (no changes needed), ESG/Safety
+axis, Energy Transition era demand shift, TECH_DEBT cleanup. 233 total
+assertions pass across the whole session's additions. Next: merge all
+feature branches to main (7 branches: esg-safety-axis,
+energy-transition-era, tech-debt-cleanup, plus the earlier
+post-phase3-balance-pass and the 3 Individual Staff branches already
+discussed for merge).
+
+---
+
 ## 2026-06-13 — Energy Transition Era: Demand Shift (Strategic Differentiation #2)
 
 **Method:** Branch `feature/energy-transition-era` (off esg-safety-axis).

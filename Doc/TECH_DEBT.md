@@ -15,44 +15,26 @@ None currently blocking. See Active Concerns below for post-v0.7 observations.
 - Product Panel Code Duplication — JetFuelPanel/LubricantsPanel/PetrochemicalsPanel
   consolidated into one config-driven `ProductPanel.tsx` + `data/products.ts`
   during the Staff Cleanup & Economy pass.
+- ResourcePanel Layout Scale — RESOLVED 2026-06-13: `.resource-grid` changed
+  from fixed `repeat(8, minmax(0,1fr))` to `repeat(auto-fit, minmax(140px,
+  1fr))`. Triggered immediately by adding the 9th card (ESG Score, see ESG
+  axis); now scales to any card count without redesign.
+- AWARDS_BALANCE.thresholdGrowthPerYear — RESOLVED 2026-06-13: removed the
+  dead config + comment. DECISION: static gradeThresholds are the intended
+  design. Rivals (rivals.ts) are already calibrated against these static
+  thresholds; ESG (incident risk) and the Energy Transition era (demand
+  shift) now provide ongoing late-game pressure in more thematic ways than a
+  generic rising score bar would, so a third "gets harder over time" system
+  would be redundant/uncoordinated. No rival recalibration needed.
 
 ---
 
 ## Active Concerns
 
-### ResourcePanel Layout Scale
-
-ResourcePanel now contains 8 resource cards (money, RP, reputation, crude, gasoline, lubricants, jet fuel, petrochemicals). On narrow viewports or when a 9th resource is added, the grid layout will require redesign. Currently using `repeat(8, minmax(0, 1fr))` — works on desktop but may wrap or compress on tablet.
-
-Fix when: a 9th resource card is added, or Mobile UI pass is promoted.
-
----
-
 ### Product Panel Code Duplication
 
 RESOLVED — see Resolved section above. (This entry described the
 pre-consolidation state and is now stale.)
-
----
-
-### AWARDS_BALANCE.thresholdGrowthPerYear is dead config
-
-`thresholdGrowthPerYear: 0.4` and its comment describe a "rising bar" (grade
-thresholds rise each year so late-game isn't an automatic S) — but
-`getAwardGrade(score)` only ever checks the static `gradeThresholds`, never
-adjusted by year. Found while building the Annual Ranking (rival refineries)
-— rivals were deliberately calibrated against the STATIC thresholds (what the
-player actually faces) rather than this unused growth curve, so the ranking
-stays fair as-is.
-
-Decide: either wire `thresholdGrowthPerYear` into `getAwardGrade` (a real
-balance change — late game would get harder to hold S/A, would need a
-re-verify of the Economy Pass scenarios), or remove the dead config/comment
-if static thresholds are the intended design. Not fixed here — changes grade
-difficulty for everyone, needs a deliberate decision.
-
-Fix when: next balance pass, alongside the rival-refinery numbers if the
-thresholds change (rivals.ts would need re-calibrating too).
 
 ---
 
