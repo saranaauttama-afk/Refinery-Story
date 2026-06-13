@@ -255,14 +255,29 @@ function App() {
         }
 
         const crudeRemaining = crudeOil - batchesProduced
-        const gasolineTotal = current.gasoline + batchesProduced
+
+        // Efficiency perks (Perk Diversity Pass): extra gasoline per batch
+        // of crude processed, not faster cycles (productionInterval already
+        // hits its floor too early for a speed bonus to matter). Fractional
+        // yield carries over so e.g. +10% materializes as +1 extra unit
+        // roughly every 10 batches, not lost to rounding each tick.
+        const perkYieldMultiplier = 1 + currentStats.perkProductionBonusRate
+        const rawGasolineYield =
+          batchesProduced * perkYieldMultiplier + current.gasolineYieldCarry
+        const gasolineProduced = Math.min(Math.floor(rawGasolineYield), storageRoom)
+        const gasolineYieldCarry =
+          gasolineProduced === Math.floor(rawGasolineYield)
+            ? rawGasolineYield - gasolineProduced
+            : 0 // storage-capped: don't bank unrealized yield while full
+
+        const gasolineTotal = current.gasoline + gasolineProduced
         const leftoverProgress =
           crudeRemaining > 0 && gasolineTotal < currentMaxGasoline
             ? nextProgress - batchesProduced * interval
             : 0
 
         const gasolineLog = serializeBilingualText(
-          text.logs.processedCrude(batchesProduced, batchesProduced),
+          text.logs.processedCrude(batchesProduced, gasolineProduced),
         )
 
         // --- ESG/Safety axis drift ---
@@ -295,15 +310,16 @@ function App() {
           crudeOil: crudeRemaining,
           feedstock,
           gasoline: gasolineTotal,
-          totalGasolineProduced: current.totalGasolineProduced + batchesProduced,
+          totalGasolineProduced: current.totalGasolineProduced + gasolineProduced,
           productionProgress: leftoverProgress,
           productInventory,
           esgScore,
+          gasolineYieldCarry,
           gasolineDemandMultiplier,
           petrochemicalsDemandMultiplier,
           yearStats: {
             ...current.yearStats,
-            gasolineProduced: current.yearStats.gasolineProduced + batchesProduced,
+            gasolineProduced: current.yearStats.gasolineProduced + gasolineProduced,
           },
           activityLog: addLog(plantActivityLog, gasolineLog),
         })

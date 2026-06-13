@@ -1,5 +1,59 @@
 # Playtest Notes
 
+## 2026-06-13 — Perk Branch Diversity Pass (Strategic Differentiation #3)
+
+**Method:** Branch `feature/perk-diversity-pass` (off tech-debt-cleanup).
+Started as "balance pass, no new code" per BACKLOG, but analysis found the
+Efficiency branch is COMPLETELY DEAD (not just suboptimal) — required a
+small, contained code change to fix properly. 21 new assertions, 233 prior
+pass (254 total).
+
+### Finding 1: Efficiency branch is 100% dead from ~refineryLevel 8
+
+`productionInterval = max(180ms, baseProductionInterval / (multipliers))`.
+Simulated a modest mid-game state (level 8, 2 distillation units, 2
+operators, 2 research items, ZERO perks): `productionInterval` is ALREADY at
+the 180ms floor. Adding efficiency1/2/3 (all 6 points) changes NOTHING —
+`fullEff.productionInterval === noPerk.productionInterval`. This matches a
+prior code comment ("Efficiency perks still overlap operators near the floor
+— a future pass could repurpose that branch to yield-per-batch instead of
+speed") but the severity (ENTIRE branch dead, not just tier 2-3) wasn't
+previously quantified.
+
+**Fix**: repurposed `efficiency*`'s `production` value (unchanged: 0.10 /
+0.15 / 0.25, total 0.50) from a productionInterval DIVISOR to a gasoline
+YIELD multiplier — extra gasoline per batch of crude processed, which has no
+floor to hit. New `GameState.gasolineYieldCarry` accumulates the fractional
+remainder each tick so a +10% bonus reliably averages out (verified: 1000
+ticks @ 1 batch/tick -> 1100 gasoline for efficiency1, 1500 for full
+efficiency — exactly +10%/+50%). Storage-capped ticks reset the carry rather
+than banking unrealized yield.
+
+### Finding 2: Capacity's crudeDiscount effect was dead too
+
+`capacity2`/`capacity3` had a `crudeDiscount: 0.05/0.10` field that was
+computed (`perkCrudeDiscountRate`) but NEVER applied to any crude price —
+dead since it was added. Redistributed into `storage`: capacity1/2/3 storage
+is now 0.10/0.20/0.35 (total 0.65, up from an effective 0.50). Removed the
+dead field + its DerivedStats export entirely.
+
+### Resulting branch identities (genuine diversity by game phase)
+- **Efficiency** (now functional): +50% gasoline yield, ALWAYS active.
+  Gasoline is ~26% of mid-game revenue (measured) and DECLINING toward
+  Energy Transition — so this is the EARLY-GAME / fast-snowball branch
+  (gasoline ~100% of revenue before downstream plants exist), fading to a
+  modest-but-real late-game bonus.
+- **Quality**: +35% sell price on ALL 4 product lines, consistent
+  throughout — the late-game/universal-scaling branch.
+- **Capacity**: +65% crude/gasoline storage — the bulk-buying/AFK-resistant
+  playstyle branch (value is conditional on hitting storage caps).
+
+### Next
+Item 2 of this session's remaining picks: Seasonal price/demand volatility
+within a business year (Strategic Differentiation #4).
+
+---
+
 ## 2026-06-13 — TECH_DEBT Cleanup (Last Item of Session Punch List)
 
 **Method:** Branch `feature/tech-debt-cleanup` (off energy-transition-era).

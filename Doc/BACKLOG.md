@@ -65,12 +65,15 @@ bonus, but ALSO sets demandShift: true -- gasolineDemandMultiplier drifts
 endgame, both monotonic. EraPanel shows a live 'Market Shift' section. See
 PLAYTEST_NOTES 2026-06-13.
 
-### 3. Perk branch diversity / build diversity (balance pass only)
+### 3. ✅ DONE (2026-06-13) -- Perk branch diversity / build diversity
 
-Efficiency / Capacity / Quality perk branches may currently have one
-standout branch. A balance pass to make all three genuinely viable late-game
-(volume play vs premium play vs diversified play) would add real
-replayability for the cost of a numbers-only pass — no new code.
+Shipped in `feature/perk-diversity-pass`. Found Efficiency was 100% DEAD
+(not just suboptimal) from ~refineryLevel 8 -- productionInterval already at
+its floor before perks apply. Repurposed efficiency's production values
+(unchanged numbers) into a gasoline yield multiplier (new
+GameState.gasolineYieldCarry for fractional accumulation). Also found
+capacity's crudeDiscount was dead; redistributed into storage
+(0.10/0.20/0.35, total 0.65). See PLAYTEST_NOTES 2026-06-13.
 
 ### 4. Seasonal price/demand volatility within a business year
 

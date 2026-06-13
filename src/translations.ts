@@ -789,15 +789,15 @@ export const text = {
     perks: {
       efficiency1: {
         name: bilingual('Streamlined Flow', 'การไหลที่ลื่นไหล'),
-        description: bilingual('+10% production speed', '+10% ความเร็วการผลิต'),
+        description: bilingual('+10% gasoline yield per batch', '+10% ผลผลิตเบนซินต่อรอบ'),
       },
       efficiency2: {
         name: bilingual('Continuous Processing', 'การประมวลผลต่อเนื่อง'),
-        description: bilingual('+15% production speed', '+15% ความเร็วการผลิต'),
+        description: bilingual('+15% gasoline yield per batch', '+15% ผลผลิตเบนซินต่อรอบ'),
       },
       efficiency3: {
         name: bilingual('Catalytic Mastery', 'เชี่ยวชาญตัวเร่งปฏิกิริยา'),
-        description: bilingual('+25% production speed', '+25% ความเร็วการผลิต'),
+        description: bilingual('+25% gasoline yield per batch', '+25% ผลผลิตเบนซินต่อรอบ'),
       },
       capacity1: {
         name: bilingual('Expanded Tankage', 'ขยายถังเก็บ'),
@@ -805,11 +805,11 @@ export const text = {
       },
       capacity2: {
         name: bilingual('Smart Logistics', 'โลจิสติกส์อัจฉริยะ'),
-        description: bilingual('+15% storage, 5% cheaper crude', '+15% การเก็บ น้ำมันดิบถูกลง 5%'),
+        description: bilingual('+20% storage capacity', '+20% ความจุการเก็บ'),
       },
       capacity3: {
         name: bilingual('Strategic Reserves', 'คลังสำรองเชิงกลยุทธ์'),
-        description: bilingual('+25% storage, 10% cheaper crude', '+25% การเก็บ น้ำมันดิบถูกลง 10%'),
+        description: bilingual('+35% storage capacity', '+35% ความจุการเก็บ'),
       },
       quality1: {
         name: bilingual('Refined Output', 'ผลผลิตคุณภาพ'),

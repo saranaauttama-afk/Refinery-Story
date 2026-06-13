@@ -339,6 +339,10 @@ function sanitizeLoadedGameState(value: unknown) {
       DEMAND_SHIFT_BALANCE.gasolineDemandFloor,
       Math.min(1, getSafeNumber(value.gasolineDemandMultiplier, fallback.gasolineDemandMultiplier)),
     ),
+    gasolineYieldCarry: Math.max(
+      0,
+      Math.min(1, getSafeNumber(value.gasolineYieldCarry, fallback.gasolineYieldCarry)),
+    ),
     petrochemicalsDemandMultiplier: Math.max(
       1,
       Math.min(

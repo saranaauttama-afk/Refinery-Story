@@ -127,3 +127,20 @@ Branch: `feature/tech-debt-cleanup` (off energy-transition-era).
 
 ## Session status: ALL 4 PRIORITY ITEMS DONE (balance pass, ESG axis, Energy
 Transition era, this cleanup). Next: merge to main.
+
+
+---
+
+# WORK PLAN — Perk Branch Diversity Pass (Strategic Differentiation #3)
+
+Branch: `feature/perk-diversity-pass` (off tech-debt-cleanup).
+
+## Tasks
+### 1. Quantify: simulate productionInterval at mid-game with/without efficiency perks  [x]
+### 2. data/perks.ts: repurpose efficiency (yield, same values); redistribute capacity (remove dead crudeDiscount)  [x]
+### 3. gameCalculations.ts: remove perkProductionMultiplier from productionInterval; remove perkCrudeDiscountRate  [x]
+### 4. types.ts: GameState.gasolineYieldCarry; remove DerivedStats.perkCrudeDiscountRate  [x]
+### 5. App.tsx: apply yield multiplier with fractional carry in gasoline tick  [x]
+### 6. gameStorage.ts: migration (gasolineYieldCarry default 0, clamp [0,1])  [x]
+### 7. translations.ts: update perk descriptions  [x]
+### 8. Tests + docs + BACKLOG update + push  [x]

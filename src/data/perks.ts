@@ -91,15 +91,27 @@ export const PERKS: PerkConfig[] = [
 
 // Numeric effect of each perk. Kept here (not in balance.ts) because it is
 // tightly coupled to the perk list above.
+//
+// Perk Diversity Pass (2026-06-13): `efficiency*`'s `production` field used
+// to divide productionInterval (speed) -- but baseProductionInterval already
+// hits PRODUCTION_BALANCE.minProductionMs by ~refineryLevel 8 with minimal
+// other investment, making the ENTIRE branch (all 3 tiers) completely dead
+// from that point on. Repurposed to a gasoline YIELD multiplier (extra
+// gasoline per batch of crude processed -- no floor to hit), values
+// unchanged. Also removed the dead `crudeDiscount` field from capacity2/3
+// (never applied anywhere) and redistributed its value into `storage`.
 export const PERK_EFFECTS = {
-  // Production speed bonus (added rate, e.g. 0.1 = +10% faster)
+  // Gasoline yield bonus (extra gasoline output per batch of crude
+  // processed). Applied via gasolineYieldCarry in the production tick.
   efficiency1: { production: 0.1 },
   efficiency2: { production: 0.15 },
   efficiency3: { production: 0.25 },
-  // Storage bonus (added rate on max storage)
-  capacity1: { storage: 0.1, crudeDiscount: 0 },
-  capacity2: { storage: 0.15, crudeDiscount: 0.05 },
-  capacity3: { storage: 0.25, crudeDiscount: 0.1 },
+  // Storage bonus (added rate on max crude/gasoline storage). capacity2/3
+  // absorb the value previously split off into the dead crudeDiscount field
+  // (0.15+0.05=0.20, 0.25+0.10=0.35).
+  capacity1: { storage: 0.1 },
+  capacity2: { storage: 0.2 },
+  capacity3: { storage: 0.35 },
   // Sell price bonus (added rate on all product sell prices)
   quality1: { sellPrice: 0.05 },
   quality2: { sellPrice: 0.1 },

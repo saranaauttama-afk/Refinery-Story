@@ -1,32 +1,35 @@
-# TECH_DEBT Cleanup — COMPLETE (2026-06-13)
+# Perk Branch Diversity Pass — COMPLETE (2026-06-13)
 
-Branch: `feature/tech-debt-cleanup` (off energy-transition-era). Last item
-of this session's 4-item priority punch list.
+Branch: `feature/perk-diversity-pass` (off tech-debt-cleanup). BACKLOG
+"Strategic Differentiation #3".
 
 ## What shipped
-- Removed AWARDS_BALANCE.thresholdGrowthPerYear (dead config, never read by
-  getAwardGrade). DECISION: static gradeThresholds are intentional — rivals
-  already calibrated against them; ESG + Energy Transition era already add
-  late-game pressure, a 3rd rising-bar system would be redundant.
-- .resource-grid: repeat(8, minmax(0,1fr)) -> repeat(auto-fit,
-  minmax(140px,1fr)). Fixes the 9th-card (ESG Score) layout break, scales to
-  any count permanently.
-- TECH_DEBT.md: both entries moved to Resolved with rationale.
+- FOUND: Efficiency branch (efficiency1/2/3, all 6 points) was 100% DEAD
+  from ~refineryLevel 8 onward -- productionInterval already at the 180ms
+  floor before perks apply, so the /perkProductionMultiplier divisor did
+  nothing. Verified via simulation.
+- FIX: repurposed efficiency's `production` values (unchanged: 0.10/0.15/
+  0.25) into a gasoline YIELD multiplier (extra gasoline per batch of crude,
+  no floor). New GameState.gasolineYieldCarry accumulates fractional yield
+  so small bonuses materialize correctly over time (verified: +10%/+50%
+  exactly over 1000 ticks).
+- FOUND: capacity2/3's `crudeDiscount` (0.05/0.10) was computed
+  (perkCrudeDiscountRate) but never applied anywhere -- dead since added.
+- FIX: redistributed into `storage`: capacity1/2/3 now 0.10/0.20/0.35 (total
+  0.65, was effectively 0.50). Removed the dead field + DerivedStats export.
+- Updated perk descriptions (efficiency: 'gasoline yield per batch';
+  capacity2/3: storage % only, no crude-discount mention).
+- Save migration: gasolineYieldCarry defaults to 0, clamped [0,1].
+
+## Resulting identities
+Efficiency = early-game/snowball (gasoline yield, gasoline ~26% of revenue
+and declining). Quality = late-game/universal (+35% all sell prices).
+Capacity = bulk-buying/AFK-resistant (+65% storage).
 
 ## Verification
-build/lint/tsc + dev server clean. No new assertions needed (config/CSS
-only); all 233 prior pass.
-
-## Session status: ALL 4 PRIORITY ITEMS DONE
-1. Post-Phase-3 balance pass (no changes needed)
-2. ESG/Safety axis
-3. Energy Transition era (demand shift)
-4. TECH_DEBT cleanup (this branch)
+build/lint/tsc + dev server clean. 21 new assertions + 233 prior = 254 total
+pass.
 
 ## Recommended next
-Merge all outstanding feature branches to main:
-post-phase3-balance-pass, esg-safety-axis, energy-transition-era,
-tech-debt-cleanup (this session's chain), plus the earlier Individual Staff
-branches (individual-employees, staff-training-choice, staff-veteran-trait,
-staff-assignments — already merged per prior session). Confirm linear
-ancestry and fast-forward.
+Strategic Differentiation #4: Seasonal price/demand volatility within a
+business year.

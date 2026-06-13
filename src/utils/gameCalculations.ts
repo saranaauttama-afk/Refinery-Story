@@ -139,6 +139,7 @@ export function createInitialGameState(): GameState {
     esgScore: ESG_BALANCE.startingScore,
     gasolineDemandMultiplier: 1,
     petrochemicalsDemandMultiplier: 1,
+    gasolineYieldCarry: 0,
     discoveredCombos: [],
     upgradePoints: 0,
     unlockedPerks: [],
@@ -577,16 +578,14 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   let perkProductionBonusRate = 0
   let perkStorageBonusRate = 0
   let perkSellPriceBonusRate = 0
-  let perkCrudeDiscountRate = 0
   for (const perkKey of unlockedPerks) {
     const effect = PERK_EFFECTS[perkKey as PerkKey] as
-      | { production?: number; storage?: number; sellPrice?: number; crudeDiscount?: number }
+      | { production?: number; storage?: number; sellPrice?: number }
       | undefined
     if (!effect) continue
     perkProductionBonusRate += effect.production ?? 0
     perkStorageBonusRate += effect.storage ?? 0
     perkSellPriceBonusRate += effect.sellPrice ?? 0
-    perkCrudeDiscountRate += effect.crudeDiscount ?? 0
   }
 
   // --- System 3: Tech Era bonuses ---
@@ -677,14 +676,15 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     (hasAdvancedProcessing ? 1 + BONUS_BALANCE.advancedProcessingBonusRate : 1)
   const workerProductionMultiplier =
     1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate
-  const perkProductionMultiplier = 1 + perkProductionBonusRate
+  // Efficiency perks no longer divide productionInterval (see
+  // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
+  // applied in the App.tsx tick loop via perkProductionBonusRate.
   const productionInterval = Math.max(
     PRODUCTION_BALANCE.minProductionMs,
     baseProductionInterval /
       productionMultiplier /
       researchProductionMultiplier /
       workerProductionMultiplier /
-      perkProductionMultiplier /
       distillationUpgradeProductionMultiplier,
   )
   const productionRate = 1000 / productionInterval
@@ -825,7 +825,6 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     perkProductionBonusRate,
     perkStorageBonusRate,
     perkSellPriceBonusRate,
-    perkCrudeDiscountRate,
     currentEra,
     nextEra,
     eraSellPriceBonusRate,

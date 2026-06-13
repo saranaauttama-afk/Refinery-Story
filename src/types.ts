@@ -68,6 +68,11 @@ export type GameState = {
   // reverse). See DEMAND_SHIFT_BALANCE.
   gasolineDemandMultiplier: number
   petrochemicalsDemandMultiplier: number
+  // Perk Diversity Pass: fractional carry-over for the Efficiency branch's
+  // gasoline-yield bonus (perkProductionBonusRate). Without this, a +10%
+  // yield on small per-tick batch counts would round away to nothing every
+  // tick; the carry lets it average out correctly over time.
+  gasolineYieldCarry: number
   // Keys of HIDDEN_COMBOS already discovered/rewarded (one-time each).
   discoveredCombos: string[]
   // System 2: Refinery Upgrade Perk Tree
@@ -434,10 +439,12 @@ export type DerivedStats = {
   workerStorageBonus: number
   // System 2 + 3 derived contributions (already folded into the multipliers
   // above, exposed here for UI display)
+  // perkProductionBonusRate now drives gasoline YIELD per batch (Perk
+  // Diversity Pass) -- NOT production speed, which hits the
+  // minProductionMs floor too early for the Efficiency branch to matter.
   perkProductionBonusRate: number
   perkStorageBonusRate: number
   perkSellPriceBonusRate: number
-  perkCrudeDiscountRate: number
   currentEra: EraConfig
   nextEra?: EraConfig
   eraSellPriceBonusRate: number
