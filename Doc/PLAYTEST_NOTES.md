@@ -1,5 +1,58 @@
 # Playtest Notes
 
+## 2026-06-13 — Energy Transition Era: Demand Shift (Strategic Differentiation #2)
+
+**Method:** Branch `feature/energy-transition-era` (off esg-safety-axis).
+4th era added — a genuine late-game inflection point instead of just another
+flat-bonus tier. 31 new unit assertions, 202 prior pass (233 total).
+
+### The shift
+
+New 4th era `energyTransition` (index 3, requires ALL 10 research + level 18
+— well past "Industry Leader" at level 15, a true endgame milestone).
+Like eras 1-3 it grants a flat sell-price/RP bonus (+30%/+40%, the largest
+yet) — but it ALSO sets `demandShift: true`, which drives a per-tick demand
+shift:
+
+- `gasolineDemandMultiplier` (starts 1.0) falls toward `gasolineDemandFloor`
+  (0.7) at `shiftPerTick` (0.0001/tick — full 0.3 swing in ~3000 ticks, under
+  1 business year).
+- `petrochemicalsDemandMultiplier` (starts 1.0) rises toward
+  `petrochemicalsDemandCeiling` (1.3) at the same rate.
+
+Both are monotonic (only move once triggered, never reverse) and feed
+directly into the existing sell-price formulas (gasoline's `sellPrice`,
+`getProductSellPrice('petrochemicals', ...)`). Verified via simulation:
+1000 ticks -> gasoline 0.900/petro 1.100 (partway); 5000 ticks -> gasoline
+hits floor 0.700, petro hits ceiling 1.300.
+
+### The "inflection point"
+
+A player who built a gasoline-heavy refinery through eras 1-3 will see their
+core product's value erode by up to 30% once they reach Energy Transition,
+while petrochemicals (the most advanced downstream product) becomes up to
+30% more valuable — pressure to diversify/pivot toward petrochemicals in the
+true endgame, rather than just scaling up what already worked.
+
+### UI
+EraPanel: era badge now reads "4/4" (dynamic via ERAS.length, no more
+hardcoded "/3"); new CSS for the energyTransition badge color. When in the
+energyTransition era, a new "Market Shift" section shows live gasoline/
+petrochemicals demand percentages with an explanatory blurb. Era-advance
+banner (EraBannerToast) is fully data-driven — works automatically for the
+4th era, no changes needed.
+
+### Migration
+Missing multipliers default to 1.0; gasoline clamped to
+[gasolineDemandFloor, 1], petrochemicals clamped to [1,
+petrochemicalsDemandCeiling]; valid values round-trip.
+
+### Next
+TECH_DEBT cleanup (thresholdGrowthPerYear decision) — last item in this
+session's priority list.
+
+---
+
 ## 2026-06-13 — ESG / Safety Axis (Strategic Differentiation #1)
 
 **Method:** Branch `feature/esg-safety-axis` (off post-phase3-balance-pass).

@@ -3,6 +3,7 @@ import {
   BONUS_BALANCE,
   BUILDING_UPGRADE_BALANCE,
   CORE_BALANCE,
+  DEMAND_SHIFT_BALANCE,
   ECONOMY_BALANCE,
   ESG_BALANCE,
   ESG_DIRTY_BUILDINGS,
@@ -44,6 +45,7 @@ import type {
   GameState,
   GridCell,
   Employee,
+  EraConfig,
   PendingShipment,
   PerkKey,
   RandomEvent,
@@ -135,6 +137,8 @@ export function createInitialGameState(): GameState {
     employees: [],
     assignments: {},
     esgScore: ESG_BALANCE.startingScore,
+    gasolineDemandMultiplier: 1,
+    petrochemicalsDemandMultiplier: 1,
     discoveredCombos: [],
     upgradePoints: 0,
     unlockedPerks: [],
@@ -349,6 +353,25 @@ export function getEsgTier(esgScore: number): BilingualTextValue {
   return text.resources.esgPoor
 }
 
+// --- Energy Transition era: demand shift (Strategic Differentiation #2) ---
+
+// Per-tick demand drift for the current era. Only the energyTransition era
+// (currentEra.demandShift) drifts; earlier eras return zero deltas. Caller
+// applies + clamps: gasoline toward gasolineDemandFloor (only decreases),
+// petrochemicals toward petrochemicalsDemandCeiling (only increases).
+export function getDemandShiftDelta(currentEra: EraConfig): {
+  gasolineDelta: number
+  petrochemicalsDelta: number
+} {
+  if (!currentEra.demandShift) {
+    return { gasolineDelta: 0, petrochemicalsDelta: 0 }
+  }
+  return {
+    gasolineDelta: -DEMAND_SHIFT_BALANCE.shiftPerTick,
+    petrochemicalsDelta: DEMAND_SHIFT_BALANCE.shiftPerTick,
+  }
+}
+
 // Base sell price per secondary product (gasoline has its own combo-aware price).
 const PRODUCT_BASE_PRICE: Record<string, number> = {
   lubricants: ECONOMY_BALANCE.lubricantPrice,
@@ -356,14 +379,17 @@ const PRODUCT_BASE_PRICE: Record<string, number> = {
   petrochemicals: ECONOMY_BALANCE.petrochemicalsPrice,
 }
 
-// Sell price for a secondary product = base × global product sell multiplier.
+// Sell price for a secondary product = base × global product sell multiplier
+// × demandMultiplier (1.0 unless the Energy Transition era has shifted
+// demand for this product — see DEMAND_SHIFT_BALANCE).
 // Used by both the sell handlers and the ProductPanel so they never drift.
 export function getProductSellPrice(
   productKey: string,
   productSellMultiplier: number,
+  demandMultiplier = 1,
 ): number {
   const base = PRODUCT_BASE_PRICE[productKey] ?? 0
-  return Math.round(base * productSellMultiplier)
+  return Math.round(base * productSellMultiplier * demandMultiplier)
 }
 
 function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem[] {
@@ -712,14 +738,16 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     eraSellPriceBonusRate
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
-  // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier,
-  // plus the flat premium-fuel research bonus.
+  // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier
+  // × demand multiplier (Energy Transition shift), plus the flat premium-fuel
+  // research bonus.
   const sellPrice =
     Math.round(
       ECONOMY_BALANCE.gasolinePrice *
         sellPriceMultiplier *
         fuelSpecialistSellPriceMultiplier *
-        productSellMultiplier,
+        productSellMultiplier *
+        game.gasolineDemandMultiplier,
     ) +
     researchSellPriceBonus
   const upgradeCost = getUpgradeCost(game.refineryLevel)

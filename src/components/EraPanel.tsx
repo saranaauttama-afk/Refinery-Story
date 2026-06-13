@@ -1,4 +1,5 @@
 import type { EraConfig } from '../types'
+import { ERAS } from '../data/eras'
 import BilingualText from './BilingualText'
 import { text } from '../translations'
 
@@ -7,6 +8,8 @@ type EraPanelProps = {
   nextEra?: EraConfig
   unlockedResearchCount: number
   refineryLevel: number
+  gasolineDemandMultiplier: number
+  petrochemicalsDemandMultiplier: number
 }
 
 function EraPanel({
@@ -14,6 +17,8 @@ function EraPanel({
   nextEra,
   unlockedResearchCount,
   refineryLevel,
+  gasolineDemandMultiplier,
+  petrochemicalsDemandMultiplier,
 }: EraPanelProps) {
   return (
     <section className="panel era-panel">
@@ -27,13 +32,32 @@ function EraPanel({
           </h2>
         </div>
         <span className={`era-badge era-badge--${currentEra.key}`}>
-          {currentEra.index + 1}/3
+          {currentEra.index + 1}/{ERAS.length}
         </span>
       </div>
 
       <p className="era-tagline">
         <BilingualText text={currentEra.tagline} />
       </p>
+
+      {currentEra.demandShift && (
+        <div className="era-demand-shift">
+          <p className="era-demand-shift-title">
+            <BilingualText text={text.eras.demandShiftTitle} />
+          </p>
+          <p className="era-demand-shift-description">
+            <BilingualText text={text.eras.demandShiftDescription} />
+          </p>
+          <p className="era-demand-shift-value">
+            <BilingualText text={text.eras.gasolineDemand(Math.round(gasolineDemandMultiplier * 100))} />
+          </p>
+          <p className="era-demand-shift-value">
+            <BilingualText
+              text={text.eras.petrochemicalsDemand(Math.round(petrochemicalsDemandMultiplier * 100))}
+            />
+          </p>
+        </div>
+      )}
 
       {nextEra ? (
         <div className="era-next">

@@ -61,6 +61,13 @@ export type GameState = {
   // event chance and unlocks a premium contract bonus; low score raises
   // incident-event chance. See ESG_BALANCE.
   esgScore: number
+  // Strategic Differentiation #2 (Energy Transition era): demand multipliers
+  // that drift once the energyTransition era is reached -- gasoline demand
+  // falls toward gasolineDemandFloor, petrochemicals demand rises toward
+  // petrochemicalsDemandCeiling. Both start at 1.0 and are monotonic (never
+  // reverse). See DEMAND_SHIFT_BALANCE.
+  gasolineDemandMultiplier: number
+  petrochemicalsDemandMultiplier: number
   // Keys of HIDDEN_COMBOS already discovered/rewarded (one-time each).
   discoveredCombos: string[]
   // System 2: Refinery Upgrade Perk Tree
@@ -220,7 +227,7 @@ export type PerkConfig = {
 }
 
 // --- System 3: Tech Eras ---
-export type EraKey = 'foundation' | 'expansion' | 'modern'
+export type EraKey = 'foundation' | 'expansion' | 'modern' | 'energyTransition'
 
 export type EraConfig = {
   key: EraKey
@@ -233,6 +240,10 @@ export type EraConfig = {
   // Global bonuses granted while in this era
   sellPriceBonusRate: number
   researchRateBonusRate: number
+  // Strategic Differentiation #2: if true, this era SHIFTS demand each tick
+  // (gasoline demand declines, petrochemicals demand rises) instead of just
+  // granting a flat bonus -- see DEMAND_SHIFT_BALANCE.
+  demandShift?: boolean
 }
 
 // --- System 4: Annual Awards ---

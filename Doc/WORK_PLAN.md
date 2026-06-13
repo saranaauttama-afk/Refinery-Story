@@ -93,3 +93,21 @@ Branch: `feature/esg-safety-axis` (off post-phase3-balance-pass).
 ### 8. gameStorage.ts: migration (default 50, clamp)  [x]
 ### 9. ResourcePanel: ESG Score card; DevTools: Toggle ESG button  [x]
 ### 10. Tests + docs + BACKLOG update + push  [x]
+
+
+---
+
+# WORK PLAN — Energy Transition Era: Demand Shift (Strategic Differentiation #2)
+
+Branch: `feature/energy-transition-era` (off esg-safety-axis).
+
+## Tasks
+### 1. types.ts: EraKey += energyTransition; EraConfig.demandShift; GameState demand multipliers  [x]
+### 2. balance.ts: DEMAND_SHIFT_BALANCE constants  [x]
+### 3. translations.ts: era name/tagline + demand-shift UI labels  [x]
+### 4. data/eras.ts: add 4th era (energyTransition, demandShift: true)  [x]
+### 5. gameCalculations.ts: getDemandShiftDelta; getProductSellPrice demandMultiplier param; gasoline sellPrice formula  [x]
+### 6. App.tsx: per-tick drift + clamp; petrochemicals sell sites; EraPanel props  [x]
+### 7. gameStorage.ts: migration (default 1.0, clamp to floor/ceiling)  [x]
+### 8. EraPanel: dynamic /N badge, energyTransition styling, Market Shift section  [x]
+### 9. Tests + docs + BACKLOG update + push  [x]

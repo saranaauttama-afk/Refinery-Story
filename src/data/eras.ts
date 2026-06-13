@@ -36,6 +36,20 @@ export const ERAS: EraConfig[] = [
     sellPriceBonusRate: 0.2,
     researchRateBonusRate: 0.3,
   },
+  {
+    key: 'energyTransition',
+    index: 3,
+    name: text.data.eras.energyTransition.name,
+    tagline: text.data.eras.energyTransition.tagline,
+    // Endgame: requires all 10 research items and well past "Industry
+    // Leader" (level 15) -- a genuine late-game inflection point, not just
+    // the next rung on the same ladder.
+    requiredResearch: 10,
+    requiredLevel: 18,
+    sellPriceBonusRate: 0.3,
+    researchRateBonusRate: 0.4,
+    demandShift: true,
+  },
 ]
 
 // Returns the highest era whose requirements are met.

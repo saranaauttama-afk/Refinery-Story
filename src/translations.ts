@@ -366,6 +366,15 @@ export const text = {
     maxReached: bilingual('Highest era reached', 'ถึงยุคสูงสุดแล้ว'),
     bannerTitle: (name: BilingualTextValue) =>
       bilingual(`Entering the ${name.en}`, `เข้าสู่${name.th}`),
+    demandShiftTitle: bilingual('Market Shift', 'การเปลี่ยนแปลงตลาด'),
+    demandShiftDescription: bilingual(
+      'Gasoline demand is fading; petrochemicals demand is rising. Time to pivot your refinery.',
+      'ความต้องการเบนซินกำลังลดลง ส่วนปิโตรเคมีกำลังเพิ่มขึ้น ถึงเวลาปรับทิศทางโรงกลั่นแล้ว',
+    ),
+    gasolineDemand: (pct: number) =>
+      bilingual(`Gasoline demand: ${pct}%`, `ความต้องการเบนซิน: ${pct}%`),
+    petrochemicalsDemand: (pct: number) =>
+      bilingual(`Petrochemicals demand: ${pct}%`, `ความต้องการปิโตรเคมี: ${pct}%`),
   },
   staffTraining: {
     levelLabel: (n: number) => bilingual(`Lv ${n}`, `ระดับ ${n}`),
@@ -827,6 +836,13 @@ export const text = {
       modern: {
         name: bilingual('Modern Era', 'ยุคสมัยใหม่'),
         tagline: bilingual('A world-class operation. +20% sell price, +30% RP.', 'การดำเนินงานระดับโลก +20% ราคาขาย, +30% RP'),
+      },
+      energyTransition: {
+        name: bilingual('Energy Transition Era', 'ยุคเปลี่ยนผ่านพลังงาน'),
+        tagline: bilingual(
+          '+30% sell price, +40% RP. The market is pivoting away from gasoline toward petrochemicals.',
+          '+30% ราคาขาย, +40% RP ตลาดกำลังหันจากเบนซินไปสู่ปิโตรเคมี',
+        ),
       },
     },
     buildings: {

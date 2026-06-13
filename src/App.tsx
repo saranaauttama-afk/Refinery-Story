@@ -30,7 +30,7 @@ import AwardCeremonyModal from './components/AwardCeremonyModal'
 import ComboDiscoveryToast from './components/ComboDiscoveryToast'
 import EraBannerToast from './components/EraBannerToast'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, AWARDS_BALANCE, ESG_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, AWARDS_BALANCE, DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
@@ -56,6 +56,7 @@ import {
   getTrainingCost,
   createNewEmployee,
   getAssignmentCapacity,
+  getDemandShiftDelta,
   getEsgDrift,
   getSpecialistMultiplier,
   getProductSellPrice,
@@ -118,7 +119,11 @@ function App() {
   const productSellPrices: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
     jetFuel: getProductSellPrice('jetFuel', productSellMultiplier),
     lubricants: getProductSellPrice('lubricants', productSellMultiplier),
-    petrochemicals: getProductSellPrice('petrochemicals', productSellMultiplier),
+    petrochemicals: getProductSellPrice(
+      'petrochemicals',
+      productSellMultiplier,
+      game.petrochemicalsDemandMultiplier,
+    ),
   }
   const productPlantCounts: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
     jetFuel: buildingCounts.jetFuelPlant,
@@ -269,6 +274,21 @@ function App() {
           Math.min(ESG_BALANCE.maxScore, current.esgScore + esgDelta),
         )
 
+        // --- Energy Transition era: demand shift ---
+        // Only drifts once currentEra.demandShift is true; both multipliers
+        // are monotonic (gasoline only falls, petrochemicals only rises).
+        const { gasolineDelta, petrochemicalsDelta } = getDemandShiftDelta(
+          currentStats.currentEra,
+        )
+        const gasolineDemandMultiplier = Math.max(
+          DEMAND_SHIFT_BALANCE.gasolineDemandFloor,
+          current.gasolineDemandMultiplier + gasolineDelta,
+        )
+        const petrochemicalsDemandMultiplier = Math.min(
+          DEMAND_SHIFT_BALANCE.petrochemicalsDemandCeiling,
+          current.petrochemicalsDemandMultiplier + petrochemicalsDelta,
+        )
+
         return applyMilestones({
           ...current,
           tickCount: nextTick,
@@ -279,6 +299,8 @@ function App() {
           productionProgress: leftoverProgress,
           productInventory,
           esgScore,
+          gasolineDemandMultiplier,
+          petrochemicalsDemandMultiplier,
           yearStats: {
             ...current.yearStats,
             gasolineProduced: current.yearStats.gasolineProduced + batchesProduced,
@@ -1010,7 +1032,7 @@ function App() {
       if (actualAmount <= 0) return current
 
       const mult = calculateDerivedStats(current).productSellMultiplier
-      const price = getProductSellPrice('petrochemicals', mult)
+      const price = getProductSellPrice('petrochemicals', mult, current.petrochemicalsDemandMultiplier)
       const totalRevenue = actualAmount * price
 
       return {
@@ -1346,6 +1368,8 @@ function App() {
             nextEra={nextEra}
             unlockedResearchCount={game.unlockedResearchCount}
             refineryLevel={game.refineryLevel}
+            gasolineDemandMultiplier={game.gasolineDemandMultiplier}
+            petrochemicalsDemandMultiplier={game.petrochemicalsDemandMultiplier}
           />
           <AwardsPanel
             businessYear={game.businessYear}

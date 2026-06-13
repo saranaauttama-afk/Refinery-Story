@@ -56,14 +56,14 @@ safetyOfficer staff. Affects incident-event frequency (getIncidentChance)
 and unlocks a +10% premium contract bonus at esgScore>=70. See
 PLAYTEST_NOTES 2026-06-13 for the full design.
 
-### 2. Eras that shift the meta, not just add bonuses
+### 2. ✅ DONE (2026-06-13) — Eras that shift the meta, not just add bonuses
 
-Currently eras (foundation → expansion → modern) only add cumulative +sell
-price / +RP bonuses. A later era — e.g. "Energy Transition" — could instead
-SHIFT demand: gasoline demand slowly declines while petrochemicals/specialty
-chemicals demand rises, forcing a mid-game restructuring of the refinery
-instead of pure linear expansion. Kairosoft progression is static; this
-creates a real inflection point.
+Shipped in `feature/energy-transition-era`: 4th era 'energyTransition'
+(requires all 10 research + level 18). Still grants the usual flat +sell/+RP
+bonus, but ALSO sets demandShift: true -- gasolineDemandMultiplier drifts
+1.0->0.7 and petrochemicalsDemandMultiplier drifts 1.0->1.3 over the
+endgame, both monotonic. EraPanel shows a live 'Market Shift' section. See
+PLAYTEST_NOTES 2026-06-13.
 
 ### 3. Perk branch diversity / build diversity (balance pass only)
 

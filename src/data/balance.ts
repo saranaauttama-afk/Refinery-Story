@@ -712,3 +712,15 @@ export const ESG_DIRTY_BUILDINGS: BuildingType[] = [
   'jetFuelPlant',
   'petrochemicalPlant',
 ]
+
+// --- Energy Transition era: demand shift (Strategic Differentiation #2) ---
+// While the player is in the 'energyTransition' era, gasoline demand
+// gradually declines while petrochemicals demand gradually rises -- a real
+// late-game inflection point (vs. eras 1-3, which only add flat bonuses).
+// Both multipliers are monotonic: they never reverse once shifted.
+export const DEMAND_SHIFT_BALANCE = {
+  // 0.0001/tick * 3000 ticks (~10min, under 1 business year) = full 0.3 swing.
+  shiftPerTick: 0.0001,
+  gasolineDemandFloor: 0.7,
+  petrochemicalsDemandCeiling: 1.3,
+} as const
