@@ -1857,12 +1857,20 @@
 
 
 /* ===== System 1: Staff Training & Levels ===== */
-.staff-level-block {
+.staff-roster-list {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--border);
   display: grid;
-  gap: 6px;
+  gap: 8px;
+}
+.staff-employee-row {
+  display: grid;
+  gap: 4px;
+}
+.staff-employee-name {
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 .staff-level-row {
   display: flex;
@@ -2278,14 +2286,6 @@
   max-width: 32ch;
   font-size: 0.85rem;
   color: rgba(246, 239, 227, 0.78);
-}
-
-/* Staff roster names */
-.staff-roster {
-  margin: 0 0 6px;
-  font-size: 0.78rem;
-  font-style: italic;
-  color: var(--muted);
 }
 
 /* Annual Ranking (Industry Ranking) in the awards ceremony */

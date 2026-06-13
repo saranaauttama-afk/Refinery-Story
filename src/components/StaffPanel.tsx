@@ -3,7 +3,6 @@ import { STAFF_LEVEL_BALANCE } from '../data/balance'
 import {
   getEmployeesByType,
   getTrainingCost,
-  getTrainingTarget,
   getWorkerLevelMultiplier,
 } from '../utils/gameCalculations'
 import { getWorkerActiveBonus } from '../utils/workerBonusText'
@@ -17,12 +16,11 @@ type StaffPanelProps = {
   activeWorkers: ActiveWorkerItem[]
   employees: Employee[]
   onHireWorker: (worker: WorkerConfig) => void
-  onTrainWorker: (worker: WorkerConfig) => void
+  onTrainEmployee: (employeeId: string) => void
 }
 
 const TIER_ORDER = [1, 2, 3] as const
 type Tier = (typeof TIER_ORDER)[number]
-const ROSTER_VISIBLE_COUNT = 3
 
 function StaffPanel({
   money,
@@ -31,7 +29,7 @@ function StaffPanel({
   activeWorkers,
   employees,
   onHireWorker,
-  onTrainWorker,
+  onTrainEmployee,
 }: StaffPanelProps) {
   const grouped = new Map<Tier, ActiveWorkerItem[]>()
   for (const worker of activeWorkers) {
@@ -76,20 +74,6 @@ function StaffPanel({
                     <p className="staff-meta">
                       <BilingualText text={text.staff.countAndCost(worker.count, worker.cost)} />
                     </p>
-                    {!isLocked && teamMembers.length > 0 && (() => {
-                      const visible = teamMembers.slice(0, ROSTER_VISIBLE_COUNT)
-                      const extra = teamMembers.length - visible.length
-                      return (
-                        <p className="staff-roster">
-                          <BilingualText
-                            text={text.staff.roster(
-                              visible.map((e) => ({ name: e.name, level: e.level })),
-                              extra,
-                            )}
-                          />
-                        </p>
-                      )
-                    })()}
                     <p>
                       <BilingualText text={worker.description} />
                     </p>
@@ -101,65 +85,65 @@ function StaffPanel({
                         </p>
                       ) : null
                     })()}
-                    {!isLocked && worker.count > 0 && (() => {
-                      const target = getTrainingTarget(employees, worker.key)
-                      const isMax = !target // null = no employees, or all at maxLevel
-                      if (isMax) {
-                        return (
-                          <div className="staff-level-block">
-                            <div className="staff-level-row">
-                              <span className="staff-level-max">
-                                <BilingualText text={text.staffTraining.maxLevel} />
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      }
-
-                      const level = target.level
-                      const xp = target.xp
-                      const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[level] ?? 0
-                      const pct = Math.min(100, Math.round((xp / Math.max(1, threshold)) * 100))
-                      const bonusPct = Math.round((getWorkerLevelMultiplier(level) - 1) * 100)
-                      const trainCost = getTrainingCost(level)
-                      const canTrain =
-                        money >= trainCost.money && researchPoints >= trainCost.rp
-                      return (
-                        <div className="staff-level-block">
-                          <div className="staff-level-row">
-                            <span className="staff-level-badge">
-                              <BilingualText
-                                text={text.staffTraining.trainingLabel(target.name, level)}
-                              />
-                            </span>
-                            {bonusPct > 0 && (
-                              <span className="staff-level-bonus">
-                                <BilingualText text={text.staffTraining.bonusLabel(bonusPct)} />
-                              </span>
-                            )}
-                          </div>
-                          <div className="staff-xp-track">
-                            <div
-                              className="staff-xp-fill"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            className="action-button staff-train-button"
-                            onClick={() => onTrainWorker(worker)}
-                            disabled={!canTrain}
-                          >
-                            <BilingualText
-                              text={text.staffTraining.trainButton(
-                                trainCost.money,
-                                trainCost.rp,
+                    {!isLocked && teamMembers.length > 0 && (
+                      <div className="staff-roster-list">
+                        {teamMembers.map((employee) => {
+                          const isMax = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
+                          const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
+                          const pct = isMax
+                            ? 100
+                            : Math.min(100, Math.round((employee.xp / Math.max(1, threshold)) * 100))
+                          const bonusPct = Math.round(
+                            (getWorkerLevelMultiplier(employee.level) - 1) * 100,
+                          )
+                          const trainCost = getTrainingCost(employee.level)
+                          const canTrain =
+                            !isMax &&
+                            money >= trainCost.money &&
+                            researchPoints >= trainCost.rp
+                          return (
+                            <div key={employee.id} className="staff-employee-row">
+                              <div className="staff-level-row">
+                                <span className="staff-employee-name">{employee.name}</span>
+                                <span className="staff-level-badge">
+                                  <BilingualText text={text.staffTraining.levelLabel(employee.level)} />
+                                </span>
+                                {bonusPct > 0 && (
+                                  <span className="staff-level-bonus">
+                                    <BilingualText text={text.staffTraining.bonusLabel(bonusPct)} />
+                                  </span>
+                                )}
+                                {isMax && (
+                                  <span className="staff-level-max">
+                                    <BilingualText text={text.staffTraining.maxLevel} />
+                                  </span>
+                                )}
+                              </div>
+                              {!isMax && (
+                                <>
+                                  <div className="staff-xp-track">
+                                    <div className="staff-xp-fill" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="action-button staff-train-button"
+                                    onClick={() => onTrainEmployee(employee.id)}
+                                    disabled={!canTrain}
+                                  >
+                                    <BilingualText
+                                      text={text.staffTraining.trainButton(
+                                        trainCost.money,
+                                        trainCost.rp,
+                                      )}
+                                    />
+                                  </button>
+                                </>
                               )}
-                            />
-                          </button>
-                        </div>
-                      )
-                    })()}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                     {isLocked && (
                       <p className="staff-unlock-note">
                         <BilingualText text={text.staff.unlockAtLevel(worker.unlockLevel!)} />

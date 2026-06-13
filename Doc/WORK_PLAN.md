@@ -14,3 +14,16 @@ Doc/INDIVIDUAL_STAFF_ROADMAP.md for the full design + future phases.
 ## Verification
 build/lint/tsc + full regression (116 prior assertions) + new migration/
 formula tests. Dev server smoke test.
+
+
+---
+
+# WORK PLAN — Individual Staff, Phase 2a (Player Chooses Who to Train)
+
+Branch: `feature/staff-training-choice` (off individual-employees).
+
+## Tasks
+### 1. App.tsx: handleTrainEmployee(employeeId) replaces handleTrainWorker(worker)  [x]
+### 2. StaffPanel.tsx: per-employee roster rows with individual Train buttons  [x]
+### 3. Remove dead trainingLabel/roster translations + .staff-roster/.staff-level-block CSS  [x]
+### 4. Tests + docs + push  [x]

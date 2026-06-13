@@ -36,6 +36,7 @@ import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
 import type { HiddenComboConfig } from './data/hiddenCombos'
 import { getStaffName } from './data/staffNames'
+import { WORKERS } from './data/workers'
 import { serializeBilingualText, text } from './translations'
 import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
 import {
@@ -54,7 +55,6 @@ import {
   getRefineryTitle,
   closeBusinessYear,
   getTrainingCost,
-  getTrainingTarget,
   getEmployeesByType,
   getProductSellPrice,
   getYearlyPayroll,
@@ -675,14 +675,18 @@ function App() {
     })
   }
 
-  function handleTrainWorker(worker: WorkerConfig) {
+  // Phase 2: the player picks WHICH employee to train (each gets their own
+  // Train button in StaffPanel). Cost depends only on the employee's own
+  // level; the type's display name (for the log) is looked up via WORKERS.
+  function handleTrainEmployee(employeeId: string) {
     setGame((current) => {
-      const target = getTrainingTarget(current.employees, worker.key)
-      if (!target) return current // no employees of this type, or all maxed
+      const target = current.employees.find((employee) => employee.id === employeeId)
+      if (!target || target.level >= 5) return current
       const cost = getTrainingCost(target.level)
       if (current.money < cost.money || current.researchPoints < cost.rp) {
         return current
       }
+      const worker = WORKERS.find((w) => w.key === target.type)
       const newLevel = target.level + 1
       return {
         ...current,
@@ -694,7 +698,7 @@ function App() {
         ),
         activityLog: addLog(
           current.activityLog,
-          serializeBilingualText(text.logs.staffTrained(target.name, worker.name, newLevel)),
+          serializeBilingualText(text.logs.staffTrained(target.name, worker!.name, newLevel)),
         ),
       }
     })
@@ -1280,7 +1284,7 @@ function App() {
             activeWorkers={activeWorkers}
             employees={game.employees}
             onHireWorker={handleHireWorker}
-            onTrainWorker={handleTrainWorker}
+            onTrainEmployee={handleTrainEmployee}
           />
           <RefineryUpgradesPanel
             upgradePoints={game.upgradePoints}

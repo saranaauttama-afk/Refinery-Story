@@ -1,5 +1,43 @@
 # Playtest Notes
 
+## 2026-06-13 — Individual Staff, Phase 2a (Player Chooses Who to Train)
+
+**Method:** Direct continuation of Phase 1. Branch
+`feature/staff-training-choice`. 6 new unit assertions, 144 prior pass (150
+total).
+
+### What changed
+
+StaffPanel no longer auto-picks a "currently training" employee. Every
+employee in a type's roster gets their OWN row: name, level badge, bonus %,
+XP progress bar, and Train button (or "MAX" badge if at level 5). The player
+can train ANY employee, not just the lowest-level one — e.g. push your best
+operator to level 5 first for a specialist, or spread training evenly.
+
+`handleTrainEmployee(employeeId)` replaces `handleTrainWorker(worker)` — cost
+is based on that specific employee's level (via getTrainingCost), looked up
+by id. Passive XP accrual (applyStaffXp's "concentrated training", lowest-
+level employee gets the type's XP budget each tick) is UNCHANGED — this only
+affects the PAID instant-training choice.
+
+Removed the old "Team: A Lv2, B Lv1 +2 more" summary line and the dead
+`trainingLabel`/`roster` translations — the per-employee list now shows
+everyone directly, no separate summary needed.
+
+### Carried forward (Phases 2b-4, see INDIVIDUAL_STAFF_ROADMAP.md)
+- Phase 2b: retirement/turnover (needs its own design discussion — triggers,
+  what happens to the roster).
+- Phase 3: assign specific employees to specific plants (the feedstock-chain
+  payoff).
+- Phase 4: traits/veteran tags/legendary hires.
+- TECH_DEBT: thresholdGrowthPerYear decision still open.
+- Possible future polish: if a single type's roster grows very large (no
+  hiring cap currently exists), the per-employee list could get long —
+  collapse/expand not implemented yet, deferred until it's observed to be a
+  real problem.
+
+---
+
 ## 2026-06-13 — Individual Staff, Phase 1 (Data Model Migration)
 
 **Method:** Foundational refactor, deliberately chosen over the lighter

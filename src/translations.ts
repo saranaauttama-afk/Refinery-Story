@@ -360,8 +360,6 @@ export const text = {
   },
   staffTraining: {
     levelLabel: (n: number) => bilingual(`Lv ${n}`, `ระดับ ${n}`),
-    trainingLabel: (name: string, level: number) =>
-      bilingual(`Training: ${name} (Lv ${level})`, `กำลังฝึก: ${name} (ระดับ ${level})`),
     maxLevel: bilingual('MAX', 'สูงสุด'),
     xpProgress: (current: number, total: number) =>
       bilingual(`${current} / ${total} XP`, `${current} / ${total} XP`),
@@ -447,11 +445,6 @@ export const text = {
       bilingual(
         `×${count} hired · $${cost.toLocaleString()} each`,
         `จ้างแล้ว ×${count} · ค่าจ้าง $${cost.toLocaleString()}/คน`,
-      ),
-    roster: (entries: { name: string; level: number }[], extra: number) =>
-      bilingual(
-        `Team: ${entries.map((e) => `${e.name} Lv${e.level}`).join(', ')}${extra > 0 ? ` +${extra} more` : ''}`,
-        `ทีม: ${entries.map((e) => `${e.name} ระดับ${e.level}`).join(', ')}${extra > 0 ? ` และอีก ${extra} คน` : ''}`,
       ),
     hireButton: bilingual('Hire', 'จ้าง'),
     cantAfford: bilingual("Can't Afford", 'ไม่มีเงินพอ'),
