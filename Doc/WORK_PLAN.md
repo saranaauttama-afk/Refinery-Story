@@ -144,3 +144,21 @@ Branch: `feature/perk-diversity-pass` (off tech-debt-cleanup).
 ### 6. gameStorage.ts: migration (gasolineYieldCarry default 0, clamp [0,1])  [x]
 ### 7. translations.ts: update perk descriptions  [x]
 ### 8. Tests + docs + BACKLOG update + push  [x]
+
+
+---
+
+# WORK PLAN — Seasonal Demand Volatility (Strategic Differentiation #4)
+
+Branch: `feature/seasonal-volatility` (off perk-diversity-pass).
+
+## Tasks
+### 1. balance.ts: SEASONAL_BALANCE (amplitude=0.15)  [x]
+### 2. gameCalculations.ts: getSeasonalGasolineMultiplier (sine wave), getSeasonLabel  [x]
+### 3. Apply to gasoline sellPrice formula; export in DerivedStats  [x]
+### 4. translations.ts: season labels + StatsPanel row text  [x]
+### 5. StatsPanel + App.tsx: new 'Gasoline Season' row  [x]
+### 6. Tests + docs + BACKLOG update + push  [x]
+
+## SESSION STATUS: Strategic Differentiation 4/4 DONE. Next: merge
+perk-diversity-pass + seasonal-volatility to main.

@@ -58,6 +58,7 @@ import {
   getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
+  getSeasonLabel,
   getSpecialistMultiplier,
   getProductSellPrice,
   getYearlyPayroll,
@@ -105,6 +106,7 @@ function App() {
     nextReputationTier,
     researchProductionMultiplier,
     sellPrice,
+    seasonalGasolineMultiplier,
     statusLabel,
     upgradeCost,
     workerProductionMultiplier,
@@ -1263,6 +1265,8 @@ function App() {
               maxCrudeStorage={maxCrudeStorage}
               maxGasolineStorage={maxGasolineStorage}
               availableSpace={availableSpace}
+              seasonalGasolineMultiplier={seasonalGasolineMultiplier}
+              seasonLabel={getSeasonLabel(game.tickCount, game.yearStartTick)}
             />
           </section>
 

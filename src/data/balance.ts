@@ -725,3 +725,15 @@ export const DEMAND_SHIFT_BALANCE = {
   gasolineDemandFloor: 0.7,
   petrochemicalsDemandCeiling: 1.3,
 } as const
+
+// --- Seasonal demand volatility (Strategic Differentiation #4) ---
+// Within each ~12-minute business year, gasoline demand cycles smoothly
+// through a "season" -- a planning layer Kairosoft-style games don't have
+// (static prices for the whole game). Purely derived from
+// (tickCount - yearStartTick) / yearLengthTicks, no new state needed.
+export const SEASONAL_BALANCE = {
+  // Multiplier oscillates in [1-amplitude, 1+amplitude] -- 0.15 => 0.85x to
+  // 1.15x (a ~35% swing peak-to-trough), gentle enough that off-season
+  // gasoline still sells for a reasonable price.
+  amplitude: 0.15,
+} as const

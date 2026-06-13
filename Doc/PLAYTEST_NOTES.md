@@ -1,5 +1,47 @@
 # Playtest Notes
 
+## 2026-06-13 — Seasonal Demand Volatility (Strategic Differentiation #4)
+
+**Method:** Branch `feature/seasonal-volatility` (off perk-diversity-pass).
+Last item of this session's picks ("1,2 พอ" = perk diversity + this). 17 new
+assertions, 254 prior pass (271 total).
+
+### The mechanic
+
+Gasoline demand now cycles through a "season" each business year (~12min,
+3600 ticks) via a smooth sine wave -- a short-term PLANNING layer that
+Kairosoft-style static prices never have. `getSeasonalGasolineMultiplier
+(tickCount, yearStartTick)` returns a multiplier in [0.85, 1.15] (±15%,
+SEASONAL_BALANCE.amplitude=0.15):
+- Year start (phase 0): 1.0 (neutral)
+- Quarter (phase 0.25): 1.15 (peak, +15%)
+- Half (phase 0.5): 1.0 (neutral)
+- Three-quarter (phase 0.75): 0.85 (trough, -15%)
+
+PURELY DERIVED from existing `tickCount`/`yearStartTick` -- no new GameState
+field, no migration needed. Multiplies into gasoline's existing `sellPrice`
+formula (composes with the long-term Energy Transition
+`gasolineDemandMultiplier`: short-term ±15% swing on top of whatever the
+long-term baseline is). Verified: peak/trough sell prices differ by ~30%
+(2*amplitude) from the year-start price.
+
+### UI
+`getSeasonLabel` gives a flavor label by sine-wave quadrant: "📈 Demand
+Rising" (0-25%), "🔥 Peak Season" (25-50%), "📉 Demand Cooling" (50-75%),
+"❄️ Off-Season" (75-100%). StatsPanel gets a new "Gasoline Season" row
+showing the label + current price as a % of base (e.g. "🔥 Peak Season ·
+112% of base price").
+
+### Session status
+Both of this session's picks done (perk diversity + this). BACKLOG
+Strategic Differentiation set is now 4/4 complete. Remaining BACKLOG: merge
+all branches to main (5 from this session: perk-diversity-pass +
+seasonal-volatility on top of the earlier esg/energy-transition/tech-debt
+chain already on main... wait, those are already merged -- only
+perk-diversity-pass and seasonal-volatility remain to merge).
+
+---
+
 ## 2026-06-13 — Perk Branch Diversity Pass (Strategic Differentiation #3)
 
 **Method:** Branch `feature/perk-diversity-pass` (off tech-debt-cleanup).

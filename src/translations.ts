@@ -216,6 +216,13 @@ export const text = {
     maxCrude: bilingual('Crude cap', 'ความจุน้ำมันดิบ'),
     maxGasoline: bilingual('Gasoline cap', 'ความจุเบนซิน'),
     openCells: bilingual('Grid cells free', 'ช่องตารางว่าง'),
+    season: bilingual('Gasoline Season', 'ฤดูเบนซิน'),
+    seasonHint: (pct: number) =>
+      bilingual(`${pct}% of base price`, `${pct}% ของราคาฐาน`),
+    seasonRising: bilingual('📈 Demand Rising', '📈 ความต้องการเพิ่มขึ้น'),
+    seasonPeak: bilingual('🔥 Peak Season', '🔥 ฤดูสูงสุด'),
+    seasonFalling: bilingual('📉 Demand Cooling', '📉 ความต้องการลดลง'),
+    seasonOff: bilingual('❄️ Off-Season', '❄️ ฤดูซบเซา'),
   },
   refineryProgression: {
     kicker: bilingual('Refinery', 'โรงกลั่น'),

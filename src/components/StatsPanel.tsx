@@ -1,3 +1,4 @@
+import type { BilingualTextValue } from '../types'
 import BilingualText from './BilingualText'
 import { text } from '../translations'
 
@@ -8,6 +9,8 @@ type StatsPanelProps = {
   maxCrudeStorage: number
   maxGasolineStorage: number
   availableSpace: number
+  seasonalGasolineMultiplier: number
+  seasonLabel: BilingualTextValue
 }
 
 function StatsPanel({
@@ -17,6 +20,8 @@ function StatsPanel({
   maxCrudeStorage,
   maxGasolineStorage,
   availableSpace,
+  seasonalGasolineMultiplier,
+  seasonLabel,
 }: StatsPanelProps) {
   return (
     <article className="panel upgrade-panel">
@@ -37,6 +42,15 @@ function StatsPanel({
             <BilingualText text={text.stats.sellPrice} />
           </dt>
           <dd>${sellPrice.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt>
+            <BilingualText text={text.stats.season} />
+          </dt>
+          <dd>
+            <BilingualText text={seasonLabel} /> ·{' '}
+            <BilingualText text={text.stats.seasonHint(Math.round(seasonalGasolineMultiplier * 100))} />
+          </dd>
         </div>
         <div>
           <dt>

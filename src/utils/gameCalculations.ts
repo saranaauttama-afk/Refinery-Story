@@ -14,6 +14,7 @@ import {
   PLANT_PRODUCTION,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
+  SEASONAL_BALANCE,
   STAFF_LEVEL_BALANCE,
   STARTING_BALANCE,
   STORAGE_BALANCE,
@@ -371,6 +372,33 @@ export function getDemandShiftDelta(currentEra: EraConfig): {
     gasolineDelta: -DEMAND_SHIFT_BALANCE.shiftPerTick,
     petrochemicalsDelta: DEMAND_SHIFT_BALANCE.shiftPerTick,
   }
+}
+
+// --- Seasonal demand volatility (Strategic Differentiation #4) ---
+
+// Gasoline demand cycles smoothly through one full sine wave per business
+// year. Purely derived from the current position in the year -- no new
+// state, monotonic GameState.yearStartTick already exists. Returns a
+// multiplier in [1-amplitude, 1+amplitude].
+export function getSeasonalGasolineMultiplier(tickCount: number, yearStartTick: number): number {
+  const yearLength = AWARDS_BALANCE.yearLengthTicks
+  const ticksIntoYear = ((tickCount - yearStartTick) % yearLength + yearLength) % yearLength
+  const phase = ticksIntoYear / yearLength
+  return 1 + SEASONAL_BALANCE.amplitude * Math.sin(2 * Math.PI * phase)
+}
+
+// Flavor label for the current point in the seasonal cycle, based on which
+// quarter of the sine wave the year is in:
+// [0, 0.25) demand rising toward peak, [0.25, 0.5) past peak and cooling,
+// [0.5, 0.75) demand falling toward the trough, [0.75, 1) recovering.
+export function getSeasonLabel(tickCount: number, yearStartTick: number): BilingualTextValue {
+  const yearLength = AWARDS_BALANCE.yearLengthTicks
+  const ticksIntoYear = ((tickCount - yearStartTick) % yearLength + yearLength) % yearLength
+  const phase = ticksIntoYear / yearLength
+  if (phase < 0.25) return text.stats.seasonRising
+  if (phase < 0.5) return text.stats.seasonPeak
+  if (phase < 0.75) return text.stats.seasonFalling
+  return text.stats.seasonOff
 }
 
 // Base sell price per secondary product (gasoline has its own combo-aware price).
@@ -741,13 +769,22 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier
   // × demand multiplier (Energy Transition shift), plus the flat premium-fuel
   // research bonus.
+  // Strategic Differentiation #4: gasoline demand cycles through a "season"
+  // each business year (sine wave, derived from tickCount/yearStartTick) --
+  // a short-term planning layer on top of the long-term Energy Transition
+  // shift above.
+  const seasonalGasolineMultiplier = getSeasonalGasolineMultiplier(
+    game.tickCount,
+    game.yearStartTick,
+  )
   const sellPrice =
     Math.round(
       ECONOMY_BALANCE.gasolinePrice *
         sellPriceMultiplier *
         fuelSpecialistSellPriceMultiplier *
         productSellMultiplier *
-        game.gasolineDemandMultiplier,
+        game.gasolineDemandMultiplier *
+        seasonalGasolineMultiplier,
     ) +
     researchSellPriceBonus
   const upgradeCost = getUpgradeCost(game.refineryLevel)
@@ -835,6 +872,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     productionRate,
     progressPercent,
     sellPrice,
+    seasonalGasolineMultiplier,
     sellPriceMultiplier,
     statusLabel,
     storageMultiplier,

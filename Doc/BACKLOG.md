@@ -75,13 +75,23 @@ GameState.gasolineYieldCarry for fractional accumulation). Also found
 capacity's crudeDiscount was dead; redistributed into storage
 (0.10/0.20/0.35, total 0.65). See PLAYTEST_NOTES 2026-06-13.
 
-### 4. Seasonal price/demand volatility within a business year
+### 4. ✅ DONE (2026-06-13) -- Seasonal price/demand volatility within a business year
 
-Within the ~12-minute business year, introduce "seasons" where gasoline
-demand/price swings high and low on a cycle (like tourist-season vs
-off-season), so players time production/selling for short-term planning.
-Kairosoft games have static prices for the whole game — this adds a planning
-layer that doesn't exist there at all.
+Shipped in `feature/seasonal-volatility`: getSeasonalGasolineMultiplier
+(tickCount, yearStartTick) -- sine wave over each ~12min business year,
+range 0.85x-1.15x, purely derived (no new state). Multiplies into gasoline's
+sellPrice. StatsPanel shows a flavor "Gasoline Season" label (Demand Rising
+/ Peak Season / Demand Cooling / Off-Season) + % of base price. See
+PLAYTEST_NOTES 2026-06-13.
+
+---
+
+## Strategic Differentiation set: 4/4 COMPLETE (2026-06-13)
+
+All four "Better than Kairosoft" ideas shipped this session: ESG/Safety
+axis, Energy Transition demand-shift era, Perk branch diversity (fixed a
+100%-dead Efficiency branch), Seasonal demand volatility. See
+PLAYTEST_NOTES 2026-06-13 entries for each.
 
 ---
 

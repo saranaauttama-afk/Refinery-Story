@@ -456,6 +456,7 @@ export type DerivedStats = {
   productionRate: number
   progressPercent: number
   sellPrice: number
+  seasonalGasolineMultiplier: number
   sellPriceMultiplier: number
   statusLabel: BilingualTextValue
   storageMultiplier: number
