@@ -27,3 +27,20 @@ Branch: `feature/staff-training-choice` (off individual-employees).
 ### 2. StaffPanel.tsx: per-employee roster rows with individual Train buttons  [x]
 ### 3. Remove dead trainingLabel/roster translations + .staff-roster/.staff-level-block CSS  [x]
 ### 4. Tests + docs + push  [x]
+
+
+---
+
+# WORK PLAN — Individual Staff, Phase 4 (Veteran Trait)
+
+Branch: `feature/staff-veteran-trait` (off staff-training-choice). Phase 2b
+(retirement/turnover) skipped: not a dependency of 3/4, deferred pending
+design discussion (risk of feeling punitive).
+
+## Tasks
+### 1. balance.ts: veteranHireChance (5%), veteranBonusRate (+20%)  [x]
+### 2. Employee.trait?: 'veteran'; getEmployeeMultiplier; getEffectiveWorkerSum uses it  [x]
+### 3. createNewEmployee(employees, type) shared helper (3 hire sites)  [x]
+### 4. StaffPanel: veteran badge + bonus% reflects it; hire log flavor line  [x]
+### 5. Save migration: trait sanitize/round-trip  [x]
+### 6. Tests + docs + push  [x]

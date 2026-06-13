@@ -1,5 +1,36 @@
 # Playtest Notes
 
+## 2026-06-13 — Individual Staff, Phase 4 (Veteran Trait)
+
+**Method:** Skipped Phase 2b (retirement/turnover — not a dependency of 3/4,
+deferred pending its own design discussion: risk of feeling punitive).
+Branch `feature/staff-veteran-trait` (off staff-training-choice). 13 new
+unit assertions, 150 prior pass (163 total).
+
+### What shipped
+
+5% chance on hire for a new employee to roll the 'veteran' trait — a
+permanent +20% effectiveness bonus that STACKS ADDITIVELY with their level
+multiplier (`getEmployeeMultiplier = getWorkerLevelMultiplier(level) +
+veteranBonusRate`). Pure luck, no extra wage cost. Shown as a "⭐ Veteran"
+badge in the StaffPanel roster row; hiring one adds a flavor log line.
+
+Refactored the 3 places that create a new employee (hire handler + 2
+choice-event free-hire outcomes) into a shared `createNewEmployee(employees,
+type)` helper — rolls the trait, picks the next pool name, sets level
+1/xp 0. Old-shape save migration does NOT retroactively grant veterans
+(feature predates those saves); new-shape employees[] round-trip the trait,
+invalid trait values are sanitized away.
+
+### Carried forward
+- Phase 2b (retirement/turnover) and Phase 3 (assign employees to plants —
+  the feedstock-chain payoff) remain in Doc/INDIVIDUAL_STAFF_ROADMAP.md.
+- TECH_DEBT: thresholdGrowthPerYear decision still open.
+- Watch: per-type roster list could get long with no hiring cap (noted in
+  Phase 2a notes) — still unaddressed.
+
+---
+
 ## 2026-06-13 — Individual Staff, Phase 2a (Player Chooses Who to Train)
 
 **Method:** Direct continuation of Phase 1. Branch

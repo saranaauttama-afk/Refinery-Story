@@ -239,14 +239,42 @@ export function getWorkerLevelMultiplier(level: number): number {
   return 1 + (safeLevel - 1) * STAFF_LEVEL_BALANCE.bonusPerLevelRate
 }
 
-// Sum of getWorkerLevelMultiplier across all employees of a type — replaces
-// the old `count * multiplier(sharedLevel)`. At uniform level these are
-// identical; as individuals level up one at a time, this rises smoothly.
+// An employee's full personal effectiveness multiplier: level multiplier
+// plus a flat veteranBonusRate if they have the 'veteran' trait (Phase 4).
+export function getEmployeeMultiplier(employee: Employee): number {
+  const veteranBonus = employee.trait === 'veteran' ? STAFF_LEVEL_BALANCE.veteranBonusRate : 0
+  return getWorkerLevelMultiplier(employee.level) + veteranBonus
+}
+
+// Sum of getEmployeeMultiplier across all employees of a type — replaces
+// the old `count * multiplier(sharedLevel)`. At uniform level (no veterans)
+// this equals that; as individuals level up (or roll veteran), it rises.
 export function getEffectiveWorkerSum(employees: Employee[], type: WorkerType): number {
   return getEmployeesByType(employees, type).reduce(
-    (sum, employee) => sum + getWorkerLevelMultiplier(employee.level),
+    (sum, employee) => sum + getEmployeeMultiplier(employee),
     0,
   )
+}
+
+// Phase 4: roll whether a new hire is a Veteran (rare, permanent bonus).
+export function rollVeteranTrait(): Employee['trait'] {
+  return Math.random() < STAFF_LEVEL_BALANCE.veteranHireChance ? 'veteran' : undefined
+}
+
+// Builds a new hire: next name from the pool (cycled by current headcount of
+// this type), level 1, xp 0, and a Veteran trait roll. Used by the hire
+// handler and both free-hire choice-event outcomes.
+export function createNewEmployee(employees: Employee[], type: WorkerType): Employee {
+  const index = getEmployeesByType(employees, type).length
+  const trait = rollVeteranTrait()
+  return {
+    id: `${type}-${index}`,
+    type,
+    name: getStaffName(index),
+    level: 1,
+    xp: 0,
+    ...(trait ? { trait } : {}),
+  }
 }
 
 // Base sell price per secondary product (gasoline has its own combo-aware price).
@@ -1449,16 +1477,7 @@ export function applyChoiceEventOption(
           ...game.workerCounts,
           operator: game.workerCounts.operator + 1,
         },
-        employees: [
-          ...game.employees,
-          {
-            id: `operator-${getEmployeesByType(game.employees, 'operator').length}`,
-            type: 'operator',
-            name: getStaffName(getEmployeesByType(game.employees, 'operator').length),
-            level: 1,
-            xp: 0,
-          },
-        ],
+        employees: [...game.employees, createNewEmployee(game.employees, 'operator')],
         activityLog: addLog(game.activityLog, logMessage),
       })
     }
@@ -1469,16 +1488,7 @@ export function applyChoiceEventOption(
         ...game.workerCounts,
         mechanic: game.workerCounts.mechanic + 1,
       },
-      employees: [
-        ...game.employees,
-        {
-          id: `mechanic-${getEmployeesByType(game.employees, 'mechanic').length}`,
-          type: 'mechanic',
-          name: getStaffName(getEmployeesByType(game.employees, 'mechanic').length),
-          level: 1,
-          xp: 0,
-        },
-      ],
+      employees: [...game.employees, createNewEmployee(game.employees, 'mechanic')],
       activityLog: addLog(game.activityLog, logMessage),
     })
   }

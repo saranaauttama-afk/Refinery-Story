@@ -552,6 +552,11 @@ export const STAFF_LEVEL_BALANCE = {
   trainBaseCost: 600,
   trainCostPerLevel: 500,
   trainRpCost: 5,
+  // Individual Staff Phase 4: small chance for a new hire to be a "Veteran"
+  // — a permanent personal effectiveness bonus on top of their level
+  // multiplier (stacks additively). Pure luck, no extra wage cost.
+  veteranHireChance: 0.05,
+  veteranBonusRate: 0.2,
 } as const
 
 // --- System 4: Annual Awards ---

@@ -2,8 +2,8 @@ import type { ActiveWorkerItem, Employee, WorkerConfig } from '../types'
 import { STAFF_LEVEL_BALANCE } from '../data/balance'
 import {
   getEmployeesByType,
+  getEmployeeMultiplier,
   getTrainingCost,
-  getWorkerLevelMultiplier,
 } from '../utils/gameCalculations'
 import { getWorkerActiveBonus } from '../utils/workerBonusText'
 import BilingualText from './BilingualText'
@@ -94,7 +94,7 @@ function StaffPanel({
                             ? 100
                             : Math.min(100, Math.round((employee.xp / Math.max(1, threshold)) * 100))
                           const bonusPct = Math.round(
-                            (getWorkerLevelMultiplier(employee.level) - 1) * 100,
+                            (getEmployeeMultiplier(employee) - 1) * 100,
                           )
                           const trainCost = getTrainingCost(employee.level)
                           const canTrain =
@@ -105,6 +105,11 @@ function StaffPanel({
                             <div key={employee.id} className="staff-employee-row">
                               <div className="staff-level-row">
                                 <span className="staff-employee-name">{employee.name}</span>
+                                {employee.trait === 'veteran' && (
+                                  <span className="staff-veteran-badge">
+                                    <BilingualText text={text.staffTraining.veteranBadge} />
+                                  </span>
+                                )}
                                 <span className="staff-level-badge">
                                   <BilingualText text={text.staffTraining.levelLabel(employee.level)} />
                                 </span>

@@ -367,6 +367,7 @@ export const text = {
       bilingual(`Train ($${money.toLocaleString()} + ${rp} RP)`, `ฝึก ($${money.toLocaleString()} + ${rp} RP)`),
     bonusLabel: (pct: number) =>
       bilingual(`+${pct}% effectiveness`, `+${pct}% ประสิทธิภาพ`),
+    veteranBadge: bilingual('⭐ Veteran', '⭐ ผู้เชี่ยวชาญ'),
   },
   awards: {
     kicker: bilingual('Awards', 'รางวัล'),
@@ -1725,6 +1726,11 @@ export const text = {
       ),
     hiredWorker: (name: BilingualTextValue, cost: number) =>
       bilingual(`Hired ${name.en} for $${cost}.`, `จ้าง ${name.th} ในราคา $${cost}`),
+    veteranHire: (employeeName: string) =>
+      bilingual(
+        `✨ ${employeeName} turns out to be a Veteran — permanent +20% effectiveness!`,
+        `✨ ${employeeName} เป็นพนักงานผู้เชี่ยวชาญ (Veteran) — ประสิทธิภาพ +20% ตลอดไป!`,
+      ),
     placedBuilding: (name: BilingualTextValue, cost: number) =>
       bilingual(`Placed ${name.en} for $${cost}.`, `วาง ${name.th} ในราคา $${cost}`),
     removedBuilding: (name: BilingualTextValue) =>

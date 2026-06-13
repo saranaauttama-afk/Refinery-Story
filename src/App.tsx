@@ -35,7 +35,6 @@ import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
 import type { HiddenComboConfig } from './data/hiddenCombos'
-import { getStaffName } from './data/staffNames'
 import { WORKERS } from './data/workers'
 import { serializeBilingualText, text } from './translations'
 import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
@@ -55,7 +54,7 @@ import {
   getRefineryTitle,
   closeBusinessYear,
   getTrainingCost,
-  getEmployeesByType,
+  createNewEmployee,
   getProductSellPrice,
   getYearlyPayroll,
   getRandomEvent,
@@ -649,29 +648,30 @@ function App() {
         return current
       }
 
-      return applyMilestones({
-        ...current,
-        money: current.money - worker.cost,
-        totalWorkersHired: current.totalWorkersHired + 1,
-        workerCounts: {
-          ...current.workerCounts,
-          [worker.key]: current.workerCounts[worker.key] + 1,
-        },
-        employees: [
-          ...current.employees,
-          {
-            id: `${worker.key}-${getEmployeesByType(current.employees, worker.key).length}`,
-            type: worker.key,
-            name: getStaffName(getEmployeesByType(current.employees, worker.key).length),
-            level: 1,
-            xp: 0,
-          },
-        ],
-        activityLog: addLog(
+      return applyMilestones((() => {
+        const newEmployee = createNewEmployee(current.employees, worker.key)
+        let activityLog = addLog(
           current.activityLog,
           serializeBilingualText(text.logs.hiredWorker(worker.name, worker.cost)),
-        ),
-      })
+        )
+        if (newEmployee.trait === 'veteran') {
+          activityLog = addLog(
+            activityLog,
+            serializeBilingualText(text.logs.veteranHire(newEmployee.name)),
+          )
+        }
+        return {
+          ...current,
+          money: current.money - worker.cost,
+          totalWorkersHired: current.totalWorkersHired + 1,
+          workerCounts: {
+            ...current.workerCounts,
+            [worker.key]: current.workerCounts[worker.key] + 1,
+          },
+          employees: [...current.employees, newEmployee],
+          activityLog,
+        }
+      })())
     })
   }
 

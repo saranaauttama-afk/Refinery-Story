@@ -145,6 +145,7 @@ function getSafeEmployees(value: unknown, workerCounts: WorkerCounts): Employee[
           name: getSafeString(item.name, getStaffName(i)),
           level: clampLevel(getSafeNumber(item.level, 1)),
           xp: Math.max(0, getSafeNumber(item.xp, 0)),
+          ...(item.trait === 'veteran' ? { trait: 'veteran' as const } : {}),
         }))
         .slice(0, workerCounts[key])
       while (ofType.length < workerCounts[key]) {

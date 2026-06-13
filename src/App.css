@@ -2371,3 +2371,11 @@
 .combo-discovery-toast--offset {
   top: 130px;
 }
+.staff-veteran-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffe9a8, #f7c948);
+  color: #5a3d05;
+}

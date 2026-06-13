@@ -178,6 +178,10 @@ export type Employee = {
   name: string
   level: number
   xp: number
+  // Phase 4: rare permanent trait rolled at hire time. 'veteran' adds a flat
+  // bonus to this employee's effectiveness multiplier (see
+  // getEmployeeMultiplier). Extensible for future traits.
+  trait?: 'veteran'
 }
 
 // --- System 2: Refinery Upgrade Perk Tree ---
