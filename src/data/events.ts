@@ -16,6 +16,7 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     key: 'minorLeak',
     name: text.data.events.minorLeak.name,
     message: serializeBilingualText(text.data.events.minorLeak.message),
+    isIncident: true,
   },
   {
     key: 'qualityBonus',
@@ -36,6 +37,7 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     key: 'equipmentWear',
     name: text.data.events.equipmentWear.name,
     message: serializeBilingualText(text.data.events.equipmentWear.message),
+    isIncident: true,
   },
   {
     key: 'efficientBatch',
@@ -66,6 +68,7 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     key: 'storageContamination',
     name: text.data.events.storageContamination.name,
     message: serializeBilingualText(text.data.events.storageContamination.message),
+    isIncident: true,
   },
   {
     key: 'communityVisit',
@@ -77,6 +80,7 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     name: text.data.events.distillationHiccup.name,
     message: serializeBilingualText(text.data.events.distillationHiccup.message),
     requiresFeedstockChain: true,
+    isIncident: true,
   },
   {
     key: 'feedstockSurplus',

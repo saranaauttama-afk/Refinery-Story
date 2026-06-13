@@ -5,6 +5,7 @@ type DevToolsPanelProps = {
   onAddMoney: () => void
   onAddRP: () => void
   onAddReputation: () => void
+  onToggleEsg: () => void
   onAddCrude: () => void
   onAddGasoline: () => void
   onSetLevel5: () => void
@@ -17,6 +18,7 @@ function DevToolsPanel({
   onAddMoney,
   onAddRP,
   onAddReputation,
+  onToggleEsg,
   onAddCrude,
   onAddGasoline,
   onSetLevel5,
@@ -41,6 +43,9 @@ function DevToolsPanel({
         </button>
         <button type="button" className="action-button dev-tools-button" onClick={onAddReputation}>
           <BilingualText text={text.devTools.addReputation} />
+        </button>
+        <button type="button" className="action-button dev-tools-button" onClick={onToggleEsg}>
+          <BilingualText text={text.devTools.toggleEsg} />
         </button>
         <button type="button" className="action-button dev-tools-button" onClick={onAddCrude}>
           <BilingualText text={text.devTools.addCrude} />

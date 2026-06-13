@@ -12,7 +12,7 @@ import type {
 } from '../types'
 import { text } from '../translations'
 import { countBuildings, createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
-import { PLANT_PRODUCTION } from '../data/balance'
+import { ESG_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
 
@@ -331,6 +331,10 @@ function sanitizeLoadedGameState(value: unknown) {
     workerCounts,
     employees,
     assignments: getSafeAssignments(value, employees, grid),
+    esgScore: Math.max(
+      ESG_BALANCE.minScore,
+      Math.min(ESG_BALANCE.maxScore, getSafeNumber(value.esgScore, fallback.esgScore)),
+    ),
     discoveredCombos: getSafeStringArray(value.discoveredCombos, []).filter((key) =>
       HIDDEN_COMBOS.some((combo) => combo.key === key),
     ),

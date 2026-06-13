@@ -4,6 +4,8 @@ import {
   BUILDING_UPGRADE_BALANCE,
   CORE_BALANCE,
   ECONOMY_BALANCE,
+  ESG_BALANCE,
+  ESG_DIRTY_BUILDINGS,
   EVENT_BALANCE,
   EXPANSION_BALANCE,
   FEEDSTOCK_BALANCE,
@@ -132,6 +134,7 @@ export function createInitialGameState(): GameState {
     },
     employees: [],
     assignments: {},
+    esgScore: ESG_BALANCE.startingScore,
     discoveredCombos: [],
     upgradePoints: 0,
     unlockedPerks: [],
@@ -176,8 +179,13 @@ export function getRandomEvent(game: GameState) {
   const eligible = RANDOM_EVENTS.filter(
     (event) => !event.requiresFeedstockChain || hasDistillationChain,
   )
-  const randomIndex = Math.floor(Math.random() * eligible.length)
-  return eligible[randomIndex]
+  const incidentEvents = eligible.filter((event) => event.isIncident)
+  const otherEvents = eligible.filter((event) => !event.isIncident)
+  const pickIncident =
+    incidentEvents.length > 0 && Math.random() < getIncidentChance(game.esgScore)
+  const pool = pickIncident || otherEvents.length === 0 ? incidentEvents : otherEvents
+  const randomIndex = Math.floor(Math.random() * pool.length)
+  return pool[randomIndex]
 }
 
 function getEmptyBuildingCounts(): BuildingCounts {
@@ -307,6 +315,38 @@ export function getSpecialistMultiplier(
     return employee ? sum + getEmployeeMultiplier(employee) * plant.specialistBonusRate! : sum
   }, 0)
   return 1 + bonus
+}
+
+// --- ESG / Safety axis ---
+
+// Per-tick ESG drift: "dirty" buildings (core refining/processing) pull the
+// score down; safetyOfficer staff (scaled by their own effectiveness, incl.
+// level/veteran) pull it up. Net can be positive or negative depending on
+// how a player has built. Caller clamps to [minScore, maxScore].
+export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {
+  const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
+  const safetyEffectiveSum = getEffectiveWorkerSum(game.employees, 'safetyOfficer')
+  return (
+    safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick -
+    dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick
+  )
+}
+
+// Chance that the next random-event roll picks an "incident" (isIncident)
+// event instead of a normal one. ~25% at the neutral score of 50 (roughly
+// matching the old uniform-random share of incident events), falling to a
+// 5% floor at 100 and rising to a 45% ceiling at 0.
+export function getIncidentChance(esgScore: number): number {
+  const raw = ESG_BALANCE.baseIncidentChance * (2 - esgScore / 50)
+  return Math.max(ESG_BALANCE.minIncidentChance, Math.min(ESG_BALANCE.maxIncidentChance, raw))
+}
+
+// Display tier for the ESG score (UI label).
+export function getEsgTier(esgScore: number): BilingualTextValue {
+  if (esgScore >= 85) return text.resources.esgExcellent
+  if (esgScore >= 60) return text.resources.esgGood
+  if (esgScore >= 35) return text.resources.esgFair
+  return text.resources.esgPoor
 }
 
 // Base sell price per secondary product (gasoline has its own combo-aware price).
@@ -633,10 +673,17 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     : 1
   const specialBuildingContractRewardMultiplier =
     1 + salesOfficeContractBonusTotal
+  // ESG/Safety axis: high score unlocks a "premium/ESG-conscious buyer"
+  // contract bonus (BACKLOG strategic differentiation #1).
+  const esgContractRewardMultiplier =
+    game.esgScore >= ESG_BALANCE.premiumThreshold
+      ? 1 + ESG_BALANCE.premiumContractRewardBonusRate
+      : 1
   const contractRewardMultiplier =
     reputationContractRewardMultiplier *
     researchContractRewardMultiplier *
-    specialBuildingContractRewardMultiplier
+    specialBuildingContractRewardMultiplier *
+    esgContractRewardMultiplier
   const specialBuildingRpRewardMultiplier =
     1 + laboratoryRpBonusTotal
   const chemistRpMultiplier = 1 + chemistCount * BONUS_BALANCE.chemistRpBonusRate
@@ -729,6 +776,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     canProcessCrude,
     comboStats,
     contractRewardMultiplier,
+    esgContractRewardMultiplier,
     contractRpRewardMultiplier,
     reputationContractRewardMultiplier,
     eventPenaltyMultiplier,

@@ -1,6 +1,8 @@
 // Early-game pacing and economy live here so tuning does not require
 // searching through simulation code.
 
+import type { BuildingType } from '../types'
+
 export const CORE_BALANCE = {
   tickMs: 200,
   gridSize: 9,
@@ -671,4 +673,42 @@ export const PLANT_PRODUCTION: PlantProductionConfig[] = [
     specialistWorker: 'chemicalEngineer',
     specialistBonusRate: BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate,
   },
+]
+
+// --- ESG / Safety axis ---
+// A second strategic axis (BACKLOG "Strategic Differentiation #1"): cheap,
+// fast expansion (more "dirty" refining buildings) pulls the score DOWN;
+// investing in safetyOfficer staff pulls it UP. High score = fewer incident
+// events + a premium contract bonus. Low score = more incident events.
+// Score is 0-100, starts neutral at 50.
+export const ESG_BALANCE = {
+  startingScore: 50,
+  minScore: 0,
+  maxScore: 100,
+  // Per-tick drift. At 1 effective safetyOfficer (level1) vs 2 dirty
+  // buildings (a typical Tier-1 start: crudeTank + distillationUnit), net
+  // drift is slightly positive (+0.001/tick). Adding more refining capacity
+  // without more/better safety staff tips the balance negative.
+  decayPerDirtyBuildingPerTick: 0.003,
+  regenPerSafetyOfficerPerTick: 0.007,
+  // Incident-event selection chance (see getIncidentChance / getRandomEvent).
+  // At esgScore=50 this equals ~25%, roughly matching the old uniform-random
+  // share of incident-flagged events.
+  baseIncidentChance: 0.25,
+  minIncidentChance: 0.05,
+  maxIncidentChance: 0.45,
+  // High-ESG premium contract bonus (BACKLOG: "unlocks premium contracts").
+  premiumThreshold: 70,
+  premiumContractRewardBonusRate: 0.1,
+} as const
+
+// Buildings that pull the ESG score down each tick (core refining/
+// processing capacity). Storage, research, sales, and maintenance buildings
+// are NOT "dirty" — expanding those doesn't cost ESG.
+export const ESG_DIRTY_BUILDINGS: BuildingType[] = [
+  'crudeTank',
+  'distillationUnit',
+  'lubricantPlant',
+  'jetFuelPlant',
+  'petrochemicalPlant',
 ]

@@ -115,6 +115,15 @@ export const text = {
       'Earned from successful contracts and used for reputation reward tiers.',
       'ได้รับจากการทำสัญญาสำเร็จ และใช้ปลดโบนัสรางวัลตามระดับชื่อเสียง',
     ),
+    esg: bilingual('ESG Score', 'คะแนน ESG'),
+    esgDescription: bilingual(
+      'Dirty buildings lower it, Safety Officers raise it. High score = fewer incidents + premium contracts. Low score = more incidents.',
+      'อาคารที่ปล่อยมลพิษลดคะแนน, เจ้าหน้าที่ความปลอดภัยเพิ่มคะแนน คะแนนสูง = อุบัติเหตุน้อย+สัญญาพรีเมียม คะแนนต่ำ = อุบัติเหตุบ่อยขึ้น',
+    ),
+    esgExcellent: bilingual('Excellent', 'ยอดเยี่ยม'),
+    esgGood: bilingual('Good', 'ดี'),
+    esgFair: bilingual('Fair', 'พอใช้'),
+    esgPoor: bilingual('Poor', 'แย่'),
     crudeOil: bilingual('Crude Oil', 'น้ำมันดิบ'),
     crudeDescription: bilingual(
       'Crude Tanks raise the storage cap.',
@@ -1634,6 +1643,7 @@ export const text = {
     addMoney: bilingual('Add $10,000', 'เพิ่ม $10,000'),
     addRP: bilingual('Add 100 RP', 'เพิ่ม 100 RP'),
     addReputation: bilingual('Add 100 Reputation', 'เพิ่มชื่อเสียง 100'),
+    toggleEsg: bilingual('Toggle ESG (0/100)', 'สลับ ESG (0/100)'),
     addCrude: bilingual('Add 500 Crude', 'เพิ่มน้ำมันดิบ 500'),
     addGasoline: bilingual('Add 500 Gasoline', 'เพิ่มเบนซิน 500'),
     setLevel5: bilingual('Set Level 5', 'ตั้งระดับ 5'),
@@ -1646,6 +1656,8 @@ export const text = {
       bilingual(`[Dev] Added ${amount} RP.`, `[Dev] เพิ่ม ${amount} RP`),
     logAddReputation: (amount: number) =>
       bilingual(`[Dev] Added ${amount} reputation.`, `[Dev] เพิ่มชื่อเสียง ${amount}`),
+    logSetEsg: (score: number) =>
+      bilingual(`[Dev] Set ESG score to ${score}.`, `[Dev] ตั้งคะแนน ESG เป็น ${score}`),
     logAddCrude: (amount: number) =>
       bilingual(`[Dev] Added ${amount} crude.`, `[Dev] เพิ่มน้ำมันดิบ ${amount}`),
     logAddGasoline: (amount: number) =>

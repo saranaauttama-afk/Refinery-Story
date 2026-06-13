@@ -74,3 +74,22 @@ merge).
 ### 2. Specialist assignment regression check (1:1, over-hire, payoff)  [x]
 ### 3. Mid-game derived-stats snapshot sanity check  [x]
 ### 4. Conclusion: no numeric constants changed. Docs updated.  [x]
+
+
+---
+
+# WORK PLAN — ESG / Safety Axis (Strategic Differentiation #1)
+
+Branch: `feature/esg-safety-axis` (off post-phase3-balance-pass).
+
+## Tasks
+### 1. types.ts: GameState.esgScore; RandomEvent.isIncident  [x]
+### 2. balance.ts: ESG_BALANCE constants + ESG_DIRTY_BUILDINGS list  [x]
+### 3. gameCalculations.ts: getEsgDrift, getIncidentChance, getEsgTier  [x]
+### 4. data/events.ts: flag 4 incident events  [x]
+### 5. getRandomEvent: incident-vs-other weighted selection  [x]
+### 6. contractRewardMultiplier: +10% ESG premium bonus at esgScore>=70  [x]
+### 7. App.tsx: per-tick esgScore drift, clamp [0,100]  [x]
+### 8. gameStorage.ts: migration (default 50, clamp)  [x]
+### 9. ResourcePanel: ESG Score card; DevTools: Toggle ESG button  [x]
+### 10. Tests + docs + BACKLOG update + push  [x]

@@ -56,6 +56,11 @@ export type GameState = {
   // 'chemicalEngineer' -> petrochemicalPlant). Capacity = that plant's
   // building count. Unassigned specialists contribute no plant bonus.
   assignments: Partial<Record<WorkerType, string[]>>
+  // ESG/Safety axis: 0-100 score. Drifts each tick (down from "dirty"
+  // buildings, up from safetyOfficer staff). High score reduces incident-
+  // event chance and unlocks a premium contract bonus; low score raises
+  // incident-event chance. See ESG_BALANCE.
+  esgScore: number
   // Keys of HIDDEN_COMBOS already discovered/rewarded (one-time each).
   discoveredCombos: string[]
   // System 2: Refinery Upgrade Perk Tree
@@ -307,6 +312,10 @@ export type RandomEvent = {
   // (maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage) — keeps
   // feedstock-chain flavor events from showing up for Tier-1-only players.
   requiresFeedstockChain?: boolean
+  // ESG/Safety axis: marks "something went wrong" operational incidents
+  // (resource loss from leaks/equipment/contamination). Incident-event
+  // selection chance scales with esgScore (see getIncidentChance).
+  isIncident?: boolean
 }
 
 export type ChoiceEventKey =
@@ -395,6 +404,7 @@ export type DerivedStats = {
   maxGasolineStorage: number
   productionInterval: number
   contractRewardMultiplier: number
+  esgContractRewardMultiplier: number
   contractRpRewardMultiplier: number
   reputationContractRewardMultiplier: number
   eventPenaltyMultiplier: number

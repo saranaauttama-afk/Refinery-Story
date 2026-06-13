@@ -30,7 +30,7 @@ import AwardCeremonyModal from './components/AwardCeremonyModal'
 import ComboDiscoveryToast from './components/ComboDiscoveryToast'
 import EraBannerToast from './components/EraBannerToast'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, AWARDS_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, AWARDS_BALANCE, ESG_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
@@ -56,6 +56,7 @@ import {
   getTrainingCost,
   createNewEmployee,
   getAssignmentCapacity,
+  getEsgDrift,
   getSpecialistMultiplier,
   getProductSellPrice,
   getYearlyPayroll,
@@ -259,6 +260,15 @@ function App() {
           text.logs.processedCrude(batchesProduced, batchesProduced),
         )
 
+        // --- ESG/Safety axis drift ---
+        // Dirty buildings pull the score down; safetyOfficer staff pull it
+        // up. Clamped to [minScore, maxScore].
+        const esgDelta = getEsgDrift(current, currentStats.buildingCounts)
+        const esgScore = Math.max(
+          ESG_BALANCE.minScore,
+          Math.min(ESG_BALANCE.maxScore, current.esgScore + esgDelta),
+        )
+
         return applyMilestones({
           ...current,
           tickCount: nextTick,
@@ -268,6 +278,7 @@ function App() {
           totalGasolineProduced: current.totalGasolineProduced + batchesProduced,
           productionProgress: leftoverProgress,
           productInventory,
+          esgScore,
           yearStats: {
             ...current.yearStats,
             gasolineProduced: current.yearStats.gasolineProduced + batchesProduced,
@@ -924,6 +935,22 @@ function App() {
     }))
   }
 
+  // Dev tool: toggle ESG score between the two extremes for quick testing
+  // of incident-event weighting and the premium contract bonus.
+  function handleDevToggleEsg() {
+    setGame((current) => {
+      const esgScore = current.esgScore >= 50 ? ESG_BALANCE.minScore : ESG_BALANCE.maxScore
+      return {
+        ...current,
+        esgScore,
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.devTools.logSetEsg(esgScore)),
+        ),
+      }
+    })
+  }
+
   function handleDevAddCrude() {
     setGame((current) => {
       const stats = calculateDerivedStats(current)
@@ -1158,6 +1185,7 @@ function App() {
           money={game.money}
           researchPoints={game.researchPoints}
           reputation={game.reputation}
+          esgScore={game.esgScore}
           crudeOil={game.crudeOil}
           maxCrudeStorage={maxCrudeStorage}
           feedstock={game.feedstock}
@@ -1355,6 +1383,7 @@ function App() {
         onAddMoney={handleDevAddMoney}
         onAddRP={handleDevAddRP}
         onAddReputation={handleDevAddReputation}
+        onToggleEsg={handleDevToggleEsg}
         onAddCrude={handleDevAddCrude}
         onAddGasoline={handleDevAddGasoline}
         onSetLevel5={() => handleDevSetLevel(5)}

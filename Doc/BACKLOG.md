@@ -48,15 +48,13 @@ and replays tend to converge on one best path. These four ideas hook into
 EXISTING systems (eras, perks, economy, awards) — no new silos — and lean
 into the refinery theme in ways generic Kairosoft clones don't.
 
-### 1. ESG / Safety as a second axis (highest value)
+### 1. ✅ DONE (2026-06-13) — ESG / Safety as a second axis
 
-An Environmental/Safety Score that's a real tradeoff: cheap/fast expansion =
-more output now but risk of fines, accidents, and reputation hits; investing
-in clean/safe operations = slower growth but unlocks premium contracts and
-reduces bad random-event frequency. Different players would genuinely build
-differently — not just "who expanded faster". The refinery theme is uniquely
-suited to this; most management sims (Kairosoft included) have no equivalent
-dimension.
+Shipped in `feature/esg-safety-axis`: GameState.esgScore (0-100, starts 50)
+drifts per tick — down from "dirty" refining buildings, up from
+safetyOfficer staff. Affects incident-event frequency (getIncidentChance)
+and unlocks a +10% premium contract bonus at esgScore>=70. See
+PLAYTEST_NOTES 2026-06-13 for the full design.
 
 ### 2. Eras that shift the meta, not just add bonuses
 

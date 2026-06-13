@@ -1,5 +1,63 @@
 # Playtest Notes
 
+## 2026-06-13 — ESG / Safety Axis (Strategic Differentiation #1)
+
+**Method:** Branch `feature/esg-safety-axis` (off post-phase3-balance-pass).
+New second strategic axis from BACKLOG "Strategic Differentiation #1" — the
+highest-value, most novel idea (most management sims, Kairosoft included,
+have no equivalent dimension). 25 new unit assertions, 177 prior pass (202
+total).
+
+### The tradeoff
+
+`GameState.esgScore: number` (0-100, starts at 50, "neutral"). Drifts every
+tick:
+- DOWN: each "dirty" building (crudeTank, distillationUnit, lubricantPlant,
+  jetFuelPlant, petrochemicalPlant — core refining/processing) costs
+  `decayPerDirtyBuildingPerTick` (0.003).
+- UP: safetyOfficer staff (via getEffectiveWorkerSum — level/veteran count)
+  give `regenPerSafetyOfficerPerTick` (0.007) each.
+
+At a typical Tier-1 start (crudeTank+distillationUnit, 0 officers): net
+-0.006/tick (~50->0 in ~2.3 in-game years if never addressed). 1 effective
+safetyOfficer offsets ~2.3 dirty buildings. Expanding refining capacity
+without proportionally investing in safety staff pulls ESG down — exactly
+the "cheap/fast expansion vs clean/safe operations" tradeoff from the
+backlog.
+
+### What the score affects
+
+1. **Incident-event frequency**: 4 existing events (minorLeak, equipmentWear,
+   storageContamination, distillationHiccup — all "something went wrong,
+   lose resources") are flagged `isIncident: true`. getRandomEvent now rolls
+   an incident-vs-other split each time, with incident chance =
+   `getIncidentChance(esgScore)`: ~25% at esg=50 (matches the old uniform
+   share), floor 5% at esg=100, ceiling 45% at esg=0. Verified statistically
+   (4000 samples): ~44% @ esg=0, ~5% @ esg=100.
+2. **Premium contract bonus**: esgScore >= 70 adds a +10%
+   `contractRewardMultiplier` ("ESG-conscious buyers pay premium"), folded
+   into the existing multiplier (visible in BuildingEffectsPanel).
+
+Note: this is FREQUENCY (which events fire), separate from safetyOfficer's
+EXISTING severity effect (eventPenaltyMultiplier, `0.85^count`) — no double-
+dipping, clean separation of concerns.
+
+### UI
+New "ESG Score" resource card (ResourcePanel): shows `XX/100 · Tier` (Poor
+<35, Fair <60, Good <85, Excellent >=85) plus a description of what
+raises/lowers it. New DevTools "Toggle ESG (0/100)" button for quick testing
+of both regimes.
+
+### Migration
+Missing `esgScore` defaults to 50 (startingScore); out-of-range values
+clamped to [0,100]; valid values round-trip.
+
+### Next
+Proceeding to BACKLOG item: Eras that shift the meta (not just bonuses), then
+TECH_DEBT cleanup (thresholdGrowthPerYear decision).
+
+---
+
 ## 2026-06-13 — Post-Phase-3 Balance Pass
 
 **Method:** Branch `feature/post-phase3-balance-pass` (off staff-assignments

@@ -1,10 +1,12 @@
 import BilingualText from './BilingualText'
 import { text, toAriaLabel } from '../translations'
+import { getEsgTier } from '../utils/gameCalculations'
 
 type ResourcePanelProps = {
   money: number
   researchPoints: number
   reputation: number
+  esgScore: number
   crudeOil: number
   maxCrudeStorage: number
   feedstock: number
@@ -21,6 +23,7 @@ function ResourcePanel({
   money,
   researchPoints,
   reputation,
+  esgScore,
   crudeOil,
   maxCrudeStorage,
   feedstock,
@@ -64,6 +67,18 @@ function ResourcePanel({
         <strong>{reputation}</strong>
         <p>
           <BilingualText text={text.resources.reputationDescription} />
+        </p>
+      </article>
+
+      <article className="resource-card">
+        <span className="resource-label">
+          <BilingualText text={text.resources.esg} />
+        </span>
+        <strong>
+          {Math.round(esgScore)}/100 · <BilingualText text={getEsgTier(esgScore)} />
+        </strong>
+        <p>
+          <BilingualText text={text.resources.esgDescription} />
         </p>
       </article>
 
