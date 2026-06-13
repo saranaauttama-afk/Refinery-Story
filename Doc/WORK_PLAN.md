@@ -60,3 +60,17 @@ Branch: `feature/staff-assignments` (off staff-veteran-trait). Scoped to the
 ### 4. StaffPanel.tsx: assignment status header + per-employee Assign/Unassign  [x]
 ### 5. gameStorage.ts: getSafeAssignments with auto-assign-up-to-capacity fallback  [x]
 ### 6. Tests + docs + push  [x]
+
+
+---
+
+# WORK PLAN — Post-Phase-3 Balance Pass
+
+Branch: `feature/post-phase3-balance-pass` (off main, post staff-assignments
+merge).
+
+## Tasks
+### 1. Concentrated training over time (incremental hiring) simulation  [x]
+### 2. Specialist assignment regression check (1:1, over-hire, payoff)  [x]
+### 3. Mid-game derived-stats snapshot sanity check  [x]
+### 4. Conclusion: no numeric constants changed. Docs updated.  [x]

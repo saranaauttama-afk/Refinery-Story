@@ -1,5 +1,43 @@
 # Playtest Notes
 
+## 2026-06-13 — Post-Phase-3 Balance Pass
+
+**Method:** Branch `feature/post-phase3-balance-pass` (off staff-assignments
+merge to main). 3-part simulation in /tmp/balancepass.ts. **Conclusion: no
+numeric constants changed — formulas verified correct, no regressions.**
+
+### 1. Concentrated training over time (incremental hiring)
+3 operators hired at 0/1/2min, simulated 20min: levels progress
+[1,1,1] -> [2,2,2] by 8min -> [3,3,3] by 16min, effectiveWorkers
+3.000 -> 3.450 -> 3.900. Sane pace — not instant, not stuck at level 1.
+
+### 2. Specialist assignment regression check
+- 1 specialist : 1 plant at level 1 -> multiplier 1.2, IDENTICAL to the old
+  flat `1 + count*rate` formula. Typical "hire 1 specialist per plant" play
+  is mathematically unchanged.
+- Over-hire (2 specialists, 1 plant) -> stays 1.2 (capped), not 1.4. Excess
+  specialist correctly contributes nothing.
+- Payoff (1 plant, Lv5+Veteran assigned) -> 1.36 vs old flat 1.2 (+16pp).
+  Confirms the intended individual-level payoff.
+
+### 3. Mid-game snapshot (refineryLevel 10, mixed roster, 3 plants)
+All multipliers computed correctly (productionMultiplier 1.100,
+productSellMultiplier 1.282, workerProductionMultiplier 1.460, jetFuelPlant
+specialist 1.330 w/ Lv4 Veteran assigned, petrochemicalPlant specialist 1.230
+w/ Lv2 assigned). An initial run showed researchProductionMultiplier/
+contractRewardMultiplier at a flat 1.000 — re-checked and this was a TEST-
+FIXTURE issue (scenario set `unlockedResearchCount` instead of
+`unlockedResearchIds`, and didn't set `reputation`). With those fields set
+correctly, both multipliers compute as expected (1.375 / 1.440). Not a
+regression from this session's changes — those systems are untouched.
+
+### Next
+Proceeding to BACKLOG strategic-differentiation items in priority order:
+ESG/Safety axis, Eras meta-shift, then TECH_DEBT cleanup
+(thresholdGrowthPerYear decision).
+
+---
+
 ## 2026-06-13 — Individual Staff, Phase 3 (Assign Specialists to Plants)
 
 **Method:** Branch `feature/staff-assignments` (off staff-veteran-trait).
