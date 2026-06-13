@@ -2,12 +2,14 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import ListRow from '../../src/components/ListRow'
-import { useGameLoop } from '../../src/hooks/useGameLoop'
+import { useGame } from '../../src/hooks/GameContext'
 import { colors, spacing } from '../../src/theme'
 import { PERKS } from '../../src/game/data/perks'
-import type { ActiveContract } from '../../src/game/types'
+import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../src/game/data/balance'
+import { text } from '../../src/game/translations'
+import type { ActiveContract, GameState } from '../../src/game/types'
 
-function contractProgress(contract: ActiveContract, game: NonNullable<ReturnType<typeof useGameLoop>['game']>) {
+function contractProgress(contract: ActiveContract, game: GameState) {
   if ((contract.petrochemicalsRequired ?? 0) > 0) {
     return { have: game.productInventory.petrochemicals, need: contract.petrochemicalsRequired ?? 0, unit: 'petrochem' }
   }
@@ -33,7 +35,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function BusinessScreen() {
-  const { game, loaded, derived, unlockResearch, installPerk, completeContract } = useGameLoop()
+  const { game, loaded, derived, unlockResearch, installPerk, completeContract, buyShipment, fulfillStandingOrder } =
+    useGame()
 
   if (!loaded || !game || !derived) {
     return (
@@ -115,6 +118,52 @@ export default function BusinessScreen() {
             )
           })}
         </Section>
+
+        <Section title="Crude shipments">
+          {game.pendingShipments.map((shipment) => {
+            const secondsLeft = Math.max(0, Math.ceil((shipment.arrivesAt - Date.now()) / 1000))
+            return (
+              <Text key={shipment.id} style={styles.pending}>
+                📦 {shipment.amount} crude arriving in {secondsLeft}s
+              </Text>
+            )
+          })}
+          {SHIPMENT_BALANCE.map((option) => (
+            <ListRow
+              key={option.key}
+              title={`${text.shipments.names[option.key].en} · +${option.amount} crude`}
+              subtitle={`$${option.cost.toLocaleString()} · arrives in ${option.delayMs / 1000}s`}
+              actionLabel="Order"
+              disabled={game.money < option.cost}
+              onPress={() => buyShipment(option)}
+            />
+          ))}
+        </Section>
+
+        <Section title="Standing orders">
+          {STANDING_ORDER_BALANCE.filter((order) => game.refineryLevel >= order.unlockLevel).map((order) => {
+            const cooldownAt = game.standingOrderCooldowns[order.key]
+            const onCooldown = cooldownAt !== undefined && cooldownAt > game.tickCount
+            const ticksLeft = onCooldown ? cooldownAt! - game.tickCount : 0
+            const have = game.productInventory[order.productKey]
+            const ready = have >= order.required && !onCooldown
+            const orderText = text.standingOrders.orders[order.key]
+            return (
+              <ListRow
+                key={order.key}
+                title={orderText.name.en}
+                subtitle={
+                  onCooldown
+                    ? `On cooldown · ${Math.ceil((ticksLeft * 200) / 1000)}s left`
+                    : `${have}/${order.required} ${order.productKey} · +$${order.reward.toLocaleString()}, +${order.rpReward} RP, +${order.reputationReward} rep`
+                }
+                actionLabel="Fulfill"
+                disabled={!ready}
+                onPress={() => fulfillStandingOrder(order.key)}
+              />
+            )
+          })}
+        </Section>
       </ScrollView>
     </SafeAreaView>
   )
@@ -157,6 +206,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  pending: {
+    fontSize: 12,
+    color: colors.blue,
+    fontWeight: '700',
     marginBottom: spacing.xs,
   },
 })

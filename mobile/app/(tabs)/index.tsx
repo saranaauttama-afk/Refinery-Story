@@ -13,7 +13,7 @@ import BuildingGrid from '../../src/components/BuildingGrid'
 import ListRow from '../../src/components/ListRow'
 import ResourceBar from '../../src/components/ResourceBar'
 import Sheet from '../../src/components/Sheet'
-import { useGameLoop } from '../../src/hooks/useGameLoop'
+import { useGame } from '../../src/hooks/GameContext'
 import { colors, radii, spacing } from '../../src/theme'
 import { BUILDINGS } from '../../src/game/data/buildings'
 import { BUILDING_UPGRADE_BALANCE } from '../../src/game/data/balance'
@@ -39,7 +39,7 @@ export default function RefineryScreen() {
     placeBuilding,
     upgradeBuilding,
     upgradeRefinery,
-  } = useGameLoop()
+  } = useGame()
   const { width } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [upgradeCell, setUpgradeCell] = useState<number | null>(null)

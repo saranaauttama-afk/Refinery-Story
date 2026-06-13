@@ -12,9 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import ListRow from '../../src/components/ListRow'
-import { useGameLoop } from '../../src/hooks/useGameLoop'
+import { useGame } from '../../src/hooks/GameContext'
 import { colors, radii, spacing } from '../../src/theme'
-import { EXPANSION_BALANCE, type PaidExpansionEntry } from '../../src/game/data/balance'
+import { ASPHALT_BALANCE, EXPANSION_BALANCE, type PaidExpansionEntry } from '../../src/game/data/balance'
 import { getEsgTier, getSeasonLabel } from '../../src/game/utils/gameCalculations'
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -27,7 +27,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export default function StatsScreen() {
-  const { game, loaded, derived, expandGrid, renameRefinery, resetGame } = useGameLoop()
+  const { game, loaded, derived, expandGrid, renameRefinery, resetGame, produceAsphalt, manualSave } = useGame()
   const [name, setName] = useState('')
 
   if (!loaded || !game || !derived) {
@@ -87,6 +87,38 @@ export default function StatsScreen() {
           )}
         </View>
 
+        {game.refineryLevel >= ASPHALT_BALANCE.unlockLevel && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Asphalt</Text>
+            <Stat label="Inventory" value={`${game.productInventory.asphalt}/${ASPHALT_BALANCE.maxStorage}`} />
+            <View style={styles.renameRow}>
+              <Pressable
+                style={[styles.renameButton, { flex: 1 }]}
+                onPress={() => produceAsphalt(ASPHALT_BALANCE.batchSize)}
+              >
+                <Text style={styles.renameButtonLabel}>Produce {ASPHALT_BALANCE.batchSize}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.renameButton, { flex: 1 }]}
+                onPress={() => produceAsphalt(ASPHALT_BALANCE.largeBatchSize)}
+              >
+                <Text style={styles.renameButtonLabel}>Produce {ASPHALT_BALANCE.largeBatchSize}</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.tagline}>Uses 1 crude per 1 asphalt. Sold via contracts / standing orders.</Text>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Activity log</Text>
+          {game.activityLog.length === 0 && <Text style={styles.tagline}>Nothing yet.</Text>}
+          {game.activityLog.slice(0, 8).map((entry, i) => (
+            <Text key={i} style={styles.logEntry}>
+              {entry}
+            </Text>
+          ))}
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Refinery name</Text>
           <View style={styles.renameRow}>
@@ -113,6 +145,9 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Save data</Text>
           <Text style={styles.tagline}>Autosaves every 5 seconds.</Text>
+          <Pressable style={[styles.renameButton, styles.standaloneButton]} onPress={() => manualSave()}>
+            <Text style={styles.renameButtonLabel}>Save now</Text>
+          </Pressable>
           <Pressable
             style={styles.resetButton}
             onPress={() =>
@@ -213,6 +248,18 @@ const styles = StyleSheet.create({
   renameButtonLabel: {
     fontWeight: '700',
     color: colors.ink,
+  },
+  standaloneButton: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    alignItems: 'center',
+  },
+  logEntry: {
+    fontSize: 11,
+    color: colors.inkMuted,
+    paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cream,
   },
   resetButton: {
     backgroundColor: colors.red,

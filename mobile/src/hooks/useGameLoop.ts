@@ -1,19 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { BuildingType, Contract, GameState, PerkConfig, ResearchItem, WorkerConfig } from '../game/types'
+import type {
+  AwardRecord,
+  BuildingType,
+  ChoiceEvent,
+  Contract,
+  EraConfig,
+  GameState,
+  PerkConfig,
+  ResearchItem,
+  StandingOrderKey,
+  WorkerConfig,
+  WorkerType,
+} from '../game/types'
 import {
+  applyChoiceEventOption,
   applyMilestones,
+  applyRandomEvent,
+  applyShipmentArrivals,
+  applyStaffXp,
   applyWinGoal,
   calculateDerivedStats,
+  closeBusinessYear,
   CRUDE_COST,
   TICK_MS,
+  RANDOM_EVENT_INTERVAL_MS,
   addLog,
   createInitialGameState,
   createNewEmployee,
+  getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
   getProductSellPrice,
+  getRandomEvent,
   getSpecialistMultiplier,
+  getTrainingCost,
   getUpgradeCost,
+  orderShipment as orderShipmentFn,
 } from '../game/utils/gameCalculations'
 import {
   clearStoredGameState,
@@ -21,25 +43,29 @@ import {
   saveStoredGameState,
 } from '../game/utils/gameStorage'
 import {
+  ASPHALT_BALANCE,
+  AWARDS_BALANCE,
   DEMAND_SHIFT_BALANCE,
   ESG_BALANCE,
   EXPANSION_BALANCE,
   FEEDSTOCK_BALANCE,
   BUILDING_UPGRADE_BALANCE,
   PLANT_PRODUCTION,
+  STAFF_LEVEL_BALANCE,
+  STANDING_ORDER_BALANCE,
   type PaidExpansionEntry,
+  type ShipmentOption,
 } from '../game/data/balance'
 import { BUILDINGS } from '../game/data/buildings'
+import { getRandomChoiceEvent } from '../game/data/choiceEvents'
 
 const SAVE_INTERVAL_MS = 5000
 
 // Full production tick: feedstock (crude -> feedstock), downstream plants
 // (feedstock -> lubricants/jetFuel/petrochemicals), gasoline (crude ->
 // gasoline, incl. Efficiency-perk yield carry), ESG drift, Energy Transition
-// demand shift. NOT ported: random/choice events, contracts auto-progress,
-// shipments, asphalt production, rivals/awards year-end rollover -- those
-// are manual actions or a later pass.
-function tick(current: GameState): GameState {
+// demand shift.
+export function tick(current: GameState): GameState {
   const stats = calculateDerivedStats(current)
   const nextTick = current.tickCount + 1
 
@@ -155,6 +181,9 @@ export function useGameLoop() {
   const [game, setGame] = useState<GameState | null>(null)
   const gameRef = useRef<GameState | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
+  const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
+  const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
 
   useEffect(() => {
     loadStoredGameState().then(({ game: loadedGame }) => {
@@ -164,16 +193,74 @@ export function useGameLoop() {
     })
   }, [])
 
+  // Main production tick (200ms): production + ESG/demand drift + staff XP +
+  // era-advance detection + year-end award close.
   useEffect(() => {
     if (!loaded) return
     const interval = setInterval(() => {
       setGame((current) => {
         if (!current) return current
-        const next = tick(current)
+        let next = tick(current)
+
+        const { employees, levelUpLog } = applyStaffXp(next)
+        next = { ...next, employees }
+        if (levelUpLog) {
+          next = { ...next, activityLog: addLog(next.activityLog, levelUpLog) }
+        }
+
+        const era = calculateDerivedStats(next).currentEra
+        if (era.index > next.highestEraIndex) {
+          next = { ...next, highestEraIndex: era.index }
+          setPendingEraBanner(era)
+        }
+
+        if (next.tickCount - next.yearStartTick >= AWARDS_BALANCE.yearLengthTicks) {
+          const { game: afterAward, record } = closeBusinessYear(next)
+          next = afterAward
+          setPendingAward(record)
+        }
+
         gameRef.current = next
         return next
       })
     }, TICK_MS)
+    return () => clearInterval(interval)
+  }, [loaded])
+
+  // Random events (e.g. equipment wear, ESG incidents).
+  useEffect(() => {
+    if (!loaded) return
+    const interval = setInterval(() => {
+      setGame((current) => {
+        if (!current) return current
+        const next = applyRandomEvent(current, getRandomEvent(current))
+        gameRef.current = next
+        return next
+      })
+    }, RANDOM_EVENT_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [loaded])
+
+  // Choice events: every 60s, only if none currently pending.
+  useEffect(() => {
+    if (!loaded) return
+    const interval = setInterval(() => {
+      setPendingChoiceEvent((current) => current ?? getRandomChoiceEvent())
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [loaded])
+
+  // Crude shipment arrivals (real-time delay, checked every second).
+  useEffect(() => {
+    if (!loaded) return
+    const interval = setInterval(() => {
+      setGame((current) => {
+        if (!current || current.pendingShipments.length === 0) return current
+        const next = applyShipmentArrivals(current, Date.now())
+        gameRef.current = next
+        return next
+      })
+    }, 1000)
     return () => clearInterval(interval)
   }, [loaded])
 
@@ -185,8 +272,6 @@ export function useGameLoop() {
     return () => clearInterval(interval)
   }, [loaded])
 
-  // Generic updater: fn returns the next state, or `current` unchanged if
-  // the action isn't valid (insufficient funds, etc.)
   const update = useCallback((fn: (current: GameState) => GameState) => {
     setGame((current) => {
       if (!current) return current
@@ -229,7 +314,6 @@ export function useGameLoop() {
     [update],
   )
 
-  // Sell from productInventory (lubricants / jetFuel / petrochemicals).
   const sellProduct = useCallback(
     (key: 'lubricants' | 'jetFuel' | 'petrochemicals', amount: number) =>
       update((current) => {
@@ -383,8 +467,141 @@ export function useGameLoop() {
     [update],
   )
 
-  const completeContract = useCallback(
-    (contract: Contract) =>
+  const trainEmployee = useCallback(
+    (employeeId: string) =>
+      update((current) => {
+        const target = current.employees.find((e) => e.id === employeeId)
+        if (!target || target.level >= STAFF_LEVEL_BALANCE.maxLevel) return current
+        const cost = getTrainingCost(target.level)
+        if (current.money < cost.money || current.researchPoints < cost.rp) return current
+        return {
+          ...current,
+          money: current.money - cost.money,
+          researchPoints: current.researchPoints - cost.rp,
+          employees: current.employees.map((e) =>
+            e.id === target.id ? { ...e, level: target.level + 1, xp: 0 } : e,
+          ),
+        }
+      }),
+    [update],
+  )
+
+  const toggleAssignment = useCallback(
+    (employeeId: string, type: WorkerType) =>
+      update((current) => {
+        const employee = current.employees.find((e) => e.id === employeeId && e.type === type)
+        if (!employee) return current
+        const capacity = getAssignmentCapacity(calculateDerivedStats(current).buildingCounts, type)
+        const list = current.assignments[type] ?? []
+        const isAssigned = list.includes(employeeId)
+        let nextList: string[]
+        if (isAssigned) {
+          nextList = list.filter((id) => id !== employeeId)
+        } else {
+          if (list.length >= capacity) return current
+          nextList = [...list, employeeId]
+        }
+        return { ...current, assignments: { ...current.assignments, [type]: nextList } }
+      }),
+    [update],
+  )
+
+  const produceAsphalt = useCallback(
+    (amount: number) =>
+      update((current) => {
+        if (current.refineryLevel < ASPHALT_BALANCE.unlockLevel) return current
+        const space = ASPHALT_BALANCE.maxStorage - current.productInventory.asphalt
+        const actual = Math.min(amount, current.crudeOil, space)
+        if (actual <= 0) return current
+        return {
+          ...current,
+          crudeOil: current.crudeOil - actual,
+          productInventory: { ...current.productInventory, asphalt: current.productInventory.asphalt + actual },
+        }
+      }),
+    [update],
+  )
+
+  const fulfillStandingOrder = useCallback(
+    (key: StandingOrderKey) =>
+      update((current) => {
+        const order = STANDING_ORDER_BALANCE.find((o) => o.key === key)
+        if (!order) return current
+        if (current.refineryLevel < order.unlockLevel) return current
+        const cooldownAt = current.standingOrderCooldowns[key]
+        if (cooldownAt !== undefined && cooldownAt > current.tickCount) return current
+        const inventory = current.productInventory[order.productKey]
+        if (inventory < order.required) return current
+        return applyMilestones({
+          ...current,
+          money: current.money + order.reward,
+          researchPoints: current.researchPoints + order.rpReward,
+          reputation: current.reputation + order.reputationReward,
+          yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + order.reward },
+          productInventory: { ...current.productInventory, [order.productKey]: inventory - order.required },
+          standingOrderCooldowns: {
+            ...current.standingOrderCooldowns,
+            [key]: current.tickCount + order.cooldownTicks,
+          },
+        })
+      }),
+    [update],
+  )
+
+  const buyShipment = useCallback(
+    (option: ShipmentOption) => update((current) => orderShipmentFn(current, option, Date.now())),
+    [update],
+  )
+
+  const chooseEventOption = useCallback(
+    (option: 'A' | 'B') => {
+      if (!pendingChoiceEvent) return
+      update((current) => applyWinGoal(applyChoiceEventOption(current, pendingChoiceEvent, option)))
+      setPendingChoiceEvent(null)
+    },
+    [update, pendingChoiceEvent],
+  )
+
+  const renameRefinery = useCallback(
+    (name: string) => update((current) => ({ ...current, refineryName: name })),
+    [update],
+  )
+
+  const manualSave = useCallback(() => {
+    if (gameRef.current) saveStoredGameState(gameRef.current)
+  }, [])
+
+  const resetGame = useCallback(() => {
+    clearStoredGameState()
+    const fresh = createInitialGameState()
+    gameRef.current = fresh
+    setGame(fresh)
+  }, [])
+
+  return {
+    game,
+    loaded,
+    derived: game ? calculateDerivedStats(game) : null,
+    pendingChoiceEvent,
+    pendingAward,
+    pendingEraBanner,
+    buyCrude,
+    sellGasoline,
+    sellProduct,
+    placeBuilding,
+    upgradeBuilding,
+    upgradeRefinery,
+    expandGrid,
+    unlockResearch,
+    installPerk,
+    hireWorker,
+    trainEmployee,
+    toggleAssignment,
+    produceAsphalt,
+    fulfillStandingOrder,
+    buyShipment,
+    chooseEventOption,
+    completeContract: (contract: Contract) =>
       update((current) => {
         if (current.refineryLevel < contract.unlockLevel) return current
         if (current.completedContractIds.includes(contract.id)) return current
@@ -430,37 +647,10 @@ export function useGameLoop() {
           },
         }))
       }),
-    [update],
-  )
-
-  const renameRefinery = useCallback(
-    (name: string) => update((current) => ({ ...current, refineryName: name })),
-    [update],
-  )
-
-  const resetGame = useCallback(() => {
-    clearStoredGameState()
-    const fresh = createInitialGameState()
-    gameRef.current = fresh
-    setGame(fresh)
-  }, [])
-
-  return {
-    game,
-    loaded,
-    derived: game ? calculateDerivedStats(game) : null,
-    buyCrude,
-    sellGasoline,
-    sellProduct,
-    placeBuilding,
-    upgradeBuilding,
-    upgradeRefinery,
-    expandGrid,
-    unlockResearch,
-    installPerk,
-    hireWorker,
-    completeContract,
     renameRefinery,
+    manualSave,
     resetGame,
+    dismissAward: () => setPendingAward(null),
+    dismissEraBanner: () => setPendingEraBanner(null),
   }
 }
