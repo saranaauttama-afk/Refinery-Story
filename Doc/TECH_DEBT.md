@@ -12,6 +12,9 @@ None currently blocking. See Active Concerns below for post-v0.7 observations.
 - Bulk buying / selling — Buy 10 / Buy 50 / Fill Tank added
 - Storage scaling — per-cell and per-level building bonuses added
 - Secondary products have no repeatable demand — resolved by Standing Orders Phase 1 (asphaltMaintenance, jetFuelCharter)
+- Product Panel Code Duplication — JetFuelPanel/LubricantsPanel/PetrochemicalsPanel
+  consolidated into one config-driven `ProductPanel.tsx` + `data/products.ts`
+  during the Staff Cleanup & Economy pass.
 
 ---
 
@@ -27,9 +30,29 @@ Fix when: a 9th resource card is added, or Mobile UI pass is promoted.
 
 ### Product Panel Code Duplication
 
-LubricantsPanel, JetFuelPanel, and PetrochemicalsPanel share near-identical structure (locked state, inventory display, sell 1/10/all buttons, no-plants hint, price footer). The pattern is copy-paste with product-specific props and CSS class names. This is intentional for now — explicit code over abstraction — but will become maintenance burden if a 5th product panel is added.
+RESOLVED — see Resolved section above. (This entry described the
+pre-consolidation state and is now stale.)
 
-Fix when: a 4th secondary product panel is added, or when the panel pattern changes significantly enough to warrant shared extraction.
+---
+
+### AWARDS_BALANCE.thresholdGrowthPerYear is dead config
+
+`thresholdGrowthPerYear: 0.4` and its comment describe a "rising bar" (grade
+thresholds rise each year so late-game isn't an automatic S) — but
+`getAwardGrade(score)` only ever checks the static `gradeThresholds`, never
+adjusted by year. Found while building the Annual Ranking (rival refineries)
+— rivals were deliberately calibrated against the STATIC thresholds (what the
+player actually faces) rather than this unused growth curve, so the ranking
+stays fair as-is.
+
+Decide: either wire `thresholdGrowthPerYear` into `getAwardGrade` (a real
+balance change — late game would get harder to hold S/A, would need a
+re-verify of the Economy Pass scenarios), or remove the dead config/comment
+if static thresholds are the intended design. Not fixed here — changes grade
+difficulty for everyone, needs a deliberate decision.
+
+Fix when: next balance pass, alongside the rival-refinery numbers if the
+thresholds change (rivals.ts would need re-calibrating too).
 
 ---
 

@@ -22,12 +22,14 @@ import { RANDOM_EVENTS } from '../data/events'
 import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
+import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
 import { WORKERS } from '../data/workers'
 import { serializeBilingualText, text } from '../translations'
 import type {
   ActiveWorkerItem,
   AwardGrade,
   AwardRecord,
+  RivalResult,
   BuildingCounts,
   BilingualTextValue,
   ChoiceEvent,
@@ -1014,6 +1016,30 @@ export function getAwardGrade(score: number): AwardGrade {
   return 'C'
 }
 
+// Generates this year's results for the 3 rival refineries (Annual Ranking).
+// Each rival's baseline grows with its own personality (see rivals.ts), then
+// a random swing is applied. Computed once at year-close and stored on the
+// AwardRecord so the ranking shown in the ceremony doesn't change on reload.
+export function getRivalResults(year: number): RivalResult[] {
+  return RIVAL_REFINERIES.map((rival) => {
+    const baseline = getRivalBaselineScore(rival, year)
+    const swing = 1 + (Math.random() * 2 - 1) * rival.varianceFactor
+    const score = Math.max(0, Math.round(baseline * swing))
+    return {
+      key: rival.key,
+      name: rival.name,
+      score,
+      grade: getAwardGrade(score),
+    }
+  })
+}
+
+// Player's 1-indexed rank among the player + rivals (1 = best). Ties favor
+// the player (a rival needs to strictly beat the player's score).
+export function getPlayerRank(playerScore: number, rivals: RivalResult[]): number {
+  return 1 + rivals.filter((rival) => rival.score > playerScore).length
+}
+
 // Evaluates the just-finished business year, grants rewards, records the result,
 // and resets the per-year counters for the next year. Returns the updated game
 // plus the AwardRecord so the UI can show a ceremony modal.
@@ -1039,6 +1065,9 @@ export function closeBusinessYear(game: GameState): {
     reputationReward -
     (couldNotAfford ? WAGE_BALANCE.unpaidReputationPenalty : 0)
 
+  const rivals = getRivalResults(game.businessYear)
+  const playerRank = getPlayerRank(score, rivals)
+
   const record: AwardRecord = {
     year: game.businessYear,
     grade,
@@ -1047,6 +1076,8 @@ export function closeBusinessYear(game: GameState): {
     payroll,
     netProfit,
     couldNotAfford,
+    rivals,
+    playerRank,
     gasolineProduced: stats.gasolineProduced,
     moneyEarned: stats.moneyEarned,
     contractsCompleted: stats.contractsCompleted,

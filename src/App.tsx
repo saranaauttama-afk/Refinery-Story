@@ -1307,6 +1307,7 @@ function App() {
       {pendingAward && (
         <AwardCeremonyModal
           record={pendingAward}
+          playerName={game.refineryName}
           onClose={() => setPendingAward(null)}
         />
       )}

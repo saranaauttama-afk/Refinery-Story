@@ -1,5 +1,40 @@
 # Playtest Notes
 
+## 2026-06-13 — Rival Refineries / Annual Ranking
+
+**Method:** Background task while user stepped away. Branch
+`feature/rival-refineries`. 22 new unit assertions, 79 prior pass (101 total).
+
+### What shipped
+
+Annual Awards ceremony now shows an "Industry Ranking" with 3 fictional
+rivals (Coastal Refining Co. — steady B; Apex Petrochem — volatile, usually A
+and occasionally S; Highland Energy Group — slow climber, B/C range) plus the
+player, sorted by score, with "Ranked #X of 4". Computed once at year-close
+and stored on the AwardRecord so it's stable on reload. Old award records
+default to an empty rivals list (ranking section hidden).
+
+### Design note: calibrated against STATIC thresholds
+
+Rivals are calibrated against `AWARDS_BALANCE.gradeThresholds` (S=1400,
+A=850, B=400, C=0) — the same numbers `getAwardGrade` actually checks. Found
+along the way: `AWARDS_BALANCE.thresholdGrowthPerYear` (a "rising bar" so late
+game isn't an automatic S) is DEAD CONFIG — `getAwardGrade` never applies it.
+Flagged in TECH_DEBT.md as a deliberate balance decision for a future pass
+(if thresholds start rising, rivals.ts needs re-calibrating too).
+
+### Eyeballed score curve (years 1/5/10/15)
+- Coastal: 680 -> 721 -> 772 -> 782 (always B, ±10% variance)
+- Apex: 935 -> 1047 -> 1187 -> 1216 (usually A, ±30% can reach S or drop to B)
+- Highland: 425 -> 510 -> 616 -> 638 (B/C boundary, ±15%)
+
+### Carried forward
+- Next from BACKLOG: hidden/discoverable combos (#4), then scoped-down star
+  employees (#2).
+- TECH_DEBT: thresholdGrowthPerYear decision (wire it in vs remove).
+
+---
+
 ## 2026-06-13 — Charm Pass (4 items)
 
 **Method:** Four small, independently-verified additions, no architecture

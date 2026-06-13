@@ -403,6 +403,10 @@ export const text = {
       bilingual(`Grade ${grade}`, `เกรด ${grade}`),
     ceremonyReward: (cash: number) =>
       bilingual(`Prize: $${cash.toLocaleString()}`, `รางวัล: $${cash.toLocaleString()}`),
+    rankingTitle: bilingual('Industry Ranking', 'อันดับอุตสาหกรรม'),
+    rankingYou: bilingual('Your Refinery', 'โรงกลั่นของคุณ'),
+    rankingPosition: (rank: number, total: number) =>
+      bilingual(`Ranked #${rank} of ${total}`, `อันดับที่ ${rank} จาก ${total}`),
     ceremonyClose: bilingual('Continue', 'ดำเนินการต่อ'),
   },
   milestones: {

@@ -218,6 +218,14 @@ export type EraConfig = {
 // --- System 4: Annual Awards ---
 export type AwardGrade = 'S' | 'A' | 'B' | 'C'
 
+// One rival refinery's result for a business year (Annual Ranking).
+export type RivalResult = {
+  key: string
+  name: BilingualTextValue
+  score: number
+  grade: AwardGrade
+}
+
 export type YearStats = {
   gasolineProduced: number
   moneyEarned: number
@@ -235,6 +243,11 @@ export type AwardRecord = {
   // reputation penalty was applied). Surfaced in the ceremony so the player
   // understands why reputation dropped — previously computed but discarded.
   couldNotAfford: boolean
+  // Annual Ranking (Charm Pass follow-up): 3 fictional rivals + the player's
+  // rank among all 4. Empty array for records saved before this feature —
+  // the ceremony hides the ranking section in that case.
+  rivals: RivalResult[]
+  playerRank: number
   gasolineProduced: number
   moneyEarned: number
   contractsCompleted: number

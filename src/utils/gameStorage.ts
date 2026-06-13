@@ -209,6 +209,8 @@ function getSafeAwardHistory(value: unknown): AwardRecord[] {
       netProfit:
         typeof item.netProfit === 'number' ? item.netProfit : item.moneyEarned ?? 0,
       couldNotAfford: typeof item.couldNotAfford === 'boolean' ? item.couldNotAfford : false,
+      rivals: Array.isArray(item.rivals) ? item.rivals : [],
+      playerRank: typeof item.playerRank === 'number' ? item.playerRank : 1,
     }))
     .slice(0, 12)
 }
