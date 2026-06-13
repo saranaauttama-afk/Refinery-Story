@@ -360,6 +360,8 @@ export const text = {
   },
   staffTraining: {
     levelLabel: (n: number) => bilingual(`Lv ${n}`, `ระดับ ${n}`),
+    trainingLabel: (name: string, level: number) =>
+      bilingual(`Training: ${name} (Lv ${level})`, `กำลังฝึก: ${name} (ระดับ ${level})`),
     maxLevel: bilingual('MAX', 'สูงสุด'),
     xpProgress: (current: number, total: number) =>
       bilingual(`${current} / ${total} XP`, `${current} / ${total} XP`),
@@ -446,10 +448,10 @@ export const text = {
         `×${count} hired · $${cost.toLocaleString()} each`,
         `จ้างแล้ว ×${count} · ค่าจ้าง $${cost.toLocaleString()}/คน`,
       ),
-    roster: (names: string[], extra: number) =>
+    roster: (entries: { name: string; level: number }[], extra: number) =>
       bilingual(
-        `Team: ${names.join(', ')}${extra > 0 ? ` +${extra} more` : ''}`,
-        `ทีม: ${names.join(', ')}${extra > 0 ? ` และอีก ${extra} คน` : ''}`,
+        `Team: ${entries.map((e) => `${e.name} Lv${e.level}`).join(', ')}${extra > 0 ? ` +${extra} more` : ''}`,
+        `ทีม: ${entries.map((e) => `${e.name} ระดับ${e.level}`).join(', ')}${extra > 0 ? ` และอีก ${extra} คน` : ''}`,
       ),
     hireButton: bilingual('Hire', 'จ้าง'),
     cantAfford: bilingual("Can't Afford", 'ไม่มีเงินพอ'),
@@ -1803,15 +1805,15 @@ export const text = {
       'Milestone completed: Product Mogul. Reward: $10,000, +75 reputation.',
       'ทำหมุดหมายสำเร็จ: Product Mogul รับรางวัล $10,000 และชื่อเสียง +75',
     ),
-    staffLevelUp: (name: BilingualTextValue, level: number) =>
+    staffLevelUp: (employeeName: string, typeName: BilingualTextValue, level: number) =>
       bilingual(
-        `${name.en} crew reached Level ${level}!`,
-        `ทีม ${name.th} เลื่อนเป็นระดับ ${level} แล้ว!`,
+        `${employeeName} (${typeName.en}) reached Level ${level}!`,
+        `${employeeName} (${typeName.th}) เลื่อนเป็นระดับ ${level} แล้ว!`,
       ),
-    staffTrained: (name: BilingualTextValue, level: number) =>
+    staffTrained: (employeeName: string, typeName: BilingualTextValue, level: number) =>
       bilingual(
-        `${name.en} crew trained to Level ${level}.`,
-        `ฝึก ${name.th} ขึ้นเป็นระดับ ${level}`,
+        `${employeeName} (${typeName.en}) trained to Level ${level}.`,
+        `ฝึก ${employeeName} (${typeName.th}) ขึ้นเป็นระดับ ${level}`,
       ),
     perkUnlocked: (name: BilingualTextValue) =>
       bilingual(

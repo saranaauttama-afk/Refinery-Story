@@ -1,24 +1,16 @@
 import type {
   AwardRecord,
   BilingualTextValue,
+  Employee,
   GameState,
   PendingShipment,
   PerkKey,
   StandingOrderKey,
   WorkerCounts,
-  WorkerLevels,
-  WorkerType,
-  WorkerXp,
   YearStats,
 } from '../types'
 import { text } from '../translations'
-import {
-  createInitialGameState,
-  DEFAULT_REFINERY_NAME,
-  getEmptyWorkerNames,
-  getEmptyWorkerXp,
-  getInitialWorkerLevels,
-} from './gameCalculations'
+import { createInitialGameState, DEFAULT_REFINERY_NAME } from './gameCalculations'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
 
@@ -127,46 +119,68 @@ const WORKER_TYPE_KEYS = [
   'chemicalEngineer',
 ] as const
 
-function getSafeWorkerLevels(value: unknown): WorkerLevels {
-  const result = getInitialWorkerLevels()
-  if (!isRecord(value)) return result
+// Individual Staff (Phase 1): each WorkerType's employees are represented as
+// a list of {id, type, name, level, xp}. Two cases:
+//  - New-shape save: value.employees is already an array — sanitize each
+//    entry, slice/pad to match workerCounts[type] (the count invariant).
+//  - Old-shape save (or no employees field): synthesize one Employee per
+//    existing worker, ALL getting the OLD SHARED LEVEL (so
+//    getEffectiveWorkerSum is numerically identical right after migration),
+//    xp reset to 0, names from the old per-type roster (Charm Pass) or the
+//    name pool.
+function getSafeEmployees(value: unknown, workerCounts: WorkerCounts): Employee[] {
+  const rawEmployees = isRecord(value) ? value.employees : undefined
+
+  if (Array.isArray(rawEmployees)) {
+    const result: Employee[] = []
+    for (const key of WORKER_TYPE_KEYS) {
+      const ofType = rawEmployees
+        .filter(
+          (item): item is Record<string, unknown> =>
+            isRecord(item) && item.type === key,
+        )
+        .map((item, i): Employee => ({
+          id: getSafeString(item.id, `${key}-${i}`),
+          type: key,
+          name: getSafeString(item.name, getStaffName(i)),
+          level: clampLevel(getSafeNumber(item.level, 1)),
+          xp: Math.max(0, getSafeNumber(item.xp, 0)),
+        }))
+        .slice(0, workerCounts[key])
+      while (ofType.length < workerCounts[key]) {
+        const i = ofType.length
+        ofType.push({ id: `${key}-${i}`, type: key, name: getStaffName(i), level: 1, xp: 0 })
+      }
+      result.push(...ofType)
+    }
+    return result
+  }
+
+  // Old shape: workerLevels (shared level per type) + workerXp (discarded) +
+  // workerNames (Charm Pass per-type roster).
+  const oldLevels = isRecord(value) ? value.workerLevels : undefined
+  const oldNames = isRecord(value) ? value.workerNames : undefined
+  const result: Employee[] = []
   for (const key of WORKER_TYPE_KEYS) {
-    const lvl = value[key]
-    if (typeof lvl === 'number' && Number.isFinite(lvl) && lvl >= 1 && lvl <= 5) {
-      result[key] = Math.floor(lvl)
+    const sharedLevel = clampLevel(
+      isRecord(oldLevels) ? getSafeNumber(oldLevels[key], 1) : 1,
+    )
+    const names = isRecord(oldNames) && Array.isArray(oldNames[key]) ? oldNames[key] : []
+    for (let i = 0; i < workerCounts[key]; i++) {
+      result.push({
+        id: `${key}-${i}`,
+        type: key,
+        name: typeof names[i] === 'string' ? names[i] : getStaffName(i),
+        level: sharedLevel,
+        xp: 0,
+      })
     }
   }
   return result
 }
 
-function getSafeWorkerXp(value: unknown): WorkerXp {
-  const result = getEmptyWorkerXp()
-  if (!isRecord(value)) return result
-  for (const key of WORKER_TYPE_KEYS) {
-    const xp = value[key]
-    if (typeof xp === 'number' && Number.isFinite(xp) && xp >= 0) {
-      result[key] = xp
-    }
-  }
-  return result
-}
-
-// Roster flavor names, added in the Charm Pass. Backfills missing names (old
-// saves, or saves from before this feature) up to each type's current
-// headcount, so every hired worker has a name immediately on load.
-function getSafeWorkerNames(value: unknown, workerCounts: WorkerCounts): Record<WorkerType, string[]> {
-  const result = getEmptyWorkerNames()
-  for (const key of WORKER_TYPE_KEYS) {
-    const saved = isRecord(value) ? value[key] : undefined
-    const names = Array.isArray(saved)
-      ? saved.filter((n): n is string => typeof n === 'string').slice(0, workerCounts[key])
-      : []
-    while (names.length < workerCounts[key]) {
-      names.push(getStaffName(names.length))
-    }
-    result[key] = names
-  }
-  return result
+function clampLevel(level: number): number {
+  return Math.max(1, Math.min(5, Math.floor(level)))
 }
 
 // System 2: only keep recognized perk keys.
@@ -271,9 +285,7 @@ function sanitizeLoadedGameState(value: unknown) {
       fallback.unlockedResearchIds,
     ) as GameState['unlockedResearchIds'],
     workerCounts,
-    workerLevels: getSafeWorkerLevels(value.workerLevels),
-    workerXp: getSafeWorkerXp(value.workerXp),
-    workerNames: getSafeWorkerNames(value.workerNames, workerCounts),
+    employees: getSafeEmployees(value, workerCounts),
     discoveredCombos: getSafeStringArray(value.discoveredCombos, []).filter((key) =>
       HIDDEN_COMBOS.some((combo) => combo.key === key),
     ),

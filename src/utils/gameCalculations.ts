@@ -25,6 +25,7 @@ import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
+import { getStaffName } from '../data/staffNames'
 import { WORKERS } from '../data/workers'
 import { serializeBilingualText, text } from '../translations'
 import type {
@@ -39,14 +40,13 @@ import type {
   DerivedStats,
   GameState,
   GridCell,
+  Employee,
   PendingShipment,
   PerkKey,
   RandomEvent,
   ReputationTier,
   WorkerCounts,
-  WorkerLevels,
   WorkerType,
-  WorkerXp,
   YearStats,
 } from '../types'
 
@@ -129,9 +129,7 @@ export function createInitialGameState(): GameState {
       aviationSpecialist: 0,
       chemicalEngineer: 0,
     },
-    workerLevels: getInitialWorkerLevels(),
-    workerXp: getEmptyWorkerXp(),
-    workerNames: getEmptyWorkerNames(),
+    employees: [],
     discoveredCombos: [],
     upgradePoints: 0,
     unlockedPerks: [],
@@ -208,46 +206,30 @@ export function getEmptyWorkerCounts(): WorkerCounts {
   }
 }
 
-export function getInitialWorkerLevels(): WorkerLevels {
-  return {
-    operator: 1,
-    mechanic: 1,
-    salesAgent: 1,
-    safetyOfficer: 1,
-    chemist: 1,
-    logisticsCoordinator: 1,
-    fuelSpecialist: 1,
-    aviationSpecialist: 1,
-    chemicalEngineer: 1,
-  }
+// --- Individual Staff (Phase 1) helpers ---
+
+export function getEmployeesByType(employees: Employee[], type: WorkerType): Employee[] {
+  return employees.filter((employee) => employee.type === type)
 }
 
-export function getEmptyWorkerXp(): WorkerXp {
-  return {
-    operator: 0,
-    mechanic: 0,
-    salesAgent: 0,
-    safetyOfficer: 0,
-    chemist: 0,
-    logisticsCoordinator: 0,
-    fuelSpecialist: 0,
-    aviationSpecialist: 0,
-    chemicalEngineer: 0,
+// "Concentrated training" target: the lowest-level employee of a type (ties
+// broken by lowest XP, then hire order). Returns null if the type has no
+// employees, or all are at maxLevel. Used by both passive XP accrual and
+// paid training, so progress always lands on the same person.
+export function getTrainingTarget(employees: Employee[], type: WorkerType): Employee | null {
+  let best: Employee | null = null
+  for (const employee of employees) {
+    if (employee.type !== type) continue
+    if (employee.level >= STAFF_LEVEL_BALANCE.maxLevel) continue
+    if (
+      !best ||
+      employee.level < best.level ||
+      (employee.level === best.level && employee.xp < best.xp)
+    ) {
+      best = employee
+    }
   }
-}
-
-export function getEmptyWorkerNames(): Record<WorkerType, string[]> {
-  return {
-    operator: [],
-    mechanic: [],
-    salesAgent: [],
-    safetyOfficer: [],
-    chemist: [],
-    logisticsCoordinator: [],
-    fuelSpecialist: [],
-    aviationSpecialist: [],
-    chemicalEngineer: [],
-  }
+  return best
 }
 
 // Multiplier applied to a worker type's bonus based on its crew level.
@@ -255,6 +237,16 @@ export function getEmptyWorkerNames(): Record<WorkerType, string[]> {
 export function getWorkerLevelMultiplier(level: number): number {
   const safeLevel = Math.max(1, Math.min(STAFF_LEVEL_BALANCE.maxLevel, level))
   return 1 + (safeLevel - 1) * STAFF_LEVEL_BALANCE.bonusPerLevelRate
+}
+
+// Sum of getWorkerLevelMultiplier across all employees of a type — replaces
+// the old `count * multiplier(sharedLevel)`. At uniform level these are
+// identical; as individuals level up one at a time, this rises smoothly.
+export function getEffectiveWorkerSum(employees: Employee[], type: WorkerType): number {
+  return getEmployeesByType(employees, type).reduce(
+    (sum, employee) => sum + getWorkerLevelMultiplier(employee.level),
+    0,
+  )
 }
 
 // Base sell price per secondary product (gasoline has its own combo-aware price).
@@ -443,12 +435,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const hasSaferOperations =
     game.unlockedResearchIds.includes('saferOperations')
   const activeWorkers = getActiveWorkers(game.workerCounts)
-  const workerLevels = game.workerLevels ?? getInitialWorkerLevels()
-  // Effective worker contribution = headcount × crew-level multiplier.
-  // A higher crew level makes each worker of that type more effective without
-  // touching the underlying bonus formulas below.
-  const effectiveWorkers = (type: WorkerType) =>
-    (game.workerCounts[type] ?? 0) * getWorkerLevelMultiplier(workerLevels[type] ?? 1)
+  // Effective worker contribution = sum of each employee's level multiplier.
+  // At uniform level this equals the old count*multiplier(sharedLevel); now
+  // it rises smoothly as individuals level up one at a time.
+  const effectiveWorkers = (type: WorkerType) => getEffectiveWorkerSum(game.employees, type)
   const operatorCount = effectiveWorkers('operator')
   const mechanicCount = effectiveWorkers('mechanic')
   const salesAgentCount = effectiveWorkers('salesAgent')
@@ -990,41 +980,48 @@ export function applyMilestones(game: GameState) {
 }
 
 // --- System 1: Staff XP accrual & training ---
-// Called once per production tick. Each worker of a type earns XP; when XP
-// crosses the threshold the crew levels up (capped at maxLevel). Returns the
-// updated levels/xp plus an optional level-up log message.
+// Called once per production tick. "Concentrated training": each type's
+// total XP budget (count * xpPerWorkerPerTick — UNCHANGED rate, no balance
+// shift in aggregate speed) goes to that type's lowest-level employee, who
+// levels up alone when they cross the threshold. Returns the updated
+// employees array plus an optional level-up log message.
 export function applyStaffXp(game: GameState): {
-  workerLevels: WorkerLevels
-  workerXp: WorkerXp
+  employees: Employee[]
   levelUpLog: string | null
 } {
-  const levels = { ...(game.workerLevels ?? getInitialWorkerLevels()) }
-  const xp = { ...(game.workerXp ?? getEmptyWorkerXp()) }
+  let employees = game.employees
   let levelUpLog: string | null = null
 
   for (const worker of WORKERS) {
     const type = worker.key
     const count = game.workerCounts[type] ?? 0
     if (count <= 0) continue
-    const level = levels[type] ?? 1
-    if (level >= STAFF_LEVEL_BALANCE.maxLevel) continue
 
-    xp[type] = (xp[type] ?? 0) + count * STAFF_LEVEL_BALANCE.xpPerWorkerPerTick
-    const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[level] ?? Infinity
-    if (xp[type] >= threshold) {
-      levels[type] = level + 1
-      xp[type] = xp[type] - threshold
+    const target = getTrainingTarget(employees, type)
+    if (!target) continue // all employees of this type are at maxLevel
+
+    const xpGain = count * STAFF_LEVEL_BALANCE.xpPerWorkerPerTick
+    const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[target.level] ?? Infinity
+    const newXp = target.xp + xpGain
+
+    let updated: Employee
+    if (newXp >= threshold) {
+      updated = { ...target, level: target.level + 1, xp: newXp - threshold }
       // Only surface the most recent level-up in the log to avoid spam.
       levelUpLog = serializeBilingualText(
-        text.logs.staffLevelUp(worker.name, level + 1),
+        text.logs.staffLevelUp(target.name, worker.name, updated.level),
       )
+    } else {
+      updated = { ...target, xp: newXp }
     }
+
+    employees = employees.map((employee) => (employee.id === target.id ? updated : employee))
   }
 
-  return { workerLevels: levels, workerXp: xp, levelUpLog }
+  return { employees, levelUpLog }
 }
 
-// Cost to instantly train a worker type to its next level.
+// Cost to instantly train an employee to their next level.
 export function getTrainingCost(currentLevel: number): { money: number; rp: number } {
   return {
     money:
@@ -1036,17 +1033,14 @@ export function getTrainingCost(currentLevel: number): { money: number; rp: numb
 
 // --- System 4: Annual Awards ---
 
-// Total wages owed for one business year, given current headcount and crew levels.
+// Total wages owed for one business year, summed per employee (their own
+// level drives their own wage factor).
 export function getYearlyPayroll(game: GameState): number {
-  const levels = game.workerLevels ?? getInitialWorkerLevels()
   let total = 0
-  for (const worker of WORKERS) {
-    const count = game.workerCounts[worker.key] ?? 0
-    if (count <= 0) continue
-    const wage = WAGE_BALANCE.perWorker[worker.key] ?? 0
-    const level = levels[worker.key] ?? 1
-    const levelFactor = 1 + (level - 1) * WAGE_BALANCE.levelWageRate
-    total += count * wage * levelFactor
+  for (const employee of game.employees) {
+    const wage = WAGE_BALANCE.perWorker[employee.type] ?? 0
+    const levelFactor = 1 + (employee.level - 1) * WAGE_BALANCE.levelWageRate
+    total += wage * levelFactor
   }
   return Math.round(total)
 }
@@ -1455,6 +1449,16 @@ export function applyChoiceEventOption(
           ...game.workerCounts,
           operator: game.workerCounts.operator + 1,
         },
+        employees: [
+          ...game.employees,
+          {
+            id: `operator-${getEmployeesByType(game.employees, 'operator').length}`,
+            type: 'operator',
+            name: getStaffName(getEmployeesByType(game.employees, 'operator').length),
+            level: 1,
+            xp: 0,
+          },
+        ],
         activityLog: addLog(game.activityLog, logMessage),
       })
     }
@@ -1465,6 +1469,16 @@ export function applyChoiceEventOption(
         ...game.workerCounts,
         mechanic: game.workerCounts.mechanic + 1,
       },
+      employees: [
+        ...game.employees,
+        {
+          id: `mechanic-${getEmployeesByType(game.employees, 'mechanic').length}`,
+          type: 'mechanic',
+          name: getStaffName(getEmployeesByType(game.employees, 'mechanic').length),
+          level: 1,
+          xp: 0,
+        },
+      ],
       activityLog: addLog(game.activityLog, logMessage),
     })
   }

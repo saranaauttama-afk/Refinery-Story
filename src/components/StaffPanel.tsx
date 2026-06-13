@@ -1,6 +1,11 @@
-import type { ActiveWorkerItem, WorkerConfig, WorkerLevels, WorkerType, WorkerXp } from '../types'
+import type { ActiveWorkerItem, Employee, WorkerConfig } from '../types'
 import { STAFF_LEVEL_BALANCE } from '../data/balance'
-import { getTrainingCost, getWorkerLevelMultiplier } from '../utils/gameCalculations'
+import {
+  getEmployeesByType,
+  getTrainingCost,
+  getTrainingTarget,
+  getWorkerLevelMultiplier,
+} from '../utils/gameCalculations'
 import { getWorkerActiveBonus } from '../utils/workerBonusText'
 import BilingualText from './BilingualText'
 import { text } from '../translations'
@@ -10,9 +15,7 @@ type StaffPanelProps = {
   researchPoints: number
   refineryLevel: number
   activeWorkers: ActiveWorkerItem[]
-  workerLevels: WorkerLevels
-  workerXp: WorkerXp
-  workerNames: Record<WorkerType, string[]>
+  employees: Employee[]
   onHireWorker: (worker: WorkerConfig) => void
   onTrainWorker: (worker: WorkerConfig) => void
 }
@@ -26,9 +29,7 @@ function StaffPanel({
   researchPoints,
   refineryLevel,
   activeWorkers,
-  workerLevels,
-  workerXp,
-  workerNames,
+  employees,
   onHireWorker,
   onTrainWorker,
 }: StaffPanelProps) {
@@ -60,6 +61,7 @@ function StaffPanel({
           <div className="staff-list">
             {grouped.get(tier)!.map((worker) => {
               const isLocked = !!(worker.unlockLevel && refineryLevel < worker.unlockLevel)
+              const teamMembers = getEmployeesByType(employees, worker.key)
               return (
                 <article key={worker.key} className={`staff-card${isLocked ? ' locked' : ''}`}>
                   <div className="staff-copy">
@@ -74,14 +76,17 @@ function StaffPanel({
                     <p className="staff-meta">
                       <BilingualText text={text.staff.countAndCost(worker.count, worker.cost)} />
                     </p>
-                    {!isLocked && worker.count > 0 && (() => {
-                      const names = workerNames[worker.key] ?? []
-                      if (names.length === 0) return null
-                      const visible = names.slice(0, ROSTER_VISIBLE_COUNT)
-                      const extra = names.length - visible.length
+                    {!isLocked && teamMembers.length > 0 && (() => {
+                      const visible = teamMembers.slice(0, ROSTER_VISIBLE_COUNT)
+                      const extra = teamMembers.length - visible.length
                       return (
                         <p className="staff-roster">
-                          <BilingualText text={text.staff.roster(visible, extra)} />
+                          <BilingualText
+                            text={text.staff.roster(
+                              visible.map((e) => ({ name: e.name, level: e.level })),
+                              extra,
+                            )}
+                          />
                         </p>
                       )
                     })()}
@@ -97,35 +102,39 @@ function StaffPanel({
                       ) : null
                     })()}
                     {!isLocked && worker.count > 0 && (() => {
-                      const level = workerLevels[worker.key] ?? 1
-                      const xp = workerXp[worker.key] ?? 0
-                      const isMax = level >= STAFF_LEVEL_BALANCE.maxLevel
+                      const target = getTrainingTarget(employees, worker.key)
+                      const isMax = !target // null = no employees, or all at maxLevel
+                      if (isMax) {
+                        return (
+                          <div className="staff-level-block">
+                            <div className="staff-level-row">
+                              <span className="staff-level-max">
+                                <BilingualText text={text.staffTraining.maxLevel} />
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      const level = target.level
+                      const xp = target.xp
                       const threshold = STAFF_LEVEL_BALANCE.xpToNextLevel[level] ?? 0
-                      const pct = isMax
-                        ? 100
-                        : Math.min(100, Math.round((xp / Math.max(1, threshold)) * 100))
-                      const bonusPct = Math.round(
-                        (getWorkerLevelMultiplier(level) - 1) * 100,
-                      )
+                      const pct = Math.min(100, Math.round((xp / Math.max(1, threshold)) * 100))
+                      const bonusPct = Math.round((getWorkerLevelMultiplier(level) - 1) * 100)
                       const trainCost = getTrainingCost(level)
                       const canTrain =
-                        !isMax &&
-                        money >= trainCost.money &&
-                        researchPoints >= trainCost.rp
+                        money >= trainCost.money && researchPoints >= trainCost.rp
                       return (
                         <div className="staff-level-block">
                           <div className="staff-level-row">
                             <span className="staff-level-badge">
-                              <BilingualText text={text.staffTraining.levelLabel(level)} />
+                              <BilingualText
+                                text={text.staffTraining.trainingLabel(target.name, level)}
+                              />
                             </span>
                             {bonusPct > 0 && (
                               <span className="staff-level-bonus">
                                 <BilingualText text={text.staffTraining.bonusLabel(bonusPct)} />
-                              </span>
-                            )}
-                            {isMax && (
-                              <span className="staff-level-max">
-                                <BilingualText text={text.staffTraining.maxLevel} />
                               </span>
                             )}
                           </div>
@@ -135,21 +144,19 @@ function StaffPanel({
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          {!isMax && (
-                            <button
-                              type="button"
-                              className="action-button staff-train-button"
-                              onClick={() => onTrainWorker(worker)}
-                              disabled={!canTrain}
-                            >
-                              <BilingualText
-                                text={text.staffTraining.trainButton(
-                                  trainCost.money,
-                                  trainCost.rp,
-                                )}
-                              />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className="action-button staff-train-button"
+                            onClick={() => onTrainWorker(worker)}
+                            disabled={!canTrain}
+                          >
+                            <BilingualText
+                              text={text.staffTraining.trainButton(
+                                trainCost.money,
+                                trainCost.rp,
+                              )}
+                            />
+                          </button>
                         </div>
                       )
                     })()}

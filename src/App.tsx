@@ -54,6 +54,8 @@ import {
   getRefineryTitle,
   closeBusinessYear,
   getTrainingCost,
+  getTrainingTarget,
+  getEmployeesByType,
   getProductSellPrice,
   getYearlyPayroll,
   getRandomEvent,
@@ -316,16 +318,15 @@ function App() {
         let next = current
 
         // Staff XP / level-ups
-        const { workerLevels, workerXp, levelUpLog } = applyStaffXp(next)
+        const { employees, levelUpLog } = applyStaffXp(next)
         if (levelUpLog) {
           next = {
             ...next,
-            workerLevels,
-            workerXp,
+            employees,
             activityLog: addLog(next.activityLog, levelUpLog),
           }
         } else {
-          next = { ...next, workerLevels, workerXp }
+          next = { ...next, employees }
         }
 
         // Annual award check
@@ -656,13 +657,16 @@ function App() {
           ...current.workerCounts,
           [worker.key]: current.workerCounts[worker.key] + 1,
         },
-        workerNames: {
-          ...current.workerNames,
-          [worker.key]: [
-            ...current.workerNames[worker.key],
-            getStaffName(current.workerNames[worker.key].length),
-          ],
-        },
+        employees: [
+          ...current.employees,
+          {
+            id: `${worker.key}-${getEmployeesByType(current.employees, worker.key).length}`,
+            type: worker.key,
+            name: getStaffName(getEmployeesByType(current.employees, worker.key).length),
+            level: 1,
+            xp: 0,
+          },
+        ],
         activityLog: addLog(
           current.activityLog,
           serializeBilingualText(text.logs.hiredWorker(worker.name, worker.cost)),
@@ -673,23 +677,24 @@ function App() {
 
   function handleTrainWorker(worker: WorkerConfig) {
     setGame((current) => {
-      const level = current.workerLevels[worker.key] ?? 1
-      if (level >= 5) return current
-      const cost = getTrainingCost(level)
+      const target = getTrainingTarget(current.employees, worker.key)
+      if (!target) return current // no employees of this type, or all maxed
+      const cost = getTrainingCost(target.level)
       if (current.money < cost.money || current.researchPoints < cost.rp) {
         return current
       }
-      const newLevel = level + 1
+      const newLevel = target.level + 1
       return {
         ...current,
         money: current.money - cost.money,
         researchPoints: current.researchPoints - cost.rp,
-        workerLevels: { ...current.workerLevels, [worker.key]: newLevel },
         // Carry leftover XP into the new level (start fresh toward next threshold).
-        workerXp: { ...current.workerXp, [worker.key]: 0 },
+        employees: current.employees.map((employee) =>
+          employee.id === target.id ? { ...employee, level: newLevel, xp: 0 } : employee,
+        ),
         activityLog: addLog(
           current.activityLog,
-          serializeBilingualText(text.logs.staffTrained(worker.name, newLevel)),
+          serializeBilingualText(text.logs.staffTrained(target.name, worker.name, newLevel)),
         ),
       }
     })
@@ -1218,7 +1223,7 @@ function App() {
           onRemoveBuilding={handleRemoveBuilding}
           onUpgradeBuilding={handleUpgradeBuilding}
         />
-        <WorkerPresenceBar workerCounts={game.workerCounts} workerLevels={game.workerLevels} />
+        <WorkerPresenceBar workerCounts={game.workerCounts} employees={game.employees} />
         <ExpansionPanel
           gridExpansionLevel={game.gridExpansionLevel}
           refineryLevel={game.refineryLevel}
@@ -1273,9 +1278,7 @@ function App() {
             researchPoints={game.researchPoints}
             refineryLevel={game.refineryLevel}
             activeWorkers={activeWorkers}
-            workerLevels={game.workerLevels}
-            workerXp={game.workerXp}
-            workerNames={game.workerNames}
+            employees={game.employees}
             onHireWorker={handleHireWorker}
             onTrainWorker={handleTrainWorker}
           />

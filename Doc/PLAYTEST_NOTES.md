@@ -1,5 +1,60 @@
 # Playtest Notes
 
+## 2026-06-13 — Individual Staff, Phase 1 (Data Model Migration)
+
+**Method:** Foundational refactor, deliberately chosen over the lighter
+"star employee" hybrid (see INDIVIDUAL_STAFF_ROADMAP.md for the decision and
+Phases 2-4). Branch `feature/individual-employees`. 24 new unit assertions,
+120 prior pass (144 total).
+
+### What changed
+
+Staff are no longer "N workers at a shared type-level" — each hired worker
+is now a named `Employee {id, type, name, level, xp}` in
+`GameState.employees`. `workerLevels`/`workerXp`/`workerNames` (3 fields)
+removed; `workerCounts` kept (31 read-sites unchanged, invariant maintained:
+`employees.filter(type).length === workerCounts[type]`).
+
+**Concentrated training** (the key design choice — preserves the existing
+AGGREGATE XP rate, no balance shift in speed): each tick, a type's total XP
+budget (`count * xpPerWorkerPerTick`, unchanged formula) goes to that type's
+LOWEST-level employee. They level up one at a time, in sequence, instead of
+the whole type jumping together. `effectiveWorkers(type)` is now
+`sum(multiplier(e.level))` across that type's employees — at uniform level
+identical to the old `count * multiplier(sharedLevel)`, but now rises
+smoothly as individuals level up.
+
+**New hires start at level 1** (intentional balance shift — "rookies" who
+need to catch up; makes "build your team early" meaningful). Paid training
+now levels up the same lowest-level "currently training" employee — one
+click, one person.
+
+### Save migration
+
+Old saves (workerCounts + workerLevels + workerXp + workerNames) -> all
+employees of a type get the OLD SHARED LEVEL, xp resets to 0. Verified
+`effectiveWorkers` is numerically IDENTICAL to the pre-migration value right
+after load (`count * multiplier(sharedLevel) === sum(multiplier(sharedLevel))`,
+count times). New-shape saves (employees array) round-trip directly,
+slice/pad to match workerCounts.
+
+### UI
+
+StaffPanel roster now shows each employee's name + their OWN level (e.g.
+"Mara Lv2, Theo Lv1, Priya Lv1 +2 more"). One "Training: <name> (Lv N)"
+progress bar + Train button per type, targeting the lowest-level employee.
+WorkerPresenceBar tokens show each individual's own level. Level-up/train log
+messages now name the employee ("Mara (Operator) reached Level 2!").
+
+### Carried forward (Phases 2-4, see INDIVIDUAL_STAFF_ROADMAP.md)
+- Phase 2: let the player choose who to train; retirement/turnover.
+- Phase 3: assign specific employees to specific plants (ties into the
+  feedstock process chain) — the real payoff of this migration.
+- Phase 4: traits/veteran tags/legendary hires, layered on real individuals.
+- TECH_DEBT: thresholdGrowthPerYear decision still open.
+
+---
+
 ## 2026-06-13 — Hidden/Discoverable Combos
 
 **Method:** Background task. Branch `feature/hidden-combos`. 15 new unit

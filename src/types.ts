@@ -47,12 +47,10 @@ export type GameState = {
   completedMilestoneKeys: MilestoneKey[]
   unlockedResearchIds: ResearchKey[]
   workerCounts: WorkerCounts
-  // System 1: Staff Training & Levels
-  workerLevels: WorkerLevels
-  workerXp: WorkerXp
-  // Flavor roster: names assigned to hired staff in hire order, per type.
-  // Cycles through STAFF_NAME_POOL — see getStaffName.
-  workerNames: Record<WorkerType, string[]>
+  // System 1: Staff Training & Levels (Individual Staff) — one entry per
+  // hired worker, in hire order. Invariant: for every WorkerType,
+  // employees.filter(e => e.type === type).length === workerCounts[type].
+  employees: Employee[]
   // Keys of HIDDEN_COMBOS already discovered/rewarded (one-time each).
   discoveredCombos: string[]
   // System 2: Refinery Upgrade Perk Tree
@@ -169,12 +167,18 @@ export type WorkerType =
 
 export type WorkerCounts = Record<WorkerType, number>
 
-// --- System 1: Staff Training & Levels ---
-// Each worker TYPE has a shared crew level (1–5) and accumulated XP.
-// Level multiplies that type's bonus effectiveness. XP accrues passively
-// per tick (scaled by headcount) and can be bought instantly via training.
-export type WorkerLevels = Record<WorkerType, number>
-export type WorkerXp = Record<WorkerType, number>
+// --- System 1: Staff Training & Levels (Individual Staff, Phase 1) ---
+// Each hired worker is a named Employee with their OWN level (1-5) and XP.
+// Level multiplies that employee's bonus effectiveness (see
+// getWorkerLevelMultiplier). XP accrues passively via "concentrated
+// training" (see applyStaffXp) or can be bought instantly for one employee.
+export type Employee = {
+  id: string
+  type: WorkerType
+  name: string
+  level: number
+  xp: number
+}
 
 // --- System 2: Refinery Upgrade Perk Tree ---
 // Spend upgradePoints (earned on refinery level-up) on perks across 3 branches.

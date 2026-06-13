@@ -1,4 +1,4 @@
-import type { WorkerCounts, WorkerLevels, WorkerType } from '../types'
+import type { Employee, WorkerCounts, WorkerType } from '../types'
 import BilingualText from './BilingualText'
 import { text } from '../translations'
 
@@ -18,16 +18,18 @@ const WORKER_ICONS: Record<WorkerType, string> = {
 
 type WorkerPresenceBarProps = {
   workerCounts: WorkerCounts
-  workerLevels: WorkerLevels
+  employees: Employee[]
 }
 
-function WorkerPresenceBar({ workerCounts, workerLevels }: WorkerPresenceBarProps) {
+function WorkerPresenceBar({ workerCounts, employees }: WorkerPresenceBarProps) {
+  // Order tokens by type (using workerCounts' key order) so the bar reads
+  // consistently even though `employees` is in hire order across all types.
   const tokens: Array<{ type: WorkerType; icon: string; level: number }> = []
 
-  for (const [type, count] of Object.entries(workerCounts) as [WorkerType, number][]) {
-    const level = workerLevels[type] ?? 1
-    for (let i = 0; i < count; i++) {
-      tokens.push({ type, icon: WORKER_ICONS[type], level })
+  for (const type of Object.keys(workerCounts) as WorkerType[]) {
+    for (const employee of employees) {
+      if (employee.type !== type) continue
+      tokens.push({ type, icon: WORKER_ICONS[type], level: employee.level })
     }
   }
 
