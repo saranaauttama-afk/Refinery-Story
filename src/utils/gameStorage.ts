@@ -19,6 +19,7 @@ import {
   getEmptyWorkerXp,
   getInitialWorkerLevels,
 } from './gameCalculations'
+import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
 
 const STORAGE_KEY = 'refinery-story-save'
@@ -273,6 +274,9 @@ function sanitizeLoadedGameState(value: unknown) {
     workerLevels: getSafeWorkerLevels(value.workerLevels),
     workerXp: getSafeWorkerXp(value.workerXp),
     workerNames: getSafeWorkerNames(value.workerNames, workerCounts),
+    discoveredCombos: getSafeStringArray(value.discoveredCombos, []).filter((key) =>
+      HIDDEN_COMBOS.some((combo) => combo.key === key),
+    ),
     upgradePoints: getSafeNumber(value.upgradePoints, 0),
     unlockedPerks: getSafePerks(value.unlockedPerks),
     highestEraIndex: getSafeNumber(value.highestEraIndex, 0),

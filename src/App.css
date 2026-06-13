@@ -2345,3 +2345,29 @@
   font-weight: 700;
   text-align: center;
 }
+
+/* Hidden-combo discovery toast (stacks below era banner if both show) */
+.combo-discovery-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 59;
+  max-width: 360px;
+  width: calc(100% - 32px);
+  padding: 14px 36px 14px 16px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(120, 200, 230, 0.22), var(--panel));
+  animation: era-banner-in 0.35s ease-out;
+}
+.combo-discovery-reward {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2a7a9b;
+}
+.combo-discovery-toast--offset {
+  top: 130px;
+}

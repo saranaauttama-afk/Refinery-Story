@@ -1823,6 +1823,15 @@ export const text = {
         `New era reached: ${name.en}!`,
         `เข้าสู่ยุคใหม่: ${name.th}!`,
       ),
+    comboDiscovered: (name: BilingualTextValue, cash: number, rp: number) =>
+      bilingual(
+        `Combo discovered: ${name.en}! +$${cash.toLocaleString()}, +${rp} RP.`,
+        `ค้นพบคอมโบ: ${name.th}! +$${cash.toLocaleString()}, +${rp} RP`,
+      ),
+    comboToastTitle: (name: BilingualTextValue) =>
+      bilingual(`Combo Discovered: ${name.en}!`, `ค้นพบคอมโบ: ${name.th}!`),
+    comboToastReward: (cash: number, rp: number) =>
+      bilingual(`+$${cash.toLocaleString()} · +${rp} RP`, `+$${cash.toLocaleString()} · +${rp} RP`),
     annualAward: (year: number, grade: string, cash: number) =>
       bilingual(
         `Year ${year} Awards: Grade ${grade}! +$${cash.toLocaleString()}`,

@@ -19,6 +19,8 @@ import type { ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
 import { getCurrentEra, getNextEra } from '../data/eras'
 import { RANDOM_EVENTS } from '../data/events'
+import { HIDDEN_COMBOS } from '../data/hiddenCombos'
+import type { HiddenComboConfig } from '../data/hiddenCombos'
 import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
@@ -130,6 +132,7 @@ export function createInitialGameState(): GameState {
     workerLevels: getInitialWorkerLevels(),
     workerXp: getEmptyWorkerXp(),
     workerNames: getEmptyWorkerNames(),
+    discoveredCombos: [],
     upgradePoints: 0,
     unlockedPerks: [],
     highestEraIndex: 0,
@@ -330,6 +333,56 @@ function getComboStats(grid: GridCell[]): ComboStats {
   })
 
   return combos
+}
+
+// Scans every 3-consecutive-cell run (horizontal and vertical) on the grid
+// for a building-type SET (order-independent, all 3 cells filled, all 3
+// types distinct) matching a HIDDEN_COMBOS entry. Returns the keys of any
+// matching combos not already in `discovered` — called each tick; the
+// caller applies rewards/logs/toasts and adds the keys to discoveredCombos.
+export function getNewlyDiscoveredCombos(
+  grid: GridCell[],
+  discovered: string[],
+): HiddenComboConfig[] {
+  const cols = Math.round(Math.sqrt(grid.length))
+  const found = new Set<string>()
+
+  function checkTriple(a: GridCell, b: GridCell, c: GridCell) {
+    if (!a || !b || !c) return
+    const cellSet = new Set([a, b, c])
+    if (cellSet.size !== 3) return // all three must be distinct types
+    for (const combo of HIDDEN_COMBOS) {
+      if (discovered.includes(combo.key) || found.has(combo.key)) continue
+      if (combo.buildings.length !== 3) continue
+      const comboSet = new Set(combo.buildings)
+      if (comboSet.size !== cellSet.size) continue
+      let matches = true
+      for (const type of cellSet) {
+        if (!comboSet.has(type)) {
+          matches = false
+          break
+        }
+      }
+      if (matches) found.add(combo.key)
+    }
+  }
+
+  // Horizontal runs of 3
+  for (let row = 0; row < cols; row++) {
+    for (let col = 0; col <= cols - 3; col++) {
+      const base = row * cols + col
+      checkTriple(grid[base], grid[base + 1], grid[base + 2])
+    }
+  }
+  // Vertical runs of 3
+  for (let col = 0; col < cols; col++) {
+    for (let row = 0; row <= cols - 3; row++) {
+      const base = row * cols + col
+      checkTriple(grid[base], grid[base + cols], grid[base + cols * 2])
+    }
+  }
+
+  return HIDDEN_COMBOS.filter((combo) => found.has(combo.key))
 }
 
 function countBuildings(grid: GridCell[]) {

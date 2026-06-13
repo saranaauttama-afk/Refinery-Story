@@ -27,12 +27,14 @@ import RefineryUpgradesPanel from './components/RefineryUpgradesPanel'
 import EraPanel from './components/EraPanel'
 import AwardsPanel from './components/AwardsPanel'
 import AwardCeremonyModal from './components/AwardCeremonyModal'
+import ComboDiscoveryToast from './components/ComboDiscoveryToast'
 import EraBannerToast from './components/EraBannerToast'
 import { BUILDINGS } from './data/buildings'
 import { ASPHALT_BALANCE, AWARDS_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
+import type { HiddenComboConfig } from './data/hiddenCombos'
 import { getStaffName } from './data/staffNames'
 import { serializeBilingualText, text } from './translations'
 import type { AwardRecord, BuildingType, ChoiceEvent, Contract, EraConfig, PerkConfig, ResearchItem, StandingOrderKey, WorkerConfig } from './types'
@@ -48,6 +50,7 @@ import {
   applyStaffXp,
   applyWinGoal,
   calculateDerivedStats,
+  getNewlyDiscoveredCombos,
   getRefineryTitle,
   closeBusinessYear,
   getTrainingCost,
@@ -74,6 +77,7 @@ function App() {
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
   const [isEditingName, setIsEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(initialLoad.game.refineryName)
+  const [pendingComboDiscoveries, setPendingComboDiscoveries] = useState<HiddenComboConfig[]>([])
   const gameRef = useRef(game)
   const {
     activeContracts,
@@ -343,6 +347,39 @@ function App() {
             ),
           }
           setPendingEraBanner(era)
+        }
+
+        // System 5: hidden/discoverable combos — one-time reward + toast the
+        // first time a qualifying 3-building layout appears on the grid.
+        const newlyDiscovered = getNewlyDiscoveredCombos(next.grid, next.discoveredCombos)
+        if (newlyDiscovered.length > 0) {
+          let activityLog = next.activityLog
+          let money = next.money
+          let researchPoints = next.researchPoints
+          let reputation = next.reputation
+          for (const combo of newlyDiscovered) {
+            money += combo.cashReward
+            researchPoints += combo.rpReward
+            reputation += combo.reputationReward ?? 0
+            activityLog = addLog(
+              activityLog,
+              serializeBilingualText(
+                text.logs.comboDiscovered(combo.name, combo.cashReward, combo.rpReward),
+              ),
+            )
+          }
+          next = {
+            ...next,
+            money,
+            researchPoints,
+            reputation,
+            activityLog,
+            discoveredCombos: [
+              ...next.discoveredCombos,
+              ...newlyDiscovered.map((combo) => combo.key),
+            ],
+          }
+          setPendingComboDiscoveries((queue) => [...queue, ...newlyDiscovered])
         }
 
         return next
@@ -1316,6 +1353,14 @@ function App() {
         <EraBannerToast
           era={pendingEraBanner}
           onClose={() => setPendingEraBanner(null)}
+        />
+      )}
+
+      {pendingComboDiscoveries.length > 0 && (
+        <ComboDiscoveryToast
+          combo={pendingComboDiscoveries[0]}
+          offset={!!pendingEraBanner}
+          onClose={() => setPendingComboDiscoveries((queue) => queue.slice(1))}
         />
       )}
     </main>

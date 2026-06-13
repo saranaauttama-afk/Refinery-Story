@@ -1,5 +1,48 @@
 # Playtest Notes
 
+## 2026-06-13 — Hidden/Discoverable Combos
+
+**Method:** Background task. Branch `feature/hidden-combos`. 15 new unit
+assertions, 101 prior pass (116 total).
+
+### What shipped
+
+5 NEW one-time "combos" — not documented anywhere in-game — for arranging 3
+DISTINCT building types in any 3 consecutive cells of a row or column
+(order-independent):
+
+1. **Full Refinery Line** {crudeTank, distillationUnit, productTank} — the
+   starter trio, small reward ($300/5RP). Easy, early "first discovery".
+2. **Command Center** {laboratory, maintenanceWorkshop, salesOffice} —
+   $500/8RP.
+3. **Jet Set Row** {distillationUnit, jetFuelPlant, salesOffice} — $800/12RP.
+4. **Refining Triangle** {distillationUnit, lubricantPlant,
+   petrochemicalPlant} — $1200/15RP.
+5. **Petrochemical Complex** {lubricantPlant, jetFuelPlant,
+   petrochemicalPlant} — hardest (all 3 advanced plants in a row), $2000/25RP
+   + reputation +10.
+
+Detection runs every tick (cheap — O(grid size)), checks every horizontal and
+vertical run of 3 cells, all distinct types, matching a combo's set. First
+match: reward applied once, logged, `discoveredCombos` updated, and a
+discovery toast (reuses the era-banner-toast pattern, distinct teal styling,
+stacks below the era banner if both fire at once).
+
+### Nice side effect for existing saves
+
+Old saves load with `discoveredCombos: []`. If a player's EXISTING layout
+already happens to satisfy a combo, the very first tick after this ships
+discovers it — a small "welcome bonus" rather than nothing. Multiple
+simultaneous discoveries are supported (queue).
+
+### Carried forward
+- Next from BACKLOG: scoped-down star employees (#2) — ~5% chance on hire for
+  a permanent small perk + star marker in the named-staff roster.
+- TECH_DEBT: thresholdGrowthPerYear decision still open (from rival-refineries
+  session).
+
+---
+
 ## 2026-06-13 — Rival Refineries / Annual Ranking
 
 **Method:** Background task while user stepped away. Branch
