@@ -48,6 +48,8 @@ import type {
   GridCell,
   Employee,
   EraConfig,
+  MilestoneKey,
+  MilestoneProgress,
   PendingShipment,
   PerkKey,
   RandomEvent,
@@ -829,6 +831,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const activeMilestones = MILESTONES.map((milestone) => ({
     ...milestone,
     isCompleted: game.completedMilestoneKeys.includes(milestone.key),
+    progress: getMilestoneProgress(game, milestone.key),
   }))
   const activeResearchItems = RESEARCH_ITEMS.map((item) => ({
     ...item,
@@ -923,6 +926,42 @@ export function applyWinGoal(game: GameState): GameState {
       game.activityLog,
       serializeBilingualText(text.goal.completionLog),
     ),
+  }
+}
+
+// Numeric progress toward a milestone's requirement, for the "next goal"
+// widget and Achievements screen progress bars. Returns null for
+// milestones whose condition isn't a single count threshold (e.g. "build a
+// Jet Fuel Plant", "complete a Tier 3 contract").
+export function getMilestoneProgress(game: GameState, key: MilestoneKey): MilestoneProgress | null {
+  switch (key) {
+    case 'firstFuel':
+      return { current: Math.min(game.totalGasolineProduced, 50), target: 50 }
+    case 'smallSupplier':
+      return { current: Math.min(game.completedContractCount, 2), target: 2 }
+    case 'growingRefinery':
+      return { current: Math.min(game.totalWorkersHired, 3), target: 3 }
+    case 'researchBeginner':
+      return { current: Math.min(game.unlockedResearchIds.length, 1), target: 1 }
+    case 'reputedSupplier':
+      return { current: Math.min(game.reputation, 50), target: 50 }
+    case 'industrialProducer':
+      return { current: Math.min(game.totalGasolineProduced, 500), target: 500 }
+    case 'refineryLevel5':
+      return { current: Math.min(game.refineryLevel, 5), target: 5 }
+    case 'researchAdvanced':
+      return { current: Math.min(game.unlockedResearchIds.length, 3), target: 3 }
+    case 'contractVeteran':
+      return { current: Math.min(game.completedContractCount, 10), target: 10 }
+    case 'fullWorkforce': {
+      const hiredTypes = Object.values(game.workerCounts).filter((count) => count > 0).length
+      const totalTypes = Object.keys(game.workerCounts).length
+      return { current: hiredTypes, target: totalTypes }
+    }
+    // upgradeBuilder, tierThreeContractor, jetFuelPioneer, aviationPartner,
+    // petrochemicalPioneer, productMogul: not single-count thresholds.
+    default:
+      return null
   }
 }
 

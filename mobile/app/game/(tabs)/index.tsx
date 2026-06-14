@@ -8,10 +8,12 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native'
+import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import BuildingGrid from '../../../src/components/BuildingGrid'
 import ListRow from '../../../src/components/ListRow'
+import ProgressBar from '../../../src/components/ProgressBar'
 import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -31,6 +33,7 @@ const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const UPGRADEABLE: BuildingType[] = ['crudeTank', 'distillationUnit', 'productTank']
 
 export default function RefineryScreen() {
+  const router = useRouter()
   const {
     game,
     loaded,
@@ -92,6 +95,8 @@ export default function RefineryScreen() {
     upgradeSubtitle = `Need $${upgradeCost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`
   }
 
+  const nextGoal = derived.activeMilestones.find((m) => !m.isCompleted)
+
   const products: { key: 'lubricants' | 'jetFuel' | 'petrochemicals'; label: string; color: string }[] = [
     { key: 'lubricants', label: 'Lubricants', color: colors.goldDark },
     { key: 'jetFuel', label: 'Jet Fuel', color: colors.blue },
@@ -109,6 +114,22 @@ export default function RefineryScreen() {
         </Pressable>
         <Text style={styles.season}>{seasonLabel.en}</Text>
       </View>
+
+      {nextGoal && (
+        <Pressable style={styles.nextGoalCard} onPress={() => router.push('/achievements')}>
+          <Text style={styles.nextGoalLabel}>🎯 Next: {nextGoal.name.en}</Text>
+          {nextGoal.progress ? (
+            <View style={styles.nextGoalProgressRow}>
+              <ProgressBar current={nextGoal.progress.current} target={nextGoal.progress.target} />
+              <Text style={styles.nextGoalProgressLabel}>
+                {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.nextGoalRequirement}>{nextGoal.requirement.en}</Text>
+          )}
+        </Pressable>
+      )}
 
       <ResourceBar stats={stats} />
 
@@ -370,6 +391,37 @@ const styles = StyleSheet.create({
     borderColor: colors.creamBorder,
     borderRadius: radii.md,
     padding: spacing.sm,
+  },
+  nextGoalCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.gold,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  nextGoalLabel: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 12,
+  },
+  nextGoalRequirement: {
+    color: colors.inkMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  nextGoalProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+  },
+  nextGoalProgressLabel: {
+    fontSize: 11,
+    color: colors.inkMuted,
+    fontWeight: '700',
   },
   autoTradeHeader: {
     flexDirection: 'row',

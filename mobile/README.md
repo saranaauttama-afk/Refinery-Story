@@ -44,12 +44,14 @@ with Expo Go on your phone.
   tabs): the full game --
   - **Refinery**: resource bar (money / crude / feedstock / gasoline / ESG /
     season), the building grid, buy crude / sell gasoline, sell downstream
-    products. Tap an empty tile to **build**, tap a crude tank / distillation
-    unit / product tank to **upgrade**, tap the title to **upgrade the
-    refinery level** (cost + a cumulative-production requirement -- see
-    below). A **🔄 Auto-trade** card lets you toggle automatic crude top-ups
-    / gasoline sell-offs with adjustable thresholds (±5% steppers) -- see
-    below.
+    products. A **🎯 Next** card under the header shows the nearest
+    incomplete milestone with a live progress bar (tap to open
+    Achievements). Tap an empty tile to **build**, tap a crude tank /
+    distillation unit / product tank to **upgrade**, tap the title to
+    **upgrade the refinery level** (cost + a cumulative-production
+    requirement -- see below). A **🔄 Auto-trade** card lets you toggle
+    automatic crude top-ups / gasoline sell-offs with adjustable thresholds
+    (±5% steppers) -- see below.
   - **Staff**: a **Recruitment** pool shows 3 candidates at a time (random
     unlocked worker type + quality tier -- see below), refreshing
     automatically every ~2 min, plus a paid "🔄 Refresh" button. "Your team"
@@ -61,10 +63,13 @@ with Expo Go on your phone.
     **Crude shipments** (order bulk crude with a real-time delay, see
     pending arrivals countdown) and **Standing orders** (recurring
     high-value sales with a cooldown).
-  - **Stats**: era progress, ESG score/tier, season, reputation, milestones,
-    **Asphalt** production (once unlocked at Lv5), an **Activity log** (last
-    8 entries), grid expansion, rename refinery, manual/auto save, reset, and
-    links to Settings/Store. Also a **☰ Main Menu** link back to `/`.
+  - **Stats**: era progress, ESG score/tier, season, reputation, a
+    **Milestones** row linking to the full **🏆 Achievements** screen (all
+    16 milestones with name/requirement/reward, progress bars for
+    count-based ones, locked vs completed styling), **Asphalt** production
+    (once unlocked at Lv5), an **Activity log** (last 8 entries), grid
+    expansion, rename refinery, manual/auto save, reset, and links to
+    Settings/Store. Also a **☰ Main Menu** link back to `/`.
 - **Global overlays**: Choice Event modal (now milestone-triggered, see
   below), year-end Award modal, Era-advance banner.
 - **Full production tick** (200ms): crude -> feedstock (distillation) ->
@@ -75,7 +80,33 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Event Triggers Rework
+## Achievements Screen & Next Goal Widget
+
+The existing ~16-entry milestone system (`completedMilestoneKeys` /
+`MILESTONES`) was fully computed in `derived.activeMilestones` but never
+shown anywhere -- the Stats tab just displayed a count ("Milestones: 6
+completed"). Two additions surface this as actual gameplay goals:
+
+- **`getMilestoneProgress(game, key)`** (in `gameCalculations.ts`, pure,
+  exported): for the ~10 milestones that are simple count thresholds
+  (firstFuel: gasoline produced, smallSupplier/contractVeteran: contracts
+  completed, refineryLevel5, reputedSupplier, fullWorkforce: worker types
+  hired, etc.) returns `{ current, target }`, clamped to target. Returns
+  `null` for the remaining ~6 "build X" / "complete a Tier 3 contract"
+  style milestones that aren't a single count. `activeMilestones` now
+  includes this as `progress`.
+- **`/achievements` screen**: full checklist of all milestones --
+  🏆/🔒, name, requirement, reward, with a `ProgressBar` (new shared
+  component, `src/components/ProgressBar.tsx`) for count-based ones.
+  Reachable from a new "Milestones" row on the Stats tab (now shows
+  "X / 16 completed" and links out).
+- **🎯 Next goal card** on the Refinery screen (right under the header):
+  shows the *first incomplete* milestone in `activeMilestones` order with
+  its progress bar (or requirement text if not count-based). Tapping it
+  opens `/achievements`. Gives players a constant, concrete "what am I
+  working toward right now" without digging into tabs.
+
+
 
 Random and choice events used to fire on real-time `setInterval`s (every
 30s / 60s), independent of the main `tickCount`-based game loop. That caused

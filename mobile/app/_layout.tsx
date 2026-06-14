@@ -30,6 +30,7 @@ export default function RootLayout() {
           <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
             <Stack.Screen name="settings" options={{ presentation: 'card' }} />
             <Stack.Screen name="store" options={{ presentation: 'card' }} />
+            <Stack.Screen name="achievements" options={{ presentation: 'card' }} />
           </Stack>
           <GlobalOverlays />
         </GameProvider>

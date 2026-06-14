@@ -425,8 +425,17 @@ export type Milestone = {
   reward: string
 }
 
+export type MilestoneProgress = {
+  current: number
+  target: number
+}
+
 export type ActiveMilestone = Milestone & {
   isCompleted: boolean
+  // Numeric progress toward the milestone, where computable (most
+  // milestones are simple count thresholds). null for milestones whose
+  // condition isn't a single number (e.g. "build a Jet Fuel Plant").
+  progress: MilestoneProgress | null
 }
 
 export type DerivedStats = {

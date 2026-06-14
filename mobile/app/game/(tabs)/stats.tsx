@@ -79,7 +79,12 @@ export default function StatsScreen() {
           <Text style={styles.sectionTitle}>Progress</Text>
           <Stat label="Refinery level" value={`${game.refineryLevel}`} />
           <Stat label="Reputation" value={`${game.reputation}`} />
-          <Stat label="Milestones" value={`${game.completedMilestoneKeys.length} completed`} />
+          <ListRow
+            title="Milestones"
+            subtitle={`${game.completedMilestoneKeys.length} / ${derived.activeMilestones.length} completed`}
+            actionLabel="View"
+            onPress={() => router.push('/achievements')}
+          />
           <Stat label="Grid size" value={`${EXPANSION_BALANCE[game.gridExpansionLevel].size}x${EXPANSION_BALANCE[game.gridExpansionLevel].size}`} />
           {nextExpansion && (
             <ListRow
