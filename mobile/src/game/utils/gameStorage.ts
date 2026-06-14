@@ -6,6 +6,7 @@ import type {
   GameState,
   PendingShipment,
   PerkKey,
+  RecruitmentCandidate,
   StandingOrderKey,
   WorkerCounts,
   WorkerType,
@@ -16,6 +17,7 @@ import { countBuildings, createInitialGameState, DEFAULT_REFINERY_NAME, getEmplo
 import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
+import { generateRecruitmentPool, getUnlockedWorkerTypes, RECRUITMENT_BALANCE } from '../data/recruitment'
 
 const STORAGE_KEY = 'refinery-story-save'
 
@@ -227,6 +229,41 @@ function getSafeAssignments(
   return result
 }
 
+const RECRUITMENT_TIERS = ['rookie', 'skilled', 'expert', 'star']
+
+// Mobile-only: validates the saved recruitment pool. If it's missing,
+// malformed, or the wrong size, regenerates a fresh pool for the current
+// refinery level (rather than trying to repair individual candidates --
+// this only happens on corrupted/pre-feature saves).
+function getSafeRecruitmentPool(
+  value: Record<string, unknown>,
+  refineryLevel: number,
+  nameCounter: number,
+): RecruitmentCandidate[] {
+  const raw = value.recruitmentPool
+  const unlockedTypes = new Set(getUnlockedWorkerTypes(refineryLevel))
+
+  if (Array.isArray(raw) && raw.length === RECRUITMENT_BALANCE.poolSize) {
+    const valid = raw.every((item) => {
+      if (!isRecord(item)) return false
+      return (
+        typeof item.id === 'string' &&
+        typeof item.type === 'string' &&
+        unlockedTypes.has(item.type as WorkerType) &&
+        typeof item.name === 'string' &&
+        typeof item.tier === 'string' &&
+        RECRUITMENT_TIERS.includes(item.tier as string) &&
+        typeof item.startingLevel === 'number' &&
+        typeof item.cost === 'number' &&
+        typeof item.isVeteran === 'boolean'
+      )
+    })
+    if (valid) return raw as unknown as RecruitmentCandidate[]
+  }
+
+  return generateRecruitmentPool(refineryLevel, nameCounter).pool
+}
+
 // System 2: only keep recognized perk keys.
 const PERK_KEYS: PerkKey[] = [
   'efficiency1', 'efficiency2', 'efficiency3',
@@ -274,7 +311,7 @@ function getSafeAwardHistory(value: unknown): AwardRecord[] {
     .slice(0, 12)
 }
 
-function sanitizeLoadedGameState(value: unknown) {
+export function sanitizeLoadedGameState(value: unknown) {
   const fallback = createInitialGameState()
 
   if (!isRecord(value)) {
@@ -332,6 +369,16 @@ function sanitizeLoadedGameState(value: unknown) {
     workerCounts,
     employees,
     assignments: getSafeAssignments(value, employees, grid),
+    recruitmentPool: getSafeRecruitmentPool(
+      value,
+      getSafeNumber(value.refineryLevel, fallback.refineryLevel),
+      getSafeNumber(value.recruitmentNameCounter, 0),
+    ),
+    recruitmentRefreshAt: getSafeNumber(
+      value.recruitmentRefreshAt,
+      getSafeNumber(value.tickCount, fallback.tickCount) + RECRUITMENT_BALANCE.refreshIntervalTicks,
+    ),
+    recruitmentNameCounter: getSafeNumber(value.recruitmentNameCounter, RECRUITMENT_BALANCE.poolSize),
     esgScore: Math.max(
       ESG_BALANCE.minScore,
       Math.min(ESG_BALANCE.maxScore, getSafeNumber(value.esgScore, fallback.esgScore)),

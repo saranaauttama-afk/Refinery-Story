@@ -31,6 +31,7 @@ import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
 import { getStaffName } from '../data/staffNames'
+import { generateRecruitmentPool, RECRUITMENT_BALANCE } from '../data/recruitment'
 import { WORKERS } from '../data/workers'
 import { serializeBilingualText, text } from '../translations'
 import type {
@@ -137,6 +138,14 @@ export function createInitialGameState(): GameState {
     },
     employees: [],
     assignments: {},
+    ...(() => {
+      const { pool, nextNameIndex } = generateRecruitmentPool(1, 0)
+      return {
+        recruitmentPool: pool,
+        recruitmentRefreshAt: RECRUITMENT_BALANCE.refreshIntervalTicks,
+        recruitmentNameCounter: nextNameIndex,
+      }
+    })(),
     esgScore: ESG_BALANCE.startingScore,
     gasolineDemandMultiplier: 1,
     petrochemicalsDemandMultiplier: 1,

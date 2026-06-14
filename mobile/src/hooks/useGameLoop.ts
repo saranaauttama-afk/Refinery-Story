@@ -8,6 +8,7 @@ import type {
   EraConfig,
   GameState,
   PerkConfig,
+  RecruitmentCandidate,
   ResearchItem,
   StandingOrderKey,
   WorkerConfig,
@@ -60,6 +61,12 @@ import {
 import { text } from '../game/translations'
 import { BUILDINGS } from '../game/data/buildings'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
+import {
+  generateRecruitmentPool,
+  getManualRefreshCost,
+  hireCandidateEmployee,
+  RECRUITMENT_BALANCE,
+} from '../game/data/recruitment'
 
 const SAVE_INTERVAL_MS = 5000
 
@@ -134,6 +141,20 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
   }
 
   return next
+}
+
+// Pure, exported for testing. Full auto-refresh of the recruitment pool
+// every RECRUITMENT_BALANCE.refreshIntervalTicks, regardless of how many
+// slots were already filled by individual hires in the meantime.
+export function applyRecruitmentRefresh(current: GameState): GameState {
+  if (current.tickCount < current.recruitmentRefreshAt) return current
+  const { pool, nextNameIndex } = generateRecruitmentPool(current.refineryLevel, current.recruitmentNameCounter)
+  return {
+    ...current,
+    recruitmentPool: pool,
+    recruitmentNameCounter: nextNameIndex,
+    recruitmentRefreshAt: current.tickCount + RECRUITMENT_BALANCE.refreshIntervalTicks,
+  }
 }
 
 // Full production tick: feedstock (crude -> feedstock), downstream plants
@@ -308,6 +329,7 @@ export function useGameLoop() {
         }
 
         next = applyAutoTrade(next, autoTradeRef.current)
+        next = applyRecruitmentRefresh(next)
 
         gameRef.current = next
         return next
@@ -557,6 +579,60 @@ export function useGameLoop() {
     [update],
   )
 
+  // Recruitment pool: hire one of the 3 current candidates. The hired slot
+  // is immediately refilled with a freshly-rolled candidate (the rest of
+  // the pool is untouched until the next periodic refresh).
+  const hireCandidate = useCallback(
+    (slotIndex: number) =>
+      update((current) => {
+        const candidate = current.recruitmentPool[slotIndex]
+        if (!candidate) return current
+        if (current.money < candidate.cost) return current
+
+        const newEmployee = hireCandidateEmployee(current.employees, candidate)
+        const replacement = generateRecruitmentPool(current.refineryLevel, current.recruitmentNameCounter)
+        const recruitmentPool = [...current.recruitmentPool]
+        recruitmentPool[slotIndex] = replacement.pool[0]
+
+        return applyMilestones({
+          ...current,
+          money: current.money - candidate.cost,
+          totalWorkersHired: current.totalWorkersHired + 1,
+          workerCounts: {
+            ...current.workerCounts,
+            [candidate.type]: current.workerCounts[candidate.type] + 1,
+          },
+          employees: [...current.employees, newEmployee],
+          recruitmentPool,
+          recruitmentNameCounter: current.recruitmentNameCounter + 1,
+        })
+      }),
+    [update],
+  )
+
+  // Manual refresh: re-rolls all 3 slots for a small fee and restarts the
+  // auto-refresh timer (so the player gets the full interval with their
+  // freshly-rolled pool).
+  const refreshRecruitmentPool = useCallback(
+    () =>
+      update((current) => {
+        const cost = getManualRefreshCost(current.refineryLevel)
+        if (current.money < cost) return current
+        const { pool, nextNameIndex } = generateRecruitmentPool(
+          current.refineryLevel,
+          current.recruitmentNameCounter,
+        )
+        return {
+          ...current,
+          money: current.money - cost,
+          recruitmentPool: pool,
+          recruitmentNameCounter: nextNameIndex,
+          recruitmentRefreshAt: current.tickCount + RECRUITMENT_BALANCE.refreshIntervalTicks,
+        }
+      }),
+    [update],
+  )
+
   const trainEmployee = useCallback(
     (employeeId: string) =>
       update((current) => {
@@ -698,6 +774,8 @@ export function useGameLoop() {
     unlockResearch,
     installPerk,
     hireWorker,
+    hireCandidate,
+    refreshRecruitmentPool,
     trainEmployee,
     toggleAssignment,
     produceAsphalt,

@@ -3,6 +3,19 @@ export type BilingualTextValue = {
   th: string
 }
 
+// Mobile-only: recruitment pool candidate (see data/recruitment.ts).
+export type RecruitmentTier = 'rookie' | 'skilled' | 'expert' | 'star'
+
+export type RecruitmentCandidate = {
+  id: string
+  type: WorkerType
+  name: string
+  tier: RecruitmentTier
+  startingLevel: number
+  cost: number
+  isVeteran: boolean
+}
+
 // Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
 export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals'
 
@@ -56,6 +69,14 @@ export type GameState = {
   // 'chemicalEngineer' -> petrochemicalPlant). Capacity = that plant's
   // building count. Unassigned specialists contribute no plant bonus.
   assignments: Partial<Record<WorkerType, string[]>>
+  // Mobile-only: recruitment pool ("3 candidates apply, pick one" hiring
+  // flow). See data/recruitment.ts. recruitmentRefreshAt is the tickCount
+  // at which the whole pool auto-refreshes; recruitmentNameCounter is a
+  // monotonic counter so candidate names cycle through STAFF_NAME_POOL
+  // independently of actual hires.
+  recruitmentPool: RecruitmentCandidate[]
+  recruitmentRefreshAt: number
+  recruitmentNameCounter: number
   // ESG/Safety axis: 0-100 score. Drifts each tick (down from "dirty"
   // buildings, up from safetyOfficer staff). High score reduces incident-
   // event chance and unlocks a premium contract bonus; low score raises

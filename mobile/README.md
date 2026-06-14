@@ -49,11 +49,13 @@ with Expo Go on your phone.
     refinery level**. A **🔄 Auto-trade** card lets you toggle automatic
     crude top-ups / gasoline sell-offs with adjustable thresholds (±5%
     steppers) -- see below.
-  - **Staff**: hire all 9 worker types. "Your team" shows each employee
-    (name, level, XP, ⭐ veteran trait), with a **Train** button (costs $ +
-    RP, max level 5) and an **Assign** toggle for specialist roles
-    (aviationSpecialist -> Jet Fuel Plant, chemicalEngineer -> Petrochemical
-    Plant) that boosts that plant's output.
+  - **Staff**: a **Recruitment** pool shows 3 candidates at a time (random
+    unlocked worker type + quality tier -- see below), refreshing
+    automatically every ~2 min, plus a paid "🔄 Refresh" button. "Your team"
+    shows each hired employee (name, level, XP, 🎖 veteran trait), with a
+    **Train** button (costs $ + RP, max level 5) and an **Assign** toggle for
+    specialist roles (aviationSpecialist -> Jet Fuel Plant, chemicalEngineer
+    -> Petrochemical Plant) that boosts that plant's output.
   - **Business**: Contracts, Research, Perks (3 branches x 3 tiers), plus
     **Crude shipments** (order bulk crude with a real-time delay, see
     pending arrivals countdown) and **Standing orders** (recurring
@@ -72,7 +74,34 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Auto-trade
+## Recruitment Pool
+
+Replaces the old "flat list of 9 always-available worker types" with a
+"3 candidates apply, pick one" flow (`src/game/data/recruitment.ts`):
+
+- Each candidate is a random unlocked worker type + a **quality tier**:
+  Rookie (Lv1, ×1.0 cost), 🔹 Skilled (Lv2, ×1.5), 🔸 Expert (Lv3, ×2.5), or
+  ⭐ Star (Lv4, ×4.0, **always** comes with the Veteran trait). Any
+  non-Star candidate also has the normal 5% chance to roll Veteran
+  (🎖, +20% effectiveness).
+- Tier weights shift with refinery level -- early game is mostly Rookies;
+  by Lv10+, Skilled/Expert/Star become much more common (Star: 1% -> 5% ->
+  10%), so "นานๆ มี Star มาที" but a bit more often as the refinery grows.
+- **Hiring** a candidate immediately refills that slot with a fresh roll;
+  the other 2 slots are untouched. The **whole pool** also auto-refreshes
+  every ~2 min (`RECRUITMENT_BALANCE.refreshIntervalTicks`), and a
+  "🔄 Refresh" button re-rolls all 3 for a small fee (`$200 + $20 per
+  refinery level`) and resets that timer.
+- Candidate names are pre-assigned from `STAFF_NAME_POOL` via a dedicated
+  counter (`recruitmentNameCounter`) so a candidate's displayed name doesn't
+  change before you hire them.
+
+`applyRecruitmentRefresh` (in `useGameLoop.ts`) is a pure function, exported
+for testing, run after the main tick. Pool/refresh state is part of the game
+save (migrates/regenerates cleanly for older saves -- see
+`getSafeRecruitmentPool` in `gameStorage.ts`).
+
+
 
 QoL feature added to address the #1 reported annoyance: repeatedly tapping
 "Buy 10 Crude" / "Sell 10 Gas". When the **🔄 Auto-trade** toggle on the
