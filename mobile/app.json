@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Refinery Story",
+    "slug": "refinery-story",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#F4EAD7"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.refinerystory.app"
+    },
+    "android": {
+      "package": "com.refinerystory.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F4EAD7"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e41dff26-bfd6-486d-86a9-fb9b3b74ae7c"
+      }
+    }
+  }
+}
