@@ -281,12 +281,20 @@ export function rollVeteranTrait(): Employee['trait'] {
 // this type), level 1, xp 0, and a Veteran trait roll. Used by the hire
 // handler and both free-hire choice-event outcomes.
 export function createNewEmployee(employees: Employee[], type: WorkerType): Employee {
-  const index = getEmployeesByType(employees, type).length
+  // Mobile note: upstream getStaffName(index) was keyed per-type
+  // (getEmployeesByType(employees, type).length), so the FIRST hire of
+  // every type got index 0 -- if a player hires one of each of the 9
+  // worker types (the natural flow on the mobile Staff tab), all 9 get the
+  // same name ("Mara"). Use a global hire-order index instead: each new
+  // employee, of any type, gets the next name in STAFF_NAME_POOL. `id`
+  // stays unique either way since it's never parsed, just compared.
+  const typeIndex = getEmployeesByType(employees, type).length
+  const globalIndex = employees.length
   const trait = rollVeteranTrait()
   return {
-    id: `${type}-${index}`,
+    id: `${type}-${typeIndex}`,
     type,
-    name: getStaffName(index),
+    name: getStaffName(globalIndex),
     level: 1,
     xp: 0,
     ...(trait ? { trait } : {}),
