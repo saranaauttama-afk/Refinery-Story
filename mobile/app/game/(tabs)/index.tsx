@@ -24,6 +24,7 @@ import {
   getProductSellPrice,
   getSeasonLabel,
   getUpgradeCost,
+  getUpgradeProductionRequirement,
 } from '../../../src/game/utils/gameCalculations'
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
@@ -77,6 +78,19 @@ export default function RefineryScreen() {
   }
 
   const upgradeCost = getUpgradeCost(game.refineryLevel)
+  const upgradeProductionRequired = getUpgradeProductionRequirement(game.refineryLevel)
+  const hasEnoughMoney = game.money >= upgradeCost
+  const hasEnoughProduction = game.totalGasolineProduced >= upgradeProductionRequired
+  const canUpgrade = hasEnoughMoney && hasEnoughProduction
+
+  let upgradeSubtitle: string
+  if (canUpgrade) {
+    upgradeSubtitle = `Tap to upgrade · $${upgradeCost.toLocaleString()}`
+  } else if (!hasEnoughProduction) {
+    upgradeSubtitle = `Produce ${game.totalGasolineProduced}/${upgradeProductionRequired} gasoline to unlock (then $${upgradeCost.toLocaleString()})`
+  } else {
+    upgradeSubtitle = `Need $${upgradeCost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`
+  }
 
   const products: { key: 'lubricants' | 'jetFuel' | 'petrochemicals'; label: string; color: string }[] = [
     { key: 'lubricants', label: 'Lubricants', color: colors.goldDark },
@@ -91,10 +105,7 @@ export default function RefineryScreen() {
           <Text style={styles.title}>
             {game.refineryName} · Lv{game.refineryLevel}
           </Text>
-          <Text style={styles.subtitle}>
-            Tap to upgrade · ${upgradeCost.toLocaleString()}
-            {game.money < upgradeCost ? ' (need more $)' : ''}
-          </Text>
+          <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>{upgradeSubtitle}</Text>
         </Pressable>
         <Text style={styles.season}>{seasonLabel.en}</Text>
       </View>
@@ -278,6 +289,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.inkMuted,
     marginTop: 2,
+  },
+  subtitleMuted: {
+    opacity: 0.6,
   },
   season: {
     fontSize: 13,

@@ -36,8 +36,23 @@ export const ECONOMY_BALANCE = {
   jetFuelPrice: 90,
   petrochemicalsPrice: 150,
   crudeCost: 10,
-  refineryUpgradeBaseCost: 55,
-  refineryUpgradeLevelStep: 35,
+  // Mobile rebalance: refinery-level upgrades were nearly free under the
+  // old linear formula (55 + 35*level) -- the cumulative cost to reach
+  // Lv15 (which unlocks the $15,000 Petrochemical Plant) was only ~$5,025,
+  // less than 1/3 of the building it unlocks. Switched to quadratic
+  // (60 + 18*level^2): cumulative cost to Lv10 (~$7,530, vs the $8,000 Jet
+  // Fuel Plant it unlocks) and Lv15 (~$23,220, vs $15,000) now roughly
+  // track the infrastructure each level gates, without exploding at very
+  // high levels the way an exponential curve would.
+  refineryUpgradeBaseCost: 60,
+  refineryUpgradeLevelStep: 18,
+  // Non-cash gate alongside the cost: cumulative lifetime gasoline output
+  // required to advance past a level. Mainly matters early (Lv1-5ish) --
+  // it forces "build a basic production line and run it for a bit" before
+  // the first few upgrades, rather than buying Lv2+ with zero buildings
+  // placed. At higher levels this is essentially always already satisfied
+  // by an active refinery, so cost becomes the dominant gate again.
+  refineryUpgradeProductionPerLevel: 50,
 } as const
 
 export const PRODUCTION_BALANCE = {

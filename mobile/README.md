@@ -46,9 +46,10 @@ with Expo Go on your phone.
     season), the building grid, buy crude / sell gasoline, sell downstream
     products. Tap an empty tile to **build**, tap a crude tank / distillation
     unit / product tank to **upgrade**, tap the title to **upgrade the
-    refinery level**. A **🔄 Auto-trade** card lets you toggle automatic
-    crude top-ups / gasoline sell-offs with adjustable thresholds (±5%
-    steppers) -- see below.
+    refinery level** (cost + a cumulative-production requirement -- see
+    below). A **🔄 Auto-trade** card lets you toggle automatic crude top-ups
+    / gasoline sell-offs with adjustable thresholds (±5% steppers) -- see
+    below.
   - **Staff**: a **Recruitment** pool shows 3 candidates at a time (random
     unlocked worker type + quality tier -- see below), refreshing
     automatically every ~2 min, plus a paid "🔄 Refresh" button. "Your team"
@@ -74,7 +75,33 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Recruitment Pool
+## Refinery Level Upgrade Rebalance
+
+The old refinery-level upgrade cost was linear (`55 + 35*level`) and barely
+scaled: the cumulative cost to reach Lv15 (which unlocks the $15,000
+Petrochemical Plant) was only ~$5,025 -- less than a third of the building it
+unlocks, so leveling up was nearly a free, no-thought action.
+
+`getUpgradeCost` (in `gameCalculations.ts`) is now **quadratic**:
+`60 + 18*level^2`. Cumulative cost to Lv10 (~$5,670, vs the $8,000 Jet Fuel
+Plant) and Lv15 (~$19,110, vs $15,000) now roughly track what each level
+unlocks, without exploding at very high levels the way an exponential curve
+would.
+
+Upgrading also now requires a **cumulative lifetime gasoline production**
+threshold (`getUpgradeProductionRequirement` = `50 * level`), checked
+alongside the cost in `upgradeRefinery()`. This mainly matters early
+(Lv1-5ish) -- it forces "build a basic production line and run it for a bit"
+before the first few upgrades, rather than buying Lv2+ with an empty grid.
+At higher levels an active refinery has long since cleared this, so cost
+becomes the dominant gate again. The Refinery tab's header shows whichever
+condition isn't met yet ("Produce X/Y gasoline to unlock" or "Need $X").
+
+In a 30-minute simulation with active building/auto-trade, this reaches
+~Lv24 (23 upgrades) -- the production gate blocks for ~2.8 min total early
+on, then cost becomes the binding constraint for the rest of the run.
+
+
 
 Replaces the old "flat list of 9 always-available worker types" with a
 "3 candidates apply, pick one" flow (`src/game/data/recruitment.ts`):

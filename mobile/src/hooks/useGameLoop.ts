@@ -37,6 +37,7 @@ import {
   getSpecialistMultiplier,
   getTrainingCost,
   getUpgradeCost,
+  getUpgradeProductionRequirement,
   orderShipment as orderShipmentFn,
 } from '../game/utils/gameCalculations'
 import {
@@ -494,7 +495,9 @@ export function useGameLoop() {
     () =>
       update((current) => {
         const cost = getUpgradeCost(current.refineryLevel)
+        const requiredProduction = getUpgradeProductionRequirement(current.refineryLevel)
         if (current.money < cost) return current
+        if (current.totalGasolineProduced < requiredProduction) return current
         return applyWinGoal({
           ...current,
           money: current.money - cost,

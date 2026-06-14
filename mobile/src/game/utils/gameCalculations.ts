@@ -180,8 +180,13 @@ export function createInitialGameState(): GameState {
 export function getUpgradeCost(level: number) {
   return (
     ECONOMY_BALANCE.refineryUpgradeBaseCost +
-    level * ECONOMY_BALANCE.refineryUpgradeLevelStep
+    ECONOMY_BALANCE.refineryUpgradeLevelStep * level * level
   )
+}
+
+// Cumulative lifetime gasoline output required to advance past `level`.
+export function getUpgradeProductionRequirement(level: number) {
+  return ECONOMY_BALANCE.refineryUpgradeProductionPerLevel * level
 }
 
 export function addLog(logs: string[], message: string) {
