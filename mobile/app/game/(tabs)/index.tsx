@@ -11,12 +11,16 @@ import {
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import BuildingGrid from '../../../src/components/BuildingGrid'
+import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import ProgressBar from '../../../src/components/ProgressBar'
 import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
+import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
+import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { BUILDING_UPGRADE_BALANCE } from '../../../src/game/data/balance'
@@ -34,6 +38,8 @@ const UPGRADEABLE: BuildingType[] = ['crudeTank', 'distillationUnit', 'productTa
 
 export default function RefineryScreen() {
   const router = useRouter()
+  const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
+  const haptics = useHaptics()
   const {
     game,
     loaded,
@@ -105,13 +111,22 @@ export default function RefineryScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
       <View style={styles.header}>
-        <Pressable onPress={() => upgradeRefinery()}>
+        <AnimatedPressable
+          onPress={() => {
+            if (canUpgrade) {
+              spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+              haptics.confirm()
+            }
+            upgradeRefinery()
+          }}
+        >
           <Text style={styles.title}>
             {game.refineryName} · Lv{game.refineryLevel}
           </Text>
           <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>{upgradeSubtitle}</Text>
-        </Pressable>
+        </AnimatedPressable>
         <Text style={styles.season}>{seasonLabel.en}</Text>
       </View>
 
@@ -144,14 +159,34 @@ export default function RefineryScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Pressable style={[styles.actionButton, styles.buyButton]} onPress={() => buyCrude(10)}>
+        <AnimatedPressable
+          style={[styles.actionButton, styles.buyButton]}
+          onPress={() => {
+            const actualBuy = Math.min(10, Math.floor(game.money / CRUDE_COST), derived.maxCrudeStorage - game.crudeOil)
+            if (actualBuy > 0) {
+              spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
+              haptics.tap()
+            }
+            buyCrude(10)
+          }}
+        >
           <Text style={styles.actionLabel}>Buy 10 Crude</Text>
           <Text style={styles.actionSub}>${CRUDE_COST}/unit</Text>
-        </Pressable>
-        <Pressable style={[styles.actionButton, styles.sellButton]} onPress={() => sellGasoline(10)}>
+        </AnimatedPressable>
+        <AnimatedPressable
+          style={[styles.actionButton, styles.sellButton]}
+          onPress={() => {
+            const actualSell = Math.min(10, game.gasoline)
+            if (actualSell > 0) {
+              spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
+              haptics.tap()
+            }
+            sellGasoline(10)
+          }}
+        >
           <Text style={styles.actionLabel}>Sell 10 Gas</Text>
           <Text style={styles.actionSub}>${derived.sellPrice}/unit</Text>
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       <View style={styles.productsWrap}>
@@ -163,17 +198,23 @@ export default function RefineryScreen() {
             p.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1,
           )
           return (
-            <Pressable
+            <AnimatedPressable
               key={p.key}
               style={[styles.productChip, { borderColor: p.color, opacity: have > 0 ? 1 : 0.5 }]}
               disabled={have <= 0}
-              onPress={() => sellProduct(p.key, have)}
+              onPress={() => {
+                if (have > 0) {
+                  spawnFloat(`+$${(have * price).toLocaleString()}`, 'income')
+                  haptics.tap()
+                }
+                sellProduct(p.key, have)
+              }}
             >
               <Text style={[styles.productLabel, { color: p.color }]}>{p.label}</Text>
               <Text style={styles.productValue}>
                 {have} · sell @${price}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           )
         })}
       </View>

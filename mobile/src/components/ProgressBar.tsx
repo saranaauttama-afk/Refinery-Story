@@ -1,11 +1,23 @@
-import { StyleSheet, View } from 'react-native'
+import { useEffect, useRef } from 'react'
+import { Animated, StyleSheet, View } from 'react-native'
 import { colors, radii } from '../theme'
 
 export default function ProgressBar({ current, target }: { current: number; target: number }) {
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
+  const widthPct = useRef(new Animated.Value(pct)).current
+
+  useEffect(() => {
+    Animated.timing(widthPct, { toValue: pct, duration: 400, useNativeDriver: false }).start()
+  }, [pct, widthPct])
+
   return (
     <View style={styles.track}>
-      <View style={[styles.fill, { width: `${pct}%` }]} />
+      <Animated.View
+        style={[
+          styles.fill,
+          { width: widthPct.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) },
+        ]}
+      />
     </View>
   )
 }

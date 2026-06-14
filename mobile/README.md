@@ -80,7 +80,35 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Achievements Screen & Next Goal Widget
+## Feel / Feedback Polish
+
+A few cheap, broadly-applicable "juice" additions that don't depend on
+final art (pure style/animation wrappers, swappable later without touching
+this logic):
+
+- **`AnimatedPressable`** (`src/components/AnimatedPressable.tsx`): drop-in
+  `Pressable` replacement that springs content to 96% scale on press-in and
+  back on release. Uses RN core `Animated` (no reanimated babel plugin
+  needed). `style` (background/border/layout) stays on the outer
+  `Pressable`, so swapping in real art later needs no layout changes. Used
+  for Buy Crude / Sell Gas / product chips / refinery-upgrade header
+  (Refinery tab), and Hire / Refresh / Train (Staff tab).
+- **Floating +/- numbers** (`useFloatingNumbers` + `FloatingNumbers`):
+  small "+$180" / "-$100" toasts that rise and fade (900ms) in the top-right
+  of the Refinery and Staff tabs, spawned on buy/sell/hire/train/refresh/
+  refinery-upgrade using amounts computed from current state (so they
+  always match what the action will actually do, including the "sell what
+  you actually have" clamping).
+- **Animated `ProgressBar`**: width transitions now animate (400ms) instead
+  of snapping -- used by the Achievements screen and the 🎯 Next Goal card.
+- **Haptics** (`useHaptics`, via `expo-haptics`): light tap on buy/sell/
+  refresh, medium "confirm" thunk on hire/train/build/upgrade, and a success
+  notification whenever a new milestone completes (tracked globally in
+  `app/_layout.tsx` via `completedMilestoneKeys.length`). All gated by the
+  existing "Sound effects" setting (now does something even without audio
+  assets) and wrapped in try/catch (no-ops on web/unsupported devices).
+
+
 
 The existing ~16-entry milestone system (`completedMilestoneKeys` /
 `MILESTONES`) was fully computed in `derived.activeMilestones` but never

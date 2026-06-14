@@ -94,7 +94,9 @@ export default function SettingsScreen() {
             onChange={(v) => update('musicEnabled', v)}
           />
           <Text style={styles.note}>
-            Demo toggles -- this build has no audio assets yet, so they don't change anything audible.
+            Demo toggles -- this build has no audio assets yet, so "Sound effects" doesn't play
+            anything audible, but it does control haptic feedback (taps, purchases, milestones).
+            "Music" doesn't change anything yet.
           </Text>
         </Section>
 

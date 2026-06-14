@@ -1,7 +1,11 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import AnimatedPressable from '../../../src/components/AnimatedPressable'
+import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
+import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
+import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { WORKERS } from '../../../src/game/data/workers'
 import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
@@ -40,6 +44,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function StaffScreen() {
   const { game, loaded, derived, hireCandidate, refreshRecruitmentPool, trainEmployee, toggleAssignment } = useGame()
+  const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
+  const haptics = useHaptics()
 
   if (!loaded || !game || !derived) {
     return (
@@ -59,6 +65,7 @@ export default function StaffScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
       <View style={styles.header}>
         <Text style={styles.title}>Staff</Text>
         <Text style={styles.subtitle}>{game.employees.length} employees hired</Text>
@@ -71,13 +78,19 @@ export default function StaffScreen() {
                 ? `Pool refreshes in ${refreshSecondsLeft}s`
                 : 'Pool refreshing...'}
             </Text>
-            <Pressable
+            <AnimatedPressable
               disabled={!canManualRefresh}
-              onPress={() => refreshRecruitmentPool()}
+              onPress={() => {
+                if (canManualRefresh) {
+                  spawnFloat(`-$${refreshCost.toLocaleString()}`, 'expense')
+                  haptics.tap()
+                }
+                refreshRecruitmentPool()
+              }}
               style={[styles.refreshButton, canManualRefresh ? styles.smallButtonActive : styles.smallButtonDisabled]}
             >
               <Text style={styles.smallButtonLabel}>🔄 Refresh (${refreshCost.toLocaleString()})</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
           {game.recruitmentPool.map((candidate, slotIndex) => {
             const worker = WORKERS.find((w) => w.key === candidate.type)
@@ -98,16 +111,22 @@ export default function StaffScreen() {
                   {badge ? `${badge} · ` : ''}Starts at Lv{candidate.startingLevel}
                   {candidate.isVeteran ? ' · Veteran (+20%)' : ''}
                 </Text>
-                <Pressable
+                <AnimatedPressable
                   disabled={!affordable}
-                  onPress={() => hireCandidate(slotIndex)}
+                  onPress={() => {
+                    if (affordable) {
+                      spawnFloat(`-$${candidate.cost.toLocaleString()}`, 'expense')
+                      haptics.confirm()
+                    }
+                    hireCandidate(slotIndex)
+                  }}
                   style={[
                     styles.hireButton,
                     affordable ? styles.smallButtonActive : styles.smallButtonDisabled,
                   ]}
                 >
                   <Text style={styles.smallButtonLabel}>Hire · ${candidate.cost.toLocaleString()}</Text>
-                </Pressable>
+                </AnimatedPressable>
               </View>
             )
           })}
@@ -138,15 +157,21 @@ export default function StaffScreen() {
                   {maxed ? ' (max)' : ` · ${employee.xp}/${xpNeeded} XP`}
                 </Text>
                 <View style={styles.employeeActions}>
-                  <Pressable
+                  <AnimatedPressable
                     disabled={!canTrain}
-                    onPress={() => trainEmployee(employee.id)}
+                    onPress={() => {
+                      if (canTrain) {
+                        spawnFloat(`-$${cost.money.toLocaleString()}`, 'expense')
+                        haptics.confirm()
+                      }
+                      trainEmployee(employee.id)
+                    }}
                     style={[styles.smallButton, canTrain ? styles.smallButtonActive : styles.smallButtonDisabled]}
                   >
                     <Text style={styles.smallButtonLabel}>
                       {maxed ? 'Max' : `Train $${cost.money.toLocaleString()}+${cost.rp}RP`}
                     </Text>
-                  </Pressable>
+                  </AnimatedPressable>
                   {isSpecialist && (
                     <Pressable
                       disabled={!assigned && (game.assignments[employee.type]?.length ?? 0) >= capacity}
