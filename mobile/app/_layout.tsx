@@ -27,7 +27,7 @@ export default function RootLayout() {
       <SettingsProvider>
         <GameProvider>
           <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
             <Stack.Screen name="settings" options={{ presentation: 'card' }} />
             <Stack.Screen name="store" options={{ presentation: 'card' }} />
           </Stack>
