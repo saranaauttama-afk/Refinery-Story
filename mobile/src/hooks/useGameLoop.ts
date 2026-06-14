@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   AwardRecord,
@@ -61,6 +62,79 @@ import { BUILDINGS } from '../game/data/buildings'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
 
 const SAVE_INTERVAL_MS = 5000
+
+// --- Auto-trade (QoL feature, mobile-only) ---
+//
+// Repeatedly tapping "Buy 10 Crude" / "Sell 10 Gas" was the #1 reported
+// annoyance. This adds an optional toggle: when enabled, each tick the game
+// tops up crude when it drops below `buyThreshold`% of capacity (capped by
+// cash on hand) and sells off gasoline down to `sellThreshold`% when it
+// exceeds that level -- so excess never overflows/wastes and crude never
+// fully runs dry, without the player babysitting both meters.
+//
+// Persisted separately from the game save (own AsyncStorage key) so it
+// survives "Reset save" / New Game, similar to Settings.
+export type AutoTradeSettings = {
+  enabled: boolean
+  buyThreshold: number // 0-100, % of maxCrudeStorage below which to top up
+  sellThreshold: number // 0-100, % of maxGasolineStorage above which to sell down to
+}
+
+const AUTO_TRADE_KEY = 'refinery-story-autotrade'
+const DEFAULT_AUTO_TRADE: AutoTradeSettings = { enabled: false, buyThreshold: 20, sellThreshold: 80 }
+
+function sanitizeAutoTrade(value: unknown): AutoTradeSettings {
+  if (typeof value !== 'object' || value === null) return DEFAULT_AUTO_TRADE
+  const v = value as Partial<AutoTradeSettings>
+  const clamp = (n: unknown, fallback: number) =>
+    typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : fallback
+  return {
+    enabled: typeof v.enabled === 'boolean' ? v.enabled : DEFAULT_AUTO_TRADE.enabled,
+    buyThreshold: clamp(v.buyThreshold, DEFAULT_AUTO_TRADE.buyThreshold),
+    sellThreshold: clamp(v.sellThreshold, DEFAULT_AUTO_TRADE.sellThreshold),
+  }
+}
+
+// Pure, exported for testing. Runs after the main tick: top up crude toward
+// buyThreshold% (limited by cash + storage), then sell gasoline down to
+// sellThreshold% if it's currently above that.
+export function applyAutoTrade(current: GameState, settings: AutoTradeSettings): GameState {
+  if (!settings.enabled) return current
+  const stats = calculateDerivedStats(current)
+  let next = current
+
+  if (stats.maxCrudeStorage > 0) {
+    const crudePct = (next.crudeOil / stats.maxCrudeStorage) * 100
+    if (crudePct < settings.buyThreshold) {
+      const targetCrude = Math.floor((settings.buyThreshold / 100) * stats.maxCrudeStorage)
+      const needed = Math.max(0, targetCrude - next.crudeOil)
+      const affordable = Math.floor(next.money / CRUDE_COST)
+      const space = stats.maxCrudeStorage - next.crudeOil
+      const amount = Math.min(needed, affordable, space)
+      if (amount > 0) {
+        next = {
+          ...next,
+          money: next.money - amount * CRUDE_COST,
+          crudeOil: next.crudeOil + amount,
+          everBoughtCrude: true,
+        }
+      }
+    }
+  }
+
+  if (stats.maxGasolineStorage > 0) {
+    const gasolinePct = (next.gasoline / stats.maxGasolineStorage) * 100
+    if (gasolinePct > settings.sellThreshold) {
+      const targetGasoline = Math.floor((settings.sellThreshold / 100) * stats.maxGasolineStorage)
+      const excess = Math.max(0, next.gasoline - targetGasoline)
+      if (excess > 0) {
+        next = { ...next, gasoline: next.gasoline - excess, money: next.money + excess * stats.sellPrice }
+      }
+    }
+  }
+
+  return next
+}
 
 // Full production tick: feedstock (crude -> feedstock), downstream plants
 // (feedstock -> lubricants/jetFuel/petrochemicals), gasoline (crude ->
@@ -183,6 +257,8 @@ export function useGameLoop() {
   const gameRef = useRef<GameState | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [hasSave, setHasSave] = useState(false)
+  const [autoTrade, setAutoTrade] = useState<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
+  const autoTradeRef = useRef<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
@@ -194,6 +270,14 @@ export function useGameLoop() {
       setHasSave(message !== text.save.noSave)
       setLoaded(true)
     })
+    AsyncStorage.getItem(AUTO_TRADE_KEY)
+      .then((raw) => {
+        if (!raw) return
+        const parsed = sanitizeAutoTrade(JSON.parse(raw))
+        autoTradeRef.current = parsed
+        setAutoTrade(parsed)
+      })
+      .catch(() => {})
   }, [])
 
   // Main production tick (200ms): production + ESG/demand drift + staff XP +
@@ -222,6 +306,8 @@ export function useGameLoop() {
           next = afterAward
           setPendingAward(record)
         }
+
+        next = applyAutoTrade(next, autoTradeRef.current)
 
         gameRef.current = next
         return next
@@ -575,6 +661,15 @@ export function useGameLoop() {
     if (gameRef.current) saveStoredGameState(gameRef.current)
   }, [])
 
+  const updateAutoTrade = useCallback((partial: Partial<AutoTradeSettings>) => {
+    setAutoTrade((current) => {
+      const next = sanitizeAutoTrade({ ...current, ...partial })
+      autoTradeRef.current = next
+      AsyncStorage.setItem(AUTO_TRADE_KEY, JSON.stringify(next)).catch(() => {})
+      return next
+    })
+  }, [])
+
   const resetGame = useCallback(() => {
     clearStoredGameState()
     const fresh = createInitialGameState()
@@ -587,6 +682,8 @@ export function useGameLoop() {
     game,
     loaded,
     hasSave,
+    autoTrade,
+    updateAutoTrade,
     derived: game ? calculateDerivedStats(game) : null,
     pendingChoiceEvent,
     pendingAward,

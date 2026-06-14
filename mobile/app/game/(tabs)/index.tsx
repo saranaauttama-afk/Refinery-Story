@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
   useWindowDimensions,
@@ -39,6 +40,8 @@ export default function RefineryScreen() {
     placeBuilding,
     upgradeBuilding,
     upgradeRefinery,
+    autoTrade,
+    updateAutoTrade,
   } = useGame()
   const { width } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
@@ -143,6 +146,56 @@ export default function RefineryScreen() {
         })}
       </View>
 
+      <View style={styles.autoTradeCard}>
+        <View style={styles.autoTradeHeader}>
+          <Text style={styles.autoTradeTitle}>🔄 Auto-trade</Text>
+          <Switch
+            value={autoTrade.enabled}
+            onValueChange={(v) => updateAutoTrade({ enabled: v })}
+            trackColor={{ false: colors.creamBorder, true: colors.green }}
+          />
+        </View>
+        {autoTrade.enabled && (
+          <>
+            <View style={styles.thresholdRow}>
+              <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
+              <View style={styles.stepper}>
+                <Pressable
+                  style={styles.stepperButton}
+                  onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}
+                >
+                  <Text style={styles.stepperLabel}>−</Text>
+                </Pressable>
+                <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
+                <Pressable
+                  style={styles.stepperButton}
+                  onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}
+                >
+                  <Text style={styles.stepperLabel}>+</Text>
+                </Pressable>
+              </View>
+            </View>
+            <View style={styles.thresholdRow}>
+              <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
+              <View style={styles.stepper}>
+                <Pressable
+                  style={styles.stepperButton}
+                  onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}
+                >
+                  <Text style={styles.stepperLabel}>−</Text>
+                </Pressable>
+                <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
+                <Pressable
+                  style={styles.stepperButton}
+                  onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}
+                >
+                  <Text style={styles.stepperLabel}>+</Text>
+                </Pressable>
+              </View>
+            </View>
+          </>
+        )}
+      </View>
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
@@ -294,5 +347,63 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.ink,
     marginTop: 2,
+  },
+  autoTradeCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+  },
+  autoTradeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  autoTradeTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 14,
+  },
+  thresholdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  thresholdLabel: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.inkMuted,
+    paddingRight: spacing.sm,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  stepperButton: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.sm,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    backgroundColor: colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperLabel: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 16,
+  },
+  stepperValue: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
+    minWidth: 40,
+    textAlign: 'center',
   },
 })

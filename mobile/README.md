@@ -46,7 +46,9 @@ with Expo Go on your phone.
     season), the building grid, buy crude / sell gasoline, sell downstream
     products. Tap an empty tile to **build**, tap a crude tank / distillation
     unit / product tank to **upgrade**, tap the title to **upgrade the
-    refinery level**.
+    refinery level**. A **🔄 Auto-trade** card lets you toggle automatic
+    crude top-ups / gasoline sell-offs with adjustable thresholds (±5%
+    steppers) -- see below.
   - **Staff**: hire all 9 worker types. "Your team" shows each employee
     (name, level, XP, ⭐ veteran trait), with a **Train** button (costs $ +
     RP, max level 5) and an **Assign** toggle for specialist roles
@@ -70,7 +72,28 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Architecture note
+## Auto-trade
+
+QoL feature added to address the #1 reported annoyance: repeatedly tapping
+"Buy 10 Crude" / "Sell 10 Gas". When the **🔄 Auto-trade** toggle on the
+Refinery screen is on, every tick (200ms):
+
+1. If `crudeOil` is below `buyThreshold`% of `maxCrudeStorage`, buy enough to
+   bring it back up to `buyThreshold`% (capped by cash on hand and storage
+   space).
+2. If `gasoline` is above `sellThreshold`% of `maxGasolineStorage`, sell the
+   excess down to `sellThreshold`%.
+
+Both thresholds (0-100%, default 20% / 80%) are adjustable via ±5% stepper
+buttons and apply to two *different* resources (crude vs. gasoline), so they
+don't interact with each other. The implementation (`applyAutoTrade` in
+`src/hooks/useGameLoop.ts`, exported for testing) is a pure function run
+after the main `tick()`.
+
+Persisted separately from the game save (`refinery-story-autotrade` in
+AsyncStorage, like Settings) -- survives "Reset save" / New Game.
+
+
 
 All game state/intervals live in **one** `useGameLoop()` instance, shared via
 `GameProvider`/`useGame()` (`src/hooks/GameContext.tsx`) and mounted once in
