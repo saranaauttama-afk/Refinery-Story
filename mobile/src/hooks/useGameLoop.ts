@@ -49,6 +49,7 @@ import {
 import {
   ASPHALT_BALANCE,
   AWARDS_BALANCE,
+  BOOST_BALANCE,
   DEMAND_SHIFT_BALANCE,
   ESG_BALANCE,
   EXPANSION_BALANCE,
@@ -193,6 +194,20 @@ export function shouldFireChoiceEventFallback(game: GameState): boolean {
   return game.tickCount - game.lastChoiceEventTick >= CHOICE_EVENT_FALLBACK_TICKS
 }
 
+// --- 🔥 Boost (mobile-only) ---
+// Pure, exported for testing.
+export function isBoostActive(game: GameState): boolean {
+  return game.tickCount < game.boostActiveUntilTick
+}
+
+export function isBoostOnCooldown(game: GameState): boolean {
+  return game.tickCount < game.boostAvailableAtTick
+}
+
+export function canActivateBoost(game: GameState): boolean {
+  return game.tickCount >= game.boostAvailableAtTick
+}
+
 // Full production tick: feedstock (crude -> feedstock), downstream plants
 // (feedstock -> lubricants/jetFuel/petrochemicals), gasoline (crude ->
 // gasoline, incl. Efficiency-perk yield carry), ESG drift, Energy Transition
@@ -246,7 +261,14 @@ export function tick(current: GameState): GameState {
   }
 
   // --- Gasoline production: crude -> gasoline (with Efficiency yield carry) ---
-  const nextProgress = current.productionProgress + TICK_MS
+  // 🔥 Boost: while active, the production clock runs at
+  // BOOST_BALANCE.productionMultiplier speed (effectively ~2x gasoline
+  // output rate). Only affects this clock, not distillation/downstream
+  // plants -- keeps the boost simple and immediately visible on the core
+  // gasoline loop.
+  const isBoosted = current.tickCount < current.boostActiveUntilTick
+  const productionTickAmount = isBoosted ? TICK_MS * BOOST_BALANCE.productionMultiplier : TICK_MS
+  const nextProgress = current.productionProgress + productionTickAmount
   const interval = stats.productionInterval
   let gasoline = current.gasoline
   let productionProgress = nextProgress
@@ -320,6 +342,7 @@ export function useGameLoop() {
   const pendingChoiceEventRef = useRef<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
+  const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
 
   // Shows a choice event (if none is currently pending) and stamps
   // lastChoiceEventTick so the fallback timer restarts from "now".
@@ -425,6 +448,9 @@ export function useGameLoop() {
       let next = fn(current)
       if (hasNewMilestone(current, next)) {
         next = triggerChoiceEvent(next)
+      }
+      if (!current.prototypeCompleted && next.prototypeCompleted) {
+        setPendingWinCelebration(true)
       }
       gameRef.current = next
       return next
@@ -674,6 +700,21 @@ export function useGameLoop() {
     [update],
   )
 
+  // 🔥 Boost: temporarily speeds up gasoline production. No-op while
+  // already active or on cooldown.
+  const activateBoost = useCallback(
+    () =>
+      update((current) => {
+        if (!canActivateBoost(current)) return current
+        return {
+          ...current,
+          boostActiveUntilTick: current.tickCount + BOOST_BALANCE.durationTicks,
+          boostAvailableAtTick: current.tickCount + BOOST_BALANCE.cooldownTicks,
+        }
+      }),
+    [update],
+  )
+
   const trainEmployee = useCallback(
     (employeeId: string) =>
       update((current) => {
@@ -806,6 +847,7 @@ export function useGameLoop() {
     pendingChoiceEvent,
     pendingAward,
     pendingEraBanner,
+    pendingWinCelebration,
     buyCrude,
     sellGasoline,
     sellProduct,
@@ -818,6 +860,7 @@ export function useGameLoop() {
     hireWorker,
     hireCandidate,
     refreshRecruitmentPool,
+    activateBoost,
     trainEmployee,
     toggleAssignment,
     produceAsphalt,
@@ -875,5 +918,6 @@ export function useGameLoop() {
     resetGame,
     dismissAward: () => setPendingAward(null),
     dismissEraBanner: () => setPendingEraBanner(null),
+    dismissWinCelebration: () => setPendingWinCelebration(false),
   }
 }

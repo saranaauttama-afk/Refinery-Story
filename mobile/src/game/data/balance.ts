@@ -24,6 +24,19 @@ export const CORE_BALANCE = {
   choiceEventFallbackTicks: 1200,
 } as const
 
+// Active "🔥 Boost" button (mobile-only): a player-activated temporary
+// production multiplier with a cooldown -- gives players something to
+// actively tap instead of only waiting on auto-trade/ticks.
+export const BOOST_BALANCE = {
+  durationTicks: 150, // ~30s active (boosted gasoline production)
+  // Total cycle from activation, including the active duration -- i.e.
+  // ~90s of cooldown after the 30s boost ends before it's available again.
+  cooldownTicks: 600,
+  // Multiplies the gasoline-production clock while active (effectively
+  // ~2x gasoline output rate).
+  productionMultiplier: 2,
+} as const
+
 export const EXPANSION_BALANCE = [
   { level: 0, size: 3, cells: 9 },
   { level: 1, size: 4, cells: 16, cost: 25000, requiresRefineryLevel: 5 },

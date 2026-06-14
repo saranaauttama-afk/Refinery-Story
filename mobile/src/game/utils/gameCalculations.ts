@@ -151,6 +151,8 @@ export function createInitialGameState(): GameState {
       }
     })(),
     lastChoiceEventTick: 0,
+    boostActiveUntilTick: 0,
+    boostAvailableAtTick: 0,
     esgScore: ESG_BALANCE.startingScore,
     gasolineDemandMultiplier: 1,
     petrochemicalsDemandMultiplier: 1,

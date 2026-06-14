@@ -49,9 +49,11 @@ with Expo Go on your phone.
     Achievements). Tap an empty tile to **build**, tap a crude tank /
     distillation unit / product tank to **upgrade**, tap the title to
     **upgrade the refinery level** (cost + a cumulative-production
-    requirement -- see below). A **🔄 Auto-trade** card lets you toggle
-    automatic crude top-ups / gasoline sell-offs with adjustable thresholds
-    (±5% steppers) -- see below.
+    requirement -- see below). A **🔥 Boost** card lets you trigger a
+    temporary 2x gasoline production multiplier (with a cooldown -- see
+    below), and a **🔄 Auto-trade** card lets you toggle automatic crude
+    top-ups / gasoline sell-offs with adjustable thresholds (±5% steppers)
+    -- see below.
   - **Staff**: a **Recruitment** pool shows 3 candidates at a time (random
     unlocked worker type + quality tier -- see below), refreshing
     automatically every ~2 min, plus a paid "🔄 Refresh" button. "Your team"
@@ -80,7 +82,51 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Feel / Feedback Polish
+## Win Celebration
+
+`prototypeCompleted` (Lv10+ refinery, reputation >= 250, contract #7 done,
+grid expansion >= 2) used to silently flip to `true` in `applyWinGoal` --
+nothing in the UI ever showed it.
+
+- `useGameLoop`'s `update()` now detects the `false -> true` transition
+  (`!current.prototypeCompleted && next.prototypeCompleted`) and sets
+  `pendingWinCelebration`.
+- New `WinCelebrationModal` (registered in `GlobalOverlays`, root layout):
+  a full-screen "🎉 Prototype Complete!" card with a snapshot of key stats
+  (level, reputation, money, lifetime gasoline) and a "Keep Playing"
+  dismiss button -- the game doesn't stop, this is just the moment
+  acknowledged. Also fires a success haptic.
+- The `/achievements` screen shows a "🏁 Prototype Complete" banner at the
+  top if `game.prototypeCompleted` is already true (so players who reach it
+  again via a fresh look, or already had it on an existing save, see
+  confirmation -- though the modal itself only fires once, on the
+  transition).
+
+## 🔥 Active Boost
+
+A player-activated temporary production multiplier -- gives players
+something to actively tap, addressing "feels like just waiting."
+
+- `BOOST_BALANCE` (`data/balance.ts`): `durationTicks=150` (~30s active),
+  `cooldownTicks=600` (~90s cooldown *after* the active window, i.e. ~2min
+  total cycle from activation), `productionMultiplier=2`.
+- New GameState fields (mobile-only): `boostActiveUntilTick`,
+  `boostAvailableAtTick` (both 0 initially, migrated via `getSafeNumber`
+  fallback 0).
+- In `tick()` (`useGameLoop.ts`), while `tickCount < boostActiveUntilTick`
+  the gasoline-production clock advances by `TICK_MS *
+  productionMultiplier` instead of `TICK_MS` each tick -- i.e. ~2x gasoline
+  output rate. Only affects the core gasoline clock (not
+  distillation/downstream plants), keeping the effect simple and
+  immediately visible.
+- `activateBoost()`: no-op while active or on cooldown
+  (`canActivateBoost`/`isBoostActive`/`isBoostOnCooldown`, all pure and
+  exported for testing).
+- UI: a 🔥 card on the Refinery screen (above Auto-trade) shows either an
+  "Activate Boost" button, an active progress bar + "Xs left", or a
+  "recharging" progress bar + countdown, using the animated `ProgressBar`.
+
+
 
 A few cheap, broadly-applicable "juice" additions that don't depend on
 final art (pure style/animation wrappers, swappable later without touching

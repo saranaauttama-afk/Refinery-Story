@@ -6,13 +6,23 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import AwardModal from '../src/components/AwardModal'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
 import EraBanner from '../src/components/EraBanner'
+import WinCelebrationModal from '../src/components/WinCelebrationModal'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
 import { useHaptics } from '../src/hooks/useHaptics'
 import { SettingsProvider } from '../src/hooks/SettingsContext'
 
 function GlobalOverlays() {
-  const { game, pendingChoiceEvent, pendingAward, pendingEraBanner, chooseEventOption, dismissAward, dismissEraBanner } =
-    useGame()
+  const {
+    game,
+    pendingChoiceEvent,
+    pendingAward,
+    pendingEraBanner,
+    pendingWinCelebration,
+    chooseEventOption,
+    dismissAward,
+    dismissEraBanner,
+    dismissWinCelebration,
+  } = useGame()
   const haptics = useHaptics()
   const lastMilestoneCount = useRef<number | null>(null)
 
@@ -27,11 +37,17 @@ function GlobalOverlays() {
     lastMilestoneCount.current = count
   }, [game?.completedMilestoneKeys.length, haptics])
 
+  // Extra-celebratory haptic when the win condition is first reached.
+  useEffect(() => {
+    if (pendingWinCelebration) haptics.success()
+  }, [pendingWinCelebration, haptics])
+
   return (
     <>
       <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} />
       <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />
       <AwardModal record={pendingAward} onDismiss={dismissAward} />
+      <WinCelebrationModal visible={pendingWinCelebration} game={game} onDismiss={dismissWinCelebration} />
     </>
   )
 }

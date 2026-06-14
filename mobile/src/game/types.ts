@@ -81,6 +81,12 @@ export type GameState = {
   // triggered or fallback). Drives the fallback timer -- see
   // CHOICE_EVENT_FALLBACK_TICKS in useGameLoop.ts.
   lastChoiceEventTick: number
+  // Mobile-only: 🔥 Boost button state. While tickCount < boostActiveUntilTick,
+  // gasoline production runs at BOOST_BALANCE.productionMultiplier speed.
+  // boostAvailableAtTick is the tick at which the button is usable again
+  // (set on activation, includes the active duration).
+  boostActiveUntilTick: number
+  boostAvailableAtTick: number
   // ESG/Safety axis: 0-100 score. Drifts each tick (down from "dirty"
   // buildings, up from safetyOfficer staff). High score reduces incident-
   // event chance and unlocks a premium contract bonus; low score raises

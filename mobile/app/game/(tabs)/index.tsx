@@ -23,7 +23,7 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
-import { BUILDING_UPGRADE_BALANCE } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE } from '../../../src/game/data/balance'
 import type { BuildingType } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -31,7 +31,9 @@ import {
   getSeasonLabel,
   getUpgradeCost,
   getUpgradeProductionRequirement,
+  TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
+import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src/hooks/useGameLoop'
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const UPGRADEABLE: BuildingType[] = ['crudeTank', 'distillationUnit', 'productTank']
@@ -52,6 +54,7 @@ export default function RefineryScreen() {
     upgradeRefinery,
     autoTrade,
     updateAutoTrade,
+    activateBoost,
   } = useGame()
   const { width } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
@@ -102,6 +105,18 @@ export default function RefineryScreen() {
   }
 
   const nextGoal = derived.activeMilestones.find((m) => !m.isCompleted)
+
+  const boostActive = isBoostActive(game)
+  const boostOnCooldown = isBoostOnCooldown(game)
+  const boostReady = canActivateBoost(game)
+  const boostActiveSecondsLeft = Math.max(0, Math.ceil(((game.boostActiveUntilTick - game.tickCount) * TICK_MS) / 1000))
+  const boostCooldownSecondsLeft = Math.max(
+    0,
+    Math.ceil(((game.boostAvailableAtTick - game.tickCount) * TICK_MS) / 1000),
+  )
+  const boostElapsed = boostActive
+    ? BOOST_BALANCE.durationTicks - (game.boostActiveUntilTick - game.tickCount)
+    : BOOST_BALANCE.cooldownTicks - (game.boostAvailableAtTick - game.tickCount)
 
   const products: { key: 'lubricants' | 'jetFuel' | 'petrochemicals'; label: string; color: string }[] = [
     { key: 'lubricants', label: 'Lubricants', color: colors.goldDark },
@@ -217,6 +232,41 @@ export default function RefineryScreen() {
             </AnimatedPressable>
           )
         })}
+      </View>
+
+      <View style={[styles.boostCard, boostActive && styles.boostCardActive]}>
+        {boostActive ? (
+          <>
+            <Text style={styles.boostTitle}>🔥 Boost active! x{BOOST_BALANCE.productionMultiplier} gasoline</Text>
+            <View style={styles.boostProgressRow}>
+              <ProgressBar current={boostElapsed} target={BOOST_BALANCE.durationTicks} />
+              <Text style={styles.boostTimeLabel}>{boostActiveSecondsLeft}s left</Text>
+            </View>
+          </>
+        ) : boostOnCooldown ? (
+          <>
+            <Text style={styles.boostTitleMuted}>🔥 Boost recharging...</Text>
+            <View style={styles.boostProgressRow}>
+              <ProgressBar current={boostElapsed} target={BOOST_BALANCE.cooldownTicks} />
+              <Text style={styles.boostTimeLabel}>{boostCooldownSecondsLeft}s</Text>
+            </View>
+          </>
+        ) : (
+          <AnimatedPressable
+            style={styles.boostButton}
+            onPress={() => {
+              if (boostReady) {
+                haptics.confirm()
+                activateBoost()
+              }
+            }}
+          >
+            <Text style={styles.boostButtonLabel}>
+              🔥 Activate Boost · x{BOOST_BALANCE.productionMultiplier} gasoline for{' '}
+              {Math.round((BOOST_BALANCE.durationTicks * TICK_MS) / 1000)}s
+            </Text>
+          </AnimatedPressable>
+        )}
       </View>
 
       <View style={styles.autoTradeCard}>
@@ -423,6 +473,49 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.ink,
     marginTop: 2,
+  },
+  boostCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+  },
+  boostCardActive: {
+    borderColor: colors.orange,
+    backgroundColor: '#FFF3E8',
+  },
+  boostTitle: {
+    fontWeight: '800',
+    color: colors.orangeDark,
+    fontSize: 13,
+  },
+  boostTitleMuted: {
+    fontWeight: '800',
+    color: colors.inkMuted,
+    fontSize: 13,
+  },
+  boostProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  boostTimeLabel: {
+    fontSize: 11,
+    color: colors.inkMuted,
+    fontWeight: '700',
+  },
+  boostButton: {
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  boostButtonLabel: {
+    fontWeight: '800',
+    color: colors.orangeDark,
+    fontSize: 13,
   },
   autoTradeCard: {
     marginHorizontal: spacing.lg,

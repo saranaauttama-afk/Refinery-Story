@@ -36,9 +36,9 @@ function MilestoneRow({ milestone }: { milestone: ActiveMilestone }) {
 
 export default function AchievementsScreen() {
   const router = useRouter()
-  const { loaded, derived } = useGame()
+  const { loaded, game, derived } = useGame()
 
-  if (!loaded || !derived) {
+  if (!loaded || !game || !derived) {
     return (
       <SafeAreaView style={styles.screen}>
         <ActivityIndicator color={colors.orange} size="large" />
@@ -60,6 +60,12 @@ export default function AchievementsScreen() {
       <Text style={styles.summary}>
         {completedCount} / {milestones.length} completed
       </Text>
+
+      {game.prototypeCompleted && (
+        <View style={styles.winBanner}>
+          <Text style={styles.winBannerText}>🏁 Prototype Complete -- all major goals achieved!</Text>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.list}>
         {milestones.map((milestone) => (
@@ -99,6 +105,21 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontWeight: '700',
     fontSize: 13,
+  },
+  winBanner: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.gold,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    padding: spacing.sm,
+  },
+  winBannerText: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
+    textAlign: 'center',
   },
   list: {
     paddingHorizontal: spacing.lg,

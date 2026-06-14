@@ -380,6 +380,8 @@ export function sanitizeLoadedGameState(value: unknown) {
     ),
     recruitmentNameCounter: getSafeNumber(value.recruitmentNameCounter, RECRUITMENT_BALANCE.poolSize),
     lastChoiceEventTick: getSafeNumber(value.lastChoiceEventTick, 0),
+    boostActiveUntilTick: getSafeNumber(value.boostActiveUntilTick, 0),
+    boostAvailableAtTick: getSafeNumber(value.boostAvailableAtTick, 0),
     esgScore: Math.max(
       ESG_BALANCE.minScore,
       Math.min(ESG_BALANCE.maxScore, getSafeNumber(value.esgScore, fallback.esgScore)),
