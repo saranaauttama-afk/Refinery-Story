@@ -31,10 +31,15 @@ with Expo Go on your phone.
   affects the menu/settings/store screens only, see gaps below), sound/music
   toggles (persisted but no audio assets yet, so silent demo toggles), link
   to Store, Reset save, About.
-- **Store** (`/store`): mock IAP screen -- "Remove Ads" ($2.99, persists
-  `adsRemoved` and hides the ad banners), plus a few illustrative consumable
-  "boosts" (cash/RP packs) with a fake purchase confirmation flow. No real
-  payment SDK -- this is all local/demo.
+- **Store** (`/store`): mock IAP screen --
+  - "Remove Ads" ($2.99, persists `adsRemoved` -- a flag for when real ads
+    are wired up later).
+  - "Rewarded Ads" section: 2 placeholders ("Watch Ad for Cash" -> +$500,
+    "Watch Ad for 2x Boost" -> 2x rewards for 10 min) marked **Soon** --
+    not yet functional, just previews the planned watch-to-earn flow.
+  - A few illustrative consumable "boosts" (cash/RP packs) with a fake
+    purchase confirmation flow. No real payment or ad SDK -- this is all
+    local/demo.
 - **🏭 Refinery / 👥 Staff / 📋 Business / 📊 Stats** (`/game/...`, bottom
   tabs): the full game --
   - **Refinery**: resource bar (money / crude / feedstock / gasoline / ESG /
@@ -55,8 +60,6 @@ with Expo Go on your phone.
     **Asphalt** production (once unlocked at Lv5), an **Activity log** (last
     8 entries), grid expansion, rename refinery, manual/auto save, reset, and
     links to Settings/Store. Also a **☰ Main Menu** link back to `/`.
-  - Each tab has a mock **ad banner** at the bottom (hidden once "Remove Ads"
-    is purchased).
 - **Global overlays**: Choice Event modal, year-end Award modal, Era-advance
   banner.
 - **Full production tick** (200ms): crude -> feedstock (distillation) ->
@@ -98,7 +101,8 @@ route can be the menu/splash without an expo-router naming conflict.
   it).
 - **Sound/music toggles** and the **Store's consumable boosts** are
   intentionally inert placeholders (no audio assets, no real IAP/payment
-  SDK) -- only "Remove Ads" actually does something (hides `<AdBanner />`).
+  SDK) -- "Remove Ads" persists `adsRemoved` for later use, and the
+  "Rewarded Ads" entries are marked **Soon** with no watch-ad flow yet.
 - **Single save slot**: "Continue" / "New Game (overwrite)" on the main menu
   cover the realistic single-slot case; there's no multi-slot save picker.
 
@@ -120,7 +124,7 @@ app/
 src/
   game/                 ported pure logic (types, data, calculations, storage)
   components/           BuildingTile, BuildingGrid, ResourceBar, Sheet, ListRow,
-                         ChoiceEventModal, AwardModal, EraBanner, AdBanner
+                         ChoiceEventModal, AwardModal, EraBanner
   hooks/
     useGameLoop.ts       load/save/tick + all game actions (exports `tick` too)
     GameContext.tsx      shared provider/hook (useGame)

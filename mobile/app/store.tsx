@@ -14,12 +14,34 @@ type Product = {
   reward?: string
 }
 
+type RewardedAd = {
+  id: string
+  title: string
+  reward: string
+  description: string
+}
+
 const REMOVE_ADS: Product = {
   id: 'remove_ads',
   title: 'Remove Ads',
-  description: 'Removes all ad banners, forever. One-time purchase.',
+  description: 'Removes all ads, forever. One-time purchase.',
   price: '$2.99',
 }
+
+const REWARDED_ADS: RewardedAd[] = [
+  {
+    id: 'rewarded_cash',
+    title: 'Watch Ad for Cash',
+    reward: '+$500',
+    description: 'Watch a short video ad for an instant cash bonus.',
+  },
+  {
+    id: 'rewarded_double',
+    title: 'Watch Ad for 2x Boost',
+    reward: '2x rewards for 10 min',
+    description: 'Watch a short video ad to double contract/event rewards for a limited time.',
+  },
+]
 
 const CONSUMABLES: Product[] = [
   {
@@ -110,6 +132,24 @@ export default function StoreScreen() {
               </Pressable>
             )}
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rewarded Ads</Text>
+          <Text style={styles.note}>Coming soon -- watch a short video ad to earn these rewards for free.</Text>
+          {REWARDED_ADS.map((ad) => (
+            <View key={ad.id} style={styles.card}>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>
+                  {ad.title} ({ad.reward})
+                </Text>
+                <Text style={styles.cardDescription}>{ad.description}</Text>
+              </View>
+              <View style={styles.soonBadge}>
+                <Text style={styles.soonLabel}>Soon</Text>
+              </View>
+            </View>
+          ))}
         </View>
 
         <View style={styles.section}>
@@ -229,6 +269,19 @@ const styles = StyleSheet.create({
   ownedLabel: {
     fontWeight: '800',
     color: colors.ink,
+  },
+  soonBadge: {
+    backgroundColor: colors.cream,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  soonLabel: {
+    fontWeight: '700',
+    color: colors.inkMuted,
+    fontSize: 12,
   },
   restoreButton: {
     alignItems: 'center',

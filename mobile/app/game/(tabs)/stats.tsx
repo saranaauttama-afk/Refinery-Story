@@ -12,7 +12,6 @@ import {
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import AdBanner from '../../../src/components/AdBanner'
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { colors, radii, spacing } from '../../../src/theme'
@@ -183,7 +182,6 @@ export default function StatsScreen() {
           />
         </View>
       </ScrollView>
-      <AdBanner />
     </SafeAreaView>
   )
 }

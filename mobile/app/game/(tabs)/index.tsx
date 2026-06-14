@@ -9,8 +9,6 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import AdBanner from '../../../src/components/AdBanner'
-
 import BuildingGrid from '../../../src/components/BuildingGrid'
 import ListRow from '../../../src/components/ListRow'
 import ResourceBar from '../../../src/components/ResourceBar'
@@ -145,7 +143,6 @@ export default function RefineryScreen() {
         })}
       </View>
 
-      <AdBanner />
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
