@@ -76,6 +76,8 @@ export function getRefineryTitle(level: number): BilingualTextValue {
   return text.refinery.titleLocalRefinery
 }
 export const RANDOM_EVENT_INTERVAL_MS = CORE_BALANCE.randomEventIntervalMs
+export const RANDOM_EVENT_INTERVAL_TICKS = CORE_BALANCE.randomEventIntervalTicks
+export const CHOICE_EVENT_FALLBACK_TICKS = CORE_BALANCE.choiceEventFallbackTicks
 
 export const REPUTATION_TIERS: ReputationTier[] = [
   {
@@ -146,6 +148,7 @@ export function createInitialGameState(): GameState {
         recruitmentNameCounter: nextNameIndex,
       }
     })(),
+    lastChoiceEventTick: 0,
     esgScore: ESG_BALANCE.startingScore,
     gasolineDemandMultiplier: 1,
     petrochemicalsDemandMultiplier: 1,

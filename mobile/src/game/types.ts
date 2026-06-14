@@ -77,6 +77,10 @@ export type GameState = {
   recruitmentPool: RecruitmentCandidate[]
   recruitmentRefreshAt: number
   recruitmentNameCounter: number
+  // Mobile-only: tickCount when a choice event was last shown (milestone-
+  // triggered or fallback). Drives the fallback timer -- see
+  // CHOICE_EVENT_FALLBACK_TICKS in useGameLoop.ts.
+  lastChoiceEventTick: number
   // ESG/Safety axis: 0-100 score. Drifts each tick (down from "dirty"
   // buildings, up from safetyOfficer staff). High score reduces incident-
   // event chance and unlocks a premium contract bonus; low score raises

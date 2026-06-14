@@ -25,7 +25,8 @@ import {
   closeBusinessYear,
   CRUDE_COST,
   TICK_MS,
-  RANDOM_EVENT_INTERVAL_MS,
+  RANDOM_EVENT_INTERVAL_TICKS,
+  CHOICE_EVENT_FALLBACK_TICKS,
   addLog,
   createInitialGameState,
   createNewEmployee,
@@ -158,6 +159,40 @@ export function applyRecruitmentRefresh(current: GameState): GameState {
   }
 }
 
+// --- Event triggers (mobile-only) ---
+//
+// Both random ("silent" economic) events and choice events used to fire on
+// real-time setIntervals (every 30s / 60s), independent of the main game
+// loop. That caused two problems: (1) desync on background/resume -- the
+// timers and tickCount drift apart, and (2) choice-event popups felt like
+// random interruptions disconnected from what the player was doing.
+//
+// Now both are checked from the main tick effect:
+// - Random events: tick-count based (every RANDOM_EVENT_INTERVAL_TICKS,
+//   ~30s of game time), but only when the refinery is "active"
+//   (crudeOil > 0) -- an idle refinery doesn't generate equipment-wear/
+//   market events.
+// - Choice events: primarily MILESTONE-triggered (whenever
+//   completedMilestoneKeys grows -- see hasNewMilestone), with a
+//   tick-count fallback (CHOICE_EVENT_FALLBACK_TICKS, ~4 min) if no
+//   milestone has fired in a while.
+
+// Pure, exported for testing.
+export function shouldFireRandomEvent(game: GameState): boolean {
+  return game.tickCount > 0 && game.tickCount % RANDOM_EVENT_INTERVAL_TICKS === 0 && game.crudeOil > 0
+}
+
+// Pure, exported for testing. True if `next` has at least one more
+// completed milestone than `current` (completedMilestoneKeys only grows).
+export function hasNewMilestone(current: GameState, next: GameState): boolean {
+  return next.completedMilestoneKeys.length > current.completedMilestoneKeys.length
+}
+
+// Pure, exported for testing.
+export function shouldFireChoiceEventFallback(game: GameState): boolean {
+  return game.tickCount - game.lastChoiceEventTick >= CHOICE_EVENT_FALLBACK_TICKS
+}
+
 // Full production tick: feedstock (crude -> feedstock), downstream plants
 // (feedstock -> lubricants/jetFuel/petrochemicals), gasoline (crude ->
 // gasoline, incl. Efficiency-perk yield carry), ESG drift, Energy Transition
@@ -282,8 +317,21 @@ export function useGameLoop() {
   const [autoTrade, setAutoTrade] = useState<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const autoTradeRef = useRef<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
+  const pendingChoiceEventRef = useRef<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
+
+  // Shows a choice event (if none is currently pending) and stamps
+  // lastChoiceEventTick so the fallback timer restarts from "now".
+  // Synchronously updates pendingChoiceEventRef so back-to-back
+  // triggers within the same tick/action don't double-fire.
+  const triggerChoiceEvent = useCallback((next: GameState): GameState => {
+    if (pendingChoiceEventRef.current) return next
+    const event = getRandomChoiceEvent()
+    pendingChoiceEventRef.current = event
+    setPendingChoiceEvent(event)
+    return { ...next, lastChoiceEventTick: next.tickCount }
+  }, [])
 
   useEffect(() => {
     loadStoredGameState().then(({ game: loadedGame, message }) => {
@@ -332,35 +380,22 @@ export function useGameLoop() {
         next = applyAutoTrade(next, autoTradeRef.current)
         next = applyRecruitmentRefresh(next)
 
+        if (shouldFireRandomEvent(next)) {
+          next = applyRandomEvent(next, getRandomEvent(next))
+        }
+
+        if (hasNewMilestone(current, next)) {
+          next = triggerChoiceEvent(next)
+        } else if (shouldFireChoiceEventFallback(next)) {
+          next = triggerChoiceEvent(next)
+        }
+
         gameRef.current = next
         return next
       })
     }, TICK_MS)
     return () => clearInterval(interval)
-  }, [loaded])
-
-  // Random events (e.g. equipment wear, ESG incidents).
-  useEffect(() => {
-    if (!loaded) return
-    const interval = setInterval(() => {
-      setGame((current) => {
-        if (!current) return current
-        const next = applyRandomEvent(current, getRandomEvent(current))
-        gameRef.current = next
-        return next
-      })
-    }, RANDOM_EVENT_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [loaded])
-
-  // Choice events: every 60s, only if none currently pending.
-  useEffect(() => {
-    if (!loaded) return
-    const interval = setInterval(() => {
-      setPendingChoiceEvent((current) => current ?? getRandomChoiceEvent())
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [loaded])
+  }, [loaded, triggerChoiceEvent])
 
   // Crude shipment arrivals (real-time delay, checked every second).
   useEffect(() => {
@@ -387,12 +422,15 @@ export function useGameLoop() {
   const update = useCallback((fn: (current: GameState) => GameState) => {
     setGame((current) => {
       if (!current) return current
-      const next = fn(current)
+      let next = fn(current)
+      if (hasNewMilestone(current, next)) {
+        next = triggerChoiceEvent(next)
+      }
       gameRef.current = next
       return next
     })
     setHasSave(true)
-  }, [])
+  }, [triggerChoiceEvent])
 
   const buyCrude = useCallback(
     (amount: number) =>
@@ -726,6 +764,7 @@ export function useGameLoop() {
     (option: 'A' | 'B') => {
       if (!pendingChoiceEvent) return
       update((current) => applyWinGoal(applyChoiceEventOption(current, pendingChoiceEvent, option)))
+      pendingChoiceEventRef.current = null
       setPendingChoiceEvent(null)
     },
     [update, pendingChoiceEvent],

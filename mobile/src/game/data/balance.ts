@@ -7,7 +7,21 @@ export const CORE_BALANCE = {
   tickMs: 200,
   gridSize: 9,
   maxLogItems: 6,
+  // Kept for reference; mobile fires random events on a tick-count check
+  // instead (see randomEventIntervalTicks) so they stay in sync with the
+  // main game loop (no real-time setInterval drift on background/resume).
   randomEventIntervalMs: 30000,
+  // Random events (equipment wear, market blips, etc.) are checked every
+  // ~30s of game time (150 ticks @ 200ms), and only actually fire if the
+  // refinery is "active" (crudeOil > 0) -- an idle refinery with no crude
+  // to process doesn't generate operational events.
+  randomEventIntervalTicks: 150,
+  // Choice events are primarily milestone-triggered (see
+  // completedMilestoneKeys / hasNewMilestone in useGameLoop.ts). This is a
+  // fallback: if ~4 min of game time (1200 ticks) pass with no milestone
+  // and no event currently shown, fire one anyway so longer gaps between
+  // milestones still get occasional choice events.
+  choiceEventFallbackTicks: 1200,
 } as const
 
 export const EXPANSION_BALANCE = [

@@ -65,8 +65,8 @@ with Expo Go on your phone.
     **Asphalt** production (once unlocked at Lv5), an **Activity log** (last
     8 entries), grid expansion, rename refinery, manual/auto save, reset, and
     links to Settings/Store. Also a **☰ Main Menu** link back to `/`.
-- **Global overlays**: Choice Event modal, year-end Award modal, Era-advance
-  banner.
+- **Global overlays**: Choice Event modal (now milestone-triggered, see
+  below), year-end Award modal, Era-advance banner.
 - **Full production tick** (200ms): crude -> feedstock (distillation) ->
   lubricants/jetFuel/petrochemicals (downstream plants, specialist-boosted),
   crude -> gasoline (incl. Efficiency-perk yield carry), ESG drift, Energy
@@ -75,7 +75,41 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Refinery Level Upgrade Rebalance
+## Event Triggers Rework
+
+Random and choice events used to fire on real-time `setInterval`s (every
+30s / 60s), independent of the main `tickCount`-based game loop. That caused
+two problems: (1) the timers and `tickCount` could drift on background/
+resume, and (2) choice-event popups felt like random interruptions
+disconnected from what the player was doing.
+
+Both are now checked from inside the main tick effect (`src/hooks/
+useGameLoop.ts`):
+
+- **Random events** (equipment wear, market blips, etc.):
+  `shouldFireRandomEvent` -- checked every `RANDOM_EVENT_INTERVAL_TICKS`
+  (150 ticks, ~30s of game time), and only fires if the refinery is
+  **active** (`crudeOil > 0`). An idle refinery with no crude to process
+  doesn't generate "equipment wear" or similar operational events.
+- **Choice events** (the A/B decision popup) are now primarily
+  **milestone-triggered**: `hasNewMilestone` checks whether
+  `completedMilestoneKeys` grew this tick/action (hooking into the existing
+  ~15-entry milestone system -- firstFuel, smallSupplier, refineryLevel5,
+  jetFuelPioneer, etc.). Checked both in the main tick effect (for
+  production-driven milestones) and in `update()` (for action-driven ones
+  like completing a contract or hiring), so the popup follows directly from
+  what just happened. A **fallback** (`shouldFireChoiceEventFallback`, new
+  `lastChoiceEventTick` field, 1200 ticks = ~4 min) still fires if no
+  milestone has completed in a while, so longer gaps between milestones
+  don't go event-free. Only one event can be pending at a time
+  (`pendingChoiceEventRef`).
+
+In a 40-minute simulation: 2-4 milestone-triggered events fire in the first
+~3 minutes (as early milestones complete), then fallback events fire exactly
+every 4 min for the rest of the run; random events fire ~every 30s
+throughout (gated on `crudeOil > 0`).
+
+
 
 The old refinery-level upgrade cost was linear (`55 + 35*level`) and barely
 scaled: the cumulative cost to reach Lv15 (which unlocks the $15,000
