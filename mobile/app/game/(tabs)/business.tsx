@@ -1,13 +1,15 @@
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import ListRow from '../../src/components/ListRow'
-import { useGame } from '../../src/hooks/GameContext'
-import { colors, spacing } from '../../src/theme'
-import { PERKS } from '../../src/game/data/perks'
-import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../src/game/data/balance'
-import { text } from '../../src/game/translations'
-import type { ActiveContract, GameState } from '../../src/game/types'
+import AdBanner from '../../../src/components/AdBanner'
+
+import ListRow from '../../../src/components/ListRow'
+import { useGame } from '../../../src/hooks/GameContext'
+import { colors, spacing } from '../../../src/theme'
+import { PERKS } from '../../../src/game/data/perks'
+import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
+import { text } from '../../../src/game/translations'
+import type { ActiveContract, GameState } from '../../../src/game/types'
 
 function contractProgress(contract: ActiveContract, game: GameState) {
   if ((contract.petrochemicalsRequired ?? 0) > 0) {
@@ -165,6 +167,7 @@ export default function BusinessScreen() {
           })}
         </Section>
       </ScrollView>
+      <AdBanner />
     </SafeAreaView>
   )
 }

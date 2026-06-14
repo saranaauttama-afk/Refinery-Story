@@ -6,6 +6,7 @@ import AwardModal from '../src/components/AwardModal'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
 import EraBanner from '../src/components/EraBanner'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
+import { SettingsProvider } from '../src/hooks/SettingsContext'
 
 function GlobalOverlays() {
   const { pendingChoiceEvent, pendingAward, pendingEraBanner, chooseEventOption, dismissAward, dismissEraBanner } =
@@ -23,13 +24,16 @@ function GlobalOverlays() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <GameProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-        <GlobalOverlays />
-      </GameProvider>
+      <SettingsProvider>
+        <GameProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="settings" options={{ presentation: 'card' }} />
+            <Stack.Screen name="store" options={{ presentation: 'card' }} />
+          </Stack>
+          <GlobalOverlays />
+        </GameProvider>
+      </SettingsProvider>
     </GestureHandlerRootView>
   )
 }

@@ -9,13 +9,15 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import ListRow from '../../src/components/ListRow'
-import { useGame } from '../../src/hooks/GameContext'
-import { colors, radii, spacing } from '../../src/theme'
-import { ASPHALT_BALANCE, EXPANSION_BALANCE, type PaidExpansionEntry } from '../../src/game/data/balance'
-import { getEsgTier, getSeasonLabel } from '../../src/game/utils/gameCalculations'
+import AdBanner from '../../../src/components/AdBanner'
+import ListRow from '../../../src/components/ListRow'
+import { useGame } from '../../../src/hooks/GameContext'
+import { colors, radii, spacing } from '../../../src/theme'
+import { ASPHALT_BALANCE, EXPANSION_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
+import { getEsgTier, getSeasonLabel } from '../../../src/game/utils/gameCalculations'
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -41,11 +43,15 @@ export default function StatsScreen() {
   const esgTier = getEsgTier(game.esgScore)
   const seasonLabel = getSeasonLabel(game.tickCount, game.yearStartTick)
   const nextExpansion = EXPANSION_BALANCE[game.gridExpansionLevel + 1] as PaidExpansionEntry | undefined
+  const router = useRouter()
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.title}>Stats</Text>
+        <Pressable onPress={() => router.push('/')}>
+          <Text style={styles.menuLink}>☰ Main Menu</Text>
+        </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.list}>
         <View style={styles.section}>
@@ -160,7 +166,24 @@ export default function StatsScreen() {
             <Text style={styles.resetButtonLabel}>Reset save</Text>
           </Pressable>
         </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>App</Text>
+          <ListRow
+            title="Settings"
+            subtitle="Language, audio, save management"
+            actionLabel="Open"
+            onPress={() => router.push('/settings')}
+          />
+          <ListRow
+            title="Store"
+            subtitle="Remove ads, boosts (demo)"
+            actionLabel="Open"
+            onPress={() => router.push('/store')}
+          />
+        </View>
       </ScrollView>
+      <AdBanner />
     </SafeAreaView>
   )
 }
@@ -177,9 +200,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
+  },
+  menuLink: {
+    fontSize: 13,
+    color: colors.blue,
+    fontWeight: '700',
   },
   title: {
     fontSize: 22,

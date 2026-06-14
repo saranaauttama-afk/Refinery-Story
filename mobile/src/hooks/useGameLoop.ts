@@ -56,6 +56,7 @@ import {
   type PaidExpansionEntry,
   type ShipmentOption,
 } from '../game/data/balance'
+import { text } from '../game/translations'
 import { BUILDINGS } from '../game/data/buildings'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
 
@@ -181,14 +182,16 @@ export function useGameLoop() {
   const [game, setGame] = useState<GameState | null>(null)
   const gameRef = useRef<GameState | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [hasSave, setHasSave] = useState(false)
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
 
   useEffect(() => {
-    loadStoredGameState().then(({ game: loadedGame }) => {
+    loadStoredGameState().then(({ game: loadedGame, message }) => {
       gameRef.current = loadedGame
       setGame(loadedGame)
+      setHasSave(message !== text.save.noSave)
       setLoaded(true)
     })
   }, [])
@@ -279,6 +282,7 @@ export function useGameLoop() {
       gameRef.current = next
       return next
     })
+    setHasSave(true)
   }, [])
 
   const buyCrude = useCallback(
@@ -576,11 +580,13 @@ export function useGameLoop() {
     const fresh = createInitialGameState()
     gameRef.current = fresh
     setGame(fresh)
+    setHasSave(false)
   }, [])
 
   return {
     game,
     loaded,
+    hasSave,
     derived: game ? calculateDerivedStats(game) : null,
     pendingChoiceEvent,
     pendingAward,

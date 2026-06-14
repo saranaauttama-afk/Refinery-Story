@@ -9,21 +9,23 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import BuildingGrid from '../../src/components/BuildingGrid'
-import ListRow from '../../src/components/ListRow'
-import ResourceBar from '../../src/components/ResourceBar'
-import Sheet from '../../src/components/Sheet'
-import { useGame } from '../../src/hooks/GameContext'
-import { colors, radii, spacing } from '../../src/theme'
-import { BUILDINGS } from '../../src/game/data/buildings'
-import { BUILDING_UPGRADE_BALANCE } from '../../src/game/data/balance'
-import type { BuildingType } from '../../src/game/types'
+import AdBanner from '../../../src/components/AdBanner'
+
+import BuildingGrid from '../../../src/components/BuildingGrid'
+import ListRow from '../../../src/components/ListRow'
+import ResourceBar from '../../../src/components/ResourceBar'
+import Sheet from '../../../src/components/Sheet'
+import { useGame } from '../../../src/hooks/GameContext'
+import { colors, radii, spacing } from '../../../src/theme'
+import { BUILDINGS } from '../../../src/game/data/buildings'
+import { BUILDING_UPGRADE_BALANCE } from '../../../src/game/data/balance'
+import type { BuildingType } from '../../../src/game/types'
 import {
   CRUDE_COST,
   getProductSellPrice,
   getSeasonLabel,
   getUpgradeCost,
-} from '../../src/game/utils/gameCalculations'
+} from '../../../src/game/utils/gameCalculations'
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const UPGRADEABLE: BuildingType[] = ['crudeTank', 'distillationUnit', 'productTank']
@@ -142,6 +144,8 @@ export default function RefineryScreen() {
           )
         })}
       </View>
+
+      <AdBanner />
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>

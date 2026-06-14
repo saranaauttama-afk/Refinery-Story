@@ -1,13 +1,15 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import ListRow from '../../src/components/ListRow'
-import { useGame } from '../../src/hooks/GameContext'
-import { colors, radii, spacing } from '../../src/theme'
-import { WORKERS } from '../../src/game/data/workers'
-import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../src/game/data/balance'
-import { getAssignmentCapacity, getTrainingCost } from '../../src/game/utils/gameCalculations'
-import type { WorkerType } from '../../src/game/types'
+import AdBanner from '../../../src/components/AdBanner'
+
+import ListRow from '../../../src/components/ListRow'
+import { useGame } from '../../../src/hooks/GameContext'
+import { colors, radii, spacing } from '../../../src/theme'
+import { WORKERS } from '../../../src/game/data/workers'
+import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
+import { getAssignmentCapacity, getTrainingCost } from '../../../src/game/utils/gameCalculations'
+import type { WorkerType } from '../../../src/game/types'
 
 // Worker types that can be assigned to a specific plant for a specialist
 // output bonus (see PLANT_PRODUCTION.specialistWorker).
@@ -120,6 +122,7 @@ export default function StaffScreen() {
           })}
         </Section>
       </ScrollView>
+      <AdBanner />
     </SafeAreaView>
   )
 }

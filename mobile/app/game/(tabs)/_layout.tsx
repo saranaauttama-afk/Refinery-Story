@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router'
 import { BarChart3, Briefcase, Factory, Users } from 'lucide-react-native'
-import { colors } from '../../src/theme'
+import { colors } from '../../../src/theme'
 
 export default function TabsLayout() {
   return (
