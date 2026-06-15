@@ -249,37 +249,50 @@ export function tick(current: GameState): GameState {
   }
 
   // --- Downstream plants: feedstock -> product ---
-  // Process highest-value/latest-unlocked plants FIRST so they get
-  // feedstock priority. PLANT_PRODUCTION is ordered by unlock tier
-  // (lubricant < jet fuel < petrochem), but feedstock is a single shared
-  // pool checked sequentially -- if lubricant (cheapest, needs least,
-  // unlocked earliest) always went first, it (and jet fuel after it) could
-  // soak up all available feedstock every cycle, leaving petrochem -- the
-  // plant the player most recently invested in -- producing nothing for a
-  // very long time until lubricant's storage fills up. Reversing the
-  // order means a newly-built petrochem plant gets feedstock immediately;
-  // lubricant (which has likely been stockpiling since much earlier in the
-  // game) absorbs whatever is left over.
-  for (const plant of [...PLANT_PRODUCTION].reverse()) {
+  // Feedstock is a single shared pool that lubricant/jet fuel/petrochem
+  // all draw from every 25-tick (5s) cycle. Previously this was
+  // first-come-first-served in a fixed order: whichever plant type was
+  // checked first got its FULL feedstockNeeded (or nothing), so when total
+  // demand exceeded supply, some plant types produced at 100% while others
+  // produced 0% for as long as the front-of-queue plants kept winning
+  // (observed: a newly-built petrochem plant could sit at 0 output for
+  // ~3-4 minutes while lubricant/jet fuel ate all the feedstock first).
+  //
+  // Now: every plant eligible this cycle (built, on-interval, has storage
+  // room) shares the pool PROPORTIONALLY to its feedstockPerCycle need. If
+  // supply covers total demand, everyone gets their normal full output
+  // (identical to the old behavior in the common case). If supply is
+  // short, every plant still produces SOMETHING this cycle -- scaled down
+  // by the same shortage ratio -- instead of some plants winning outright
+  // and others getting nothing.
+  const eligiblePlants = PLANT_PRODUCTION.filter((plant) => {
     const plantCount = stats.buildingCounts[plant.buildingKey]
-    if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) continue
+    if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) return false
+    return plant.maxStorage - productInventory[plant.productKey] > 0
+  })
+  const totalFeedstockDemand = eligiblePlants.reduce(
+    (sum, plant) => sum + stats.buildingCounts[plant.buildingKey] * plant.feedstockPerCycle,
+    0,
+  )
+  if (totalFeedstockDemand > 0 && feedstock > 0) {
+    const shareRatio = Math.min(1, feedstock / totalFeedstockDemand)
+    for (const plant of eligiblePlants) {
+      const plantCount = stats.buildingCounts[plant.buildingKey]
+      const productSpace = plant.maxStorage - productInventory[plant.productKey]
+      const specialistMultiplier = getSpecialistMultiplier(current, plant, plantCount)
+      const rawProduced = plantCount * plant.outputPerCycle * specialistMultiplier * shareRatio
+      // Full share: round as before (preserves old behavior exactly when
+      // supply is sufficient). Reduced share: floor, so a plant never
+      // "rounds up" into output it didn't have the feedstock for.
+      const produced = Math.min(shareRatio >= 1 ? Math.round(rawProduced) : Math.floor(rawProduced), productSpace)
+      if (produced <= 0) continue
 
-    const feedstockNeeded = plantCount * plant.feedstockPerCycle
-    const productSpace = plant.maxStorage - productInventory[plant.productKey]
-    if (feedstock < feedstockNeeded || productSpace <= 0) continue
-
-    const specialistMultiplier = getSpecialistMultiplier(current, plant, plantCount)
-    const produced = Math.min(
-      Math.round(plantCount * plant.outputPerCycle * specialistMultiplier),
-      productSpace,
-    )
-    if (produced <= 0) continue
-
-    feedstock -= feedstockNeeded
-    productInventory = {
-      ...productInventory,
-      [plant.productKey]: productInventory[plant.productKey] + produced,
+      productInventory = {
+        ...productInventory,
+        [plant.productKey]: productInventory[plant.productKey] + produced,
+      }
     }
+    feedstock = shareRatio >= 1 ? feedstock - totalFeedstockDemand : 0
   }
 
   // --- Gasoline production: crude -> gasoline (with Efficiency yield carry) ---

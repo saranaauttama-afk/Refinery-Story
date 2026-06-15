@@ -429,17 +429,18 @@ export function getBuildingEffectLines(
       }
 
       // Feedstock supply vs total demand across all built downstream
-      // plants (lubricant/jet fuel/petrochem all draw from the same
-      // feedstock pool every 25-tick cycle). If supply can't cover total
-      // demand, some plants won't fire every cycle -- surface this here
-      // rather than leaving the player wondering why output is slow/zero.
+      // plants (lubricant/jet fuel/petrochem share one feedstock pool,
+      // split proportionally every 25-tick cycle -- see tick()). If
+      // supply can't cover total demand, every plant runs at a reduced
+      // rate (not just this one).
       const supplyPer25Ticks = derived.feedstockPerDistillationCycle * 5
       const demandPer25Ticks = PLANT_PRODUCTION.reduce(
         (sum, p) => sum + derived.buildingCounts[p.buildingKey] * p.feedstockPerCycle,
         0,
       )
       if (demandPer25Ticks > supplyPer25Ticks) {
-        line.warning = `Feedstock supply (${Math.floor(supplyPer25Ticks)}/${seconds}s) is below total demand (${demandPer25Ticks}/${seconds}s) -- build more Distillation Units to keep all downstream plants running every cycle.`
+        const pct = Math.round((supplyPer25Ticks / demandPer25Ticks) * 100)
+        line.warning = `Feedstock supply (${Math.floor(supplyPer25Ticks)}/${seconds}s) covers only ${pct}% of total demand (${demandPer25Ticks}/${seconds}s) -- all downstream plants run at a reduced rate. Build more Distillation Units for full output.`
       }
 
       return [line]

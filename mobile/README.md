@@ -510,35 +510,52 @@ against the SAME shared feedstock pool every 25-tick (5s) cycle.
 Root cause: with 1 of each plant built and only 1 Distillation Unit (a very
 common "just unlocked petrochem" setup), feedstock supply (~12.5/cycle) is
 well below total demand (lubricant 6 + jet fuel 8 + petrochem 10 = 24/cycle).
-`PLANT_PRODUCTION` was processed in unlock-tier order (lubricant -> jet fuel
--> petrochem), so the cheapest/earliest-unlocked plants greedily consumed
-the limited feedstock first every cycle -- petrochem (last, needing the
-most) got nothing until lubricant's 200-unit storage filled up and stopped
-competing. Simulated: petrochemicals stayed at 0 until tick ~1125 (~3.75
-min) before this fix.
+The original code was first-come-first-served in a fixed order (lubricant ->
+jet fuel -> petrochem): whichever plant was checked first got its FULL
+feedstockNeeded or nothing, so the front-of-queue plants produced at 100%
+while petrochem (last, needing the most) got 0% until lubricant's 200-unit
+storage filled up and stopped competing. Simulated: petrochemicals stayed at
+0 until tick ~1125 (~3.75 min) before this fix.
 
-Fix (`useGameLoop.ts` tick()): the downstream-plants loop now iterates
-`[...PLANT_PRODUCTION].reverse()` -- petrochem, then jet fuel, then
-lubricant -- so the plant the player most recently invested in gets
-feedstock priority; lubricant (likely already stockpiled from earlier in
-the game) absorbs the leftovers. Simulated: petrochemicals now produces on
-its very first eligible cycle (tick 25).
+A first attempt just reversed the processing order (petrochem first) --
+rejected on review as "musical chairs": it fixes petrochem's case but now
+*lubricant* is the one that can sit at 0% for minutes. Same problem, just
+moved to a different plant.
 
-Also added: `getBuildingEffectLines` (Building Info sheet, see above) now
-shows an orange `warning` line on lubricant/jet fuel/petrochem plants when
-total feedstock demand across all built downstream plants exceeds supply --
-"Feedstock supply (X/5s) is below total demand (Y/5s) -- build more
-Distillation Units to keep all downstream plants running every cycle." New
+**Real fix** (`useGameLoop.ts` tick()): every plant eligible this cycle
+(built, on-interval, has storage room) now shares the feedstock pool
+**proportionally** to its `feedstockPerCycle` need:
+- If supply >= total demand: everyone gets their normal full output
+  (`Math.round`, identical to the old behavior in the common case).
+- If supply < total demand: `shareRatio = feedstock / totalDemand` (e.g.
+  12.5/24 ~= 52%), and EVERY eligible plant produces
+  `Math.floor(plantCount * outputPerCycle * specialistMultiplier *
+  shareRatio)` -- scaled down by the same shortage ratio, never zero just
+  because of queue position. All available feedstock is consumed
+  (`feedstock = 0`) since it was fully distributed.
+
+Simulated (1 of each plant, 1 distillation unit, shareRatio ~52%): all three
+products now produce `floor(5 * 0.52) = 2` units on the very first cycle
+(tick 25), and after 2000 ticks all three sit at exactly 160 (perfectly
+balanced -- none favored, none starved). With 4 distillation units (supply >
+demand), each plant gets its full 5 per cycle, unchanged from before.
+
+Also updated: `getBuildingEffectLines` (Building Info sheet) warning line on
+lubricant/jet fuel/petrochem now reflects proportional sharing -- "Feedstock
+supply (X/5s) covers only Y% of total demand (Z/5s) -- all downstream plants
+run at a reduced rate. Build more Distillation Units for full output." New
 `BuildingEffectLine.warning?` field, rendered in `colors.orangeDark`.
 
-New `feedstock_priority.test.ts` (9 assertions): petrochem produces within
-the first 25 ticks (was 0 before); after 2000 ticks all three products have
-accumulated (none permanently starved); single-petrochem-no-competition
-case unaffected; the feedstock warning appears on all 3 plant types when
-demand > supply and is absent when only lubricant is built (demand <
-supply).
+`feedstock_priority.test.ts` (15 assertions): all three plants produce a
+non-zero, IDENTICAL amount on the first cycle when feedstock is scarce
+(proportional, same ratio); after 2000 ticks all three have substantial,
+balanced output; with sufficient feedstock (4 distillation units) each plant
+gets its full outputPerCycle (5) unchanged; single-petrochem-no-competition
+case unaffected; feedstock never goes negative over a 2000-tick run; the
+feedstock warning (with coverage %) appears on all 3 plant types when demand
+> supply and is absent when only lubricant is built.
 
-Verification: tsc --noEmit clean. feedstock_priority.test.ts (9) +
+Verification: tsc --noEmit clean. feedstock_priority.test.ts (15) +
 building_info.test.ts (19, unaffected) + full suite (2000-tick sim 10,106,
 autotrade 3018, recruitment ~645 + migration 11, refinery_balance 19,
 events 19 + events_long 8, milestones 25, win_celebration 12, boost 20,
@@ -547,8 +564,9 @@ combos 16, contracts_ui 13, choiceevent_migration 7, translation-key checks
 
 Note: this is complementary to (not a replacement for) the earlier "cap Jet
 Fuel/Petrochem Plant at 1" discussion -- even with the cap, 1-of-each can
-still hit this feedstock bottleneck; the real long-term fix is building
-enough Distillation Units, which the new warning now surfaces.
+still hit this feedstock bottleneck (now shared fairly instead of starving
+one); the real long-term fix is building enough Distillation Units, which
+the warning now surfaces.
 
 ## What's NOT done / known gaps
 
