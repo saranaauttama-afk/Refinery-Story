@@ -40,6 +40,7 @@ import type {
   AwardRecord,
   RivalResult,
   BuildingCounts,
+  BuildingType,
   BilingualTextValue,
   ChoiceEvent,
   ComboStats,
@@ -351,6 +352,119 @@ export function getSpecialistMultiplier(
     return employee ? sum + getEmployeeMultiplier(employee) * plant.specialistBonusRate! : sum
   }, 0)
   return 1 + bonus
+}
+
+// One line of "what does this tile do right now" info, for the Building
+// Info sheet (tap any built tile). `bonus` is rendered in green -- the
+// extra amount coming from upgrades (next level preview) or assigned
+// specialist staff, so the player can see what hiring/upgrading would add.
+export type BuildingEffectLine = {
+  label: string
+  value: string
+  bonus?: string
+}
+
+export function getBuildingEffectLines(
+  cell: BuildingType,
+  level: number,
+  game: GameState,
+  derived: DerivedStats,
+): BuildingEffectLine[] {
+  switch (cell) {
+    case 'crudeTank':
+    case 'productTank': {
+      const byLevel =
+        cell === 'crudeTank'
+          ? BUILDING_UPGRADE_BALANCE.crudeTankStorageByLevel
+          : BUILDING_UPGRADE_BALANCE.productTankStorageByLevel
+      const current = byLevel[level] ?? byLevel[1]
+      const next = byLevel[level + 1]
+      return [
+        {
+          label: cell === 'crudeTank' ? 'Crude storage from this tank' : 'Gasoline storage from this tank',
+          value: `+${current}`,
+          bonus: next !== undefined ? `(+${next - current} at Lv${level + 1})` : undefined,
+        },
+      ]
+    }
+    case 'distillationUnit': {
+      const byLevel = BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel
+      const current = byLevel[level] ?? byLevel[1]
+      const next = byLevel[level + 1]
+      return [
+        {
+          label: 'Production & feedstock speed bonus',
+          value: `+${Math.round(current * 100)}%`,
+          bonus:
+            next !== undefined
+              ? `(+${Math.round((next - current) * 100)}% at Lv${level + 1})`
+              : undefined,
+        },
+      ]
+    }
+    case 'lubricantPlant':
+    case 'jetFuelPlant':
+    case 'petrochemicalPlant': {
+      const plant = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
+      if (!plant) return []
+      const plantCount = derived.buildingCounts[cell]
+      const seconds = (plant.intervalTicks * TICK_MS) / 1000
+      const base = plant.outputPerCycle
+      const specialistMultiplier = getSpecialistMultiplier(game, plant, plantCount)
+      const boosted = Math.round(base * specialistMultiplier)
+      const bonusAmount = boosted - base
+      let bonus: string | undefined
+      if (bonusAmount > 0 && plant.specialistWorker) {
+        const assignedCount = (game.assignments[plant.specialistWorker] ?? []).slice(0, plantCount).length
+        const specialistName = WORKERS.find((w) => w.key === plant.specialistWorker)?.name.en ?? 'specialist'
+        bonus = `(+${bonusAmount} from ${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''})`
+      }
+      return [
+        {
+          label: 'Output per plant',
+          value: `${base} ${plant.productKey} / ${seconds}s`,
+          bonus,
+        },
+      ]
+    }
+    case 'laboratory': {
+      const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
+      const count = derived.buildingCounts.laboratory
+      return [
+        {
+          label: 'Research points from contracts',
+          value: `+${Math.round(rate * 100)}%`,
+          bonus: count > 1 ? `(x${count} labs = +${Math.round(rate * 100 * count)}% total)` : undefined,
+        },
+      ]
+    }
+    case 'maintenanceWorkshop': {
+      const rate = BUILDING_UPGRADE_BALANCE.maintenanceWorkshopPenaltyRateByLevel[1] ?? 0.5
+      const count = derived.buildingCounts.maintenanceWorkshop
+      const totalReduction = 1 - Math.pow(rate, count)
+      return [
+        {
+          label: 'Negative event penalty reduction',
+          value: `-${Math.round((1 - rate) * 100)}%`,
+          bonus:
+            count > 1 ? `(x${count} workshops = -${Math.round(totalReduction * 100)}% total)` : undefined,
+        },
+      ]
+    }
+    case 'salesOffice': {
+      const rate = BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[1] ?? 0.1
+      const count = derived.buildingCounts.salesOffice
+      return [
+        {
+          label: 'Contract rewards',
+          value: `+${Math.round(rate * 100)}%`,
+          bonus: count > 1 ? `(x${count} offices = +${Math.round(rate * 100 * count)}% total)` : undefined,
+        },
+      ]
+    }
+    default:
+      return []
+  }
 }
 
 // --- ESG / Safety axis ---

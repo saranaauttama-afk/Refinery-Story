@@ -24,10 +24,13 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
-import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE } from '../../../src/game/data/balance'
+import { WORKERS } from '../../../src/game/data/workers'
+import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import type { BuildingType } from '../../../src/game/types'
 import {
   CRUDE_COST,
+  getBuildingEffectLines,
+  getAssignmentCapacity,
   getProductSellPrice,
   getSeasonLabel,
   getUpgradeCost,
@@ -56,10 +59,11 @@ export default function RefineryScreen() {
     autoTrade,
     updateAutoTrade,
     activateBoost,
+    toggleAssignment,
   } = useGame()
   const { width } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
-  const [upgradeCell, setUpgradeCell] = useState<number | null>(null)
+  const [infoCell, setInfoCell] = useState<number | null>(null)
 
   if (!loaded || !game || !derived) {
     return (
@@ -85,8 +89,8 @@ export default function RefineryScreen() {
     const cell = game.grid[index]
     if (cell === null) {
       setPickerCell(index)
-    } else if (UPGRADEABLE.includes(cell)) {
-      setUpgradeCell(index)
+    } else {
+      setInfoCell(index)
     }
   }
 
@@ -174,7 +178,7 @@ export default function RefineryScreen() {
           isActive={game.crudeOil > 0}
           employeeCount={game.employees.length}
         />
-        <Text style={styles.hint}>Tap an empty tile to build · tap a tank/unit to upgrade</Text>
+        <Text style={styles.hint}>Tap an empty tile to build · tap a built tile for info</Text>
       </View>
 
       <View style={styles.actions}>
@@ -348,30 +352,87 @@ export default function RefineryScreen() {
         })}
       </Sheet>
 
-      {/* Upgrade modal */}
-      <Sheet visible={upgradeCell !== null} title="Upgrade building" onClose={() => setUpgradeCell(null)}>
+      {/* Building info */}
+      <Sheet
+        visible={infoCell !== null}
+        title={infoCell !== null && game.grid[infoCell] ? BUILDINGS[game.grid[infoCell]!].name.en : 'Info'}
+        onClose={() => setInfoCell(null)}
+      >
         {(() => {
-          if (upgradeCell === null) return null
-          const cell = game.grid[upgradeCell]
+          if (infoCell === null) return null
+          const cell = game.grid[infoCell]
           if (!cell) return null
-          const level = game.gridLevels[upgradeCell] ?? 1
+          const level = game.gridLevels[infoCell] ?? 1
+          const config = BUILDINGS[cell]
+          const effectLines = getBuildingEffectLines(cell, level, game, derived)
+          const isUpgradeable = UPGRADEABLE.includes(cell)
           const maxed = level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
-          const cost =
+          const upgradeCost =
             level === 1
               ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
               : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
+          const plant = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
+          const specialistType = plant?.specialistWorker
+          const specialistName = specialistType
+            ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType
+            : null
+          const capacity = specialistType ? getAssignmentCapacity(derived.buildingCounts, specialistType) : 0
+          const assignedIds = specialistType ? game.assignments[specialistType] ?? [] : []
+          const eligibleEmployees = specialistType
+            ? game.employees.filter((e) => e.type === specialistType)
+            : []
+
           return (
-            <ListRow
-              title={`${BUILDINGS[cell].name.en} (Lv${level})`}
-              subtitle={maxed ? 'Max level' : `Upgrade to Lv${level + 1} · $${cost.toLocaleString()}`}
-              actionLabel="Upgrade"
-              disabled={maxed || game.money < cost}
-              done={maxed}
-              onPress={() => {
-                upgradeBuilding(upgradeCell)
-                setUpgradeCell(null)
-              }}
-            />
+            <>
+              {isUpgradeable && <Text style={styles.infoLevel}>Level {level}</Text>}
+              <Text style={styles.infoDescription}>{config.description.en}</Text>
+              {effectLines.map((line, i) => (
+                <View key={i} style={styles.infoEffectRow}>
+                  <Text style={styles.infoEffectLabel}>{line.label}</Text>
+                  <Text style={styles.infoEffectValue}>
+                    {line.value}
+                    {line.bonus && <Text style={styles.infoEffectBonus}> {line.bonus}</Text>}
+                  </Text>
+                </View>
+              ))}
+              {isUpgradeable && (
+                <ListRow
+                  title={`Upgrade to Lv${level + 1}`}
+                  subtitle={maxed ? 'Max level' : `$${upgradeCost.toLocaleString()}`}
+                  actionLabel="Upgrade"
+                  disabled={maxed || game.money < upgradeCost}
+                  done={maxed}
+                  onPress={() => upgradeBuilding(infoCell)}
+                />
+              )}
+              {specialistType && (
+                <>
+                  <Text style={styles.infoSectionTitle}>
+                    {specialistName} assignment ({Math.min(assignedIds.length, capacity)}/{capacity})
+                  </Text>
+                  {eligibleEmployees.length === 0 && (
+                    <Text style={styles.infoHint}>
+                      Hire a {specialistName} from the Staff tab to assign here.
+                    </Text>
+                  )}
+                  {eligibleEmployees.map((employee) => {
+                    const assigned = assignedIds.includes(employee.id)
+                    const full = !assigned && assignedIds.length >= capacity
+                    return (
+                      <ListRow
+                        key={employee.id}
+                        title={employee.name}
+                        subtitle={`Lv${employee.level}${employee.trait === 'veteran' ? ' · Veteran' : ''}`}
+                        badge={assigned ? 'ASSIGNED' : undefined}
+                        actionLabel={assigned ? 'Unassign' : 'Assign'}
+                        disabled={full}
+                        onPress={() => toggleAssignment(employee.id, employee.type)}
+                      />
+                    )
+                  })}
+                </>
+              )}
+            </>
           )
         })()}
       </Sheet>
@@ -380,6 +441,54 @@ export default function RefineryScreen() {
 }
 
 const styles = StyleSheet.create({
+  infoLevel: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
+    marginTop: spacing.sm,
+  },
+  infoDescription: {
+    color: colors.inkMuted,
+    fontSize: 13,
+    marginTop: 2,
+    marginBottom: spacing.sm,
+  },
+  infoEffectRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamBorder,
+  },
+  infoEffectLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  infoEffectValue: {
+    color: colors.ink,
+    fontWeight: '800',
+    fontSize: 13,
+    textAlign: 'right',
+  },
+  infoEffectBonus: {
+    color: colors.greenDark,
+    fontWeight: '800',
+  },
+  infoSectionTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  infoHint: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    marginBottom: spacing.sm,
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.cream,

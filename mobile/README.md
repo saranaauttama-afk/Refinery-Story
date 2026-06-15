@@ -444,8 +444,54 @@ felt opaque.
 Note: assignment is still per-*type* with a capacity cap (e.g. "up to 2
 Aviation Specialists boost all Jet Fuel Plants combined"), not
 per-building-instance ("assign Bob to the plant at grid cell 5") -- see the
-Plant Info design below for how per-instance-feeling assignment could work
+Building Info section below for how per-instance-feeling assignment works
 within this existing model.
+
+## Building Info Sheet: Rates, Green Bonuses, In-Place Staff Assignment
+
+Previously, tapping a built tile did nothing for 6 of the 9 building types
+(only crude tank / distillation unit / product tank opened an "Upgrade
+building" popup with just a cost). Every `BUILDINGS[type].description` was
+already written but never shown anywhere.
+
+- Tapping **any built tile** now opens a "Building Info" sheet: the
+  building's name/level, its full description, and one or more live effect
+  lines (`getBuildingEffectLines`, new pure exported function in
+  `gameCalculations.ts`, `building_info.test.ts` -- 19 assertions):
+  - **Crude Tank / Product Tank**: current storage contribution (`+25` at
+    Lv1, `+50` at Lv2, `+100` at Lv3), with the next level's *increase*
+    shown in green, e.g. `+25 (+25 at Lv2)`.
+  - **Distillation Unit**: current production/feedstock speed bonus (`+0%`
+    at Lv1, `+25%` at Lv2, `+50%` at Lv3), green delta to next level.
+  - **Lubricant Plant**: fixed `5 lubricants / 5s` per plant -- no
+    upgrades or specialists exist for this building, so never shows a
+    green bonus (intentional, not a bug).
+  - **Jet Fuel Plant / Petrochemical Plant**: base `5 <product> / 5s`, plus
+    green `(+N from M Aviation/Chemical Specialists)` when specialists are
+    assigned (uses the existing `getSpecialistMultiplier`).
+  - **Laboratory / Maintenance Workshop / Sales Office**: their flat
+    Lv1 bonus (+10% RP / -50% event penalties / +10% contract rewards), plus
+    a "x{count} = {total}" note if you've built more than one (workshops
+    stack multiplicatively, lab/sales office additively -- matches
+    `calculateDerivedStats`).
+- **Upgrade row** (crude tank / distillation unit / product tank only):
+  moved into this same sheet, unchanged cost/logic.
+- **In-place specialist assignment** (jet fuel / petrochem plants only):
+  the sheet lists every hired Aviation/Chemical Specialist with an
+  Assign/Unassign button and an "ASSIGNED" badge (reuses `ListRow`'s badge
+  prop and the existing per-type `toggleAssignment`/`assignments`/capacity
+  system) -- so assigning staff *feels* per-building even though the
+  underlying model is still "up to N specialists boost all plants of this
+  type".
+
+Verification: tsc --noEmit clean. building_info.test.ts (19 assertions)
+covers every building type's effect-line text and bonus-clamping at max
+level / no-specialist-assigned. Existing suites unaffected: 2000-tick sim
+(10,106), autotrade (3018), recruitment (647) + migration (11),
+refinery_balance (19), events (19) + events_long (8), milestones (25),
+win_celebration (12), boost (20), combos (16), contracts_ui (13),
+choiceevent_migration (7), translation-key checks (38) all still pass.
+EXPO_OFFLINE web export still produces all 14 routes.
 
 ## What's NOT done / known gaps
 
