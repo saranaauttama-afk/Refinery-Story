@@ -623,6 +623,28 @@ pass. EXPO_OFFLINE web export still produces all 14 routes.
 
 ## What's NOT done / known gaps
 
+- **Backlog: Production Complexity Expansion (Power/Waste/Chain).** Bigger
+  long-term-engagement direction discussed -- a 3-phase roadmap, deferred
+  (not started):
+  - **Phase 1 (waste)**: every existing production action also emits a
+    small `waste` byproduct (new resource + storage cap). Over-cap waste
+    penalizes `esgScore` (existing system). New "Waste Treatment Plant"
+    disposes waste (protects ESG) or converts some into a sellable
+    "recycled material". Additive -- doesn't change any existing output
+    formula.
+  - **Phase 2 (power)**: new `electricity` resource + Power Plant (can burn
+    crude or Phase 1's waste as fuel). All production buildings consume
+    electricity; insufficient electricity throttles output (reuse the
+    feedstock proportional-sharing/priority pattern above). Highest risk --
+    touches every existing production formula at once.
+  - **Phase 3 (5th product tier)**: new high-level (~Lv20+) plant that
+    consumes `petrochemicals` (currently a final product) as INPUT to
+    produce a new top-tier product + its own specialist -- extends the
+    feedstock->plant pattern one level deeper, and doubles as the
+    "endgame content past Lv18" gap noted in the retention discussion.
+  - Phases connect (waste->power fuel, new Phase-3 plant could consume
+    power and emit waste) but each is independently shippable. Starting
+    phase TBD.
 - **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Discussed at length
   (matches their "1 flagship + 1 specialist" design intent vs lubricant's
   "build more" role -- aviationSpecialist/chemicalEngineer unlock at the
