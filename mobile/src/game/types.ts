@@ -17,7 +17,7 @@ export type RecruitmentCandidate = {
 }
 
 // Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
-export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals'
+export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial'
 
 export type ProductInventory = Record<ProductKey, number>
 
@@ -32,6 +32,7 @@ export type BuildingType =
   | 'jetFuelPlant'
   | 'petrochemicalPlant'
   | 'powerPlant'
+  | 'wasteTreatmentPlant'
 
 export type GridCell = BuildingType | null
 
@@ -49,6 +50,10 @@ export type GameState = {
   // least 1 Power Plant is built and supply < demand, downstream plant
   // output is throttled (folded into the existing feedstock shareRatio).
   electricity: number
+  // Production Complexity Expansion Phase 1: waste byproduct from "dirty"
+  // production buildings. Over-cap waste applies an ESG penalty. See
+  // WASTE_BALANCE.
+  waste: number
   // Phase A foundation: future product inventory.
   // Only gasoline is active. Others are unused placeholders.
   // game.gasoline remains the source of truth for all current gameplay.
@@ -505,6 +510,7 @@ export type DerivedStats = {
   eraResearchRateBonusRate: number
   // Refinery process chain (feedstock layer)
   maxFeedstockStorage: number
+  maxWasteStorage: number
   maxElectricityStorage: number
   electricityDemandPerCycle: number
   feedstockPerDistillationCycle: number

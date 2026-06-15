@@ -34,6 +34,8 @@ import {
   getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
+  getWasteGeneratedPerTick,
+  getWasteOverflowEsgPenalty,
   getNewlyDiscoveredCombos,
   getProductSellPrice,
   getRandomEvent,
@@ -60,6 +62,7 @@ import {
   BUILDING_UPGRADE_BALANCE,
   PLANT_PRODUCTION,
   POWER_PLANT_BALANCE,
+  WASTE_TREATMENT_PLANT_BALANCE,
   STAFF_LEVEL_BALANCE,
   STANDING_ORDER_BALANCE,
   type PaidExpansionEntry,
@@ -234,6 +237,12 @@ export function tick(current: GameState): GameState {
   let electricity = current.electricity
   let productInventory = current.productInventory
 
+  // --- Production Complexity Expansion Phase 1: waste byproduct ---
+  // Dirty buildings emit waste each tick, capped by storage. Computed
+  // early so the Waste Treatment Plant block below can consume it.
+  const wasteGenerated = getWasteGeneratedPerTick(stats.buildingCounts)
+  let waste = Math.min(current.waste + wasteGenerated, stats.maxWasteStorage)
+
   // --- Distillation: crude -> feedstock ---
   if (
     stats.feedstockPerDistillationCycle > 0 &&
@@ -269,6 +278,33 @@ export function tick(current: GameState): GameState {
       if (electricityMade > 0) {
         crudeOil -= crudeNeeded
         electricity += electricityMade
+      }
+    }
+  }
+
+  // --- Waste Treatment Plant: waste -> recycledMaterial (Production
+  // Complexity Expansion Phase 1) ---
+  // Same 25-tick (5s) cadence as the downstream plants. Separate from the
+  // PLANT_PRODUCTION loop since its input is `waste` (not `feedstock`) and
+  // it has no specialist worker. Purely additive.
+  {
+    const wasteTreatmentCount = stats.buildingCounts.wasteTreatmentPlant
+    if (wasteTreatmentCount > 0 && nextTick % WASTE_TREATMENT_PLANT_BALANCE.intervalTicks === 0) {
+      const wasteNeeded = wasteTreatmentCount * WASTE_TREATMENT_PLANT_BALANCE.wastePerCycle
+      const recycledSpace =
+        WASTE_TREATMENT_PLANT_BALANCE.maxRecycledMaterialStorage - productInventory.recycledMaterial
+      if (waste >= wasteNeeded && recycledSpace > 0) {
+        const produced = Math.min(
+          wasteTreatmentCount * WASTE_TREATMENT_PLANT_BALANCE.recycledMaterialPerCycle,
+          recycledSpace,
+        )
+        if (produced > 0) {
+          waste -= wasteNeeded
+          productInventory = {
+            ...productInventory,
+            recycledMaterial: productInventory.recycledMaterial + produced,
+          }
+        }
       }
     }
   }
@@ -418,9 +454,13 @@ export function tick(current: GameState): GameState {
 
   // --- ESG drift + Energy Transition demand shift ---
   const esgDelta = getEsgDrift(current, stats.buildingCounts)
+  // Production Complexity Expansion Phase 1: waste at/over cap (after any
+  // Waste Treatment Plant processing above) applies an extra ESG penalty
+  // this tick, on top of the dirty-building drift.
+  const wasteOverflowPenalty = getWasteOverflowEsgPenalty(waste, stats.maxWasteStorage)
   const esgScore = Math.max(
     ESG_BALANCE.minScore,
-    Math.min(ESG_BALANCE.maxScore, current.esgScore + esgDelta),
+    Math.min(ESG_BALANCE.maxScore, current.esgScore + esgDelta + wasteOverflowPenalty),
   )
 
   const { gasolineDelta, petrochemicalsDelta } = getDemandShiftDelta(stats.currentEra)
@@ -439,6 +479,7 @@ export function tick(current: GameState): GameState {
     crudeOil,
     feedstock,
     electricity,
+    waste,
     productInventory,
     gasoline,
     productionProgress,
@@ -612,7 +653,7 @@ export function useGameLoop() {
   )
 
   const sellProduct = useCallback(
-    (key: 'lubricants' | 'jetFuel' | 'petrochemicals', amount: number) =>
+    (key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial', amount: number) =>
       update((current) => {
         const stats = calculateDerivedStats(current)
         const have = current.productInventory[key]

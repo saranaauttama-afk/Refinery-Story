@@ -21,6 +21,8 @@ import {
   STARTING_BALANCE,
   STORAGE_BALANCE,
   WAGE_BALANCE,
+  WASTE_BALANCE,
+  WASTE_TREATMENT_PLANT_BALANCE,
 } from '../data/balance'
 import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
@@ -122,6 +124,7 @@ export function createInitialGameState(): GameState {
     gasoline: 0,
     feedstock: 0,
     electricity: 0,
+    waste: 0,
     refineryLevel: 1,
     productionProgress: 0,
     tickCount: 0,
@@ -190,6 +193,7 @@ export function createInitialGameState(): GameState {
       jetFuel: 0,
       lubricants: 0,
       petrochemicals: 0,
+      recycledMaterial: 0,
     },
   }
 }
@@ -237,6 +241,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
     jetFuelPlant: 0,
     petrochemicalPlant: 0,
     powerPlant: 0,
+    wasteTreatmentPlant: 0,
   }
 }
 
@@ -493,6 +498,19 @@ export function getBuildingEffectLines(
         },
       ]
     }
+    case 'wasteTreatmentPlant': {
+      const seconds = (WASTE_TREATMENT_PLANT_BALANCE.intervalTicks * TICK_MS) / 1000
+      return [
+        {
+          label: 'Recycled material output per plant',
+          value: `+${WASTE_TREATMENT_PLANT_BALANCE.recycledMaterialPerCycle} / ${seconds}s`,
+        },
+        {
+          label: 'Waste consumed per plant',
+          value: `-${WASTE_TREATMENT_PLANT_BALANCE.wastePerCycle} / ${seconds}s`,
+        },
+      ]
+    }
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
       const count = derived.buildingCounts.laboratory
@@ -546,6 +564,21 @@ export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): nu
     safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick -
     dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick
   )
+}
+
+// --- Production Complexity Expansion Phase 1: waste byproduct ---
+
+// Waste generated this tick, scaled by how many "dirty" buildings are
+// running (reuses ESG_DIRTY_BUILDINGS). Caller clamps to remaining storage.
+export function getWasteGeneratedPerTick(buildingCounts: BuildingCounts): number {
+  const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
+  return dirtyCount * WASTE_BALANCE.wastePerDirtyBuildingPerTick
+}
+
+// Extra ESG drift (on top of getEsgDrift) applied while waste is at/over
+// its storage cap.
+export function getWasteOverflowEsgPenalty(waste: number, maxWasteStorage: number): number {
+  return waste >= maxWasteStorage ? -WASTE_BALANCE.overCapEsgPenaltyPerTick : 0
 }
 
 // Chance that the next random-event roll picks an "incident" (isIncident)
@@ -616,6 +649,7 @@ const PRODUCT_BASE_PRICE: Record<string, number> = {
   lubricants: ECONOMY_BALANCE.lubricantPrice,
   jetFuel: ECONOMY_BALANCE.jetFuelPrice,
   petrochemicals: ECONOMY_BALANCE.petrochemicalsPrice,
+  recycledMaterial: ECONOMY_BALANCE.recycledMaterialPrice,
 }
 
 // Sell price for a secondary product = base × global product sell multiplier
@@ -868,6 +902,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const maxFeedstockStorage =
     FEEDSTOCK_BALANCE.baseFeedstockStorage +
     distillationUnitCount * FEEDSTOCK_BALANCE.feedstockStoragePerDistillationUnit
+  // Waste storage (Production Complexity Expansion Phase 1): flat cap for
+  // now. The Waste Treatment Plant is the way to manage waste, not a
+  // storage increase.
+  const maxWasteStorage = WASTE_BALANCE.baseWasteStorage
 
   // --- Production Complexity Expansion Phase 2: electricity ---
   // Flat storage cap per Power Plant built. Demand is the sum of every
@@ -1091,6 +1129,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     eraSellPriceBonusRate,
     eraResearchRateBonusRate,
     maxFeedstockStorage,
+    maxWasteStorage,
     maxElectricityStorage,
     electricityDemandPerCycle,
     feedstockPerDistillationCycle,

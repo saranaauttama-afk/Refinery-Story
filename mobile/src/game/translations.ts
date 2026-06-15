@@ -143,6 +143,10 @@ export const text = {
       'No feedstock — build/feed Distillation Units to supply this plant.',
       'ไม่มีวัตถุดิบกลั่น — สร้าง/ป้อนหน่วยกลั่นเพื่อจ่ายให้โรงงานนี้',
     ),
+    wasteStarved: bilingual(
+      'No waste to process yet — waste accumulates from refining activity.',
+      'ยังไม่มีของเสียให้กำจัด — ของเสียจะเกิดจากกิจกรรมการกลั่น',
+    ),
     gasoline: bilingual('Gasoline', 'น้ำมันเบนซิน'),
     gasolineDescription: bilingual(
       'Product Tanks raise finished fuel storage.',
@@ -606,6 +610,28 @@ export const text = {
       'ยังไม่มีโรงผลิตปิโตรเคมี วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
     ),
   },
+  recycledMaterial: {
+    kicker: bilingual('Recycled Material', 'วัสดุรีไซเคิล'),
+    title: bilingual('Recycling Market', 'ตลาดวัสดุรีไซเคิล'),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}. Build Waste Treatment Plants to convert waste into recycled material automatically.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงบำบัดของเสียเพื่อแปลงของเสียเป็นวัสดุรีไซเคิลโดยอัตโนมัติ`,
+      ),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+    noPlants: bilingual(
+      'No Waste Treatment Plants placed. Add plants to the grid to begin processing waste.',
+      'ยังไม่มีโรงบำบัดของเสีย วางโรงงานในกริดเพื่อเริ่มกำจัดของเสีย',
+    ),
+  },
   asphalt: {
     kicker: bilingual('Asphalt', 'แอสฟัลต์'),
     title: bilingual('Asphalt Processing', 'การผลิตแอสฟัลต์'),
@@ -931,6 +957,14 @@ export const text = {
         description: bilingual(
           'Burns crude to generate electricity. 4 crude → 12 electricity every 5s per plant. Downstream plants (lubricant/jet fuel/petrochemical) need electricity to run at full output once any Power Plant is built.',
           'เผาน้ำมันดิบเพื่อผลิตไฟฟ้า 4 น้ำมันดิบ → 12 ไฟฟ้า ทุก 5 วินาทีต่อโรงงาน เมื่อมีโรงไฟฟ้าแล้ว โรงผลิตขั้นปลาย (สารหล่อลื่น/เชื้อเพลิงอากาศยาน/ปิโตรเคมี) ต้องใช้ไฟฟ้าเพื่อผลิตได้เต็มกำลัง',
+        ),
+      },
+      wasteTreatmentPlant: {
+        name: bilingual('Waste Treatment Plant', 'โรงบำบัดของเสีย'),
+        role: bilingual('Waste Management', 'การจัดการของเสีย'),
+        description: bilingual(
+          'Processes accumulated waste into recycled material. 4 waste → 2 recycled material every 5s per plant. Keeps waste storage from overflowing (avoids ESG penalty).',
+          'แปลงของเสียที่สะสมเป็นวัสดุรีไซเคิล 4 ของเสีย → 2 วัสดุรีไซเคิล ทุก 5 วินาทีต่อโรงงาน ช่วยไม่ให้ของเสียล้นถัง (ป้องกันผลเสียต่อ ESG)',
         ),
       },
     } satisfies Record<
