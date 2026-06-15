@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useGame } from '../src/hooks/GameContext'
 import ProgressBar from '../src/components/ProgressBar'
 import { colors, radii, spacing } from '../src/theme'
+import { HIDDEN_COMBOS } from '../src/game/data/hiddenCombos'
 import type { ActiveMilestone } from '../src/game/types'
 
 function MilestoneRow({ milestone }: { milestone: ActiveMilestone }) {
@@ -48,6 +49,7 @@ export default function AchievementsScreen() {
 
   const milestones = derived.activeMilestones
   const completedCount = milestones.filter((m) => m.isCompleted).length
+  const discoveredCombos = HIDDEN_COMBOS.filter((combo) => game.discoveredCombos.includes(combo.key))
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -66,6 +68,21 @@ export default function AchievementsScreen() {
           <Text style={styles.winBannerText}>🏁 Prototype Complete -- all major goals achieved!</Text>
         </View>
       )}
+
+      <View style={styles.comboCard}>
+        <Text style={styles.comboTitle}>
+          🧩 Hidden Combos: {discoveredCombos.length} / {HIDDEN_COMBOS.length} discovered
+        </Text>
+        {discoveredCombos.length > 0 ? (
+          discoveredCombos.map((combo) => (
+            <Text key={combo.key} style={styles.comboName}>• {combo.name.en}</Text>
+          ))
+        ) : (
+          <Text style={styles.comboHint}>
+            Try arranging buildings in a row or column -- some layouts hide bonus rewards.
+          </Text>
+        )}
+      </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         {milestones.map((milestone) => (
@@ -120,6 +137,30 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 13,
     textAlign: 'center',
+  },
+  comboCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.teal,
+    padding: spacing.sm,
+  },
+  comboTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
+  },
+  comboName: {
+    color: colors.ink,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  comboHint: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    marginTop: 2,
   },
   list: {
     paddingHorizontal: spacing.lg,

@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import AwardModal from '../src/components/AwardModal'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
+import ComboDiscoveryBanner from '../src/components/ComboDiscoveryBanner'
 import EraBanner from '../src/components/EraBanner'
 import WinCelebrationModal from '../src/components/WinCelebrationModal'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
@@ -18,10 +19,12 @@ function GlobalOverlays() {
     pendingAward,
     pendingEraBanner,
     pendingWinCelebration,
+    pendingComboDiscovery,
     chooseEventOption,
     dismissAward,
     dismissEraBanner,
     dismissWinCelebration,
+    dismissComboDiscovery,
   } = useGame()
   const haptics = useHaptics()
   const lastMilestoneCount = useRef<number | null>(null)
@@ -42,9 +45,15 @@ function GlobalOverlays() {
     if (pendingWinCelebration) haptics.success()
   }, [pendingWinCelebration, haptics])
 
+  // Success haptic when a hidden layout combo is discovered.
+  useEffect(() => {
+    if (pendingComboDiscovery) haptics.success()
+  }, [pendingComboDiscovery, haptics])
+
   return (
     <>
       <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} />
+      <ComboDiscoveryBanner combo={pendingComboDiscovery} onDismiss={dismissComboDiscovery} />
       <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />
       <AwardModal record={pendingAward} onDismiss={dismissAward} />
       <WinCelebrationModal visible={pendingWinCelebration} game={game} onDismiss={dismissWinCelebration} />

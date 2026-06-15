@@ -82,7 +82,47 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
-## Win Celebration
+## Hidden Combo Discovery
+
+Same pattern as the Achievements screen earlier: `HIDDEN_COMBOS` (5 entries,
+`data/hiddenCombos.ts`), `getNewlyDiscoveredCombos()`, and
+`GameState.discoveredCombos` (sanitized in `gameStorage.ts`) were all
+already fully built -- but nothing on mobile ever called
+`getNewlyDiscoveredCombos`, so combos could never actually be discovered.
+
+Each combo is a specific set of 3 distinct building types placed in any 3
+consecutive cells of a row or column (order-independent), awarded once per
+save:
+
+- **Full Refinery Line** (crude tank + distillation unit + product tank):
+  +$300, +5 RP
+- **Command Center** (laboratory + maintenance workshop + sales office):
+  +$500, +8 RP
+- **Jet Set Row** (distillation unit + jet fuel plant + sales office):
+  +$800, +12 RP
+- **Refining Triangle** (distillation unit + lubricant plant +
+  petrochemical plant): +$1,200, +15 RP
+- **Petrochemical Complex** (lubricant plant + jet fuel plant +
+  petrochemical plant): +$2,000, +25 RP, +10 reputation
+
+Wiring: `placeBuilding` (the only action that changes a grid cell's
+*type*) now calls `getNewlyDiscoveredCombos(next.grid, next.discoveredCombos)`
+after placing -- applies all newly-matched combos' cash/RP/reputation
+rewards, appends their keys to `discoveredCombos`, and logs a "🧩 Combo
+found: ..." activity-log entry. A new `ComboDiscoveryBanner` (teal,
+auto-dismisses after 6s, same shape as `EraBanner`) pops for the first
+newly-found combo, plus a success haptic. The `/achievements` screen shows
+a "🧩 Hidden Combos: X/5 discovered" card listing the *names* of combos
+already found (per the existing "deliberately not shown ahead of time"
+design -- undiscovered combos stay a mystery, just a hint to experiment
+with layouts).
+
+Known minor edge case: `EraBanner` and `ComboDiscoveryBanner` share the same
+screen position/z-index, so if both fire in the same tick they'd visually
+stack. Low probability (era advances are milestone/level-driven, combo
+discovery is placement-driven) and not addressed here.
+
+
 
 `prototypeCompleted` (Lv10+ refinery, reputation >= 250, contract #7 done,
 grid expansion >= 2) used to silently flip to `true` in `applyWinGoal` --

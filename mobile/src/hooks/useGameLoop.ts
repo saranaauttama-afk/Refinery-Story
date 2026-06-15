@@ -33,6 +33,7 @@ import {
   getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
+  getNewlyDiscoveredCombos,
   getProductSellPrice,
   getRandomEvent,
   getSpecialistMultiplier,
@@ -64,6 +65,7 @@ import {
 import { text } from '../game/translations'
 import { BUILDINGS } from '../game/data/buildings'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
+import type { HiddenComboConfig } from '../game/data/hiddenCombos'
 import {
   generateRecruitmentPool,
   getManualRefreshCost,
@@ -343,6 +345,7 @@ export function useGameLoop() {
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
   const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
+  const [pendingComboDiscovery, setPendingComboDiscovery] = useState<HiddenComboConfig | null>(null)
 
   // Shows a choice event (if none is currently pending) and stamps
   // lastChoiceEventTick so the fallback timer restarts from "now".
@@ -523,13 +526,39 @@ export function useGameLoop() {
         grid[cellIndex] = building
         const gridLevels = [...current.gridLevels]
         gridLevels[cellIndex] = 1
-        return {
+
+        let next: GameState = {
           ...current,
           money: current.money - buildingData.cost,
           grid,
           gridLevels,
           activityLog: addLog(current.activityLog, `Built ${buildingData.name.en} (-$${buildingData.cost})`),
         }
+
+        // 🧩 Hidden combos: placing a building can newly complete a 3-in-a-
+        // row/column of distinct building types. Apply all newly-found
+        // combos' rewards, log them, and pop the discovery banner for the
+        // first one.
+        const newlyFound = getNewlyDiscoveredCombos(next.grid, next.discoveredCombos)
+        for (const combo of newlyFound) {
+          next = {
+            ...next,
+            money: next.money + combo.cashReward,
+            researchPoints: next.researchPoints + combo.rpReward,
+            reputation: next.reputation + (combo.reputationReward ?? 0),
+            discoveredCombos: [...next.discoveredCombos, combo.key],
+            activityLog: addLog(
+              next.activityLog,
+              `🧩 Combo found: ${combo.name.en}! +$${combo.cashReward}, +${combo.rpReward}RP` +
+                (combo.reputationReward ? `, +${combo.reputationReward} Rep` : ''),
+            ),
+          }
+        }
+        if (newlyFound.length > 0) {
+          setPendingComboDiscovery(newlyFound[0])
+        }
+
+        return next
       }),
     [update],
   )
@@ -848,6 +877,7 @@ export function useGameLoop() {
     pendingAward,
     pendingEraBanner,
     pendingWinCelebration,
+    pendingComboDiscovery,
     buyCrude,
     sellGasoline,
     sellProduct,
@@ -919,5 +949,6 @@ export function useGameLoop() {
     dismissAward: () => setPendingAward(null),
     dismissEraBanner: () => setPendingEraBanner(null),
     dismissWinCelebration: () => setPendingWinCelebration(false),
+    dismissComboDiscovery: () => setPendingComboDiscovery(null),
   }
 }
