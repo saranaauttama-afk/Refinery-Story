@@ -170,6 +170,7 @@ export default function RefineryScreen() {
           containerWidth={width - spacing.lg * 2}
           onCellPress={handleCellPress}
           isActive={game.crudeOil > 0}
+          employeeCount={game.employees.length}
         />
         <Text style={styles.hint}>Tap an empty tile to build · tap a tank/unit to upgrade</Text>
       </View>

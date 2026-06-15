@@ -23,9 +23,13 @@ type BuildingGridProps = {
   // True when the refinery is actively running (crudeOil > 0) -- gates the
   // production-pulse glow on PRODUCTION_BUILDING_TYPES tiles.
   isActive?: boolean
+  // Number of hired staff -- if > 0, active production tiles also show a
+  // small bobbing "👷" badge (minimal stand-in for a future walking-sprite
+  // layer).
+  employeeCount?: number
 }
 
-function BuildingGrid({ grid, gridLevels, containerWidth, onCellPress, isActive }: BuildingGridProps) {
+function BuildingGrid({ grid, gridLevels, containerWidth, onCellPress, isActive, employeeCount }: BuildingGridProps) {
   const cols = Math.round(Math.sqrt(grid.length))
   const padding = spacing.md * 2
   const tileMargin = 3 * 2 // BuildingTile's margin on each side
@@ -33,16 +37,20 @@ function BuildingGrid({ grid, gridLevels, containerWidth, onCellPress, isActive 
 
   return (
     <View style={styles.wrap}>
-      {grid.map((cell, i) => (
-        <BuildingTile
-          key={i}
-          type={cell}
-          level={gridLevels[i] ?? 1}
-          size={tileSize}
-          onPress={() => onCellPress?.(i)}
-          active={Boolean(isActive && cell && PRODUCTION_BUILDING_TYPES.has(cell))}
-        />
-      ))}
+      {grid.map((cell, i) => {
+        const isProducing = Boolean(isActive && cell && PRODUCTION_BUILDING_TYPES.has(cell))
+        return (
+          <BuildingTile
+            key={i}
+            type={cell}
+            level={gridLevels[i] ?? 1}
+            size={tileSize}
+            onPress={() => onCellPress?.(i)}
+            active={isProducing}
+            showWorker={isProducing && Boolean(employeeCount && employeeCount > 0)}
+          />
+        )
+      })}
     </View>
   )
 }

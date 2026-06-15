@@ -155,6 +155,11 @@ this logic):
   don't pulse. The glow is a separate `Animated.View` overlay on top of the
   existing color-block visual, so swapping in real building art later needs
   no changes here.
+- **Worker badge** (`BuildingTile` `showWorker` prop): minimal stand-in for
+  a future Kairosoft-style walking-sprite layer. When the refinery is
+  active *and* at least one employee is hired, active production tiles show
+  a small bobbing "👷" in the corner (translateY loop, no new assets). Not
+  per-employee placement -- just a "staff are working" presence indicator.
 - **Haptics** (`useHaptics`, via `expo-haptics`): light tap on buy/sell/
   refresh, medium "confirm" thunk on hire/train/build/upgrade, and a success
   notification whenever a new milestone completes (tracked globally in
@@ -163,9 +168,9 @@ this logic):
   assets) and wrapped in try/catch (no-ops on web/unsupported devices).
 
 Not done (need real assets first): actual sound effects (no audio files in
-the project yet), and Kairosoft-style worker sprites walking around the
-grid (needs sprite sheets + a frame-animation layer on top of the existing
-tile positions).
+the project yet -- haptics cover the "feedback" role for now), and a true
+walking-sprite system (the 👷 badge above is a static-position placeholder;
+real sprite sheets + a frame-animation/movement layer would replace it).
 
 
 

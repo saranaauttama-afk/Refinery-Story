@@ -13,10 +13,15 @@ type BuildingTileProps = {
   // True if this building is part of the active production chain right
   // now (refinery has crude to process) -- shows a gentle pulsing glow.
   active?: boolean
+  // True if staff are hired and this tile is active -- shows a small
+  // bobbing "👷" worker badge. Minimal stand-in for a future walking-sprite
+  // layer; purely decorative, no game-state changes.
+  showWorker?: boolean
 }
 
-function BuildingTile({ type, level, size, onPress, active }: BuildingTileProps) {
+function BuildingTile({ type, level, size, onPress, active, showWorker }: BuildingTileProps) {
   const glow = useRef(new Animated.Value(0.25)).current
+  const bob = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     if (!active) {
@@ -32,6 +37,21 @@ function BuildingTile({ type, level, size, onPress, active }: BuildingTileProps)
     loop.start()
     return () => loop.stop()
   }, [active, glow])
+
+  useEffect(() => {
+    if (!showWorker) {
+      bob.setValue(0)
+      return
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: -3, duration: 450, useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]),
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [showWorker, bob])
 
   if (!type) {
     return (
@@ -54,6 +74,14 @@ function BuildingTile({ type, level, size, onPress, active }: BuildingTileProps)
     >
       {active && <Animated.View pointerEvents="none" style={[styles.glow, { opacity: glow }]} />}
       <Text style={styles.shortName}>{config.shortName}</Text>
+      {showWorker && (
+        <Animated.Text
+          pointerEvents="none"
+          style={[styles.worker, { transform: [{ translateY: bob }] }]}
+        >
+          👷
+        </Animated.Text>
+      )}
       {level > 1 && (
         <View style={styles.levelBadge}>
           <Text style={styles.levelText}>Lv{level}</Text>
@@ -110,6 +138,12 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 9,
     fontWeight: '700',
+  },
+  worker: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    fontSize: 12,
   },
 })
 
