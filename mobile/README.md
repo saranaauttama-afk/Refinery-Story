@@ -407,7 +407,29 @@ route can be the menu/splash without an expo-router naming conflict.
 - **Single save slot**: "Continue" / "New Game (overwrite)" on the main menu
   cover the realistic single-slot case; there's no multi-slot save picker.
 
-## Folder structure
+## Bottom Tab Bar: Minimal, Blends Into the Game
+
+The bottom tab bar previously looked like a standard app navigation bar:
+white background, top border, icon + text label per tab -- visually
+separate from the cream game screens above it.
+
+- `tabBarStyle.backgroundColor` is now `colors.cream` (same as every
+  screen's background), with `borderTopWidth: 0`, `elevation: 0`,
+  `shadowOpacity: 0` -- no separate "bar" strip, the icons just sit on the
+  same canvas as the game.
+- `tabBarShowLabel: false` -- icon-only, four icons (Refinery / Staff /
+  Business / Stats via `lucide-react-native`, unchanged icon set).
+- The active tab gets a small rounded gold highlight behind its icon (new
+  `TabIcon` wrapper, `colors.gold` + `radii.md`) instead of a text-label
+  color change -- reads more like a pressed HUD button than a standard tab
+  indicator.
+
+Kept deliberately conservative (no `position: absolute` floating-pill bar
+with custom screen padding) to avoid safe-area/layout regressions across
+all four tabs without on-device testing -- a more dramatic "floating
+island" bar is a possible follow-up if this blended look isn't enough.
+
+
 
 ```
 app/
