@@ -425,6 +425,28 @@ save:
    targets plus new assertions: visible fluctuation over 1000 ticks, and
    buying never overshoots past `(buyThreshold + buffer)%`.
 
+## Staff Tab: Show What Each Role Does + Assign Targets a Named Plant
+
+`WORKERS[].description` (bilingual, e.g. "Operator -- +10% production
+rate") already existed in the data but was never shown anywhere -- hiring
+felt opaque.
+
+- Recruitment candidates and "Your team" cards now show
+  `worker.description.en` as a small green line under the level/XP info --
+  e.g. "Aviation Specialist" -> "+20% jet fuel production per worker".
+- The existing per-type "Assign" mechanism (`toggleAssignment`,
+  `game.assignments[type]`, capacity = number of matching plants built) now
+  names the target plant: "Assign to Jet Fuel Plant (1/2)" /
+  "Assigned -- Jet Fuel Plant" instead of just "Assign (1/2)". New
+  `SPECIALIST_PLANT_NAME` map built from `PLANT_PRODUCTION[].specialistWorker
+  -> buildingKey -> BUILDINGS[buildingKey].name`.
+
+Note: assignment is still per-*type* with a capacity cap (e.g. "up to 2
+Aviation Specialists boost all Jet Fuel Plants combined"), not
+per-building-instance ("assign Bob to the plant at grid cell 5") -- see the
+Plant Info design below for how per-instance-feeling assignment could work
+within this existing model.
+
 ## What's NOT done / known gaps
 
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,

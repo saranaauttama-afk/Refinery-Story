@@ -8,6 +8,7 @@ import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { WORKERS } from '../../../src/game/data/workers'
+import { BUILDINGS } from '../../../src/game/data/buildings'
 import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
 import { getAssignmentCapacity, getTrainingCost, TICK_MS } from '../../../src/game/utils/gameCalculations'
@@ -31,6 +32,14 @@ const TIER_BORDER_COLORS: Record<RecruitmentTier, string> = {
 // output bonus (see PLANT_PRODUCTION.specialistWorker).
 const SPECIALIST_TYPES: WorkerType[] = PLANT_PRODUCTION.map((p) => p.specialistWorker).filter(
   (t): t is 'aviationSpecialist' | 'chemicalEngineer' => !!t,
+)
+
+// e.g. { aviationSpecialist: 'Jet Fuel Plant', chemicalEngineer: 'Petrochemical Plant' }
+const SPECIALIST_PLANT_NAME: Partial<Record<WorkerType, string>> = Object.fromEntries(
+  PLANT_PRODUCTION.filter((p) => p.specialistWorker).map((p) => [
+    p.specialistWorker as WorkerType,
+    BUILDINGS[p.buildingKey].name.en,
+  ]),
 )
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -111,6 +120,7 @@ export default function StaffScreen() {
                   {badge ? `${badge} · ` : ''}Starts at Lv{candidate.startingLevel}
                   {candidate.isVeteran ? ' · Veteran (+20%)' : ''}
                 </Text>
+                {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
                 <AnimatedPressable
                   disabled={!affordable}
                   onPress={() => {
@@ -156,6 +166,7 @@ export default function StaffScreen() {
                   Lv{employee.level}
                   {maxed ? ' (max)' : ` · ${employee.xp}/${xpNeeded} XP`}
                 </Text>
+                {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
                 <View style={styles.employeeActions}>
                   <AnimatedPressable
                     disabled={!canTrain}
@@ -182,7 +193,9 @@ export default function StaffScreen() {
                       ]}
                     >
                       <Text style={styles.smallButtonLabel}>
-                        {assigned ? 'Assigned' : `Assign (${(game.assignments[employee.type]?.length ?? 0)}/${capacity})`}
+                        {assigned
+                          ? `Assigned · ${SPECIALIST_PLANT_NAME[employee.type] ?? ''}`
+                          : `Assign to ${SPECIALIST_PLANT_NAME[employee.type] ?? ''} (${(game.assignments[employee.type]?.length ?? 0)}/${capacity})`}
                       </Text>
                     </Pressable>
                   )}
@@ -299,6 +312,12 @@ const styles = StyleSheet.create({
   employeeStats: {
     color: colors.inkMuted,
     fontSize: 12,
+    marginTop: 2,
+  },
+  workerDescription: {
+    color: colors.greenDark,
+    fontSize: 12,
+    fontWeight: '700',
     marginTop: 2,
   },
   employeeActions: {
