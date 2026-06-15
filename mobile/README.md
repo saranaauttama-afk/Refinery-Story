@@ -384,7 +384,36 @@ backed by a separate AsyncStorage key so they survive "Reset save".
 The game itself lives under `/game` (a `(tabs)` group), so the root `/`
 route can be the menu/splash without an expo-router naming conflict.
 
-## What's NOT done / known gaps
+## Bugfixes: Choice Event Firing on First Load + Refinery Tab Not Scrollable
+
+Two issues reported after the first post-update playtest on an existing
+save:
+
+1. **A choice event popped up immediately on opening the game.** Root
+   cause: the "Event triggers reworked" change added
+   `GameState.lastChoiceEventTick` and a fallback rule
+   (`tickCount - lastChoiceEventTick >= CHOICE_EVENT_FALLBACK_TICKS`, ~4
+   min). For an *existing* save (large `tickCount`, field didn't exist
+   yet), migration defaulted it to `0` -- so
+   `tickCount - 0 >= 1200` was already true on the very first tick after
+   loading, firing the fallback choice event instantly. Fix
+   (`gameStorage.ts`): migrate missing `lastChoiceEventTick` to the save's
+   *current* `tickCount` (same pattern already used for
+   `recruitmentRefreshAt`) -- "as if a choice event was just shown now",
+   giving existing saves a full fallback window before the next one.
+   New `choiceevent_migration.test.ts` (7 assertions) covers the old-save,
+   fresh-game, and already-migrated cases.
+
+2. **The 🔄 Auto-trade toggle was impossible to find.** The Refinery tab
+   (`index.tsx`) was a plain `SafeAreaView` with no `ScrollView` -- after
+   adding the 🎯 Next Goal and 🔥 Boost cards on top of the existing grid /
+   actions / product chips / Auto-trade card, the total content no longer
+   fit on screen and there was no way to scroll down to it. Fix: everything
+   below the refinery name/level header is now wrapped in a `ScrollView`
+   (matching the Staff/Business/Stats tabs, which were already
+   scrollable).
+
+
 
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,
   PT...) on the grid, per `src/buildingColors.ts`. The 30 isometric SVGs

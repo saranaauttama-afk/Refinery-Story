@@ -379,7 +379,17 @@ export function sanitizeLoadedGameState(value: unknown) {
       getSafeNumber(value.tickCount, fallback.tickCount) + RECRUITMENT_BALANCE.refreshIntervalTicks,
     ),
     recruitmentNameCounter: getSafeNumber(value.recruitmentNameCounter, RECRUITMENT_BALANCE.poolSize),
-    lastChoiceEventTick: getSafeNumber(value.lastChoiceEventTick, 0),
+    // For saves predating this field, default to "now" (current tickCount)
+    // rather than 0 -- otherwise an established save (large tickCount,
+    // missing this field) would compute tickCount - 0 >= 1200 and fire the
+    // choice-event fallback immediately on the first tick after load. This
+    // mirrors the recruitmentRefreshAt migration above: treat it as "a
+    // choice event was just shown", giving a full fallback window before
+    // the next one.
+    lastChoiceEventTick: getSafeNumber(
+      value.lastChoiceEventTick,
+      getSafeNumber(value.tickCount, fallback.tickCount),
+    ),
     boostActiveUntilTick: getSafeNumber(value.boostActiveUntilTick, 0),
     boostAvailableAtTick: getSafeNumber(value.boostAvailableAtTick, 0),
     esgScore: Math.max(

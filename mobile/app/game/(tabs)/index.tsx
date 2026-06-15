@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -145,6 +146,7 @@ export default function RefineryScreen() {
         <Text style={styles.season}>{seasonLabel.en}</Text>
       </View>
 
+      <ScrollView contentContainerStyle={styles.scrollContent}>
       {nextGoal && (
         <Pressable style={styles.nextGoalCard} onPress={() => router.push('/achievements')}>
           <Text style={styles.nextGoalLabel}>🎯 Next: {nextGoal.name.en}</Text>
@@ -321,6 +323,7 @@ export default function RefineryScreen() {
           </>
         )}
       </View>
+      </ScrollView>
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
@@ -380,6 +383,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
   loadingScreen: {
     flex: 1,
