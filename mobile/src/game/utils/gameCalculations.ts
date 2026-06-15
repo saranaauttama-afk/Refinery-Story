@@ -80,6 +80,7 @@ export function getRefineryTitle(level: number): BilingualTextValue {
 export const RANDOM_EVENT_INTERVAL_MS = CORE_BALANCE.randomEventIntervalMs
 export const RANDOM_EVENT_INTERVAL_TICKS = CORE_BALANCE.randomEventIntervalTicks
 export const CHOICE_EVENT_FALLBACK_TICKS = CORE_BALANCE.choiceEventFallbackTicks
+export const AUTO_TRADE_BUFFER_PERCENT = CORE_BALANCE.autoTradeBufferPercent
 
 export const REPUTATION_TIERS: ReputationTier[] = [
   {

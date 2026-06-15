@@ -7,6 +7,14 @@ export const CORE_BALANCE = {
   tickMs: 200,
   gridSize: 9,
   maxLogItems: 6,
+  // Auto-trade buy/sell to "threshold +/- buffer" instead of snapping
+  // exactly to the threshold every tick -- otherwise (since production
+  // consumes/produces every tick too) the level gets corrected back to the
+  // exact threshold every single tick and the displayed number never
+  // visibly moves. With a buffer, crude oscillates between
+  // [buyThreshold, buyThreshold + buffer] and gasoline between
+  // [sellThreshold - buffer, sellThreshold] -- a visible sawtooth.
+  autoTradeBufferPercent: 10,
   // Kept for reference; mobile fires random events on a tick-count check
   // instead (see randomEventIntervalTicks) so they stay in sync with the
   // main game loop (no real-time setInterval drift on background/resume).

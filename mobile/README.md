@@ -413,7 +413,19 @@ save:
    (matching the Staff/Business/Stats tabs, which were already
    scrollable).
 
+3. **Auto-trade made crude/gasoline numbers look "frozen".** `applyAutoTrade`
+   ran every tick and corrected crude/gasoline to *exactly* the threshold
+   %, every single tick -- since production also runs every tick, the
+   level gets snapped back to the same number constantly and the display
+   never visibly moves. Fix: new `AUTO_TRADE_BUFFER_PERCENT = 10` constant
+   (`CORE_BALANCE`). Buying now overshoots to `(buyThreshold + buffer)%`
+   and selling undershoots to `(sellThreshold - buffer)%`, so the level
+   drains/refills visibly via production between corrections (sawtooth)
+   instead of being pinned flat. `autotrade.test.ts` updated for the new
+   targets plus new assertions: visible fluctuation over 1000 ticks, and
+   buying never overshoots past `(buyThreshold + buffer)%`.
 
+## What's NOT done / known gaps
 
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,
   PT...) on the grid, per `src/buildingColors.ts`. The 30 isometric SVGs

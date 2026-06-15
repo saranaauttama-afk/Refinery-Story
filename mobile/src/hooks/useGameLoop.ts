@@ -27,6 +27,7 @@ import {
   TICK_MS,
   RANDOM_EVENT_INTERVAL_TICKS,
   CHOICE_EVENT_FALLBACK_TICKS,
+  AUTO_TRADE_BUFFER_PERCENT,
   addLog,
   createInitialGameState,
   createNewEmployee,
@@ -118,7 +119,11 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
   if (stats.maxCrudeStorage > 0) {
     const crudePct = (next.crudeOil / stats.maxCrudeStorage) * 100
     if (crudePct < settings.buyThreshold) {
-      const targetCrude = Math.floor((settings.buyThreshold / 100) * stats.maxCrudeStorage)
+      // Overshoot to threshold + buffer (not exactly the threshold) so
+      // crude visibly drains back down via production before the next
+      // top-up, instead of being corrected to the same number every tick.
+      const targetPct = Math.min(100, settings.buyThreshold + AUTO_TRADE_BUFFER_PERCENT)
+      const targetCrude = Math.floor((targetPct / 100) * stats.maxCrudeStorage)
       const needed = Math.max(0, targetCrude - next.crudeOil)
       const affordable = Math.floor(next.money / CRUDE_COST)
       const space = stats.maxCrudeStorage - next.crudeOil
@@ -137,7 +142,11 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
   if (stats.maxGasolineStorage > 0) {
     const gasolinePct = (next.gasoline / stats.maxGasolineStorage) * 100
     if (gasolinePct > settings.sellThreshold) {
-      const targetGasoline = Math.floor((settings.sellThreshold / 100) * stats.maxGasolineStorage)
+      // Undershoot to threshold - buffer so gasoline visibly refills via
+      // production before the next sell-off, instead of being corrected to
+      // the same number every tick.
+      const targetPct = Math.max(0, settings.sellThreshold - AUTO_TRADE_BUFFER_PERCENT)
+      const targetGasoline = Math.floor((targetPct / 100) * stats.maxGasolineStorage)
       const excess = Math.max(0, next.gasoline - targetGasoline)
       if (excess > 0) {
         next = { ...next, gasoline: next.gasoline - excess, money: next.money + excess * stats.sellPrice }
