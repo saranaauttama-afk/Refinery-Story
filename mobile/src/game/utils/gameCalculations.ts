@@ -362,6 +362,9 @@ export type BuildingEffectLine = {
   label: string
   value: string
   bonus?: string
+  // Shown in orange -- a heads-up about a constraint (e.g. feedstock
+  // supply can't keep up with total demand from built plants).
+  warning?: string
 }
 
 export function getBuildingEffectLines(
@@ -419,13 +422,27 @@ export function getBuildingEffectLines(
         const specialistName = WORKERS.find((w) => w.key === plant.specialistWorker)?.name.en ?? 'specialist'
         bonus = `(+${bonusAmount} from ${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''})`
       }
-      return [
-        {
-          label: 'Output per plant',
-          value: `${base} ${plant.productKey} / ${seconds}s`,
-          bonus,
-        },
-      ]
+      const line: BuildingEffectLine = {
+        label: 'Output per plant',
+        value: `${base} ${plant.productKey} / ${seconds}s`,
+        bonus,
+      }
+
+      // Feedstock supply vs total demand across all built downstream
+      // plants (lubricant/jet fuel/petrochem all draw from the same
+      // feedstock pool every 25-tick cycle). If supply can't cover total
+      // demand, some plants won't fire every cycle -- surface this here
+      // rather than leaving the player wondering why output is slow/zero.
+      const supplyPer25Ticks = derived.feedstockPerDistillationCycle * 5
+      const demandPer25Ticks = PLANT_PRODUCTION.reduce(
+        (sum, p) => sum + derived.buildingCounts[p.buildingKey] * p.feedstockPerCycle,
+        0,
+      )
+      if (demandPer25Ticks > supplyPer25Ticks) {
+        line.warning = `Feedstock supply (${Math.floor(supplyPer25Ticks)}/${seconds}s) is below total demand (${demandPer25Ticks}/${seconds}s) -- build more Distillation Units to keep all downstream plants running every cycle.`
+      }
+
+      return [line]
     }
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1

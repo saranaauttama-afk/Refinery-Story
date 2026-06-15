@@ -249,7 +249,18 @@ export function tick(current: GameState): GameState {
   }
 
   // --- Downstream plants: feedstock -> product ---
-  for (const plant of PLANT_PRODUCTION) {
+  // Process highest-value/latest-unlocked plants FIRST so they get
+  // feedstock priority. PLANT_PRODUCTION is ordered by unlock tier
+  // (lubricant < jet fuel < petrochem), but feedstock is a single shared
+  // pool checked sequentially -- if lubricant (cheapest, needs least,
+  // unlocked earliest) always went first, it (and jet fuel after it) could
+  // soak up all available feedstock every cycle, leaving petrochem -- the
+  // plant the player most recently invested in -- producing nothing for a
+  // very long time until lubricant's storage fills up. Reversing the
+  // order means a newly-built petrochem plant gets feedstock immediately;
+  // lubricant (which has likely been stockpiling since much earlier in the
+  // game) absorbs whatever is left over.
+  for (const plant of [...PLANT_PRODUCTION].reverse()) {
     const plantCount = stats.buildingCounts[plant.buildingKey]
     if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) continue
 

@@ -499,6 +499,57 @@ win_celebration (12), boost (20), combos (16), contracts_ui (13),
 choiceevent_migration (7), translation-key checks (38) all still pass.
 EXPO_OFFLINE web export still produces all 14 routes.
 
+## Bugfix: Petrochemical Plant Could Produce Nothing for ~3-4 Minutes
+
+Reported: "Jet/Petro produce from what? Petro is built but its inventory
+isn't going up." Jet Fuel and Petrochemical Plants (like Lubricant Plant)
+consume **feedstock**, not crude directly -- feedstock is made by
+Distillation Units from crude. All downstream plants check eligibility
+against the SAME shared feedstock pool every 25-tick (5s) cycle.
+
+Root cause: with 1 of each plant built and only 1 Distillation Unit (a very
+common "just unlocked petrochem" setup), feedstock supply (~12.5/cycle) is
+well below total demand (lubricant 6 + jet fuel 8 + petrochem 10 = 24/cycle).
+`PLANT_PRODUCTION` was processed in unlock-tier order (lubricant -> jet fuel
+-> petrochem), so the cheapest/earliest-unlocked plants greedily consumed
+the limited feedstock first every cycle -- petrochem (last, needing the
+most) got nothing until lubricant's 200-unit storage filled up and stopped
+competing. Simulated: petrochemicals stayed at 0 until tick ~1125 (~3.75
+min) before this fix.
+
+Fix (`useGameLoop.ts` tick()): the downstream-plants loop now iterates
+`[...PLANT_PRODUCTION].reverse()` -- petrochem, then jet fuel, then
+lubricant -- so the plant the player most recently invested in gets
+feedstock priority; lubricant (likely already stockpiled from earlier in
+the game) absorbs the leftovers. Simulated: petrochemicals now produces on
+its very first eligible cycle (tick 25).
+
+Also added: `getBuildingEffectLines` (Building Info sheet, see above) now
+shows an orange `warning` line on lubricant/jet fuel/petrochem plants when
+total feedstock demand across all built downstream plants exceeds supply --
+"Feedstock supply (X/5s) is below total demand (Y/5s) -- build more
+Distillation Units to keep all downstream plants running every cycle." New
+`BuildingEffectLine.warning?` field, rendered in `colors.orangeDark`.
+
+New `feedstock_priority.test.ts` (9 assertions): petrochem produces within
+the first 25 ticks (was 0 before); after 2000 ticks all three products have
+accumulated (none permanently starved); single-petrochem-no-competition
+case unaffected; the feedstock warning appears on all 3 plant types when
+demand > supply and is absent when only lubricant is built (demand <
+supply).
+
+Verification: tsc --noEmit clean. feedstock_priority.test.ts (9) +
+building_info.test.ts (19, unaffected) + full suite (2000-tick sim 10,106,
+autotrade 3018, recruitment ~645 + migration 11, refinery_balance 19,
+events 19 + events_long 8, milestones 25, win_celebration 12, boost 20,
+combos 16, contracts_ui 13, choiceevent_migration 7, translation-key checks
+38) all pass. EXPO_OFFLINE web export still produces all 14 routes.
+
+Note: this is complementary to (not a replacement for) the earlier "cap Jet
+Fuel/Petrochem Plant at 1" discussion -- even with the cap, 1-of-each can
+still hit this feedstock bottleneck; the real long-term fix is building
+enough Distillation Units, which the new warning now surfaces.
+
 ## What's NOT done / known gaps
 
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,

@@ -387,12 +387,15 @@ export default function RefineryScreen() {
               {isUpgradeable && <Text style={styles.infoLevel}>Level {level}</Text>}
               <Text style={styles.infoDescription}>{config.description.en}</Text>
               {effectLines.map((line, i) => (
-                <View key={i} style={styles.infoEffectRow}>
-                  <Text style={styles.infoEffectLabel}>{line.label}</Text>
-                  <Text style={styles.infoEffectValue}>
-                    {line.value}
-                    {line.bonus && <Text style={styles.infoEffectBonus}> {line.bonus}</Text>}
-                  </Text>
+                <View key={i}>
+                  <View style={styles.infoEffectRow}>
+                    <Text style={styles.infoEffectLabel}>{line.label}</Text>
+                    <Text style={styles.infoEffectValue}>
+                      {line.value}
+                      {line.bonus && <Text style={styles.infoEffectBonus}> {line.bonus}</Text>}
+                    </Text>
+                  </View>
+                  {line.warning && <Text style={styles.infoWarning}>⚠️ {line.warning}</Text>}
                 </View>
               ))}
               {isUpgradeable && (
@@ -481,6 +484,12 @@ const styles = StyleSheet.create({
   infoEffectBonus: {
     color: colors.greenDark,
     fontWeight: '800',
+  },
+  infoWarning: {
+    color: colors.orangeDark,
+    fontSize: 11,
+    marginTop: 2,
+    marginBottom: spacing.xs,
   },
   infoSectionTitle: {
     fontWeight: '800',
