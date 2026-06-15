@@ -17,7 +17,7 @@ export type RecruitmentCandidate = {
 }
 
 // Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
-export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial'
+export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
 
 export type ProductInventory = Record<ProductKey, number>
 
@@ -33,6 +33,7 @@ export type BuildingType =
   | 'petrochemicalPlant'
   | 'powerPlant'
   | 'wasteTreatmentPlant'
+  | 'polymerPlant'
 
 export type GridCell = BuildingType | null
 
@@ -236,6 +237,7 @@ export type WorkerType =
   | 'fuelSpecialist'
   | 'aviationSpecialist'
   | 'chemicalEngineer'
+  | 'polymerEngineer'
 
 export type WorkerCounts = Record<WorkerType, number>
 

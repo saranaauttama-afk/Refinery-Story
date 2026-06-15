@@ -71,4 +71,12 @@ export const WORKERS: WorkerConfig[] = [
     unlockLevel: 15,
     tier: 3,
   },
+  {
+    key: 'polymerEngineer',
+    name: text.data.workers.polymerEngineer.name,
+    cost: 8000,
+    description: text.data.workers.polymerEngineer.description,
+    unlockLevel: 20,
+    tier: 3,
+  },
 ]

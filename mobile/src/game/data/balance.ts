@@ -1,7 +1,7 @@
 // Early-game pacing and economy live here so tuning does not require
 // searching through simulation code.
 
-import type { BuildingType } from '../types'
+import type { BuildingType, ProductKey } from '../types'
 
 export const CORE_BALANCE = {
   tickMs: 200,
@@ -71,6 +71,10 @@ export const ECONOMY_BALANCE = {
   jetFuelPrice: 90,
   petrochemicalsPrice: 150,
   recycledMaterialPrice: 25,
+  // Production Complexity Expansion Phase 3: ~2x petrochemicals per unit --
+  // the "process further" incentive (sell petrochemicals raw at 150, or
+  // feed them into the Polymer Plant for plasticPellets at 300).
+  plasticPelletsPrice: 300,
   crudeCost: 10,
   // Mobile rebalance: refinery-level upgrades were nearly free under the
   // old linear formula (55 + 35*level) -- the cumulative cost to reach
@@ -136,6 +140,7 @@ export const BONUS_BALANCE = {
   fuelSpecialistSellPriceBonusRate: 0.05,
   aviationSpecialistJetFuelBonusRate: 0.20,
   chemicalEngineerPetrochemicalsBonusRate: 0.20,
+  polymerEngineerPlasticPelletsBonusRate: 0.20,
 } as const
 
 export const EVENT_BALANCE = {
@@ -484,6 +489,24 @@ export const PETROCHEMICAL_PLANT_BALANCE = {
   cost: 15000,
 } as const
 
+// Production Complexity Expansion Phase 3: Polymer Plant consumes
+// `petrochemicals` (the existing final product, which keeps its dual
+// role -- still sellable raw at petrochemicalsPrice, OR fed in here for a
+// higher-value product) and produces `plasticPellets`. Implemented as its
+// own standalone block in useGameLoop.ts (NOT part of PLANT_PRODUCTION /
+// the shared feedstock pool), since its input is a different pool
+// entirely. 1 plant = 1 product, same as every other plant. Output scales
+// via plant upgrade levels (existing pattern) and the polymerEngineer
+// specialist (BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate).
+export const POLYMER_PLANT_BALANCE = {
+  unlockLevel: 20,
+  cost: 25000,
+  intervalTicks: 25,
+  petrochemicalsPerCycle: 10,
+  plasticPelletsPerCycle: 5,
+  maxPlasticPelletsStorage: 200,
+} as const
+
 // Production Complexity Expansion Phase 2: Power Plant burns crude to
 // generate electricity, consumed by the 3 downstream PLANT_PRODUCTION
 // plants (see PlantProductionConfig.electricityPerCycle). Electricity is
@@ -730,6 +753,14 @@ export type PlantProductionConfig = {
   // Plant is built -- see POWER_PLANT_BALANCE and the downstream-plants
   // loop in useGameLoop.ts.
   electricityPerCycle: number
+  // Production Complexity Expansion Phase 3: generic input override. When
+  // absent (all 3 current plants), the plant consumes `feedstock` as
+  // before. Reserved for future tiers (e.g. a plant consuming
+  // `plasticPellets`) that need a non-feedstock input -- NOT used by
+  // Polymer Plant itself, which is implemented as its own standalone block
+  // (see POLYMER_PLANT_BALANCE) since it has its own dedicated
+  // petrochemicals->plasticPellets pool, not the shared feedstock pool.
+  inputProduct?: ProductKey
   // Optional specialist worker that multiplies this plant's output.
   specialistWorker?: 'aviationSpecialist' | 'chemicalEngineer'
   specialistBonusRate?: number

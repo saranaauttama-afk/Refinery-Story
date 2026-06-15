@@ -66,7 +66,8 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
       cell === 'jetFuelPlant' ||
       cell === 'petrochemicalPlant' ||
       cell === 'powerPlant' ||
-      cell === 'wasteTreatmentPlant',
+      cell === 'wasteTreatmentPlant' ||
+      cell === 'polymerPlant',
   )
     ? value
     : fallback
@@ -110,6 +111,7 @@ function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
     fuelSpecialist: getSafeNumber(value.fuelSpecialist, 0),
     aviationSpecialist: getSafeNumber(value.aviationSpecialist, 0),
     chemicalEngineer: getSafeNumber(value.chemicalEngineer, 0),
+    polymerEngineer: getSafeNumber(value.polymerEngineer, 0),
   }
 }
 
@@ -124,6 +126,7 @@ const WORKER_TYPE_KEYS = [
   'fuelSpecialist',
   'aviationSpecialist',
   'chemicalEngineer',
+  'polymerEngineer',
 ] as const
 
 // Individual Staff (Phase 1): each WorkerType's employees are represented as
@@ -446,6 +449,7 @@ export function sanitizeLoadedGameState(value: unknown) {
       lubricants: getSafeProductAmount(value.productInventory, 'lubricants'),
       petrochemicals: getSafeProductAmount(value.productInventory, 'petrochemicals'),
       recycledMaterial: getSafeProductAmount(value.productInventory, 'recycledMaterial'),
+      plasticPellets: getSafeProductAmount(value.productInventory, 'plasticPellets'),
     },
   }
 }

@@ -147,6 +147,10 @@ export const text = {
       'No waste to process yet — waste accumulates from refining activity.',
       'ยังไม่มีของเสียให้กำจัด — ของเสียจะเกิดจากกิจกรรมการกลั่น',
     ),
+    petrochemicalsStarved: bilingual(
+      'No petrochemicals — build/run Petrochemical Plants to supply this plant.',
+      'ไม่มีปิโตรเคมี — สร้าง/เดินโรงผลิตปิโตรเคมีเพื่อจ่ายให้โรงงานนี้',
+    ),
     gasoline: bilingual('Gasoline', 'น้ำมันเบนซิน'),
     gasolineDescription: bilingual(
       'Product Tanks raise finished fuel storage.',
@@ -632,6 +636,28 @@ export const text = {
       'ยังไม่มีโรงบำบัดของเสีย วางโรงงานในกริดเพื่อเริ่มกำจัดของเสีย',
     ),
   },
+  plasticPellets: {
+    kicker: bilingual('Plastic Pellets', 'เม็ดพลาสติก'),
+    title: bilingual('Polymer Market', 'ตลาดพอลิเมอร์'),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}. Build Polymer Plants to convert petrochemicals into plastic pellets automatically.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงผลิตพอลิเมอร์เพื่อแปลงปิโตรเคมีเป็นเม็ดพลาสติกโดยอัตโนมัติ`,
+      ),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+    noPlants: bilingual(
+      'No Polymer Plants placed. Add plants to the grid to begin production.',
+      'ยังไม่มีโรงผลิตพอลิเมอร์ วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
+    ),
+  },
   asphalt: {
     kicker: bilingual('Asphalt', 'แอสฟัลต์'),
     title: bilingual('Asphalt Processing', 'การผลิตแอสฟัลต์'),
@@ -967,6 +993,14 @@ export const text = {
           'แปลงของเสียที่สะสมเป็นวัสดุรีไซเคิล 4 ของเสีย → 2 วัสดุรีไซเคิล ทุก 5 วินาทีต่อโรงงาน ช่วยไม่ให้ของเสียล้นถัง (ป้องกันผลเสียต่อ ESG)',
         ),
       },
+      polymerPlant: {
+        name: bilingual('Polymer Plant', 'โรงผลิตพอลิเมอร์'),
+        role: bilingual('Advanced Production', 'การผลิตขั้นสูง'),
+        description: bilingual(
+          'Converts petrochemicals into plastic pellets, a higher-value product. 10 petrochemicals → 5 plastic pellets every 5s per plant. Petrochemicals can still be sold directly, or processed here for more.',
+          'แปลงปิโตรเคมีเป็นเม็ดพลาสติก สินค้ามูลค่าสูงขึ้น 10 ปิโตรเคมี → 5 เม็ดพลาสติก ทุก 5 วินาทีต่อโรงงาน ปิโตรเคมียังขายตรงได้เหมือนเดิม หรือนำมาแปรรูปที่นี่เพื่อมูลค่าที่สูงขึ้น',
+        ),
+      },
     } satisfies Record<
       BuildingType,
       { name: BilingualTextValue; description: BilingualTextValue; role: BilingualTextValue }
@@ -1010,6 +1044,10 @@ export const text = {
       chemicalEngineer: {
         name: bilingual('Chemical Engineer', 'วิศวกรเคมี'),
         description: bilingual('+20% petrochemical production per worker', '+20% การผลิตปิโตรเคมีต่อคนงาน'),
+      },
+      polymerEngineer: {
+        name: bilingual('Polymer Engineer', 'วิศวกรพอลิเมอร์'),
+        description: bilingual('+20% plastic pellet production per worker', '+20% การผลิตเม็ดพลาสติกต่อคนงาน'),
       },
     } satisfies Record<
       WorkerType,

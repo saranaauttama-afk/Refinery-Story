@@ -63,6 +63,8 @@ import {
   PLANT_PRODUCTION,
   POWER_PLANT_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
+  POLYMER_PLANT_BALANCE,
+  BONUS_BALANCE,
   STAFF_LEVEL_BALANCE,
   STANDING_ORDER_BALANCE,
   type PaidExpansionEntry,
@@ -309,6 +311,44 @@ export function tick(current: GameState): GameState {
     }
   }
 
+  // --- Polymer Plant: petrochemicals -> plasticPellets (Production
+  // Complexity Expansion Phase 3) ---
+  // Same 25-tick (5s) cadence. Standalone block (not part of the shared
+  // feedstock PLANT_PRODUCTION loop below) since its input is
+  // `petrochemicals`, a different pool with its own dedicated
+  // producer/consumer relationship -- 1 plant = 1 product, like every
+  // other plant. Petrochemicals keeps its existing dual role: this
+  // consumes from the same productInventory.petrochemicals that can also
+  // be sold directly via sellProduct. polymerEngineer specialist (tier 3)
+  // multiplies output, same pattern as chemicalEngineer/aviationSpecialist.
+  {
+    const polymerPlantCount = stats.buildingCounts.polymerPlant
+    if (polymerPlantCount > 0 && nextTick % POLYMER_PLANT_BALANCE.intervalTicks === 0) {
+      const petrochemicalsNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle
+      const plasticPelletsSpace =
+        POLYMER_PLANT_BALANCE.maxPlasticPelletsStorage - productInventory.plasticPellets
+      if (productInventory.petrochemicals >= petrochemicalsNeeded && plasticPelletsSpace > 0) {
+        const specialistMultiplier = getSpecialistMultiplier(
+          current,
+          'polymerEngineer',
+          BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
+          polymerPlantCount,
+        )
+        const produced = Math.min(
+          Math.round(polymerPlantCount * POLYMER_PLANT_BALANCE.plasticPelletsPerCycle * specialistMultiplier),
+          plasticPelletsSpace,
+        )
+        if (produced > 0) {
+          productInventory = {
+            ...productInventory,
+            petrochemicals: productInventory.petrochemicals - petrochemicalsNeeded,
+            plasticPellets: productInventory.plasticPellets + produced,
+          }
+        }
+      }
+    }
+  }
+
   // --- Downstream plants: feedstock -> product ---
   // Feedstock is a single shared pool that lubricant/jet fuel/petrochem
   // all draw from every 25-tick (5s) cycle. Originally this was
@@ -383,7 +423,7 @@ export function tick(current: GameState): GameState {
     for (const plant of eligiblePlants) {
       const plantCount = stats.buildingCounts[plant.buildingKey]
       const productSpace = plant.maxStorage - productInventory[plant.productKey]
-      const specialistMultiplier = getSpecialistMultiplier(current, plant, plantCount)
+      const specialistMultiplier = getSpecialistMultiplier(current, plant.specialistWorker, plant.specialistBonusRate, plantCount)
       const priority = current.feedstockPriority[plant.buildingKey] ?? 1
       const normalOutput = plantCount * plant.outputPerCycle * specialistMultiplier
       // Full share: round as before (preserves old behavior exactly when
@@ -653,7 +693,7 @@ export function useGameLoop() {
   )
 
   const sellProduct = useCallback(
-    (key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial', amount: number) =>
+    (key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets', amount: number) =>
       update((current) => {
         const stats = calculateDerivedStats(current)
         const have = current.productInventory[key]

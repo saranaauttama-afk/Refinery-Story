@@ -13,6 +13,7 @@ import {
   FEEDSTOCK_PRIORITY_BALANCE,
   MILESTONE_BALANCE,
   PLANT_PRODUCTION,
+  POLYMER_PLANT_BALANCE,
   POWER_PLANT_BALANCE,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
@@ -147,6 +148,7 @@ export function createInitialGameState(): GameState {
       fuelSpecialist: 0,
       aviationSpecialist: 0,
       chemicalEngineer: 0,
+      polymerEngineer: 0,
     },
     employees: [],
     assignments: {},
@@ -194,6 +196,7 @@ export function createInitialGameState(): GameState {
       lubricants: 0,
       petrochemicals: 0,
       recycledMaterial: 0,
+      plasticPellets: 0,
     },
   }
 }
@@ -242,6 +245,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
     petrochemicalPlant: 0,
     powerPlant: 0,
     wasteTreatmentPlant: 0,
+    polymerPlant: 0,
   }
 }
 
@@ -256,6 +260,7 @@ export function getEmptyWorkerCounts(): WorkerCounts {
     fuelSpecialist: 0,
     aviationSpecialist: 0,
     chemicalEngineer: 0,
+    polymerEngineer: 0,
   }
 }
 
@@ -354,16 +359,17 @@ export function getAssignmentCapacity(buildingCounts: BuildingCounts, type: Work
 // flat `1 + workerCounts[type] * rate`.
 export function getSpecialistMultiplier(
   game: GameState,
-  plant: PlantProductionConfig,
+  specialistWorker: WorkerType | undefined,
+  specialistBonusRate: number | undefined,
   plantCount: number,
 ): number {
-  if (!plant.specialistWorker || !plant.specialistBonusRate) return 1
-  const assignedIds = (game.assignments[plant.specialistWorker] ?? []).slice(0, plantCount)
+  if (!specialistWorker || !specialistBonusRate) return 1
+  const assignedIds = (game.assignments[specialistWorker] ?? []).slice(0, plantCount)
   const bonus = assignedIds.reduce((sum, id) => {
     const employee = game.employees.find(
-      (e) => e.id === id && e.type === plant.specialistWorker,
+      (e) => e.id === id && e.type === specialistWorker,
     )
-    return employee ? sum + getEmployeeMultiplier(employee) * plant.specialistBonusRate! : sum
+    return employee ? sum + getEmployeeMultiplier(employee) * specialistBonusRate! : sum
   }, 0)
   return 1 + bonus
 }
@@ -427,7 +433,7 @@ export function getBuildingEffectLines(
       const plantCount = derived.buildingCounts[cell]
       const seconds = (plant.intervalTicks * TICK_MS) / 1000
       const base = plant.outputPerCycle
-      const specialistMultiplier = getSpecialistMultiplier(game, plant, plantCount)
+      const specialistMultiplier = getSpecialistMultiplier(game, plant.specialistWorker, plant.specialistBonusRate, plantCount)
       const boosted = Math.round(base * specialistMultiplier)
       const bonusAmount = boosted - base
       let bonus: string | undefined
@@ -510,6 +516,39 @@ export function getBuildingEffectLines(
           value: `-${WASTE_TREATMENT_PLANT_BALANCE.wastePerCycle} / ${seconds}s`,
         },
       ]
+    }
+    case 'polymerPlant': {
+      const plantCount = derived.buildingCounts.polymerPlant
+      const seconds = (POLYMER_PLANT_BALANCE.intervalTicks * TICK_MS) / 1000
+      const base = POLYMER_PLANT_BALANCE.plasticPelletsPerCycle
+      const specialistMultiplier = getSpecialistMultiplier(
+        game,
+        'polymerEngineer',
+        BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
+        plantCount,
+      )
+      const boosted = Math.round(base * specialistMultiplier)
+      const bonusAmount = boosted - base
+      let bonus: string | undefined
+      if (bonusAmount > 0) {
+        const assignedCount = (game.assignments.polymerEngineer ?? []).slice(0, plantCount).length
+        const specialistName = WORKERS.find((w) => w.key === 'polymerEngineer')?.name.en ?? 'Polymer Engineer'
+        bonus = `(+${bonusAmount} from ${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''})`
+      }
+      const line: BuildingEffectLine = {
+        label: 'Output per plant',
+        value: `${base} plasticPellets / ${seconds}s`,
+        bonus,
+      }
+      const inputLine: BuildingEffectLine = {
+        label: 'Petrochemicals consumed per plant',
+        value: `-${POLYMER_PLANT_BALANCE.petrochemicalsPerCycle} / ${seconds}s`,
+      }
+      if (game.productInventory.petrochemicals < plantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle) {
+        inputLine.warning =
+          'Not enough petrochemicals in stock for this plant to run its next cycle. Petrochemicals are still sellable directly -- keep some in reserve, or build more Petrochemical Plants.'
+      }
+      return [line, inputLine]
     }
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
@@ -650,6 +689,7 @@ const PRODUCT_BASE_PRICE: Record<string, number> = {
   jetFuel: ECONOMY_BALANCE.jetFuelPrice,
   petrochemicals: ECONOMY_BALANCE.petrochemicalsPrice,
   recycledMaterial: ECONOMY_BALANCE.recycledMaterialPrice,
+  plasticPellets: ECONOMY_BALANCE.plasticPelletsPrice,
 }
 
 // Sell price for a secondary product = base × global product sell multiplier
