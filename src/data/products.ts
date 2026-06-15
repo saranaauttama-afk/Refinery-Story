@@ -3,6 +3,7 @@ import {
   JET_FUEL_PLANT_BALANCE,
   LUBRICANT_PLANT_BALANCE,
   PETROCHEMICAL_PLANT_BALANCE,
+  WASTE_TREATMENT_PLANT_BALANCE,
 } from './balance'
 import { text } from '../translations'
 import type { BilingualTextValue } from '../types'
@@ -21,7 +22,7 @@ export type ProductTextBundle = {
   sellDisabledEmpty: BilingualTextValue
 }
 
-export type SellableProductKey = 'jetFuel' | 'lubricants' | 'petrochemicals'
+export type SellableProductKey = 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial'
 
 export type SellableProductConfig = {
   key: SellableProductKey
@@ -29,6 +30,7 @@ export type SellableProductConfig = {
   plantUnlockLevel: number
   className: string
   copy: ProductTextBundle
+  inputStarvedText: BilingualTextValue
 }
 
 // The three plant-produced, directly-sold products. Asphalt is intentionally NOT
@@ -41,6 +43,7 @@ export const SELLABLE_PRODUCTS: SellableProductConfig[] = [
     plantUnlockLevel: JET_FUEL_PLANT_BALANCE.unlockLevel,
     className: 'jetfuel-panel',
     copy: text.jetFuel,
+    inputStarvedText: text.resources.feedstockStarved,
   },
   {
     key: 'lubricants',
@@ -48,6 +51,7 @@ export const SELLABLE_PRODUCTS: SellableProductConfig[] = [
     plantUnlockLevel: LUBRICANT_PLANT_BALANCE.unlockLevel,
     className: 'lubricants-panel',
     copy: text.lubricants,
+    inputStarvedText: text.resources.feedstockStarved,
   },
   {
     key: 'petrochemicals',
@@ -55,5 +59,14 @@ export const SELLABLE_PRODUCTS: SellableProductConfig[] = [
     plantUnlockLevel: PETROCHEMICAL_PLANT_BALANCE.unlockLevel,
     className: 'petrochemicals-panel',
     copy: text.petrochemicals,
+    inputStarvedText: text.resources.feedstockStarved,
+  },
+  {
+    key: 'recycledMaterial',
+    unlockLevel: WASTE_TREATMENT_PLANT_BALANCE.unlockLevel,
+    plantUnlockLevel: WASTE_TREATMENT_PLANT_BALANCE.unlockLevel,
+    className: 'recycled-material-panel',
+    copy: text.recycledMaterial,
+    inputStarvedText: text.resources.wasteStarved,
   },
 ]

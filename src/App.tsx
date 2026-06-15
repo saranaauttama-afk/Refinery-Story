@@ -30,7 +30,7 @@ import AwardCeremonyModal from './components/AwardCeremonyModal'
 import ComboDiscoveryToast from './components/ComboDiscoveryToast'
 import EraBannerToast from './components/EraBannerToast'
 import { BUILDINGS } from './data/buildings'
-import { ASPHALT_BALANCE, AWARDS_BALANCE, DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from './data/balance'
+import { ASPHALT_BALANCE, AWARDS_BALANCE, DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_BALANCE, PLANT_PRODUCTION, STANDING_ORDER_BALANCE, BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE, WASTE_TREATMENT_PLANT_BALANCE } from './data/balance'
 import type { PaidExpansionEntry, ShipmentOption } from './data/balance'
 import { getRandomChoiceEvent } from './data/choiceEvents'
 import { SELLABLE_PRODUCTS } from './data/products'
@@ -121,7 +121,7 @@ function App() {
     feedstockPerDistillationCycle,
   } = calculateDerivedStats(game)
 
-  const productSellPrices: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
+  const productSellPrices: Record<'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial', number> = {
     jetFuel: getProductSellPrice('jetFuel', productSellMultiplier),
     lubricants: getProductSellPrice('lubricants', productSellMultiplier),
     petrochemicals: getProductSellPrice(
@@ -129,16 +129,28 @@ function App() {
       productSellMultiplier,
       game.petrochemicalsDemandMultiplier,
     ),
+    recycledMaterial: getProductSellPrice('recycledMaterial', productSellMultiplier),
   }
-  const productPlantCounts: Record<'jetFuel' | 'lubricants' | 'petrochemicals', number> = {
+  const productPlantCounts: Record<'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial', number> = {
     jetFuel: buildingCounts.jetFuelPlant,
     lubricants: buildingCounts.lubricantPlant,
     petrochemicals: buildingCounts.petrochemicalPlant,
+    recycledMaterial: buildingCounts.wasteTreatmentPlant,
   }
-  const productSellHandlers: Record<'jetFuel' | 'lubricants' | 'petrochemicals', (amount: number) => void> = {
+  const productInputResources: Record<'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial', number> = {
+    jetFuel: game.feedstock,
+    lubricants: game.feedstock,
+    petrochemicals: game.feedstock,
+    recycledMaterial: game.waste,
+  }
+  const productSellHandlers: Record<
+    'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial',
+    (amount: number) => void
+  > = {
     jetFuel: handleSellJetFuel,
     lubricants: handleSellLubricants,
     petrochemicals: handleSellPetrochemicals,
+    recycledMaterial: handleSellRecycledMaterial,
   }
 
   const petrochemicalDone = game.completedContractIds.includes(7)
@@ -158,6 +170,12 @@ function App() {
         let feedstock = current.feedstock
         let productInventory = current.productInventory
         let plantActivityLog = current.activityLog
+
+        // --- Production Complexity Expansion Phase 1: waste byproduct ---
+        // Dirty buildings emit waste each tick, capped by storage. Computed
+        // early so the Waste Treatment Plant block below can consume it.
+        const wasteGenerated = getWasteGeneratedPerTick(currentStats.buildingCounts)
+        let waste = Math.min(current.waste + wasteGenerated, currentStats.maxWasteStorage)
 
         // --- Distillation: crude → feedstock ---
         // Each distillation cycle converts crude into feedstock (capped by storage).
@@ -212,6 +230,38 @@ function App() {
           )
         }
 
+        // --- Waste Treatment Plant: waste → recycledMaterial ---
+        // Separate from the unified PLANT_PRODUCTION loop above because its
+        // input is `waste` (not `feedstock`) and it has no specialist worker
+        // yet. Purely additive: does not touch feedstock or any other
+        // product's production.
+        {
+          const plantCount = currentStats.buildingCounts.wasteTreatmentPlant
+          if (plantCount > 0 && nextTick % WASTE_TREATMENT_PLANT_BALANCE.intervalTicks === 0) {
+            const wasteNeeded = plantCount * WASTE_TREATMENT_PLANT_BALANCE.wastePerCycle
+            const recycledSpace =
+              WASTE_TREATMENT_PLANT_BALANCE.maxRecycledMaterialStorage -
+              productInventory.recycledMaterial
+            if (waste >= wasteNeeded && recycledSpace > 0) {
+              const produced = Math.min(
+                plantCount * WASTE_TREATMENT_PLANT_BALANCE.recycledMaterialPerCycle,
+                recycledSpace,
+              )
+              if (produced > 0) {
+                waste -= wasteNeeded
+                productInventory = {
+                  ...productInventory,
+                  recycledMaterial: productInventory.recycledMaterial + produced,
+                }
+                plantActivityLog = addLog(
+                  plantActivityLog,
+                  serializeBilingualText(text.logs.producedRecycledMaterial(plantCount, produced)),
+                )
+              }
+            }
+          }
+        }
+
         // --- Gasoline production (Tier 1: crude-direct, unchanged) ---
         if (crudeOil < 1 || current.gasoline >= currentMaxGasoline) {
           return {
@@ -220,6 +270,7 @@ function App() {
             productionProgress: 0,
             crudeOil,
             feedstock,
+            waste,
             productInventory,
             activityLog: plantActivityLog,
           }
@@ -235,6 +286,7 @@ function App() {
             productionProgress: nextProgress,
             crudeOil,
             feedstock,
+            waste,
             productInventory,
             activityLog: plantActivityLog,
           }
@@ -254,6 +306,7 @@ function App() {
             productionProgress: 0,
             crudeOil,
             feedstock,
+            waste,
             productInventory,
             activityLog: plantActivityLog,
           }
@@ -290,11 +343,9 @@ function App() {
         // up. Clamped to [minScore, maxScore].
         const esgDelta = getEsgDrift(current, currentStats.buildingCounts)
 
-        // --- Production Complexity Expansion Phase 1: waste byproduct ---
-        // Dirty buildings also emit waste each tick, capped by storage.
-        // Waste at/over cap applies an extra ESG penalty this tick.
-        const wasteGenerated = getWasteGeneratedPerTick(currentStats.buildingCounts)
-        const waste = Math.min(current.waste + wasteGenerated, currentStats.maxWasteStorage)
+        // Production Complexity Expansion Phase 1: waste at/over cap (after
+        // any Waste Treatment Plant processing above) applies an extra ESG
+        // penalty this tick, on top of the existing dirty-building drift.
         const wasteOverflowPenalty = getWasteOverflowEsgPenalty(waste, currentStats.maxWasteStorage)
 
         const esgScore = Math.max(
@@ -1081,6 +1132,31 @@ function App() {
     })
   }
 
+  function handleSellRecycledMaterial(amount: number) {
+    setGame((current) => {
+      const actualAmount = Math.min(amount, current.productInventory.recycledMaterial)
+      if (actualAmount <= 0) return current
+
+      const mult = calculateDerivedStats(current).productSellMultiplier
+      const price = getProductSellPrice('recycledMaterial', mult)
+      const totalRevenue = actualAmount * price
+
+      return {
+        ...current,
+        money: current.money + totalRevenue,
+        yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + totalRevenue },
+        productInventory: {
+          ...current.productInventory,
+          recycledMaterial: current.productInventory.recycledMaterial - actualAmount,
+        },
+        activityLog: addLog(
+          current.activityLog,
+          serializeBilingualText(text.logs.soldRecycledMaterial(actualAmount, totalRevenue)),
+        ),
+      }
+    })
+  }
+
   function handleFulfillStandingOrder(key: StandingOrderKey) {
     setGame((current) => {
       const order = STANDING_ORDER_BALANCE.find((o) => o.key === key)
@@ -1310,7 +1386,7 @@ function App() {
               inventory={game.productInventory[product.key]}
               sellPrice={productSellPrices[product.key]}
               plantCount={productPlantCounts[product.key]}
-              feedstock={game.feedstock}
+              inputResource={productInputResources[product.key]}
               onSell={productSellHandlers[product.key]}
             />
           ))}

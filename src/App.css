@@ -2425,3 +2425,13 @@
   font-size: 0.74rem;
   padding: 4px 9px;
 }
+
+/* ─── Recycled Material Panel ─── */
+
+.recycled-material-panel {
+  padding: 12px 16px;
+}
+
+.recycled-material-panel--locked {
+  opacity: 0.6;
+}

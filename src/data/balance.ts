@@ -35,6 +35,7 @@ export const ECONOMY_BALANCE = {
   lubricantPrice: 45,
   jetFuelPrice: 90,
   petrochemicalsPrice: 150,
+  recycledMaterialPrice: 25,
   crudeCost: 10,
   refineryUpgradeBaseCost: 55,
   refineryUpgradeLevelStep: 35,
@@ -726,6 +727,20 @@ export const WASTE_BALANCE = {
   baseWasteStorage: 50,
   // ESG penalty applied per tick while waste is at/over the cap.
   overCapEsgPenaltyPerTick: 0.01,
+} as const
+
+// Waste Treatment Plant: consumes accumulated `waste` and produces
+// `recycledMaterial` (a sellable secondary product). Disposing waste this
+// way keeps it under the storage cap, avoiding the ESG overflow penalty
+// above. Low value per unit (vs. petrochemicals at 150) -- this is a
+// mitigation building, not a new income strategy.
+export const WASTE_TREATMENT_PLANT_BALANCE = {
+  unlockLevel: 8,
+  cost: 6000,
+  intervalTicks: 25,
+  wastePerCycle: 4,
+  recycledMaterialPerCycle: 2,
+  maxRecycledMaterialStorage: 150,
 } as const
 
 // --- Energy Transition era: demand shift (Strategic Differentiation #2) ---

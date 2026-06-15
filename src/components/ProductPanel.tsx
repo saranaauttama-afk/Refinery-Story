@@ -1,6 +1,5 @@
 import type { SellableProductConfig } from '../data/products'
 import BilingualText from './BilingualText'
-import { text } from '../translations'
 
 type ProductPanelProps = {
   config: SellableProductConfig
@@ -8,7 +7,7 @@ type ProductPanelProps = {
   inventory: number
   sellPrice: number
   plantCount: number
-  feedstock: number
+  inputResource: number
   onSell: (amount: number) => void
 }
 
@@ -20,10 +19,10 @@ function ProductPanel({
   inventory,
   sellPrice,
   plantCount,
-  feedstock,
+  inputResource,
   onSell,
 }: ProductPanelProps) {
-  const { copy, className, unlockLevel, plantUnlockLevel } = config
+  const { copy, className, unlockLevel, plantUnlockLevel, inputStarvedText } = config
 
   if (refineryLevel < unlockLevel) {
     return (
@@ -63,9 +62,9 @@ function ProductPanel({
         </p>
       )}
 
-      {plantCount > 0 && feedstock <= 0 && (
+      {plantCount > 0 && inputResource <= 0 && (
         <p className="product-no-feedstock">
-          <BilingualText text={text.resources.feedstockStarved} />
+          <BilingualText text={inputStarvedText} />
         </p>
       )}
 

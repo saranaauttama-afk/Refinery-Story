@@ -143,6 +143,10 @@ export const text = {
       'No feedstock — build/feed Distillation Units to supply this plant.',
       'ไม่มีวัตถุดิบกลั่น — สร้าง/ป้อนหน่วยกลั่นเพื่อจ่ายให้โรงงานนี้',
     ),
+    wasteStarved: bilingual(
+      'No waste to process yet — waste accumulates from refining activity.',
+      'ยังไม่มีของเสียให้กำจัด — ของเสียจะเกิดจากกิจกรรมการกลั่น',
+    ),
     gasoline: bilingual('Gasoline', 'น้ำมันเบนซิน'),
     gasolineDescription: bilingual(
       'Product Tanks raise finished fuel storage.',
@@ -608,6 +612,28 @@ export const text = {
       'ยังไม่มีโรงผลิตปิโตรเคมี วางโรงผลิตในกริดเพื่อเริ่มการผลิต',
     ),
   },
+  recycledMaterial: {
+    kicker: bilingual('Recycled Material', 'วัสดุรีไซเคิล'),
+    title: bilingual('Recycling Market', 'ตลาดวัสดุรีไซเคิล'),
+    lockedMessage: (level: number) =>
+      bilingual(
+        `Unlocks at Refinery Level ${level}. Build Waste Treatment Plants to convert waste into recycled material automatically.`,
+        `ปลดล็อกที่ระดับโรงกลั่น ${level} สร้างโรงบำบัดของเสียเพื่อแปลงของเสียเป็นวัสดุรีไซเคิลโดยอัตโนมัติ`,
+      ),
+    inventory: (current: number) =>
+      bilingual(`Inventory: ${current}`, `คลัง: ${current}`),
+    priceLabel: (price: number) =>
+      bilingual(`$${price} per unit`, `$${price} ต่อหน่วย`),
+    sell1Button: bilingual('Sell 1', 'ขาย 1'),
+    sell10Button: bilingual('Sell 10', 'ขาย 10'),
+    sellAllButton: (amount: number) =>
+      bilingual(`Sell All (${amount})`, `ขายทั้งหมด (${amount})`),
+    sellDisabledEmpty: bilingual('None to sell', 'ไม่มีสินค้า'),
+    noPlants: bilingual(
+      'No Waste Treatment Plants placed. Add plants to the grid to begin processing waste.',
+      'ยังไม่มีโรงบำบัดของเสีย วางโรงงานในกริดเพื่อเริ่มกำจัดของเสีย',
+    ),
+  },
   asphalt: {
     kicker: bilingual('Asphalt', 'แอสฟัลต์'),
     title: bilingual('Asphalt Processing', 'การผลิตแอสฟัลต์'),
@@ -925,6 +951,14 @@ export const text = {
         description: bilingual(
           'Converts crude into petrochemicals. 30 crude → 5 petrochemicals every 5s per plant.',
           'แปลงน้ำมันดิบเป็นปิโตรเคมี 30 น้ำมันดิบ → 5 ปิโตรเคมี ทุก 5 วินาทีต่อโรงงาน',
+        ),
+      },
+      wasteTreatmentPlant: {
+        name: bilingual('Waste Treatment Plant', 'โรงบำบัดของเสีย'),
+        role: bilingual('Waste Management', 'การจัดการของเสีย'),
+        description: bilingual(
+          'Processes accumulated waste into recycled material. 4 waste → 2 recycled material every 5s per plant. Keeps waste storage from overflowing (avoids ESG penalty).',
+          'แปลงของเสียที่สะสมเป็นวัสดุรีไซเคิล 4 ของเสีย → 2 วัสดุรีไซเคิล ทุก 5 วินาทีต่อโรงงาน ช่วยไม่ให้ของเสียล้นถัง (ป้องกันผลเสียต่อ ESG)',
         ),
       },
     } satisfies Record<
@@ -1719,6 +1753,11 @@ export const text = {
         `โรงผลิต ${plants} แห่งผลิต${n.th} ${amount} หน่วยจากวัตถุดิบกลั่น`,
       )
     },
+    producedRecycledMaterial: (plants: number, amount: number) =>
+      bilingual(
+        `${plants} waste treatment plant${plants > 1 ? 's' : ''} produced ${amount} recycled material from waste.`,
+        `โรงบำบัดของเสีย ${plants} แห่งผลิตวัสดุรีไซเคิล ${amount} หน่วยจากของเสีย`,
+      ),
     soldLubricants: (amount: number, totalRevenue: number) =>
       bilingual(
         `Sold ${amount} lubricants for $${totalRevenue.toLocaleString()}.`,
@@ -1733,6 +1772,11 @@ export const text = {
       bilingual(
         `Sold ${amount} petrochemicals for $${totalRevenue.toLocaleString()}.`,
         `ขายปิโตรเคมี ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
+      ),
+    soldRecycledMaterial: (amount: number, totalRevenue: number) =>
+      bilingual(
+        `Sold ${amount} recycled material for $${totalRevenue.toLocaleString()}.`,
+        `ขายวัสดุรีไซเคิล ${amount} หน่วยได้ $${totalRevenue.toLocaleString()}`,
       ),
     boughtCrude: (amount: number, totalCost: number) =>
       bilingual(

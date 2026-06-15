@@ -166,6 +166,7 @@ export function createInitialGameState(): GameState {
       jetFuel: 0,
       lubricants: 0,
       petrochemicals: 0,
+      recycledMaterial: 0,
     },
   }
 }
@@ -207,6 +208,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
     lubricantPlant: 0,
     jetFuelPlant: 0,
     petrochemicalPlant: 0,
+    wasteTreatmentPlant: 0,
   }
 }
 
@@ -425,6 +427,7 @@ const PRODUCT_BASE_PRICE: Record<string, number> = {
   lubricants: ECONOMY_BALANCE.lubricantPrice,
   jetFuel: ECONOMY_BALANCE.jetFuelPrice,
   petrochemicals: ECONOMY_BALANCE.petrochemicalsPrice,
+  recycledMaterial: ECONOMY_BALANCE.recycledMaterialPrice,
 }
 
 // Sell price for a secondary product = base × global product sell multiplier

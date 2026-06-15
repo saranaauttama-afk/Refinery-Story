@@ -4,7 +4,7 @@ export type BilingualTextValue = {
 }
 
 // Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
-export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals'
+export type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial'
 
 export type ProductInventory = Record<ProductKey, number>
 
@@ -18,6 +18,7 @@ export type BuildingType =
   | 'lubricantPlant'
   | 'jetFuelPlant'
   | 'petrochemicalPlant'
+  | 'wasteTreatmentPlant'
 
 export type GridCell = BuildingType | null
 
