@@ -3,12 +3,27 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import ListRow from '../../../src/components/ListRow'
+import SellProductRow from '../../../src/components/SellProductRow'
+import FeedstockPriorityRow from '../../../src/components/FeedstockPriorityRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { colors, spacing } from '../../../src/theme'
 import { PERKS } from '../../../src/game/data/perks'
-import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
+import { PLANT_PRODUCTION, SHIPMENT_BALANCE, STANDING_ORDER_BALANCE, FEEDSTOCK_PRIORITY_BALANCE } from '../../../src/game/data/balance'
+import { BUILDINGS } from '../../../src/game/data/buildings'
+import { SELLABLE_PRODUCTS } from '../../../src/game/data/products'
+import { getProductSellPrice } from '../../../src/game/utils/gameCalculations'
 import { text } from '../../../src/game/translations'
-import type { ActiveContract, GameState } from '../../../src/game/types'
+import type { ActiveContract, BuildingType, GameState } from '../../../src/game/types'
+
+// Maps each sellable product to the building that produces it, for the
+// "no plants built yet" hint.
+const PRODUCT_PLANT: Record<(typeof SELLABLE_PRODUCTS)[number]['key'], BuildingType> = {
+  jetFuel: 'jetFuelPlant',
+  lubricants: 'lubricantPlant',
+  petrochemicals: 'petrochemicalPlant',
+  recycledMaterial: 'wasteTreatmentPlant',
+  plasticPellets: 'polymerPlant',
+}
 
 function contractProgress(contract: ActiveContract, game: GameState) {
   if ((contract.petrochemicalsRequired ?? 0) > 0) {
@@ -36,8 +51,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function BusinessScreen() {
-  const { game, loaded, derived, unlockResearch, installPerk, completeContract, buyShipment, fulfillStandingOrder } =
-    useGame()
+  const {
+    game,
+    loaded,
+    derived,
+    unlockResearch,
+    installPerk,
+    completeContract,
+    buyShipment,
+    fulfillStandingOrder,
+    sellProduct,
+    adjustFeedstockPriority,
+  } = useGame()
   const [showCompletedContracts, setShowCompletedContracts] = useState(false)
 
   if (!loaded || !game || !derived) {
@@ -65,6 +90,53 @@ export default function BusinessScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={styles.list}>
+        <Section title="Sell Products">
+          {SELLABLE_PRODUCTS.filter((product) => game.refineryLevel >= product.unlockLevel).map((product) => {
+            const demandMultiplier = product.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1
+            const price = getProductSellPrice(product.key, derived.productSellMultiplier, demandMultiplier)
+            const inventory = game.productInventory[product.key]
+            const plantBuilding = PRODUCT_PLANT[product.key]
+            const plantCount = derived.buildingCounts[plantBuilding]
+            const noPlantsMessage =
+              plantCount === 0 && game.refineryLevel >= product.plantUnlockLevel
+                ? product.copy.noPlants.en
+                : undefined
+            return (
+              <SellProductRow
+                key={product.key}
+                title={product.copy.kicker.en}
+                subtitle={`${inventory} in stock · $${price}/unit`}
+                inventory={inventory}
+                price={price}
+                noPlantsMessage={noPlantsMessage}
+                onSell={(amount) => sellProduct(product.key, amount)}
+              />
+            )
+          })}
+        </Section>
+
+        {(derived.buildingCounts.lubricantPlant > 0 ||
+          derived.buildingCounts.jetFuelPlant > 0 ||
+          derived.buildingCounts.petrochemicalPlant > 0) && (
+          <Section title="⚖️ Feedstock Priority">
+            <Text style={styles.tagline}>
+              When feedstock runs short, plants split it proportionally. Raise a plant's priority
+              to claim more of the shortage first (up to its own normal output); set to 0% to turn
+              it off entirely.
+            </Text>
+            {PLANT_PRODUCTION.filter((plant) => derived.buildingCounts[plant.buildingKey] > 0).map((plant) => (
+              <FeedstockPriorityRow
+                key={plant.buildingKey}
+                title={BUILDINGS[plant.buildingKey].name.en}
+                value={game.feedstockPriority[plant.buildingKey] ?? FEEDSTOCK_PRIORITY_BALANCE.default}
+                min={FEEDSTOCK_PRIORITY_BALANCE.min}
+                max={FEEDSTOCK_PRIORITY_BALANCE.max}
+                onAdjust={(delta) => adjustFeedstockPriority(plant.buildingKey, delta)}
+              />
+            ))}
+          </Section>
+        )}
+
         <Section title="Contracts">
           {incompleteContracts.map((contract) => {
             const { have, need, unit } = contractProgress(contract, game)

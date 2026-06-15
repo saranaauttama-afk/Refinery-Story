@@ -40,7 +40,21 @@ import {
 import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src/hooks/useGameLoop'
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
-const UPGRADEABLE: BuildingType[] = ['crudeTank', 'distillationUnit', 'productTank']
+// Keep in sync with the isUpgradeable check in useGameLoop.ts
+// upgradeBuilding() -- every building with a ...ByLevel table in
+// BUILDING_UPGRADE_BALANCE.
+const UPGRADEABLE: BuildingType[] = [
+  'crudeTank',
+  'distillationUnit',
+  'productTank',
+  'laboratory',
+  'maintenanceWorkshop',
+  'salesOffice',
+  'lubricantPlant',
+  'jetFuelPlant',
+  'petrochemicalPlant',
+  'polymerPlant',
+]
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -418,7 +432,9 @@ export default function RefineryScreen() {
               ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
               : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
           const plant = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
-          const specialistType = plant?.specialistWorker
+          // polymerPlant isn't in PLANT_PRODUCTION (standalone production
+          // block, see useGameLoop.ts) but still has a specialist worker.
+          const specialistType = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker
           const specialistName = specialistType
             ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType
             : null

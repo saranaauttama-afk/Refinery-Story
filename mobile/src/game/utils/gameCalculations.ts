@@ -348,6 +348,7 @@ export function createNewEmployee(employees: Employee[], type: WorkerType): Empl
 // How many specialist slots a plant has = how many of that building exist.
 // Returns 0 for worker types that aren't a plant specialist.
 export function getAssignmentCapacity(buildingCounts: BuildingCounts, type: WorkerType): number {
+  if (type === 'polymerEngineer') return buildingCounts.polymerPlant
   const plant = PLANT_PRODUCTION.find((p) => p.specialistWorker === type)
   return plant ? buildingCounts[plant.buildingKey] : 0
 }
