@@ -434,13 +434,23 @@ export function getBuildingEffectLines(
       const seconds = (plant.intervalTicks * TICK_MS) / 1000
       const base = plant.outputPerCycle
       const specialistMultiplier = getSpecialistMultiplier(game, plant.specialistWorker, plant.specialistBonusRate, plantCount)
-      const boosted = Math.round(base * specialistMultiplier)
+      const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(derived, plant.buildingKey)
+      const boosted = Math.round(base * specialistMultiplier * outputUpgradeMultiplier)
       const bonusAmount = boosted - base
       let bonus: string | undefined
-      if (bonusAmount > 0 && plant.specialistWorker) {
-        const assignedCount = (game.assignments[plant.specialistWorker] ?? []).slice(0, plantCount).length
-        const specialistName = WORKERS.find((w) => w.key === plant.specialistWorker)?.name.en ?? 'specialist'
-        bonus = `(+${bonusAmount} from ${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''})`
+      if (bonusAmount > 0) {
+        const parts: string[] = []
+        if (plant.specialistWorker) {
+          const assignedCount = (game.assignments[plant.specialistWorker] ?? []).slice(0, plantCount).length
+          if (assignedCount > 0) {
+            const specialistName = WORKERS.find((w) => w.key === plant.specialistWorker)?.name.en ?? 'specialist'
+            parts.push(`${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''}`)
+          }
+        }
+        if (outputUpgradeMultiplier > 1) {
+          parts.push('plant level upgrades')
+        }
+        bonus = `(+${bonusAmount} from ${parts.join(' + ')})`
       }
       const line: BuildingEffectLine = {
         label: 'Output per plant',
@@ -527,13 +537,21 @@ export function getBuildingEffectLines(
         BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
         plantCount,
       )
-      const boosted = Math.round(base * specialistMultiplier)
+      const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(derived, 'polymerPlant')
+      const boosted = Math.round(base * specialistMultiplier * outputUpgradeMultiplier)
       const bonusAmount = boosted - base
       let bonus: string | undefined
       if (bonusAmount > 0) {
+        const parts: string[] = []
         const assignedCount = (game.assignments.polymerEngineer ?? []).slice(0, plantCount).length
-        const specialistName = WORKERS.find((w) => w.key === 'polymerEngineer')?.name.en ?? 'Polymer Engineer'
-        bonus = `(+${bonusAmount} from ${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''})`
+        if (assignedCount > 0) {
+          const specialistName = WORKERS.find((w) => w.key === 'polymerEngineer')?.name.en ?? 'Polymer Engineer'
+          parts.push(`${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''}`)
+        }
+        if (outputUpgradeMultiplier > 1) {
+          parts.push('plant level upgrades')
+        }
+        bonus = `(+${bonusAmount} from ${parts.join(' + ')})`
       }
       const line: BuildingEffectLine = {
         label: 'Output per plant',
@@ -596,6 +614,27 @@ export function getBuildingEffectLines(
 // score down; safetyOfficer staff (scaled by their own effectiveness, incl.
 // level/veteran) pull it up. Net can be positive or negative depending on
 // how a player has built. Caller clamps to [minScore, maxScore].
+// Production Complexity Expansion: maps a PLANT_PRODUCTION buildingKey to
+// its summed per-instance output-upgrade multiplier (see
+// ...OutputBonusRateByLevel in BUILDING_UPGRADE_BALANCE and the per-cell
+// loop above). Used by the downstream-plants loop alongside the
+// specialist multiplier.
+export function getPlantOutputUpgradeMultiplier(
+  derived: DerivedStats,
+  buildingKey: 'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant' | 'polymerPlant',
+): number {
+  switch (buildingKey) {
+    case 'lubricantPlant':
+      return derived.lubricantPlantOutputMultiplier
+    case 'jetFuelPlant':
+      return derived.jetFuelPlantOutputMultiplier
+    case 'petrochemicalPlant':
+      return derived.petrochemicalPlantOutputMultiplier
+    case 'polymerPlant':
+      return derived.polymerPlantOutputMultiplier
+  }
+}
+
 export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {
   const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
   const safetyEffectiveSum = getEffectiveWorkerSum(game.employees, 'safetyOfficer')
@@ -912,6 +951,13 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   let laboratoryRpBonusTotal = 0
   let workshopPenaltyMultiplier = 1
   let salesOfficeContractBonusTotal = 0
+  // Production Complexity Expansion: per-plant-type output bonus, summed
+  // across all instances of that building (same pattern as
+  // distillationUpgradeBonusRate).
+  let lubricantPlantOutputBonusRate = 0
+  let jetFuelPlantOutputBonusRate = 0
+  let petrochemicalPlantOutputBonusRate = 0
+  let polymerPlantOutputBonusRate = 0
   for (let i = 0; i < game.grid.length; i++) {
     const cell = game.grid[i]
     if (!cell) continue
@@ -932,9 +978,24 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     } else if (cell === 'salesOffice') {
       salesOfficeContractBonusTotal +=
         BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1
+    } else if (cell === 'lubricantPlant') {
+      lubricantPlantOutputBonusRate += BUILDING_UPGRADE_BALANCE.lubricantPlantOutputBonusRateByLevel[level] ?? 0
+    } else if (cell === 'jetFuelPlant') {
+      jetFuelPlantOutputBonusRate += BUILDING_UPGRADE_BALANCE.jetFuelPlantOutputBonusRateByLevel[level] ?? 0
+    } else if (cell === 'petrochemicalPlant') {
+      petrochemicalPlantOutputBonusRate +=
+        BUILDING_UPGRADE_BALANCE.petrochemicalPlantOutputBonusRateByLevel[level] ?? 0
+    } else if (cell === 'polymerPlant') {
+      polymerPlantOutputBonusRate += BUILDING_UPGRADE_BALANCE.polymerPlantOutputBonusRateByLevel[level] ?? 0
     }
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
+  // Production Complexity Expansion: per-plant-type output multipliers from
+  // building-level upgrades (1 = no bonus, matches pre-upgrade behavior).
+  const lubricantPlantOutputMultiplier = 1 + lubricantPlantOutputBonusRate
+  const jetFuelPlantOutputMultiplier = 1 + jetFuelPlantOutputBonusRate
+  const petrochemicalPlantOutputMultiplier = 1 + petrochemicalPlantOutputBonusRate
+  const polymerPlantOutputMultiplier = 1 + polymerPlantOutputBonusRate
 
   // --- Process chain: feedstock storage + distillation output ---
   // Feedstock cap scales with how much distillation capacity you've built.
@@ -1170,6 +1231,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     eraResearchRateBonusRate,
     maxFeedstockStorage,
     maxWasteStorage,
+    lubricantPlantOutputMultiplier,
+    jetFuelPlantOutputMultiplier,
+    petrochemicalPlantOutputMultiplier,
+    polymerPlantOutputMultiplier,
     maxElectricityStorage,
     electricityDemandPerCycle,
     feedstockPerDistillationCycle,

@@ -467,6 +467,19 @@ export const BUILDING_UPGRADE_BALANCE = {
   crudeTankStorageByLevel: [0, 25, 50, 100],
   productTankStorageByLevel: [0, 25, 50, 100],
   distillationUnitBonusRateByLevel: [0, 0, 0.25, 0.5],
+  // Production Complexity Expansion: per-instance output bonus for the 4
+  // production plants (lubricant/jetFuel/petrochemical/polymer). Same
+  // shape and values as distillationUnitBonusRateByLevel -- Lv1 = base
+  // (no bonus, matches pre-upgrade behavior exactly), Lv2 = +25%, Lv3 =
+  // +50% output for THAT plant instance. Summed across all instances of a
+  // plant type (see calculateDerivedStats), then applied as a multiplier
+  // on outputPerCycle alongside the existing specialist multiplier. Gives
+  // upgrading these plants an actual effect -- previously upgrade cost was
+  // payable but had zero effect on the 4 production plants.
+  lubricantPlantOutputBonusRateByLevel: [0, 0, 0.25, 0.5],
+  jetFuelPlantOutputBonusRateByLevel: [0, 0, 0.25, 0.5],
+  petrochemicalPlantOutputBonusRateByLevel: [0, 0, 0.25, 0.5],
+  polymerPlantOutputBonusRateByLevel: [0, 0, 0.25, 0.5],
   // Support buildings — Lv1 matches the previous flat-rate constant exactly
   laboratoryRpBonusRateByLevel: [0, 0.1, 0.2, 0.35],
   maintenanceWorkshopPenaltyRateByLevel: [0, 0.5, 0.35, 0.20],

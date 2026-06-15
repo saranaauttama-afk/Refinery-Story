@@ -513,6 +513,13 @@ export type DerivedStats = {
   // Refinery process chain (feedstock layer)
   maxFeedstockStorage: number
   maxWasteStorage: number
+  // Production Complexity Expansion: per-plant-type output multipliers
+  // from building-level upgrades, applied alongside the specialist
+  // multiplier in the downstream-plants loop and the Polymer Plant block.
+  lubricantPlantOutputMultiplier: number
+  jetFuelPlantOutputMultiplier: number
+  petrochemicalPlantOutputMultiplier: number
+  polymerPlantOutputMultiplier: number
   maxElectricityStorage: number
   electricityDemandPerCycle: number
   feedstockPerDistillationCycle: number

@@ -34,6 +34,7 @@ import {
   getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
+  getPlantOutputUpgradeMultiplier,
   getWasteGeneratedPerTick,
   getWasteOverflowEsgPenalty,
   getNewlyDiscoveredCombos,
@@ -334,8 +335,11 @@ export function tick(current: GameState): GameState {
           BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
           polymerPlantCount,
         )
+        const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(stats, 'polymerPlant')
         const produced = Math.min(
-          Math.round(polymerPlantCount * POLYMER_PLANT_BALANCE.plasticPelletsPerCycle * specialistMultiplier),
+          Math.round(
+            polymerPlantCount * POLYMER_PLANT_BALANCE.plasticPelletsPerCycle * specialistMultiplier * outputUpgradeMultiplier,
+          ),
           plasticPelletsSpace,
         )
         if (produced > 0) {
@@ -424,8 +428,9 @@ export function tick(current: GameState): GameState {
       const plantCount = stats.buildingCounts[plant.buildingKey]
       const productSpace = plant.maxStorage - productInventory[plant.productKey]
       const specialistMultiplier = getSpecialistMultiplier(current, plant.specialistWorker, plant.specialistBonusRate, plantCount)
+      const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(stats, plant.buildingKey)
       const priority = current.feedstockPriority[plant.buildingKey] ?? 1
-      const normalOutput = plantCount * plant.outputPerCycle * specialistMultiplier
+      const normalOutput = plantCount * plant.outputPerCycle * specialistMultiplier * outputUpgradeMultiplier
       // Full share: round as before (preserves old behavior exactly when
       // both feedstock and electricity are sufficient). Reduced share:
       // floor of (normal output * priority * combinedShareRatio), capped
@@ -766,7 +771,25 @@ export function useGameLoop() {
       update((current) => {
         const cell = current.grid[cellIndex]
         if (!cell) return current
-        const isUpgradeable = cell === 'crudeTank' || cell === 'productTank' || cell === 'distillationUnit'
+        // Every building with a ...ByLevel table in BUILDING_UPGRADE_BALANCE
+        // is upgradeable. crudeTank/productTank/distillationUnit were the
+        // original 3; laboratory/maintenanceWorkshop/salesOffice had tables
+        // but were missing from this list (their bonuses were stuck at Lv1
+        // in normal play); lubricantPlant/jetFuelPlant/petrochemicalPlant/
+        // polymerPlant are the new Production Complexity Expansion tables
+        // (Lv1 = no bonus, so this is backward compatible -- existing saves
+        // at Lv1 see no change until the player upgrades).
+        const isUpgradeable =
+          cell === 'crudeTank' ||
+          cell === 'productTank' ||
+          cell === 'distillationUnit' ||
+          cell === 'laboratory' ||
+          cell === 'maintenanceWorkshop' ||
+          cell === 'salesOffice' ||
+          cell === 'lubricantPlant' ||
+          cell === 'jetFuelPlant' ||
+          cell === 'petrochemicalPlant' ||
+          cell === 'polymerPlant'
         if (!isUpgradeable) return current
         const currentLevel = current.gridLevels[cellIndex] ?? 1
         if (currentLevel >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel) return current
