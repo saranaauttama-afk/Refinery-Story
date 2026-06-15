@@ -42,13 +42,19 @@ with Expo Go on your phone.
     local/demo.
 - **🏭 Refinery / 👥 Staff / 📋 Business / 📊 Stats** (`/game/...`, bottom
   tabs): the full game --
-  - **Refinery**: resource bar (money / crude / feedstock / gasoline / ESG /
-    season), the building grid, buy crude / sell gasoline, sell downstream
-    products. A **🎯 Next** card under the header shows the nearest
-    incomplete milestone with a live progress bar (tap to open
-    Achievements). Tap an empty tile to **build**, tap a crude tank /
-    distillation unit / product tank to **upgrade**, tap the title to
-    **upgrade the refinery level** (cost + a cumulative-production
+  - **Refinery**: resource bar (money / crude / feedstock / waste /
+    electricity / gasoline / ESG / season), the building grid, buy crude /
+    sell gasoline, sell downstream products. A **🎯 Next** card under the
+    header shows the nearest incomplete milestone with a live progress bar
+    (tap to open Achievements). Tap an empty tile to **build** -- 12
+    building types now, including **Power Plant** (Lv5, crude ->
+    electricity), **Waste Treatment Plant** (Lv8, waste -> recycledMaterial),
+    and **Polymer Plant** (Lv20, petrochemicals -> plasticPellets). Tap any
+    of the 7 upgradeable buildings (storage/processing tanks, distillation,
+    laboratory, maintenance workshop, sales office, and all 4 production
+    plants) to **upgrade** its level (Lv1-3, each level boosts that
+    building's bonus -- output for the 4 production plants), tap the title
+    to **upgrade the refinery level** (cost + a cumulative-production
     requirement -- see below). A **🔥 Boost** card lets you trigger a
     temporary 2x gasoline production multiplier (with a cooldown -- see
     below), and a **🔄 Auto-trade** card lets you toggle automatic crude
@@ -60,11 +66,16 @@ with Expo Go on your phone.
     shows each hired employee (name, level, XP, 🎖 veteran trait), with a
     **Train** button (costs $ + RP, max level 5) and an **Assign** toggle for
     specialist roles (aviationSpecialist -> Jet Fuel Plant, chemicalEngineer
-    -> Petrochemical Plant) that boosts that plant's output.
-  - **Business**: Contracts, Research, Perks (3 branches x 3 tiers), plus
-    **Crude shipments** (order bulk crude with a real-time delay, see
-    pending arrivals countdown) and **Standing orders** (recurring
-    high-value sales with a cooldown).
+    -> Petrochemical Plant, polymerEngineer -> Polymer Plant) that boosts
+    that plant's output.
+  - **Business**: **Sell Products** (Sell 1/10/All for jetFuel, lubricants,
+    petrochemicals, recycledMaterial, plasticPellets, with live prices and
+    "no plants built yet" hints), an **⚖️ Feedstock Priority** card (0-200%
+    stepper per built downstream plant, shown once any of the 3 is built),
+    Contracts, Research, Perks (3 branches x 3 tiers), plus **Crude
+    shipments** (order bulk crude with a real-time delay, see pending
+    arrivals countdown) and **Standing orders** (recurring high-value sales
+    with a cooldown).
   - **Stats**: era progress, ESG score/tier, season, reputation, a
     **Milestones** row linking to the full **🏆 Achievements** screen (all
     16 milestones with name/requirement/reward, progress bars for
@@ -75,9 +86,13 @@ with Expo Go on your phone.
 - **Global overlays**: Choice Event modal (now milestone-triggered, see
   below), year-end Award modal, Era-advance banner.
 - **Full production tick** (200ms): crude -> feedstock (distillation) ->
-  lubricants/jetFuel/petrochemicals (downstream plants, specialist-boosted),
-  crude -> gasoline (incl. Efficiency-perk yield carry), ESG drift, Energy
-  Transition demand shift, staff XP/level-ups, era-advance detection,
+  lubricants/jetFuel/petrochemicals (downstream plants, specialist- and
+  plant-level-boosted, with feedstock + electricity shareRatio throttling),
+  crude -> electricity (Power Plant), waste byproduct -> recycledMaterial
+  (Waste Treatment Plant), petrochemicals -> plasticPellets (Polymer Plant,
+  specialist- and plant-level-boosted), crude -> gasoline (incl.
+  Efficiency-perk yield carry), ESG drift (incl. waste-overflow penalty),
+  Energy Transition demand shift, staff XP/level-ups, era-advance detection,
   year-end award rollover, random events, real-time crude shipments.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
@@ -621,76 +636,97 @@ win_celebration 12, boost 20, combos 16, contracts_ui 13,
 choiceevent_migration 7, building_info 19, translation-key checks 38) all
 pass. EXPO_OFFLINE web export still produces all 14 routes.
 
+## Production Complexity Expansion: SHIPPED (Phases 1-3 + upgrade fix + UI)
+
+The 3-phase roadmap below (originally logged as "deferred, not started") is
+now fully implemented in `mobile/src/` (this codebase), across several
+branches merged into `devMobile` on 2026-06-15:
+
+- **Phase 1 (waste byproduct)**: `GameState.waste`, `WASTE_BALANCE`,
+  `getWasteGeneratedPerTick` / `getWasteOverflowEsgPenalty`. New "Waste
+  Treatment Plant" (Lv8, $6000, `WASTE_TREATMENT_PLANT_BALANCE`) converts
+  waste -> new product `recycledMaterial` ($25/unit). Over-cap waste applies
+  an extra ESG penalty on top of the existing dirty-building drift.
+- **Phase 2 (power)**: `GameState.electricity`, new "Power Plant" (Lv5,
+  $4000, `POWER_PLANT_BALANCE`) burns crude -> electricity. The 3 downstream
+  plants each gained an `electricityPerCycle` cost; the existing feedstock
+  shareRatio/priority loop in `useGameLoop.ts` now also computes an
+  `electricityShareRatio`, and `combinedShareRatio = min(both)` -- whichever
+  resource is scarcer governs the throttle. With 0 Power Plants built this
+  is fully backward compatible (ratio stays 1).
+- **Phase 3 (Polymer Plant / Plastic Pellets)**: new "Polymer Plant" (Lv20,
+  $25000, `POLYMER_PLANT_BALANCE`) is a standalone tick block (NOT in
+  `PLANT_PRODUCTION`, since its input -- `petrochemicals` -- is a different
+  pool from the shared feedstock pool). Consumes 10 petrochemicals -> 5
+  `plasticPellets` ($300/unit, ~2x petrochemicals) per cycle. Petrochemicals
+  keep their dual role exactly as designed (still sellable raw AND now also
+  an input). New specialist `polymerEngineer` (tier 3, Lv20, $8000, +20%/
+  worker). `PlantProductionConfig.inputProduct?: ProductKey` added as
+  documented (currently unused -- reserved for future tiers).
+- **Plant-upgrade-output fix** (went beyond the original 3-phase scope,
+  requested as a follow-up): all 4 production plants
+  (lubricant/jetFuel/petrochemical/polymer) now have
+  `...OutputBonusRateByLevel` tables (Lv1=0%, Lv2=+25%, Lv3=+50%, same shape
+  as `distillationUnitBonusRateByLevel`), applied as a multiplier alongside
+  the specialist multiplier. Root-cause fix: `upgradeBuilding()`'s
+  `isUpgradeable` list only covered crudeTank/productTank/distillationUnit,
+  so laboratory/maintenanceWorkshop/salesOffice (which already had
+  `...ByLevel` tables) AND the 4 production plants were all permanently
+  stuck at Lv1 in normal play -- their bonus tables were dead code. Now all
+  7 buildings with `...ByLevel` tables are upgradeable.
+- **Mobile UI** (Business tab): new "Sell Products" section
+  (`SellProductRow`, Sell 1/10/All) for all 5 `SELLABLE_PRODUCTS`
+  (jetFuel/lubricants/petrochemicals/recycledMaterial/plasticPellets), and
+  a "⚖️ Feedstock Priority" card (`FeedstockPriorityRow` stepper) shown once
+  any downstream plant is built. Building Info sheet's upgrade button and
+  specialist-assignment section (`UPGRADEABLE` list, `getAssignmentCapacity`)
+  were fixed to match -- previously had their own stale hardcoded lists.
+
+Verification across all of the above: `tsc --noEmit` clean (mobile) after
+every commit; isolated Node simulations for the electricity throttle (5
+cases), waste/waste-treatment over 3000 ticks (2 cases), Polymer Plant
+production (4 cases), and the plant-upgrade multiplier math (5 cases) --
+all passed. No formal test suite run (none exists for `mobile/src/`; the
+271-assertion suite referenced elsewhere in this doc is from an earlier
+session and may be stale -- re-verify before relying on it).
+
+**Not yet done from the original Phase 1-3 scope**: Tier-1 gasoline
+production is NOT electricity-gated (only the 3 downstream plants +
+Polymer Plant's own simple check) -- Phase 2's "ALL production buildings"
+was intentionally scoped down to avoid touching the core gasoline-yield
+formula. Polymer Plant's electricity consumption was also deferred (it has
+no `electricityPerCycle` cost, unlike the other 3 plants) for the same
+reason.
+
 ## What's NOT done / known gaps
 
-- **Backlog: Production Complexity Expansion (Power/Waste/Chain).** Bigger
-  long-term-engagement direction discussed -- a 3-phase roadmap, deferred
-  (not started):
-  - **Phase 1 (waste)**: every existing production action also emits a
-    small `waste` byproduct (new resource + storage cap). Over-cap waste
-    penalizes `esgScore` (existing system). New "Waste Treatment Plant"
-    disposes waste (protects ESG) or converts some into a sellable
-    "recycled material". Additive -- doesn't change any existing output
-    formula.
-  - **Phase 2 (power)**: new `electricity` resource + Power Plant (can burn
-    crude or Phase 1's waste as fuel). All production buildings consume
-    electricity; insufficient electricity throttles output (reuse the
-    feedstock proportional-sharing/priority pattern above). Highest risk --
-    touches every existing production formula at once.
-  - **Phase 3 (5th product tier -- Polymer Plant / Plastic Pellets)**: new
-    "Polymer Plant" (~Lv20+) consumes `petrochemicals` as INPUT to produce a
-    new top-tier product `plasticPellets`. Refined design (2026-06-15):
-    - **Petrochemicals keeps its dual role** -- still sellable as a final
-      product / contract good exactly as today, AND becomes the input
-      feedstock for the Polymer Plant. No change to its ProductKey, price,
-      or existing contracts. This is the core B2B decision point: sell
-      petrochemicals raw, or feed them into pellets for a higher-value
-      product (target ~1.8-2.5x value per unit vs raw petrochemicals, to
-      give a real long-game "process further" incentive rather than a
-      flat upgrade).
-    - **1 plant = 1 product**, same as every existing plant -- Polymer
-      Plant only ever outputs `plasticPellets`. No per-plant product
-      switching.
-    - **Performance scaling stays on the existing two levers**: (1) plant
-      upgrade levels (Lv1-3, same as Lab/Workshop/Sales Office pattern)
-      reduce `intervalTicks` / raise `outputPerCycle`; (2) a new
-      specialist worker `polymerEngineer` (tier 3, unlocks at the Polymer
-      Plant's level, same pairing pattern as chemicalEngineer <->
-      petrochemicalPlant) multiplies output via `specialistBonusRate`,
-      and staff level (1-5, existing wage-scaling system) scales that
-      bonus further. No new mechanic types.
-    - **`PlantProductionConfig` needs a new optional `inputProduct?:
-      ProductKey` field** (defaults to feedstock-consumption when absent,
-      preserving all 3 existing plants unchanged) -- this is what lets
-      Polymer Plant consume `petrochemicals` instead of `feedstock`, and
-      is written generically so any *future* tier (e.g. a "Finished Goods"
-      plant consuming `plasticPellets`) can reuse the same field without
-      another core-loop change.
-    - **Intentionally designed for long B2B/industrial play, not a quick
-      add-on**: this opens a 2-tier chain (feedstock -> petrochemicals ->
-      plasticPellets) and a natural home for future B2B contract tiers
-      (e.g. "Packaging Manufacturer", "Automotive Parts Supplier" clients
-      requesting plasticPellets) via the existing contract-expansion
-      pattern -- no new systems needed for that follow-up content.
-  - Phases connect (waste->power fuel, new Phase-3 plant could consume
-    power and emit waste) but each is independently shippable. Starting
-    phase TBD.
+- **Backlog: electricity-gate Tier-1 gasoline + Polymer Plant.** See "Not
+  yet done from the original Phase 1-3 scope" above -- Phase 2's
+  electricity throttle currently only covers the 3 original downstream
+  plants. Extending it to Tier-1 gasoline production and adding an
+  `electricityPerCycle` cost to Polymer Plant would complete the original
+  "ALL production buildings" intent, but touches the core gasoline-yield
+  formula (highest risk in the original Phase 2 description) -- do as its
+  own focused change with its own verification pass.
 - **Backlog: Grid Expansion Tier 4 (6x6)**. Current expansion ladder tops
   out at 5x5 (25 cells, Lv10, $100k) -- see `EXPANSION_BALANCE`. Production
-  Complexity Expansion above could add up to 3 new building types (Waste
-  Treatment Plant, Power Plant, Polymer Plant) on top of the existing 9,
-  which may push endgame layouts tight on a 5x5 grid. Do NOT build a 4th
-  expansion tier yet -- revisit only after Phase 1-3 above ship and actual
-  endgame cell-usage can be measured. If needed: a 6x6 (36 cells) tier,
-  gated to a high refinery level (~Lv20) with a cost well above the 5x5's
-  $100k, following the existing `EXPANSION_BALANCE` pattern. Grid-size
-  changes touch layout UI, save migration, and adjacency-combo balance, so
-  keep this as its own phase -- do not bundle with Production Complexity.
-- **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Discussed at length
-  (matches their "1 flagship + 1 specialist" design intent vs lubricant's
-  "build more" role -- aviationSpecialist/chemicalEngineer unlock at the
-  exact same refinery level as their plant). Explicitly deferred in favor
-  of Feedstock Priority above; not implemented.
+  Complexity Expansion (above, now shipped) added 3 new building types
+  (Waste Treatment Plant, Power Plant, Polymer Plant) on top of the
+  existing 9 (12 total), which may push endgame layouts tight on a 5x5
+  grid -- this is the "revisit" point the original note was waiting for.
+  Still not started: measure actual endgame cell-usage with 12 building
+  types before committing to a 6x6 (36 cells) tier gated to a high
+  refinery level (~Lv20) with a cost well above the 5x5's $100k, following
+  the existing `EXPANSION_BALANCE` pattern. Grid-size changes touch layout
+  UI, save migration, and adjacency-combo balance, so keep this as its own
+  phase.
+- **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Originally deferred
+  in favor of Feedstock Priority (shipped above). Feedstock Priority's 0%
+  setting already gives players a way to effectively "turn off" a plant
+  without capping it structurally, which may address the underlying
+  "1 flagship + 1 specialist" design intent well enough -- revisit only if
+  players still build multiple Jet Fuel/Petrochem Plants in a way that
+  feels unintended despite Priority being available. Not implemented.
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,
   PT...) on the grid, per `src/buildingColors.ts`. The 30 isometric SVGs
   generated earlier are in `assets/icons/` but not wired in (by request).
