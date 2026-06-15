@@ -1,4 +1,5 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import ListRow from '../../../src/components/ListRow'
@@ -37,6 +38,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function BusinessScreen() {
   const { game, loaded, derived, unlockResearch, installPerk, completeContract, buyShipment, fulfillStandingOrder } =
     useGame()
+  const [showCompletedContracts, setShowCompletedContracts] = useState(false)
 
   if (!loaded || !game || !derived) {
     return (
@@ -45,6 +47,14 @@ export default function BusinessScreen() {
       </SafeAreaView>
     )
   }
+
+  const unlockedContracts = derived.activeContracts.filter((c) => c.isUnlocked)
+  // Newest-unlocked tier first, so contracts you just gained access to float
+  // to the top instead of getting buried in a long static list.
+  const incompleteContracts = unlockedContracts
+    .filter((c) => !c.isCompleted)
+    .sort((a, b) => b.unlockLevel - a.unlockLevel || b.id - a.id)
+  const completedContracts = unlockedContracts.filter((c) => c.isCompleted)
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -56,19 +66,49 @@ export default function BusinessScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.list}>
         <Section title="Contracts">
-          {derived.activeContracts
-            .filter((c) => c.isUnlocked)
-            .map((contract) => {
+          {incompleteContracts.map((contract) => {
+            const { have, need, unit } = contractProgress(contract, game)
+            const ready = have >= need
+            // "NEW" = this contract just became available at your current
+            // refinery level. Disappears once you complete it, or once you
+            // level up past its tier (it's no longer the "newest" one).
+            const isNew = contract.unlockLevel === game.refineryLevel
+            return (
+              <ListRow
+                key={contract.id}
+                title={contract.name.en}
+                subtitle={`${have}/${need} ${unit} · +$${contract.currentReward.toLocaleString()}, +${contract.currentRpReward} RP, +${contract.currentReputationReward} rep`}
+                actionLabel="Complete"
+                disabled={!ready}
+                badge={isNew ? 'NEW' : undefined}
+                onPress={() => completeContract(contract)}
+              />
+            )
+          })}
+          {incompleteContracts.length === 0 && (
+            <Text style={styles.tagline}>No open contracts right now -- keep producing!</Text>
+          )}
+
+          {completedContracts.length > 0 && (
+            <Pressable
+              style={styles.completedToggle}
+              onPress={() => setShowCompletedContracts((v) => !v)}
+            >
+              <Text style={styles.completedToggleLabel}>
+                {showCompletedContracts ? '▾' : '▸'} Completed ({completedContracts.length})
+              </Text>
+            </Pressable>
+          )}
+          {showCompletedContracts &&
+            completedContracts.map((contract) => {
               const { have, need, unit } = contractProgress(contract, game)
-              const ready = have >= need && !contract.isCompleted
               return (
                 <ListRow
                   key={contract.id}
                   title={contract.name.en}
                   subtitle={`${have}/${need} ${unit} · +$${contract.currentReward.toLocaleString()}, +${contract.currentRpReward} RP, +${contract.currentReputationReward} rep`}
                   actionLabel="Complete"
-                  disabled={!ready}
-                  done={contract.isCompleted}
+                  done
                   onPress={() => completeContract(contract)}
                 />
               )
@@ -213,5 +253,18 @@ const styles = StyleSheet.create({
     color: colors.blue,
     fontWeight: '700',
     marginBottom: spacing.xs,
+  },
+  tagline: {
+    color: colors.inkMuted,
+    fontSize: 13,
+    paddingVertical: spacing.sm,
+  },
+  completedToggle: {
+    paddingVertical: spacing.sm,
+  },
+  completedToggleLabel: {
+    color: colors.inkMuted,
+    fontWeight: '700',
+    fontSize: 13,
   },
 })

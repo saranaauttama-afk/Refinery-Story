@@ -82,6 +82,31 @@ with Expo Go on your phone.
   Autosaves every 5s via AsyncStorage. Settings (language/audio/ads) are
   stored separately so "Reset save" / New Game doesn't wipe them.
 
+## Contracts List: NEW Badge + Newest-First + Collapsed Completed
+
+The Contracts section showed every unlocked contract (26 total in
+`CONTRACT_BALANCE`, in static `id` order) including ones completed long ago
+-- by mid/late game this was a long, mostly-irrelevant list.
+
+- **Sort**: incomplete contracts are now sorted by `unlockLevel` descending
+  (ties broken by `id` descending), so the tier you *just* unlocked floats
+  to the top instead of being buried among lower-tier contracts.
+- **"NEW" badge** (`ListRow` new `badge?: string` prop, small orange pill
+  next to the title): shown when `contract.unlockLevel === game.refineryLevel`
+  -- i.e. "this contract just became available at your current level and
+  you haven't completed it yet." No new persistent state needed: the badge
+  clears itself either when you complete that contract, or when you level
+  up again and a newer tier takes over as "current."
+- **Completed contracts** move into a collapsed "▸ Completed (X)" toggle at
+  the bottom of the section (local component state, default collapsed) --
+  still reachable for reference, but no longer pushing active contracts off
+  screen.
+
+Verification: new contracts_ui.test.ts (13 assertions) checks the sort
+order, that the NEW badge only ever applies to the current-level tier, that
+it disappears on completion, and that leveling up moves the badge to the
+new tier and clears it from the old one.
+
 ## Hidden Combo Discovery
 
 Same pattern as the Achievements screen earlier: `HIDDEN_COMBOS` (5 entries,
@@ -122,7 +147,7 @@ screen position/z-index, so if both fire in the same tick they'd visually
 stack. Low probability (era advances are milestone/level-driven, combo
 discovery is placement-driven) and not addressed here.
 
-
+## Win Celebration
 
 `prototypeCompleted` (Lv10+ refinery, reputation >= 250, contract #7 done,
 grid expansion >= 2) used to silently flip to `true` in `applyWinGoal` --

@@ -7,14 +7,23 @@ type ListRowProps = {
   actionLabel: string
   disabled?: boolean
   done?: boolean
+  // Small pill rendered next to the title, e.g. "NEW".
+  badge?: string
   onPress: () => void
 }
 
-function ListRow({ title, subtitle, actionLabel, disabled, done, onPress }: ListRowProps) {
+function ListRow({ title, subtitle, actionLabel, disabled, done, badge, onPress }: ListRowProps) {
   return (
     <View style={styles.row}>
       <View style={styles.text}>
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{title}</Text>
+          {badge && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeLabel}>{badge}</Text>
+            </View>
+          )}
+        </View>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <Pressable
@@ -44,6 +53,22 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  badge: {
+    backgroundColor: colors.orange,
+    borderRadius: radii.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  badgeLabel: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '800',
   },
   title: {
     fontWeight: '700',
