@@ -637,14 +637,55 @@ pass. EXPO_OFFLINE web export still produces all 14 routes.
     electricity; insufficient electricity throttles output (reuse the
     feedstock proportional-sharing/priority pattern above). Highest risk --
     touches every existing production formula at once.
-  - **Phase 3 (5th product tier)**: new high-level (~Lv20+) plant that
-    consumes `petrochemicals` (currently a final product) as INPUT to
-    produce a new top-tier product + its own specialist -- extends the
-    feedstock->plant pattern one level deeper, and doubles as the
-    "endgame content past Lv18" gap noted in the retention discussion.
+  - **Phase 3 (5th product tier -- Polymer Plant / Plastic Pellets)**: new
+    "Polymer Plant" (~Lv20+) consumes `petrochemicals` as INPUT to produce a
+    new top-tier product `plasticPellets`. Refined design (2026-06-15):
+    - **Petrochemicals keeps its dual role** -- still sellable as a final
+      product / contract good exactly as today, AND becomes the input
+      feedstock for the Polymer Plant. No change to its ProductKey, price,
+      or existing contracts. This is the core B2B decision point: sell
+      petrochemicals raw, or feed them into pellets for a higher-value
+      product (target ~1.8-2.5x value per unit vs raw petrochemicals, to
+      give a real long-game "process further" incentive rather than a
+      flat upgrade).
+    - **1 plant = 1 product**, same as every existing plant -- Polymer
+      Plant only ever outputs `plasticPellets`. No per-plant product
+      switching.
+    - **Performance scaling stays on the existing two levers**: (1) plant
+      upgrade levels (Lv1-3, same as Lab/Workshop/Sales Office pattern)
+      reduce `intervalTicks` / raise `outputPerCycle`; (2) a new
+      specialist worker `polymerEngineer` (tier 3, unlocks at the Polymer
+      Plant's level, same pairing pattern as chemicalEngineer <->
+      petrochemicalPlant) multiplies output via `specialistBonusRate`,
+      and staff level (1-5, existing wage-scaling system) scales that
+      bonus further. No new mechanic types.
+    - **`PlantProductionConfig` needs a new optional `inputProduct?:
+      ProductKey` field** (defaults to feedstock-consumption when absent,
+      preserving all 3 existing plants unchanged) -- this is what lets
+      Polymer Plant consume `petrochemicals` instead of `feedstock`, and
+      is written generically so any *future* tier (e.g. a "Finished Goods"
+      plant consuming `plasticPellets`) can reuse the same field without
+      another core-loop change.
+    - **Intentionally designed for long B2B/industrial play, not a quick
+      add-on**: this opens a 2-tier chain (feedstock -> petrochemicals ->
+      plasticPellets) and a natural home for future B2B contract tiers
+      (e.g. "Packaging Manufacturer", "Automotive Parts Supplier" clients
+      requesting plasticPellets) via the existing contract-expansion
+      pattern -- no new systems needed for that follow-up content.
   - Phases connect (waste->power fuel, new Phase-3 plant could consume
     power and emit waste) but each is independently shippable. Starting
     phase TBD.
+- **Backlog: Grid Expansion Tier 4 (6x6)**. Current expansion ladder tops
+  out at 5x5 (25 cells, Lv10, $100k) -- see `EXPANSION_BALANCE`. Production
+  Complexity Expansion above could add up to 3 new building types (Waste
+  Treatment Plant, Power Plant, Polymer Plant) on top of the existing 9,
+  which may push endgame layouts tight on a 5x5 grid. Do NOT build a 4th
+  expansion tier yet -- revisit only after Phase 1-3 above ship and actual
+  endgame cell-usage can be measured. If needed: a 6x6 (36 cells) tier,
+  gated to a high refinery level (~Lv20) with a cost well above the 5x5's
+  $100k, following the existing `EXPANSION_BALANCE` pattern. Grid-size
+  changes touch layout UI, save migration, and adjacency-combo balance, so
+  keep this as its own phase -- do not bundle with Production Complexity.
 - **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Discussed at length
   (matches their "1 flagship + 1 specialist" design intent vs lubricant's
   "build more" role -- aviationSpecialist/chemicalEngineer unlock at the
