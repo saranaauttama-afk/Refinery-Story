@@ -410,6 +410,11 @@ export default function RefineryScreen() {
                   <Text style={styles.infoSectionTitle}>
                     {specialistName} assignment ({Math.min(assignedIds.length, capacity)}/{capacity})
                   </Text>
+                  <Text style={styles.infoHint}>
+                    Shared pool across all {capacity} {config.name.en}
+                    {capacity > 1 ? 's' : ''} -- assigning here boosts their combined output, not just
+                    this tile.
+                  </Text>
                   {eligibleEmployees.length === 0 && (
                     <Text style={styles.infoHint}>
                       Hire a {specialistName} from the Staff tab to assign here.

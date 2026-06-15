@@ -482,7 +482,13 @@ already written but never shown anywhere.
   prop and the existing per-type `toggleAssignment`/`assignments`/capacity
   system) -- so assigning staff *feels* per-building even though the
   underlying model is still "up to N specialists boost all plants of this
-  type".
+  type". A hint line under the section title spells this out explicitly
+  ("Shared pool across all N <Plant>s -- assigning here boosts their
+  combined output, not just this tile") -- with 2+ plants of the same type,
+  the assignment list/capacity/ASSIGNED badges are identical no matter
+  which plant's info you open, and unassigning from either affects the
+  shared bonus for all of them. Added after a clarifying question about
+  exactly this multi-plant case.
 
 Verification: tsc --noEmit clean. building_info.test.ts (19 assertions)
 covers every building type's effect-line text and bonus-clamping at max
