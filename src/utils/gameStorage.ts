@@ -61,7 +61,8 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
       cell === 'salesOffice' ||
       cell === 'lubricantPlant' ||
       cell === 'jetFuelPlant' ||
-      cell === 'petrochemicalPlant',
+      cell === 'petrochemicalPlant' ||
+      cell === 'wasteTreatmentPlant',
   )
     ? value
     : fallback
@@ -292,6 +293,7 @@ function sanitizeLoadedGameState(value: unknown) {
     crudeOil: getSafeNumber(value.crudeOil, fallback.crudeOil),
     gasoline: getSafeNumber(value.gasoline, fallback.gasoline),
     feedstock: getSafeNumber(value.feedstock, 0),
+    waste: Math.max(0, getSafeNumber(value.waste, 0)),
     refineryLevel: getSafeNumber(value.refineryLevel, fallback.refineryLevel),
     productionProgress: getSafeNumber(
       value.productionProgress,
@@ -379,6 +381,7 @@ function sanitizeLoadedGameState(value: unknown) {
       jetFuel: getSafeProductAmount(value.productInventory, 'jetFuel'),
       lubricants: getSafeProductAmount(value.productInventory, 'lubricants'),
       petrochemicals: getSafeProductAmount(value.productInventory, 'petrochemicals'),
+      recycledMaterial: getSafeProductAmount(value.productInventory, 'recycledMaterial'),
     },
   }
 }

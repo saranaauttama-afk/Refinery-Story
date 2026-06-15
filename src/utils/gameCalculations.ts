@@ -19,6 +19,7 @@ import {
   STARTING_BALANCE,
   STORAGE_BALANCE,
   WAGE_BALANCE,
+  WASTE_BALANCE,
 } from '../data/balance'
 import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
@@ -112,6 +113,7 @@ export function createInitialGameState(): GameState {
     crudeOil: STARTING_CRUDE,
     gasoline: 0,
     feedstock: 0,
+    waste: 0,
     refineryLevel: 1,
     productionProgress: 0,
     tickCount: 0,
@@ -164,6 +166,7 @@ export function createInitialGameState(): GameState {
       jetFuel: 0,
       lubricants: 0,
       petrochemicals: 0,
+      recycledMaterial: 0,
     },
   }
 }
@@ -205,6 +208,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
     lubricantPlant: 0,
     jetFuelPlant: 0,
     petrochemicalPlant: 0,
+    wasteTreatmentPlant: 0,
   }
 }
 
@@ -338,6 +342,23 @@ export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): nu
   )
 }
 
+// --- Production Complexity Expansion Phase 1: waste byproduct ---
+
+// Waste generated this tick, scaled by how many "dirty" buildings are
+// running (reuses ESG_DIRTY_BUILDINGS -- same buildings that drift ESG
+// down also produce waste). Caller clamps to remaining storage.
+export function getWasteGeneratedPerTick(buildingCounts: BuildingCounts): number {
+  const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
+  return dirtyCount * WASTE_BALANCE.wastePerDirtyBuildingPerTick
+}
+
+// Extra ESG drift (on top of getEsgDrift) applied while waste is at/over
+// its storage cap -- the cost of running over capacity with nowhere for
+// waste to go.
+export function getWasteOverflowEsgPenalty(waste: number, maxWasteStorage: number): number {
+  return waste >= maxWasteStorage ? -WASTE_BALANCE.overCapEsgPenaltyPerTick : 0
+}
+
 // Chance that the next random-event roll picks an "incident" (isIncident)
 // event instead of a normal one. ~25% at the neutral score of 50 (roughly
 // matching the old uniform-random share of incident events), falling to a
@@ -406,6 +427,7 @@ const PRODUCT_BASE_PRICE: Record<string, number> = {
   lubricants: ECONOMY_BALANCE.lubricantPrice,
   jetFuel: ECONOMY_BALANCE.jetFuelPrice,
   petrochemicals: ECONOMY_BALANCE.petrochemicalsPrice,
+  recycledMaterial: ECONOMY_BALANCE.recycledMaterialPrice,
 }
 
 // Sell price for a secondary product = base × global product sell multiplier
@@ -658,6 +680,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const maxFeedstockStorage =
     FEEDSTOCK_BALANCE.baseFeedstockStorage +
     distillationUnitCount * FEEDSTOCK_BALANCE.feedstockStoragePerDistillationUnit
+  // Waste storage (Production Complexity Expansion Phase 1): flat cap for
+  // now. No building upgrades it yet -- Phase 1's "Waste Treatment Plant"
+  // is the planned way to manage waste, not a storage increase.
+  const maxWasteStorage = WASTE_BALANCE.baseWasteStorage
   // Feedstock produced per distillation cycle across all units, boosted by
   // crude→distillation adjacency (reuses the combo system) AND by Distillation
   // Unit level upgrades. distillationUpgradeProductionMultiplier already boosts
@@ -867,6 +893,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     eraSellPriceBonusRate,
     eraResearchRateBonusRate,
     maxFeedstockStorage,
+    maxWasteStorage,
     feedstockPerDistillationCycle,
     productionMultiplier,
     productionRate,
