@@ -21,6 +21,7 @@ import {
   STAFF_LEVEL_BALANCE,
   STARTING_BALANCE,
   STORAGE_BALANCE,
+  TANK_FARM_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
@@ -246,6 +247,11 @@ function getEmptyBuildingCounts(): BuildingCounts {
     powerPlant: 0,
     wasteTreatmentPlant: 0,
     polymerPlant: 0,
+    lubricantTank: 0,
+    jetFuelTank: 0,
+    petrochemicalTank: 0,
+    recyclingBunker: 0,
+    pelletSilo: 0,
   }
 }
 
@@ -568,6 +574,26 @@ export function getBuildingEffectLines(
       }
       return [line, inputLine]
     }
+    case 'lubricantTank':
+    case 'jetFuelTank':
+    case 'petrochemicalTank':
+    case 'recyclingBunker':
+    case 'pelletSilo': {
+      const config = TANK_FARM_BALANCE[cell]
+      const productLabel: Record<typeof cell, string> = {
+        lubricantTank: 'lubricants',
+        jetFuelTank: 'jet fuel',
+        petrochemicalTank: 'petrochemicals',
+        recyclingBunker: 'recycled material',
+        pelletSilo: 'plastic pellets',
+      }
+      return [
+        {
+          label: `${productLabel[cell]} storage from this tank`,
+          value: `+${config.storagePerTank}`,
+        },
+      ]
+    }
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
       const count = derived.buildingCounts.laboratory
@@ -632,6 +658,24 @@ export function getPlantOutputUpgradeMultiplier(
       return derived.petrochemicalPlantOutputMultiplier
     case 'polymerPlant':
       return derived.polymerPlantOutputMultiplier
+  }
+}
+
+// Tank Farm (Per-Product Storage, design doc Part B): maps a
+// PLANT_PRODUCTION productKey to its current maxStorage (base +
+// tankCount * storagePerTank, see calculateDerivedStats). Used by the
+// downstream-plants loop instead of the static PlantProductionConfig.maxStorage.
+export function getProductMaxStorage(
+  derived: DerivedStats,
+  productKey: 'lubricants' | 'jetFuel' | 'petrochemicals',
+): number {
+  switch (productKey) {
+    case 'lubricants':
+      return derived.maxLubricantsStorage
+    case 'jetFuel':
+      return derived.maxJetFuelStorage
+    case 'petrochemicals':
+      return derived.maxPetrochemicalsStorage
   }
 }
 
@@ -1008,6 +1052,30 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // storage increase.
   const maxWasteStorage = WASTE_BALANCE.baseWasteStorage
 
+  // --- Tank Farm (Per-Product Storage, design doc Part B) ---
+  // Each secondary product's storage cap = its base constant (the
+  // PLANT_PRODUCTION / standalone-block maxStorage value, previously
+  // fixed) + tankCount * storagePerTank for that product's tank building.
+  // Flat bonus, no upgrade levels.
+  const lubricantPlantConfig = PLANT_PRODUCTION.find((p) => p.buildingKey === 'lubricantPlant')
+  const jetFuelPlantConfig = PLANT_PRODUCTION.find((p) => p.buildingKey === 'jetFuelPlant')
+  const petrochemicalPlantConfig = PLANT_PRODUCTION.find((p) => p.buildingKey === 'petrochemicalPlant')
+  const maxLubricantsStorage =
+    (lubricantPlantConfig?.maxStorage ?? 0) +
+    buildingCounts.lubricantTank * TANK_FARM_BALANCE.lubricantTank.storagePerTank
+  const maxJetFuelStorage =
+    (jetFuelPlantConfig?.maxStorage ?? 0) +
+    buildingCounts.jetFuelTank * TANK_FARM_BALANCE.jetFuelTank.storagePerTank
+  const maxPetrochemicalsStorage =
+    (petrochemicalPlantConfig?.maxStorage ?? 0) +
+    buildingCounts.petrochemicalTank * TANK_FARM_BALANCE.petrochemicalTank.storagePerTank
+  const maxRecycledMaterialStorage =
+    WASTE_TREATMENT_PLANT_BALANCE.maxRecycledMaterialStorage +
+    buildingCounts.recyclingBunker * TANK_FARM_BALANCE.recyclingBunker.storagePerTank
+  const maxPlasticPelletsStorage =
+    POLYMER_PLANT_BALANCE.maxPlasticPelletsStorage +
+    buildingCounts.pelletSilo * TANK_FARM_BALANCE.pelletSilo.storagePerTank
+
   // --- Production Complexity Expansion Phase 2: electricity ---
   // Flat storage cap per Power Plant built. Demand is the sum of every
   // downstream plant's electricityPerCycle * count, regardless of whether
@@ -1231,6 +1299,11 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     eraResearchRateBonusRate,
     maxFeedstockStorage,
     maxWasteStorage,
+    maxLubricantsStorage,
+    maxJetFuelStorage,
+    maxPetrochemicalsStorage,
+    maxRecycledMaterialStorage,
+    maxPlasticPelletsStorage,
     lubricantPlantOutputMultiplier,
     jetFuelPlantOutputMultiplier,
     petrochemicalPlantOutputMultiplier,

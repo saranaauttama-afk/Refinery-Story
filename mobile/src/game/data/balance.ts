@@ -520,6 +520,26 @@ export const POLYMER_PLANT_BALANCE = {
   maxPlasticPelletsStorage: 200,
 } as const
 
+// Tank Farm (Per-Product Storage, design doc Part B): 5 dedicated storage
+// buildings, one per secondary product whose maxStorage was previously a
+// fixed constant. Each placed tank adds storagePerTank to that product's
+// cap -- same additive pattern as maxFeedstockStorage scaling with
+// distillationUnitCount, just per-instance instead of per-count-times-
+// constant (each tank type has its own bonus amount). Flat bonus, no
+// upgrade levels (consistent with how the Phase 1-3 plants' storage caps
+// are flat constants). storagePerTank is calibrated roughly inversely to
+// the product's sell price (cheaper products get bigger per-tank bonuses)
+// so tank cost/benefit feels comparable across products. unlockLevel
+// matches each product's plant, so a tank becomes buildable as soon as the
+// corresponding plant is.
+export const TANK_FARM_BALANCE = {
+  lubricantTank: { unlockLevel: 5, cost: 1500, storagePerTank: 75 },
+  jetFuelTank: { unlockLevel: 10, cost: 4000, storagePerTank: 60 },
+  petrochemicalTank: { unlockLevel: 15, cost: 7500, storagePerTank: 50 },
+  recyclingBunker: { unlockLevel: 8, cost: 3000, storagePerTank: 100 },
+  pelletSilo: { unlockLevel: 20, cost: 12000, storagePerTank: 40 },
+} as const
+
 // Production Complexity Expansion Phase 2: Power Plant burns crude to
 // generate electricity, consumed by the 3 downstream PLANT_PRODUCTION
 // plants (see PlantProductionConfig.electricityPerCycle). Electricity is

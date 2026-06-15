@@ -17,4 +17,9 @@ export const BUILDING_COLORS: Record<BuildingType, string> = {
   powerPlant: colors.red,
   wasteTreatmentPlant: colors.greenDark,
   polymerPlant: colors.teal,
+  lubricantTank: colors.goldDark,
+  jetFuelTank: colors.blue,
+  petrochemicalTank: colors.purple,
+  recyclingBunker: colors.greenDark,
+  pelletSilo: colors.teal,
 }

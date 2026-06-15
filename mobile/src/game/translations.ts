@@ -1001,6 +1001,46 @@ export const text = {
           'แปลงปิโตรเคมีเป็นเม็ดพลาสติก สินค้ามูลค่าสูงขึ้น 10 ปิโตรเคมี → 5 เม็ดพลาสติก ทุก 5 วินาทีต่อโรงงาน ปิโตรเคมียังขายตรงได้เหมือนเดิม หรือนำมาแปรรูปที่นี่เพื่อมูลค่าที่สูงขึ้น',
         ),
       },
+      lubricantTank: {
+        name: bilingual('Lubricant Tank', 'แท็งก์สารหล่อลื่น'),
+        role: bilingual('Storage', 'คลังเก็บ'),
+        description: bilingual(
+          '+75 lubricants storage capacity per tank.',
+          '+75 ความจุคลังสารหล่อลื่นต่อแท็งก์',
+        ),
+      },
+      jetFuelTank: {
+        name: bilingual('Jet Fuel Tank', 'แท็งก์เชื้อเพลิงอากาศยาน'),
+        role: bilingual('Storage', 'คลังเก็บ'),
+        description: bilingual(
+          '+60 jet fuel storage capacity per tank.',
+          '+60 ความจุคลังเชื้อเพลิงอากาศยานต่อแท็งก์',
+        ),
+      },
+      petrochemicalTank: {
+        name: bilingual('Petrochemical Tank', 'แท็งก์ปิโตรเคมี'),
+        role: bilingual('Storage', 'คลังเก็บ'),
+        description: bilingual(
+          '+50 petrochemicals storage capacity per tank.',
+          '+50 ความจุคลังปิโตรเคมีต่อแท็งก์',
+        ),
+      },
+      recyclingBunker: {
+        name: bilingual('Recycling Bunker', 'บังเกอร์รีไซเคิล'),
+        role: bilingual('Storage', 'คลังเก็บ'),
+        description: bilingual(
+          '+100 recycled material storage capacity per bunker.',
+          '+100 ความจุคลังวัสดุรีไซเคิลต่อบังเกอร์',
+        ),
+      },
+      pelletSilo: {
+        name: bilingual('Pellet Silo', 'ไซโลเม็ดพลาสติก'),
+        role: bilingual('Storage', 'คลังเก็บ'),
+        description: bilingual(
+          '+40 plastic pellets storage capacity per silo.',
+          '+40 ความจุคลังเม็ดพลาสติกต่อไซโล',
+        ),
+      },
     } satisfies Record<
       BuildingType,
       { name: BilingualTextValue; description: BilingualTextValue; role: BilingualTextValue }

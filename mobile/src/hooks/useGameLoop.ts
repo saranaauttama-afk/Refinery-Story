@@ -35,6 +35,7 @@ import {
   getDemandShiftDelta,
   getEsgDrift,
   getPlantOutputUpgradeMultiplier,
+  getProductMaxStorage,
   getWasteGeneratedPerTick,
   getWasteOverflowEsgPenalty,
   getNewlyDiscoveredCombos,
@@ -294,8 +295,7 @@ export function tick(current: GameState): GameState {
     const wasteTreatmentCount = stats.buildingCounts.wasteTreatmentPlant
     if (wasteTreatmentCount > 0 && nextTick % WASTE_TREATMENT_PLANT_BALANCE.intervalTicks === 0) {
       const wasteNeeded = wasteTreatmentCount * WASTE_TREATMENT_PLANT_BALANCE.wastePerCycle
-      const recycledSpace =
-        WASTE_TREATMENT_PLANT_BALANCE.maxRecycledMaterialStorage - productInventory.recycledMaterial
+      const recycledSpace = stats.maxRecycledMaterialStorage - productInventory.recycledMaterial
       if (waste >= wasteNeeded && recycledSpace > 0) {
         const produced = Math.min(
           wasteTreatmentCount * WASTE_TREATMENT_PLANT_BALANCE.recycledMaterialPerCycle,
@@ -326,8 +326,7 @@ export function tick(current: GameState): GameState {
     const polymerPlantCount = stats.buildingCounts.polymerPlant
     if (polymerPlantCount > 0 && nextTick % POLYMER_PLANT_BALANCE.intervalTicks === 0) {
       const petrochemicalsNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle
-      const plasticPelletsSpace =
-        POLYMER_PLANT_BALANCE.maxPlasticPelletsStorage - productInventory.plasticPellets
+      const plasticPelletsSpace = stats.maxPlasticPelletsStorage - productInventory.plasticPellets
       if (productInventory.petrochemicals >= petrochemicalsNeeded && plasticPelletsSpace > 0) {
         const specialistMultiplier = getSpecialistMultiplier(
           current,
@@ -382,7 +381,7 @@ export function tick(current: GameState): GameState {
     const plantCount = stats.buildingCounts[plant.buildingKey]
     if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) return false
     if ((current.feedstockPriority[plant.buildingKey] ?? 1) <= 0) return false
-    return plant.maxStorage - productInventory[plant.productKey] > 0
+    return getProductMaxStorage(stats, plant.productKey) - productInventory[plant.productKey] > 0
   })
   const totalFeedstockDemand = eligiblePlants.reduce(
     (sum, plant) => sum + stats.buildingCounts[plant.buildingKey] * plant.feedstockPerCycle,
@@ -426,7 +425,7 @@ export function tick(current: GameState): GameState {
 
     for (const plant of eligiblePlants) {
       const plantCount = stats.buildingCounts[plant.buildingKey]
-      const productSpace = plant.maxStorage - productInventory[plant.productKey]
+      const productSpace = getProductMaxStorage(stats, plant.productKey) - productInventory[plant.productKey]
       const specialistMultiplier = getSpecialistMultiplier(current, plant.specialistWorker, plant.specialistBonusRate, plantCount)
       const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(stats, plant.buildingKey)
       const priority = current.feedstockPriority[plant.buildingKey] ?? 1

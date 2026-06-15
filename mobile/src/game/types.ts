@@ -34,6 +34,11 @@ export type BuildingType =
   | 'powerPlant'
   | 'wasteTreatmentPlant'
   | 'polymerPlant'
+  | 'lubricantTank'
+  | 'jetFuelTank'
+  | 'petrochemicalTank'
+  | 'recyclingBunker'
+  | 'pelletSilo'
 
 export type GridCell = BuildingType | null
 
@@ -513,6 +518,12 @@ export type DerivedStats = {
   // Refinery process chain (feedstock layer)
   maxFeedstockStorage: number
   maxWasteStorage: number
+  // Tank Farm (Per-Product Storage, design doc Part B)
+  maxLubricantsStorage: number
+  maxJetFuelStorage: number
+  maxPetrochemicalsStorage: number
+  maxRecycledMaterialStorage: number
+  maxPlasticPelletsStorage: number
   // Production Complexity Expansion: per-plant-type output multipliers
   // from building-level upgrades, applied alongside the specialist
   // multiplier in the downstream-plants loop and the Polymer Plant block.

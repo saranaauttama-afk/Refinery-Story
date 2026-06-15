@@ -67,7 +67,12 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
       cell === 'petrochemicalPlant' ||
       cell === 'powerPlant' ||
       cell === 'wasteTreatmentPlant' ||
-      cell === 'polymerPlant',
+      cell === 'polymerPlant' ||
+      cell === 'lubricantTank' ||
+      cell === 'jetFuelTank' ||
+      cell === 'petrochemicalTank' ||
+      cell === 'recyclingBunker' ||
+      cell === 'pelletSilo',
   )
     ? value
     : fallback

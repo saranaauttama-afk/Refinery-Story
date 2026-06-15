@@ -1,6 +1,6 @@
 import type { BuildingConfig, BuildingType } from '../types'
 import { text } from '../translations'
-import { LUBRICANT_PLANT_BALANCE, JET_FUEL_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, POWER_PLANT_BALANCE, WASTE_TREATMENT_PLANT_BALANCE, POLYMER_PLANT_BALANCE } from './balance'
+import { LUBRICANT_PLANT_BALANCE, JET_FUEL_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, POWER_PLANT_BALANCE, WASTE_TREATMENT_PLANT_BALANCE, POLYMER_PLANT_BALANCE, TANK_FARM_BALANCE } from './balance'
 
 export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
   crudeTank: {
@@ -83,5 +83,40 @@ export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
     cost: POLYMER_PLANT_BALANCE.cost,
     description: text.data.buildings.polymerPlant.description,
     unlockLevel: POLYMER_PLANT_BALANCE.unlockLevel,
+  },
+  lubricantTank: {
+    name: text.data.buildings.lubricantTank.name,
+    shortName: 'LT',
+    cost: TANK_FARM_BALANCE.lubricantTank.cost,
+    description: text.data.buildings.lubricantTank.description,
+    unlockLevel: TANK_FARM_BALANCE.lubricantTank.unlockLevel,
+  },
+  jetFuelTank: {
+    name: text.data.buildings.jetFuelTank.name,
+    shortName: 'JT',
+    cost: TANK_FARM_BALANCE.jetFuelTank.cost,
+    description: text.data.buildings.jetFuelTank.description,
+    unlockLevel: TANK_FARM_BALANCE.jetFuelTank.unlockLevel,
+  },
+  petrochemicalTank: {
+    name: text.data.buildings.petrochemicalTank.name,
+    shortName: 'PCT',
+    cost: TANK_FARM_BALANCE.petrochemicalTank.cost,
+    description: text.data.buildings.petrochemicalTank.description,
+    unlockLevel: TANK_FARM_BALANCE.petrochemicalTank.unlockLevel,
+  },
+  recyclingBunker: {
+    name: text.data.buildings.recyclingBunker.name,
+    shortName: 'RB',
+    cost: TANK_FARM_BALANCE.recyclingBunker.cost,
+    description: text.data.buildings.recyclingBunker.description,
+    unlockLevel: TANK_FARM_BALANCE.recyclingBunker.unlockLevel,
+  },
+  pelletSilo: {
+    name: text.data.buildings.pelletSilo.name,
+    shortName: 'PS',
+    cost: TANK_FARM_BALANCE.pelletSilo.cost,
+    description: text.data.buildings.pelletSilo.description,
+    unlockLevel: TANK_FARM_BALANCE.pelletSilo.unlockLevel,
   },
 }
