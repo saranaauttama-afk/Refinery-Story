@@ -568,8 +568,66 @@ still hit this feedstock bottleneck (now shared fairly instead of starving
 one); the real long-term fix is building enough Distillation Units, which
 the warning now surfaces.
 
+## Feedstock Priority: Player-Adjustable Allocation
+
+Follow-up to the proportional-sharing fix above. Request: "can the % be
+adjusted -- sometimes I want to lean toward one product, sometimes turn one
+off entirely." The "cap Jet Fuel/Petrochem Plant at 1" idea was explicitly
+deferred to backlog in favor of this.
+
+New per-plant **priority weight** (0% to 200% in 25% steps, default 100%,
+`FEEDSTOCK_PRIORITY_BALANCE` in `data/balance.ts`; new `GameState.feedstockPriority:
+Record<'lubricantPlant'|'jetFuelPlant'|'petrochemicalPlant', number>`):
+
+- **0% = off.** That plant is excluded entirely from the downstream loop --
+  never produces, never competes for feedstock -- regardless of supply.
+- **100% (default) = unchanged** from the plain proportional split above.
+- **>100% = priority during scarcity.** The plant's *demand* is weighted up
+  for the scarcity split, so it claims a bigger slice of `shareRatio` (closer
+  to its own normal 100%) at the expense of lower-priority plants. Output is
+  still capped at the plant's own normal 100% -- priority only helps you
+  *reach* full output sooner under scarcity, never exceed it.
+- When supply >= total (unweighted) demand, every eligible plant still gets
+  full output regardless of priority -- weights only matter when plants are
+  actively competing for a shortfall.
+
+**UI**: new "⚖️ Feedstock Priority" card on the Refinery tab (same stepper
+style as Auto-trade thresholds), shown once any of the 3 downstream plants
+is built, with one row per *built* plant type and a one-line explainer of
+what 0%/100%/200% mean. New `adjustFeedstockPriority(buildingKey, delta)`
+action (useGameLoop.ts) nudges by `+/- step` (25%), clamped to [0%, 200%].
+
+**Building Info sheet**: each of the 3 plants now shows a second line,
+"Feedstock priority: X%" (orange warning if 0% = off), and the existing
+feedstock-shortage warning now also suggests adjusting priority here as an
+alternative to building more Distillation Units.
+
+**Migration**: old saves (no `feedstockPriority` field) default every plant
+to 100% -- identical to the proportional-sharing behavior they already had.
+Out-of-range/invalid saved values fall back to 100% per-plant.
+
+`feedstock_priority.test.ts` extended to 24 assertions: default behavior
+unchanged (8, same as before); sufficient feedstock ignores priority except
+0% (2); priority=0% is a hard off even with abundant feedstock (2);
+de-prioritizing lube+jet (25% each) cumulatively shifts output toward
+petrochem over 500 ticks (3); feedstock never negative with mixed priorities
+(1); Building Info shows the priority line/warning correctly (4); migration
+defaults/clamps/preserves `feedstockPriority` correctly (3 cases).
+
+Verification: tsc --noEmit clean. feedstock_priority.test.ts (24) + full
+suite (2000-tick sim 10,106, autotrade 3018, recruitment ~645 + migration
+11, refinery_balance 19, events 19 + events_long 8, milestones 25,
+win_celebration 12, boost 20, combos 16, contracts_ui 13,
+choiceevent_migration 7, building_info 19, translation-key checks 38) all
+pass. EXPO_OFFLINE web export still produces all 14 routes.
+
 ## What's NOT done / known gaps
 
+- **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Discussed at length
+  (matches their "1 flagship + 1 specialist" design intent vs lubricant's
+  "build more" role -- aviationSpecialist/chemicalEngineer unlock at the
+  exact same refinery level as their plant). Explicitly deferred in favor
+  of Feedstock Priority above; not implemented.
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,
   PT...) on the grid, per `src/buildingColors.ts`. The 30 isometric SVGs
   generated earlier are in `assets/icons/` but not wired in (by request).

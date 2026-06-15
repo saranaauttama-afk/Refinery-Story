@@ -10,6 +10,7 @@ import {
   EVENT_BALANCE,
   EXPANSION_BALANCE,
   FEEDSTOCK_BALANCE,
+  FEEDSTOCK_PRIORITY_BALANCE,
   MILESTONE_BALANCE,
   PLANT_PRODUCTION,
   PRODUCTION_BALANCE,
@@ -176,6 +177,11 @@ export function createInitialGameState(): GameState {
     refineryName: DEFAULT_REFINERY_NAME,
     pendingShipments: [],
     standingOrderCooldowns: {},
+    feedstockPriority: {
+      lubricantPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
+      jetFuelPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
+      petrochemicalPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
+    },
     productInventory: {
       gasoline: 0,
       asphalt: 0,
@@ -440,10 +446,18 @@ export function getBuildingEffectLines(
       )
       if (demandPer25Ticks > supplyPer25Ticks) {
         const pct = Math.round((supplyPer25Ticks / demandPer25Ticks) * 100)
-        line.warning = `Feedstock supply (${Math.floor(supplyPer25Ticks)}/${seconds}s) covers only ${pct}% of total demand (${demandPer25Ticks}/${seconds}s) -- all downstream plants run at a reduced rate. Build more Distillation Units for full output.`
+        line.warning = `Feedstock supply (${Math.floor(supplyPer25Ticks)}/${seconds}s) covers only ${pct}% of total demand (${demandPer25Ticks}/${seconds}s) -- all downstream plants run at a reduced rate. Build more Distillation Units for full output, or adjust Feedstock Priority below to favor this plant.`
       }
 
-      return [line]
+      const priorityLine: BuildingEffectLine = {
+        label: 'Feedstock priority',
+        value: `${Math.round((game.feedstockPriority[cell] ?? 1) * 100)}%`,
+      }
+      if ((game.feedstockPriority[cell] ?? 1) <= 0) {
+        priorityLine.warning = 'Set to 0% (off) -- this plant never produces. Adjust in the Feedstock Priority card below.'
+      }
+
+      return [line, priorityLine]
     }
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1

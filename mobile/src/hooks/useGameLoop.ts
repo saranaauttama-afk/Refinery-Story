@@ -52,6 +52,7 @@ import {
   ASPHALT_BALANCE,
   AWARDS_BALANCE,
   BOOST_BALANCE,
+  FEEDSTOCK_PRIORITY_BALANCE,
   DEMAND_SHIFT_BALANCE,
   ESG_BALANCE,
   EXPANSION_BALANCE,
@@ -250,24 +251,33 @@ export function tick(current: GameState): GameState {
 
   // --- Downstream plants: feedstock -> product ---
   // Feedstock is a single shared pool that lubricant/jet fuel/petrochem
-  // all draw from every 25-tick (5s) cycle. Previously this was
-  // first-come-first-served in a fixed order: whichever plant type was
-  // checked first got its FULL feedstockNeeded (or nothing), so when total
-  // demand exceeded supply, some plant types produced at 100% while others
-  // produced 0% for as long as the front-of-queue plants kept winning
-  // (observed: a newly-built petrochem plant could sit at 0 output for
-  // ~3-4 minutes while lubricant/jet fuel ate all the feedstock first).
+  // all draw from every 25-tick (5s) cycle. Originally this was
+  // first-come-first-served in a fixed order, which could leave one plant
+  // type producing 0% for minutes while another produced 100%. Fixed to
+  // proportional sharing (every eligible plant gets the same shareRatio of
+  // its normal output), then extended here with player-adjustable
+  // per-plant PRIORITY weights (Feedstock Priority card, Refinery tab,
+  // feedstockPriority in GameState/FEEDSTOCK_PRIORITY_BALANCE):
   //
-  // Now: every plant eligible this cycle (built, on-interval, has storage
-  // room) shares the pool PROPORTIONALLY to its feedstockPerCycle need. If
-  // supply covers total demand, everyone gets their normal full output
-  // (identical to the old behavior in the common case). If supply is
-  // short, every plant still produces SOMETHING this cycle -- scaled down
-  // by the same shortage ratio -- instead of some plants winning outright
-  // and others getting nothing.
+  // - priority = 0: this plant is excluded entirely -- never produces,
+  //   never competes for feedstock, regardless of supply (a hard "off"
+  //   switch for when the player doesn't want more of that product right
+  //   now).
+  // - priority = 1 (default, 100%): unchanged from the plain proportional
+  //   split.
+  // - priority > 1: this plant's *demand* is weighted up for the scarcity
+  //   split below, so it gets a bigger slice of shareRatio (closer to its
+  //   normal 100%) at the expense of lower-priority plants -- but its
+  //   output is still capped at its own normal 100% (priority lets you
+  //   reach full output sooner under scarcity, not exceed it).
+  //
+  // When supply >= total (unweighted) demand, every eligible plant still
+  // gets its normal full output regardless of priority -- priority only
+  // matters when plants are competing for a shortage.
   const eligiblePlants = PLANT_PRODUCTION.filter((plant) => {
     const plantCount = stats.buildingCounts[plant.buildingKey]
     if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) return false
+    if ((current.feedstockPriority[plant.buildingKey] ?? 1) <= 0) return false
     return plant.maxStorage - productInventory[plant.productKey] > 0
   })
   const totalFeedstockDemand = eligiblePlants.reduce(
@@ -275,16 +285,34 @@ export function tick(current: GameState): GameState {
     0,
   )
   if (totalFeedstockDemand > 0 && feedstock > 0) {
-    const shareRatio = Math.min(1, feedstock / totalFeedstockDemand)
+    const sufficient = feedstock >= totalFeedstockDemand
+    // Priority only changes the SPLIT during scarcity -- when supply is
+    // sufficient, every plant gets full output regardless of weight, so
+    // the weighted total is only needed in the scarce branch.
+    const totalWeightedDemand = sufficient
+      ? totalFeedstockDemand
+      : eligiblePlants.reduce(
+          (sum, plant) =>
+            sum +
+            stats.buildingCounts[plant.buildingKey] *
+              plant.feedstockPerCycle *
+              (current.feedstockPriority[plant.buildingKey] ?? 1),
+          0,
+        )
+    const shareRatio = sufficient ? 1 : feedstock / totalWeightedDemand
     for (const plant of eligiblePlants) {
       const plantCount = stats.buildingCounts[plant.buildingKey]
       const productSpace = plant.maxStorage - productInventory[plant.productKey]
       const specialistMultiplier = getSpecialistMultiplier(current, plant, plantCount)
-      const rawProduced = plantCount * plant.outputPerCycle * specialistMultiplier * shareRatio
+      const priority = current.feedstockPriority[plant.buildingKey] ?? 1
+      const normalOutput = plantCount * plant.outputPerCycle * specialistMultiplier
       // Full share: round as before (preserves old behavior exactly when
-      // supply is sufficient). Reduced share: floor, so a plant never
-      // "rounds up" into output it didn't have the feedstock for.
-      const produced = Math.min(shareRatio >= 1 ? Math.round(rawProduced) : Math.floor(rawProduced), productSpace)
+      // supply is sufficient). Reduced share: floor of (normal output *
+      // priority * shareRatio), capped at the plant's own normal output so
+      // priority can only help it reach 100% sooner, never exceed it.
+      const produced = sufficient
+        ? Math.min(Math.round(normalOutput), productSpace)
+        : Math.min(Math.floor(normalOutput * priority * shareRatio), Math.round(normalOutput), productSpace)
       if (produced <= 0) continue
 
       productInventory = {
@@ -292,7 +320,7 @@ export function tick(current: GameState): GameState {
         [plant.productKey]: productInventory[plant.productKey] + produced,
       }
     }
-    feedstock = shareRatio >= 1 ? feedstock - totalFeedstockDemand : 0
+    feedstock = sufficient ? feedstock - totalFeedstockDemand : 0
   }
 
   // --- Gasoline production: crude -> gasoline (with Efficiency yield carry) ---
@@ -777,6 +805,23 @@ export function useGameLoop() {
     [update],
   )
 
+  // Feedstock Priority card (Refinery tab): adjust one downstream plant's
+  // priority weight by +/- FEEDSTOCK_PRIORITY_BALANCE.step, clamped to
+  // [min, max]. 0 = off (this plant never produces).
+  const adjustFeedstockPriority = useCallback(
+    (buildingKey: keyof GameState['feedstockPriority'], delta: number) =>
+      update((current) => {
+        const { min, max, step } = FEEDSTOCK_PRIORITY_BALANCE
+        const next = Math.max(min, Math.min(max, current.feedstockPriority[buildingKey] + delta * step))
+        if (next === current.feedstockPriority[buildingKey]) return current
+        return {
+          ...current,
+          feedstockPriority: { ...current.feedstockPriority, [buildingKey]: next },
+        }
+      }),
+    [update],
+  )
+
   const trainEmployee = useCallback(
     (employeeId: string) =>
       update((current) => {
@@ -924,6 +969,7 @@ export function useGameLoop() {
     hireCandidate,
     refreshRecruitmentPool,
     activateBoost,
+    adjustFeedstockPriority,
     trainEmployee,
     toggleAssignment,
     produceAsphalt,

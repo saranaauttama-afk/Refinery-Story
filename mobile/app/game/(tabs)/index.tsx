@@ -59,6 +59,7 @@ export default function RefineryScreen() {
     autoTrade,
     updateAutoTrade,
     activateBoost,
+    adjustFeedstockPriority,
     toggleAssignment,
   } = useGame()
   const { width } = useWindowDimensions()
@@ -327,6 +328,51 @@ export default function RefineryScreen() {
           </>
         )}
       </View>
+
+      {(derived.buildingCounts.lubricantPlant > 0 ||
+        derived.buildingCounts.jetFuelPlant > 0 ||
+        derived.buildingCounts.petrochemicalPlant > 0) && (
+        <View style={styles.autoTradeCard}>
+          <View style={styles.autoTradeHeader}>
+            <Text style={styles.autoTradeTitle}>⚖️ Feedstock Priority</Text>
+          </View>
+          <Text style={styles.feedstockPriorityHint}>
+            0% = off (never produces) · 100% = normal · 200% = highest priority when feedstock is
+            short. Only matters when plants are competing for limited feedstock.
+          </Text>
+          {(
+            [
+              { buildingKey: 'lubricantPlant', label: 'Lubricants' },
+              { buildingKey: 'jetFuelPlant', label: 'Jet Fuel' },
+              { buildingKey: 'petrochemicalPlant', label: 'Petrochemicals' },
+            ] as const
+          ).map(
+            ({ buildingKey, label }) =>
+              derived.buildingCounts[buildingKey] > 0 && (
+                <View key={buildingKey} style={styles.thresholdRow}>
+                  <Text style={styles.thresholdLabel}>{label}</Text>
+                  <View style={styles.stepper}>
+                    <Pressable
+                      style={styles.stepperButton}
+                      onPress={() => adjustFeedstockPriority(buildingKey, -1)}
+                    >
+                      <Text style={styles.stepperLabel}>−</Text>
+                    </Pressable>
+                    <Text style={styles.stepperValue}>
+                      {Math.round(game.feedstockPriority[buildingKey] * 100)}%
+                    </Text>
+                    <Pressable
+                      style={styles.stepperButton}
+                      onPress={() => adjustFeedstockPriority(buildingKey, 1)}
+                    >
+                      <Text style={styles.stepperLabel}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ),
+          )}
+        </View>
+      )}
       </ScrollView>
 
       {/* Build picker */}
@@ -490,6 +536,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     marginBottom: spacing.xs,
+  },
+  feedstockPriorityHint: {
+    color: colors.inkMuted,
+    fontSize: 11,
+    marginBottom: spacing.sm,
   },
   infoSectionTitle: {
     fontWeight: '800',

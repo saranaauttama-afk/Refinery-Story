@@ -129,6 +129,14 @@ export type GameState = {
   // Maps standing order key → tick at which the order becomes available again.
   // Absent key means the order is currently available (never fulfilled or cooldown expired).
   standingOrderCooldowns: Partial<Record<StandingOrderKey, number>>
+  // Feedstock Priority: per-downstream-plant weight (0 to
+  // FEEDSTOCK_PRIORITY_BALANCE.max, in FEEDSTOCK_PRIORITY_BALANCE.step
+  // increments, default 1 = 100%) used when feedstock is scarce -- a
+  // higher weight gets a larger share of the proportional split (see
+  // tick()). 0 = fully off (this plant never produces, regardless of
+  // feedstock availability). Has no effect when feedstock supply covers
+  // total demand -- every plant still gets its normal full output then.
+  feedstockPriority: Record<'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant', number>
 }
 
 export type BuildingConfig = {

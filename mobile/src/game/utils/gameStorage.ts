@@ -14,7 +14,7 @@ import type {
 } from '../types'
 import { text } from '../translations'
 import { countBuildings, createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
-import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, PLANT_PRODUCTION } from '../data/balance'
+import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
 import { generateRecruitmentPool, getUnlockedWorkerTypes, RECRUITMENT_BALANCE } from '../data/recruitment'
@@ -430,6 +430,7 @@ export function sanitizeLoadedGameState(value: unknown) {
     refineryName: getSafeString(value.refineryName, DEFAULT_REFINERY_NAME).trim().slice(0, 40) || DEFAULT_REFINERY_NAME,
     pendingShipments: getSafePendingShipments(value.pendingShipments),
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
+    feedstockPriority: getSafeFeedstockPriority(value),
     // productInventory is now live gameplay state for all secondary products.
     // gasoline mirrors value.gasoline (source of truth for the primary product).
     // Previously asphalt/jetFuel/lubricants/petrochemicals were reset to 0 on
@@ -475,6 +476,35 @@ function getSafeStandingOrderCooldowns(
     const entry = value[key]
     if (typeof entry === 'number' && Number.isFinite(entry)) {
       result[key] = entry
+    }
+  }
+  return result
+}
+
+// Feedstock Priority weights (Refinery tab card). For each downstream
+// plant, keep a saved value only if it's a finite number within
+// [min, max]; otherwise fall back to the default (100%). Old saves
+// (created before this feature) have no feedstockPriority at all, so
+// every plant defaults to 100% -- identical to the proportional-sharing
+// behavior they already had.
+function getSafeFeedstockPriority(value: unknown): GameState['feedstockPriority'] {
+  const raw = isRecord(value) ? value.feedstockPriority : undefined
+  const result: GameState['feedstockPriority'] = {
+    lubricantPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
+    jetFuelPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
+    petrochemicalPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
+  }
+  if (isRecord(raw)) {
+    for (const key of ['lubricantPlant', 'jetFuelPlant', 'petrochemicalPlant'] as const) {
+      const entry = raw[key]
+      if (
+        typeof entry === 'number' &&
+        Number.isFinite(entry) &&
+        entry >= FEEDSTOCK_PRIORITY_BALANCE.min &&
+        entry <= FEEDSTOCK_PRIORITY_BALANCE.max
+      ) {
+        result[key] = entry
+      }
     }
   }
   return result

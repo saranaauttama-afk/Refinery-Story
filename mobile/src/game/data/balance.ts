@@ -681,6 +681,19 @@ export const FEEDSTOCK_BALANCE = {
   feedstockStoragePerDistillationUnit: 25,
 } as const
 
+// Player-adjustable per-plant feedstock priority weights (Feedstock
+// Priority card on the Refinery tab). 0 = off (this plant never produces),
+// default 1 = 100% (normal). Only affects the proportional split when
+// feedstock is SCARCE (total demand > supply) -- when supply covers
+// demand, every built plant still gets its normal full output regardless
+// of weight. See the downstream-plants loop in useGameLoop.ts tick().
+export const FEEDSTOCK_PRIORITY_BALANCE = {
+  min: 0,
+  max: 2,
+  step: 0.25,
+  default: 1,
+} as const
+
 // Unified downstream-plant production. These three plants now consume FEEDSTOCK
 // (not raw crude). One config-driven tick loop replaces three duplicated blocks.
 export type PlantProductionConfig = {
