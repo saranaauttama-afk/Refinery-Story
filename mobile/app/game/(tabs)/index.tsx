@@ -169,6 +169,7 @@ export default function RefineryScreen() {
           gridLevels={game.gridLevels}
           containerWidth={width - spacing.lg * 2}
           onCellPress={handleCellPress}
+          isActive={game.crudeOil > 0}
         />
         <Text style={styles.hint}>Tap an empty tile to build · tap a tank/unit to upgrade</Text>
       </View>

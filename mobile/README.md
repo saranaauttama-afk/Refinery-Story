@@ -126,7 +126,7 @@ something to actively tap, addressing "feels like just waiting."
   "Activate Boost" button, an active progress bar + "Xs left", or a
   "recharging" progress bar + countdown, using the animated `ProgressBar`.
 
-
+## Feel / Feedback Polish
 
 A few cheap, broadly-applicable "juice" additions that don't depend on
 final art (pure style/animation wrappers, swappable later without touching
@@ -146,13 +146,26 @@ this logic):
   always match what the action will actually do, including the "sell what
   you actually have" clamping).
 - **Animated `ProgressBar`**: width transitions now animate (400ms) instead
-  of snapping -- used by the Achievements screen and the 🎯 Next Goal card.
+  of snapping -- used by the Achievements screen, the 🎯 Next Goal card, and
+  the 🔥 Boost card.
+- **Building tile glow** (`BuildingTile`/`BuildingGrid`): crude tank,
+  distillation unit, and the three downstream plants get a slow pulsing
+  gold-border glow whenever the refinery is active (`crudeOil > 0`) --
+  storage/support buildings (product tank, lab, workshop, sales office)
+  don't pulse. The glow is a separate `Animated.View` overlay on top of the
+  existing color-block visual, so swapping in real building art later needs
+  no changes here.
 - **Haptics** (`useHaptics`, via `expo-haptics`): light tap on buy/sell/
   refresh, medium "confirm" thunk on hire/train/build/upgrade, and a success
   notification whenever a new milestone completes (tracked globally in
   `app/_layout.tsx` via `completedMilestoneKeys.length`). All gated by the
   existing "Sound effects" setting (now does something even without audio
   assets) and wrapped in try/catch (no-ops on web/unsupported devices).
+
+Not done (need real assets first): actual sound effects (no audio files in
+the project yet), and Kairosoft-style worker sprites walking around the
+grid (needs sprite sheets + a frame-animation layer on top of the existing
+tile positions).
 
 
 
