@@ -64,7 +64,8 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
       cell === 'salesOffice' ||
       cell === 'lubricantPlant' ||
       cell === 'jetFuelPlant' ||
-      cell === 'petrochemicalPlant',
+      cell === 'petrochemicalPlant' ||
+      cell === 'powerPlant',
   )
     ? value
     : fallback
@@ -330,6 +331,7 @@ export function sanitizeLoadedGameState(value: unknown) {
     crudeOil: getSafeNumber(value.crudeOil, fallback.crudeOil),
     gasoline: getSafeNumber(value.gasoline, fallback.gasoline),
     feedstock: getSafeNumber(value.feedstock, 0),
+    electricity: Math.max(0, getSafeNumber(value.electricity, 0)),
     refineryLevel: getSafeNumber(value.refineryLevel, fallback.refineryLevel),
     productionProgress: getSafeNumber(
       value.productionProgress,

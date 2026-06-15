@@ -59,6 +59,7 @@ import {
   FEEDSTOCK_BALANCE,
   BUILDING_UPGRADE_BALANCE,
   PLANT_PRODUCTION,
+  POWER_PLANT_BALANCE,
   STAFF_LEVEL_BALANCE,
   STANDING_ORDER_BALANCE,
   type PaidExpansionEntry,
@@ -230,6 +231,7 @@ export function tick(current: GameState): GameState {
 
   let crudeOil = current.crudeOil
   let feedstock = current.feedstock
+  let electricity = current.electricity
   let productInventory = current.productInventory
 
   // --- Distillation: crude -> feedstock ---
@@ -245,6 +247,28 @@ export function tick(current: GameState): GameState {
       if (feedstockMade > 0) {
         crudeOil -= crudeNeeded
         feedstock += feedstockMade
+      }
+    }
+  }
+
+  // --- Power Plant: crude -> electricity (Production Complexity Expansion
+  // Phase 2) ---
+  // Burns crude (not feedstock) every 25-tick (5s) cycle, same cadence as
+  // downstream plants. Capped by maxElectricityStorage. With 0 Power
+  // Plants built this block does nothing (powerPlantCount === 0), and
+  // electricityDemand below is simply never enforced.
+  const powerPlantCount = stats.buildingCounts.powerPlant
+  if (powerPlantCount > 0 && nextTick % POWER_PLANT_BALANCE.intervalTicks === 0) {
+    const crudeNeeded = powerPlantCount * POWER_PLANT_BALANCE.crudePerCycle
+    const electricitySpace = stats.maxElectricityStorage - electricity
+    if (crudeOil >= crudeNeeded && electricitySpace > 0) {
+      const electricityMade = Math.min(
+        powerPlantCount * POWER_PLANT_BALANCE.electricityPerCycle,
+        electricitySpace,
+      )
+      if (electricityMade > 0) {
+        crudeOil -= crudeNeeded
+        electricity += electricityMade
       }
     }
   }
@@ -300,6 +324,26 @@ export function tick(current: GameState): GameState {
           0,
         )
     const shareRatio = sufficient ? 1 : feedstock / totalWeightedDemand
+
+    // --- Electricity throttle (Production Complexity Expansion Phase 2) ---
+    // Independent second constraint on top of the feedstock shareRatio
+    // above. Only enforced once the player has built >= 1 Power Plant --
+    // before that, electricityShareRatio stays at 1 (no-op), so every save
+    // without a Power Plant behaves exactly as before Phase 2.
+    const totalElectricityDemand = eligiblePlants.reduce(
+      (sum, plant) => sum + stats.buildingCounts[plant.buildingKey] * plant.electricityPerCycle,
+      0,
+    )
+    const electricitySufficient =
+      stats.buildingCounts.powerPlant <= 0 || electricity >= totalElectricityDemand
+    const electricityShareRatio = electricitySufficient
+      ? 1
+      : totalElectricityDemand > 0
+        ? electricity / totalElectricityDemand
+        : 1
+    const combinedShareRatio = Math.min(shareRatio, electricityShareRatio)
+    const combinedSufficient = sufficient && electricitySufficient
+
     for (const plant of eligiblePlants) {
       const plantCount = stats.buildingCounts[plant.buildingKey]
       const productSpace = plant.maxStorage - productInventory[plant.productKey]
@@ -307,12 +351,20 @@ export function tick(current: GameState): GameState {
       const priority = current.feedstockPriority[plant.buildingKey] ?? 1
       const normalOutput = plantCount * plant.outputPerCycle * specialistMultiplier
       // Full share: round as before (preserves old behavior exactly when
-      // supply is sufficient). Reduced share: floor of (normal output *
-      // priority * shareRatio), capped at the plant's own normal output so
-      // priority can only help it reach 100% sooner, never exceed it.
-      const produced = sufficient
+      // both feedstock and electricity are sufficient). Reduced share:
+      // floor of (normal output * priority * combinedShareRatio), capped
+      // at the plant's own normal output so priority can only help it
+      // reach 100% sooner, never exceed it. combinedShareRatio is the
+      // tighter of the feedstock-scarcity ratio and the
+      // electricity-scarcity ratio -- whichever resource is scarcer this
+      // tick governs the throttle.
+      const produced = combinedSufficient
         ? Math.min(Math.round(normalOutput), productSpace)
-        : Math.min(Math.floor(normalOutput * priority * shareRatio), Math.round(normalOutput), productSpace)
+        : Math.min(
+            Math.floor(normalOutput * priority * combinedShareRatio),
+            Math.round(normalOutput),
+            productSpace,
+          )
       if (produced <= 0) continue
 
       productInventory = {
@@ -321,6 +373,9 @@ export function tick(current: GameState): GameState {
       }
     }
     feedstock = sufficient ? feedstock - totalFeedstockDemand : 0
+    electricity = electricitySufficient
+      ? electricity - totalElectricityDemand
+      : 0
   }
 
   // --- Gasoline production: crude -> gasoline (with Efficiency yield carry) ---
@@ -383,6 +438,7 @@ export function tick(current: GameState): GameState {
     tickCount: nextTick,
     crudeOil,
     feedstock,
+    electricity,
     productInventory,
     gasoline,
     productionProgress,

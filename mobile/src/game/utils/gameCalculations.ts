@@ -13,6 +13,7 @@ import {
   FEEDSTOCK_PRIORITY_BALANCE,
   MILESTONE_BALANCE,
   PLANT_PRODUCTION,
+  POWER_PLANT_BALANCE,
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
   SEASONAL_BALANCE,
@@ -120,6 +121,7 @@ export function createInitialGameState(): GameState {
     crudeOil: STARTING_CRUDE,
     gasoline: 0,
     feedstock: 0,
+    electricity: 0,
     refineryLevel: 1,
     productionProgress: 0,
     tickCount: 0,
@@ -234,6 +236,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
     lubricantPlant: 0,
     jetFuelPlant: 0,
     petrochemicalPlant: 0,
+    powerPlant: 0,
   }
 }
 
@@ -457,7 +460,38 @@ export function getBuildingEffectLines(
         priorityLine.warning = 'Set to 0% (off) -- this plant never produces. Adjust in the Feedstock Priority card below.'
       }
 
-      return [line, priorityLine]
+      const lines = [line, priorityLine]
+
+      // Electricity supply vs demand (Production Complexity Expansion
+      // Phase 2). Only relevant once >= 1 Power Plant is built -- before
+      // that, downstream plants don't need electricity at all.
+      if (derived.buildingCounts.powerPlant > 0 && derived.electricityDemandPerCycle > 0) {
+        const electricitySupplyPerCycle = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
+        const electricityLine: BuildingEffectLine = {
+          label: 'Electricity demand (this plant)',
+          value: `${plantCount * plant.electricityPerCycle} / ${seconds}s`,
+        }
+        if (derived.electricityDemandPerCycle > electricitySupplyPerCycle) {
+          const pct = Math.round((electricitySupplyPerCycle / derived.electricityDemandPerCycle) * 100)
+          electricityLine.warning = `Electricity supply (${electricitySupplyPerCycle}/${seconds}s) covers only ${pct}% of total demand (${derived.electricityDemandPerCycle}/${seconds}s) -- all downstream plants run at a reduced rate. Build more Power Plants for full output.`
+        }
+        lines.push(electricityLine)
+      }
+
+      return lines
+    }
+    case 'powerPlant': {
+      const seconds = (POWER_PLANT_BALANCE.intervalTicks * TICK_MS) / 1000
+      return [
+        {
+          label: 'Electricity output per plant',
+          value: `+${POWER_PLANT_BALANCE.electricityPerCycle} / ${seconds}s`,
+        },
+        {
+          label: 'Crude consumed per plant',
+          value: `-${POWER_PLANT_BALANCE.crudePerCycle} / ${seconds}s`,
+        },
+      ]
     }
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
@@ -834,6 +868,19 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const maxFeedstockStorage =
     FEEDSTOCK_BALANCE.baseFeedstockStorage +
     distillationUnitCount * FEEDSTOCK_BALANCE.feedstockStoragePerDistillationUnit
+
+  // --- Production Complexity Expansion Phase 2: electricity ---
+  // Flat storage cap per Power Plant built. Demand is the sum of every
+  // downstream plant's electricityPerCycle * count, regardless of whether
+  // any Power Plant exists -- the tick loop only enforces this demand when
+  // buildingCounts.powerPlant > 0 (see useGameLoop.ts), so this number is
+  // harmless to compute unconditionally and is useful for the UI even
+  // before the player builds their first Power Plant.
+  const maxElectricityStorage = buildingCounts.powerPlant * POWER_PLANT_BALANCE.maxElectricityStorage
+  const electricityDemandPerCycle = PLANT_PRODUCTION.reduce(
+    (sum, plant) => sum + buildingCounts[plant.buildingKey] * plant.electricityPerCycle,
+    0,
+  )
   // Feedstock produced per distillation cycle across all units, boosted by
   // crude→distillation adjacency (reuses the combo system) AND by Distillation
   // Unit level upgrades. distillationUpgradeProductionMultiplier already boosts
@@ -1044,6 +1091,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     eraSellPriceBonusRate,
     eraResearchRateBonusRate,
     maxFeedstockStorage,
+    maxElectricityStorage,
+    electricityDemandPerCycle,
     feedstockPerDistillationCycle,
     productionMultiplier,
     productionRate,

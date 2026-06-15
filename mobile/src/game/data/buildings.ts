@@ -1,6 +1,6 @@
 import type { BuildingConfig, BuildingType } from '../types'
 import { text } from '../translations'
-import { LUBRICANT_PLANT_BALANCE, JET_FUEL_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE } from './balance'
+import { LUBRICANT_PLANT_BALANCE, JET_FUEL_PLANT_BALANCE, PETROCHEMICAL_PLANT_BALANCE, POWER_PLANT_BALANCE } from './balance'
 
 export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
   crudeTank: {
@@ -62,5 +62,12 @@ export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
     cost: PETROCHEMICAL_PLANT_BALANCE.cost,
     description: text.data.buildings.petrochemicalPlant.description,
     unlockLevel: PETROCHEMICAL_PLANT_BALANCE.unlockLevel,
+  },
+  powerPlant: {
+    name: text.data.buildings.powerPlant.name,
+    shortName: 'PW',
+    cost: POWER_PLANT_BALANCE.cost,
+    description: text.data.buildings.powerPlant.description,
+    unlockLevel: POWER_PLANT_BALANCE.unlockLevel,
   },
 }

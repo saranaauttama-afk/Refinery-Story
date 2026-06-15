@@ -925,6 +925,14 @@ export const text = {
           'แปลงน้ำมันดิบเป็นปิโตรเคมี 30 น้ำมันดิบ → 5 ปิโตรเคมี ทุก 5 วินาทีต่อโรงงาน',
         ),
       },
+      powerPlant: {
+        name: bilingual('Power Plant', 'โรงไฟฟ้า'),
+        role: bilingual('Energy Infrastructure', 'โครงสร้างพื้นฐานด้านพลังงาน'),
+        description: bilingual(
+          'Burns crude to generate electricity. 4 crude → 12 electricity every 5s per plant. Downstream plants (lubricant/jet fuel/petrochemical) need electricity to run at full output once any Power Plant is built.',
+          'เผาน้ำมันดิบเพื่อผลิตไฟฟ้า 4 น้ำมันดิบ → 12 ไฟฟ้า ทุก 5 วินาทีต่อโรงงาน เมื่อมีโรงไฟฟ้าแล้ว โรงผลิตขั้นปลาย (สารหล่อลื่น/เชื้อเพลิงอากาศยาน/ปิโตรเคมี) ต้องใช้ไฟฟ้าเพื่อผลิตได้เต็มกำลัง',
+        ),
+      },
     } satisfies Record<
       BuildingType,
       { name: BilingualTextValue; description: BilingualTextValue; role: BilingualTextValue }

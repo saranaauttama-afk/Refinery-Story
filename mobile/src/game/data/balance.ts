@@ -483,6 +483,27 @@ export const PETROCHEMICAL_PLANT_BALANCE = {
   cost: 15000,
 } as const
 
+// Production Complexity Expansion Phase 2: Power Plant burns crude to
+// generate electricity, consumed by the 3 downstream PLANT_PRODUCTION
+// plants (see PlantProductionConfig.electricityPerCycle). Electricity is
+// purely additive: with 0 Power Plants built, electricityDemand from the
+// downstream loop is ignored entirely (current.electricity stays 0,
+// plants run exactly as before Phase 2 -- no existing save is affected
+// until the player builds one).
+//
+// 1 Power Plant generates 12/cycle (every 5s, same cadence as downstream
+// plants) -- enough to fully cover 1 of each downstream plant (3+4+5=12).
+// Burns crude (not feedstock), so it doesn't compete with the
+// distillation->feedstock->plants chain.
+export const POWER_PLANT_BALANCE = {
+  unlockLevel: 5,
+  cost: 4000,
+  intervalTicks: 25,
+  crudePerCycle: 4,
+  electricityPerCycle: 12,
+  maxElectricityStorage: 60,
+} as const
+
 export const JET_FUEL_BALANCE = {
   // Refinery level required to unlock jet fuel processing (panel visible; the
   // Jet Fuel Plant itself unlocks later at JET_FUEL_PLANT_BALANCE.unlockLevel).
@@ -703,6 +724,11 @@ export type PlantProductionConfig = {
   outputPerCycle: number
   intervalTicks: number
   maxStorage: number
+  // Production Complexity Expansion Phase 2: electricity consumed per cycle
+  // (same cadence as feedstockPerCycle). Only enforced once >= 1 Power
+  // Plant is built -- see POWER_PLANT_BALANCE and the downstream-plants
+  // loop in useGameLoop.ts.
+  electricityPerCycle: number
   // Optional specialist worker that multiplies this plant's output.
   specialistWorker?: 'aviationSpecialist' | 'chemicalEngineer'
   specialistBonusRate?: number
@@ -716,6 +742,7 @@ export const PLANT_PRODUCTION: PlantProductionConfig[] = [
     outputPerCycle: 5,
     intervalTicks: 25,
     maxStorage: 200,
+    electricityPerCycle: 3,
   },
   {
     buildingKey: 'jetFuelPlant',
@@ -724,6 +751,7 @@ export const PLANT_PRODUCTION: PlantProductionConfig[] = [
     outputPerCycle: 5,
     intervalTicks: 25,
     maxStorage: 200,
+    electricityPerCycle: 4,
     specialistWorker: 'aviationSpecialist',
     specialistBonusRate: BONUS_BALANCE.aviationSpecialistJetFuelBonusRate,
   },
@@ -734,6 +762,7 @@ export const PLANT_PRODUCTION: PlantProductionConfig[] = [
     outputPerCycle: 5,
     intervalTicks: 25,
     maxStorage: 200,
+    electricityPerCycle: 5,
     specialistWorker: 'chemicalEngineer',
     specialistBonusRate: BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate,
   },
