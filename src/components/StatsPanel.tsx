@@ -11,6 +11,8 @@ type StatsPanelProps = {
   availableSpace: number
   seasonalGasolineMultiplier: number
   seasonLabel: BilingualTextValue
+  waste: number
+  maxWasteStorage: number
 }
 
 function StatsPanel({
@@ -22,6 +24,8 @@ function StatsPanel({
   availableSpace,
   seasonalGasolineMultiplier,
   seasonLabel,
+  waste,
+  maxWasteStorage,
 }: StatsPanelProps) {
   return (
     <article className="panel upgrade-panel">
@@ -69,6 +73,20 @@ function StatsPanel({
             <BilingualText text={text.stats.openCells} />
           </dt>
           <dd>{availableSpace} cells</dd>
+        </div>
+        <div>
+          <dt>
+            <BilingualText text={text.stats.waste} />
+          </dt>
+          <dd>
+            {Math.floor(waste)}/{maxWasteStorage}
+            {waste >= maxWasteStorage ? (
+              <>
+                {' '}
+                · <BilingualText text={text.stats.wasteFull} />
+              </>
+            ) : null}
+          </dd>
         </div>
       </dl>
     </article>

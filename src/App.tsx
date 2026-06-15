@@ -58,6 +58,8 @@ import {
   getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
+  getWasteGeneratedPerTick,
+  getWasteOverflowEsgPenalty,
   getSeasonLabel,
   getSpecialistMultiplier,
   getProductSellPrice,
@@ -115,6 +117,7 @@ function App() {
     currentEra,
     nextEra,
     maxFeedstockStorage,
+    maxWasteStorage,
     feedstockPerDistillationCycle,
   } = calculateDerivedStats(game)
 
@@ -286,9 +289,17 @@ function App() {
         // Dirty buildings pull the score down; safetyOfficer staff pull it
         // up. Clamped to [minScore, maxScore].
         const esgDelta = getEsgDrift(current, currentStats.buildingCounts)
+
+        // --- Production Complexity Expansion Phase 1: waste byproduct ---
+        // Dirty buildings also emit waste each tick, capped by storage.
+        // Waste at/over cap applies an extra ESG penalty this tick.
+        const wasteGenerated = getWasteGeneratedPerTick(currentStats.buildingCounts)
+        const waste = Math.min(current.waste + wasteGenerated, currentStats.maxWasteStorage)
+        const wasteOverflowPenalty = getWasteOverflowEsgPenalty(waste, currentStats.maxWasteStorage)
+
         const esgScore = Math.max(
           ESG_BALANCE.minScore,
-          Math.min(ESG_BALANCE.maxScore, current.esgScore + esgDelta),
+          Math.min(ESG_BALANCE.maxScore, current.esgScore + esgDelta + wasteOverflowPenalty),
         )
 
         // --- Energy Transition era: demand shift ---
@@ -311,6 +322,7 @@ function App() {
           tickCount: nextTick,
           crudeOil: crudeRemaining,
           feedstock,
+          waste,
           gasoline: gasolineTotal,
           totalGasolineProduced: current.totalGasolineProduced + gasolineProduced,
           productionProgress: leftoverProgress,
@@ -1267,6 +1279,8 @@ function App() {
               availableSpace={availableSpace}
               seasonalGasolineMultiplier={seasonalGasolineMultiplier}
               seasonLabel={getSeasonLabel(game.tickCount, game.yearStartTick)}
+              waste={game.waste}
+              maxWasteStorage={maxWasteStorage}
             />
           </section>
 

@@ -216,6 +216,8 @@ export const text = {
     maxCrude: bilingual('Crude cap', 'ความจุน้ำมันดิบ'),
     maxGasoline: bilingual('Gasoline cap', 'ความจุเบนซิน'),
     openCells: bilingual('Grid cells free', 'ช่องตารางว่าง'),
+    waste: bilingual('Waste', 'ของเสีย'),
+    wasteFull: bilingual('Storage full — ESG penalty', 'เต็มแล้ว — กระทบ ESG'),
     season: bilingual('Gasoline Season', 'ฤดูเบนซิน'),
     seasonHint: (pct: number) =>
       bilingual(`${pct}% of base price`, `${pct}% ของราคาฐาน`),

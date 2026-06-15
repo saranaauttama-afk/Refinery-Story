@@ -714,6 +714,20 @@ export const ESG_DIRTY_BUILDINGS: BuildingType[] = [
   'petrochemicalPlant',
 ]
 
+// --- Production Complexity Expansion Phase 1: waste byproduct ---
+// Every "dirty" production building (reuses ESG_DIRTY_BUILDINGS) emits a
+// small amount of waste per tick. Waste has its own storage cap; once full,
+// each additional tick's would-be waste is dropped on the floor AND applies
+// an extra ESG penalty (on top of the existing per-dirty-building drift) --
+// the cost of running over capacity with nowhere for waste to go. Purely
+// additive: does not change any existing production formula.
+export const WASTE_BALANCE = {
+  wastePerDirtyBuildingPerTick: 0.02,
+  baseWasteStorage: 50,
+  // ESG penalty applied per tick while waste is at/over the cap.
+  overCapEsgPenaltyPerTick: 0.01,
+} as const
+
 // --- Energy Transition era: demand shift (Strategic Differentiation #2) ---
 // While the player is in the 'energyTransition' era, gasoline demand
 // gradually declines while petrochemicals demand gradually rises -- a real

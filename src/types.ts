@@ -30,6 +30,10 @@ export type GameState = {
   // Intermediate refined feedstock: Distillation Units make it from crude;
   // downstream plants (jet fuel / lubricants / petrochemicals) consume it.
   feedstock: number
+  // Production Complexity Expansion Phase 1: waste byproduct from "dirty"
+  // production buildings. Over-cap waste applies an ESG penalty (on top of
+  // the existing dirty-building drift). See WASTE_BALANCE.
+  waste: number
   // Phase A foundation: future product inventory.
   // Only gasoline is active. Others are unused placeholders.
   // game.gasoline remains the source of truth for all current gameplay.
@@ -451,6 +455,7 @@ export type DerivedStats = {
   eraResearchRateBonusRate: number
   // Refinery process chain (feedstock layer)
   maxFeedstockStorage: number
+  maxWasteStorage: number
   feedstockPerDistillationCycle: number
   productionMultiplier: number
   productionRate: number

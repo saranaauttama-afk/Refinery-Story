@@ -292,6 +292,7 @@ function sanitizeLoadedGameState(value: unknown) {
     crudeOil: getSafeNumber(value.crudeOil, fallback.crudeOil),
     gasoline: getSafeNumber(value.gasoline, fallback.gasoline),
     feedstock: getSafeNumber(value.feedstock, 0),
+    waste: Math.max(0, getSafeNumber(value.waste, 0)),
     refineryLevel: getSafeNumber(value.refineryLevel, fallback.refineryLevel),
     productionProgress: getSafeNumber(
       value.productionProgress,
