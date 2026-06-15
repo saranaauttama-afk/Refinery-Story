@@ -698,7 +698,170 @@ formula. Polymer Plant's electricity consumption was also deferred (it has
 no `electricityPerCycle` cost, unlike the other 3 plants) for the same
 reason.
 
-## What's NOT done / known gaps
+## DESIGN (not started): Per-Plant Staff Assignment + Per-Product Storage
+
+Two related backlog items, designed together on 2026-06-15 because both
+touch the same per-instance ("which specific tile") concept that the
+current codebase doesn't have for production plants. **Neither is started
+-- this is a design doc for a future session.** Both are larger than
+anything shipped so far in this doc and should each get their own
+session/branch with their own verification pass.
+
+### Part A: Per-Plant Staff Assignment (replaces the shared-pool model)
+
+**Problem with the current shared-pool model**: `GameState.assignments:
+Partial<Record<WorkerType, string[]>>` assigns specialists to a *worker
+type*, and `getSpecialistMultiplier` multiplies the bonus into the
+*aggregate* output of ALL plants of that buildingKey
+(`plantCount * outputPerCycle * specialistMultiplier`). This means 1
+assigned specialist's bonus scales with however many plants of that type
+exist -- with 3 Petrochemical Plants and chemicalEngineer at +20%/worker,
+1 assigned worker adds +20% to the COMBINED output of all 3 plants (3x the
+"intended" single-plant value), and each additional hire compounds the
+same way. This makes hiring specialists increasingly overpowered as the
+player builds more plants of a type -- an economy-breaking scaling problem,
+not just a feel issue. (A smaller "deflate the formula" fix was proposed
+and rejected in favor of this larger, more satisfying redesign: the player
+explicitly wants "assign my best worker to my best-upgraded plant"
+strategic placement.)
+
+**New model**: each employee can be assigned to ONE specific plant
+*instance* (grid cell), not a worker-type pool. Output is computed
+per-cell, so a Lv3-upgraded plant + a high-level specialist on that cell
+stacks multiplicatively for THAT cell only -- exactly the "put my best
+person on my best-upgraded plant" strategy the player described.
+
+**Data model changes**:
+- `GameState.assignments` changes from `Partial<Record<WorkerType,
+  string[]>>` to `Record<number, string>` -- maps grid `cellIndex ->
+  employeeId`. (Alternative considered: `assignedCell?: number` field on
+  `Employee` instead of a separate map -- either works; the cellIndex-keyed
+  map is preferred because "what's assigned to this cell" is the more
+  common lookup direction, from the Building Info sheet.)
+- `Employee` type unchanged (id/type/name/level/xp/trait) -- assignment is
+  now purely positional via the new map, not a property of the employee.
+- An employee can only be assigned to a cell whose building matches their
+  `type`'s plant (aviationSpecialist -> jetFuelPlant cells,
+  chemicalEngineer -> petrochemicalPlant cells, polymerEngineer ->
+  polymerPlant cells). Assigning to a new cell automatically unassigns from
+  any previous cell (1 employee = at most 1 cell).
+
+**Tick loop changes** (`useGameLoop.ts`, the unified downstream-plants loop
++ the standalone Polymer Plant block):
+- Currently iterates `for (const plant of eligiblePlants)` once per
+  buildingKey, computing one aggregate `normalOutput` for all instances.
+  Must change to iterate **per grid cell** of that buildingKey: for each
+  cell, look up `gridLevels[cellIndex]` (-> that cell's own
+  `outputUpgradeMultiplier`, no longer summed across instances -- see Part
+  B... actually see the storage-multiplier note below, this is about
+  output not storage) and `assignments[cellIndex]` (-> that cell's own
+  specialist, if any, via `getEmployeeMultiplier`).
+- **`getPlantOutputUpgradeMultiplier` and the
+  `...OutputBonusRateByLevel` tables need to change from "summed across all
+  instances" to "per-instance"**: currently
+  `lubricantPlantOutputBonusRate` etc. are accumulated by summing each
+  cell's `BUILDING_UPGRADE_BALANCE.lubricantPlantOutputBonusRateByLevel[level]`
+  across ALL cells of that type (so 2 plants at Lv2 = +50% applied to the
+  combined total). Per-cell assignment requires per-cell multipliers
+  instead: cell at Lv2 gets ITS OWN ×1.25, independent of other cells'
+  levels. This is a breaking change to the Phase-1-3-adjacent
+  plant-upgrade-output work (`feature/plant-upgrade-output`, merged) --
+  that work assumed aggregate computation and will need to be revisited
+  alongside this.
+- **Feedstock/electricity shareRatio interaction**: the existing
+  `combinedShareRatio` (feedstock + electricity scarcity, see Phase 2) is
+  still a SHARED pool across all plants of all types -- that doesn't change.
+  But the per-cell `normalOutput` (before shareRatio) now varies per cell
+  based on that cell's level + assigned specialist. The shareRatio still
+  applies uniformly to every cell's `normalOutput` (same proportional cut
+  for everyone during scarcity) -- only the PRE-shareRatio baseline becomes
+  per-cell. `Math.round`/`Math.floor` rounding currently happens once per
+  buildingKey; with per-cell computation it happens per cell, then sums --
+  watch for rounding drift (sum-of-rounded vs round-of-sum) in verification.
+
+**UI changes** (Building Info sheet, `app/game/(tabs)/index.tsx`):
+- The "{specialistName} assignment (X/Y)" section (capacity = plant count,
+  shared pool) becomes "Assigned to this plant: [name or 'None']" with an
+  Assign/Unassign action that's per-cell, not per-worker-type.
+- Need a new way to browse "all my chemicalEngineers and which cell (if
+  any) each is on" -- could live on the Staff tab (each employee row shows
+  "Assigned: Petrochemical Plant #2" or "Unassigned") or as a picker when
+  tapping "Assign" on a specific cell (list of eligible employees, showing
+  which cell they're currently on if any, so reassigning is one tap).
+- `getAssignmentCapacity` (currently `buildingCounts[plant.buildingKey]`,
+  i.e. "1 slot per plant instance") -- the *concept* of capacity-per-type
+  still makes sense for "how many of this specialist type are useful total"
+  display purposes, but the actual assign/unassign action becomes per-cell.
+
+**Migration**: old saves have `assignments: Partial<Record<WorkerType,
+string[]>>` (pool). Convert to the new `Record<number, string>`: for each
+worker type with assigned employee IDs, walk the grid cells of the
+matching buildingKey in index order and assign the pooled employee IDs to
+the first N cells (N = however many were "in the pool", up to the cell
+count). Leftover pooled IDs (if pool had more than cell count, shouldn't
+happen given the old capacity logic, but be defensive) are dropped
+(employee becomes unassigned, still exists). This roughly preserves "total
+assigned bonus was spread across N plants" -> "N specific plants now have 1
+assignee each", though the SPECIFIC cell-to-employee pairing is arbitrary
+(grid order) since the old model had no per-cell information to preserve.
+
+### Part B: Per-Product-Type Storage ("Tank Farm" / Auto Warehouse)
+
+**Problem**: lubricants/jetFuel/petrochemicals/recycledMaterial/
+plasticPellets each have a FIXED `maxStorage` (200/200/200/150/200) that
+cannot be expanded -- unlike gasoline (Product Tank, Lv1-3 upgradeable,
+`productTankStorageByLevel`) and crude (Crude Tank, same pattern) and
+feedstock (scales with Distillation Unit count). Building multiple plants
+of the same type (Part A's whole premise -- "build 3 Petrochemical Plants")
+makes hitting these fixed caps much faster, at which point the plant(s)
+"run for nothing" (tick loop already correctly skips production when
+`productSpace <= 0` -- no waste/overflow bug, just lost potential output).
+
+**Chosen direction (per player, 2026-06-15): "Tank Farm" -- a dedicated
+storage building PER PRODUCT, not 1 shared warehouse for all secondary
+products.** This mirrors Product Tank/Crude Tank (each storage building
+expands ONE specific resource's cap) rather than introducing a new "expand
+everything" mechanic.
+
+**Design**:
+- New building per product line needing expandable storage:
+  "Lubricant Tank", "Jet Fuel Tank", "Petrochemical Tank", "Recycling
+  Bunker" (recycledMaterial), "Pellet Silo" (plasticPellets) -- 5 new
+  building types, OR a single generic "Storage Tank" building type with a
+  per-instance "which product" selection (more Kairosoft-flat, fewer
+  building types to place on an already-tight grid -- see Grid Expansion
+  Tier 4 backlog item, this would make that even more pressing). **Open
+  question, needs a decision before implementation**: 5 distinct buildings
+  (clearer, matches Crude/Product Tank precedent, but +5 grid slots) vs 1
+  generic tank with a product-choice UI (saves grid space, but is a new UI
+  pattern -- "place then configure" -- not used anywhere else in this
+  codebase).
+- Each placed tank adds a flat amount to that product's `maxStorage` (e.g.
+  +100 per tank, configurable per product -- petrochemicals/plasticPellets
+  at $300/unit probably warrant a smaller per-tank bonus than
+  recycledMaterial at $25/unit, to keep tank cost/benefit roughly
+  comparable across products).
+- Unlike Product/Crude Tank (which have Lv1-3 upgrade tables), start simple:
+  flat storage bonus per tank, no upgrade levels -- consistent with how
+  Waste Treatment/Power/Polymer Plant storage caps are currently flat
+  constants (`WASTE_TREATMENT_PLANT_BALANCE.maxRecycledMaterialStorage`
+  etc.), and avoids compounding with Part A's per-cell-level changes in the
+  same PR.
+- `calculateDerivedStats` needs 5 new `maxXStorage` fields (or extend the
+  existing `PLANT_PRODUCTION`/standalone-block `maxStorage` constants to
+  be `baseMaxStorage + tankCount * perTankBonus`, computed the same way
+  `maxFeedstockStorage` already scales with `distillationUnitCount`).
+
+**Sequencing relative to Part A**: independent in principle (storage cap
+doesn't depend on per-cell staff), but both touch
+`calculateDerivedStats`/`PlantProductionConfig`-adjacent code in
+`useGameLoop.ts` and `gameCalculations.ts`. Doing Part B first (smaller,
+additive, same "new building + new maxStorage field" pattern as
+Phase-1-3's Waste Treatment/Power/Polymer Plants) and verifying it in
+isolation, THEN doing Part A (the bigger per-cell rewrite) on top, is lower
+risk than the reverse or combining them.
+
+
 
 - **Backlog: electricity-gate Tier-1 gasoline + Polymer Plant.** See "Not
   yet done from the original Phase 1-3 scope" above -- Phase 2's
