@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
+import { SvgXml } from 'react-native-svg'
 import type { BuildingType } from '../game/types'
 import { BUILDINGS } from '../game/data/buildings'
 import { BUILDING_COLORS } from '../buildingColors'
+import { BUILDING_ICONS } from '../buildingIcons'
 import { colors, radii } from '../theme'
 
 type BuildingTileProps = {
@@ -66,14 +68,23 @@ function BuildingTile({ type, level, size, onPress, active, showWorker }: Buildi
 
   const config = BUILDINGS[type]
   const bg = BUILDING_COLORS[type]
+  const icon = BUILDING_ICONS[type]
 
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.tile, { width: size, height: size, backgroundColor: bg }]}
+      style={[
+        styles.tile,
+        { width: size, height: size },
+        icon ? styles.tileWithIcon : { backgroundColor: bg },
+      ]}
     >
       {active && <Animated.View pointerEvents="none" style={[styles.glow, { opacity: glow }]} />}
-      <Text style={styles.shortName}>{config.shortName}</Text>
+      {icon ? (
+        <SvgXml xml={icon} width={size} height={size} />
+      ) : (
+        <Text style={styles.shortName}>{config.shortName}</Text>
+      )}
       {showWorker && (
         <Animated.Text
           pointerEvents="none"
@@ -109,6 +120,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     borderWidth: 2,
     borderColor: colors.gold,
+  },
+  tileWithIcon: {
+    // Icons already render their own cream rounded-card background AND
+    // border (see the rect fill/stroke in each SVG, inset within the
+    // 128x128 viewBox) -- they're self-contained little "tiles" already.
+    // Drop the outer Pressable's border/background so it doesn't double
+    // up with the icon's own.
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   empty: {
     backgroundColor: colors.cream,
