@@ -16,6 +16,7 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import BuildingGrid from '../../../src/components/BuildingGrid'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
+import ProductionOverview from '../../../src/components/ProductionOverview'
 import ProgressBar from '../../../src/components/ProgressBar'
 import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
@@ -27,7 +28,7 @@ import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE } from '../../../src/game/data/balance'
-import type { BuildingType } from '../../../src/game/types'
+import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
   getBuildingEffectLines,
@@ -58,6 +59,41 @@ const UPGRADEABLE: BuildingType[] = [
   'petrochemicalPlant',
   'polymerPlant',
 ]
+
+// Maps each secondary product to the building that produces it, used by
+// the Production Overview panel to decide whether to show a row for a
+// product the player hasn't built a plant for yet (hidden until either
+// some stock exists or the plant is built -- matches the "no plants"
+// gating pattern used elsewhere, e.g. business.tsx's Sell Products
+// section).
+const PRODUCT_PLANT_BUILDING: Record<
+  'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
+  BuildingType
+> = {
+  lubricants: 'lubricantPlant',
+  jetFuel: 'jetFuelPlant',
+  petrochemicals: 'petrochemicalPlant',
+  recycledMaterial: 'wasteTreatmentPlant',
+  plasticPellets: 'polymerPlant',
+}
+
+function PRODUCT_MAX_STORAGE(
+  derived: DerivedStats,
+  key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
+): number {
+  switch (key) {
+    case 'lubricants':
+      return derived.maxLubricantsStorage
+    case 'jetFuel':
+      return derived.maxJetFuelStorage
+    case 'petrochemicals':
+      return derived.maxPetrochemicalsStorage
+    case 'recycledMaterial':
+      return derived.maxRecycledMaterialStorage
+    case 'plasticPellets':
+      return derived.maxPlasticPelletsStorage
+  }
+}
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -96,6 +132,11 @@ export default function RefineryScreen() {
   // just silently no-ops, matching how the underlying action already
   // guards against invalid targets).
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
+  // Refinery-tab dashboard redesign: Auto-trade + Feedstock Priority moved
+  // out of the main scroll into a dedicated modal (opened via the ⚙️
+  // button next to the header), so the main view stays a shorter,
+  // dashboard-like glance instead of a long settings list.
+  const [automationModalOpen, setAutomationModalOpen] = useState(false)
 
   if (!loaded || !game || !derived) {
     return (
@@ -200,7 +241,15 @@ export default function RefineryScreen() {
           </Text>
           <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>{upgradeSubtitle}</Text>
         </AnimatedPressable>
-        <Text style={styles.season}>{seasonLabel.en}</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.season}>{seasonLabel.en}</Text>
+          <Pressable
+            style={styles.automationButton}
+            onPress={() => setAutomationModalOpen(true)}
+          >
+            <Text style={styles.automationButtonLabel}>⚙️</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -274,6 +323,21 @@ export default function RefineryScreen() {
         </AnimatedPressable>
       </View>
 
+      <ProductionOverview
+        rows={[
+          { key: 'gasoline', label: 'Gasoline', current: game.gasoline, max: derived.maxGasolineStorage, color: colors.green },
+          ...products
+            .filter((p) => game.productInventory[p.key] > 0 || derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+            .map((p) => ({
+              key: p.key,
+              label: p.label,
+              current: game.productInventory[p.key],
+              max: PRODUCT_MAX_STORAGE(derived, p.key),
+              color: p.color,
+            })),
+        ]}
+      />
+
       <View style={styles.productsWrap}>
         {products.map((p) => {
           const have = game.productInventory[p.key]
@@ -339,102 +403,108 @@ export default function RefineryScreen() {
         )}
       </View>
 
-      <View style={styles.autoTradeCard}>
-        <View style={styles.autoTradeHeader}>
-          <Text style={styles.autoTradeTitle}>🔄 Auto-trade</Text>
-          <Switch
-            value={autoTrade.enabled}
-            onValueChange={(v) => updateAutoTrade({ enabled: v })}
-            trackColor={{ false: colors.creamBorder, true: colors.green }}
-          />
-        </View>
-        {autoTrade.enabled && (
-          <>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
-              <View style={styles.stepper}>
-                <Pressable
-                  style={styles.stepperButton}
-                  onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}
-                >
-                  <Text style={styles.stepperLabel}>−</Text>
-                </Pressable>
-                <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
-                <Pressable
-                  style={styles.stepperButton}
-                  onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}
-                >
-                  <Text style={styles.stepperLabel}>+</Text>
-                </Pressable>
-              </View>
-            </View>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
-              <View style={styles.stepper}>
-                <Pressable
-                  style={styles.stepperButton}
-                  onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}
-                >
-                  <Text style={styles.stepperLabel}>−</Text>
-                </Pressable>
-                <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
-                <Pressable
-                  style={styles.stepperButton}
-                  onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}
-                >
-                  <Text style={styles.stepperLabel}>+</Text>
-                </Pressable>
-              </View>
-            </View>
-          </>
-        )}
-      </View>
+      </ScrollView>
 
-      {(derived.buildingCounts.lubricantPlant > 0 ||
-        derived.buildingCounts.jetFuelPlant > 0 ||
-        derived.buildingCounts.petrochemicalPlant > 0) && (
+      {/* Automation: Auto-trade + Feedstock Priority, moved out of the
+          main scroll (dashboard redesign) so the Refinery tab stays a
+          short glance-able view; opened via the ⚙️ header button. */}
+      <Sheet visible={automationModalOpen} title="⚙️ Automation" onClose={() => setAutomationModalOpen(false)}>
         <View style={styles.autoTradeCard}>
           <View style={styles.autoTradeHeader}>
-            <Text style={styles.autoTradeTitle}>⚖️ Feedstock Priority</Text>
+            <Text style={styles.autoTradeTitle}>🔄 Auto-trade</Text>
+            <Switch
+              value={autoTrade.enabled}
+              onValueChange={(v) => updateAutoTrade({ enabled: v })}
+              trackColor={{ false: colors.creamBorder, true: colors.green }}
+            />
           </View>
-          <Text style={styles.feedstockPriorityHint}>
-            0% = off (never produces) · 100% = normal · 200% = highest priority when feedstock is
-            short. Only matters when plants are competing for limited feedstock.
-          </Text>
-          {(
-            [
-              { buildingKey: 'lubricantPlant', label: 'Lubricants' },
-              { buildingKey: 'jetFuelPlant', label: 'Jet Fuel' },
-              { buildingKey: 'petrochemicalPlant', label: 'Petrochemicals' },
-            ] as const
-          ).map(
-            ({ buildingKey, label }) =>
-              derived.buildingCounts[buildingKey] > 0 && (
-                <View key={buildingKey} style={styles.thresholdRow}>
-                  <Text style={styles.thresholdLabel}>{label}</Text>
-                  <View style={styles.stepper}>
-                    <Pressable
-                      style={styles.stepperButton}
-                      onPress={() => adjustFeedstockPriority(buildingKey, -1)}
-                    >
-                      <Text style={styles.stepperLabel}>−</Text>
-                    </Pressable>
-                    <Text style={styles.stepperValue}>
-                      {Math.round(game.feedstockPriority[buildingKey] * 100)}%
-                    </Text>
-                    <Pressable
-                      style={styles.stepperButton}
-                      onPress={() => adjustFeedstockPriority(buildingKey, 1)}
-                    >
-                      <Text style={styles.stepperLabel}>+</Text>
-                    </Pressable>
-                  </View>
+          {autoTrade.enabled && (
+            <>
+              <View style={styles.thresholdRow}>
+                <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
+                <View style={styles.stepper}>
+                  <Pressable
+                    style={styles.stepperButton}
+                    onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}
+                  >
+                    <Text style={styles.stepperLabel}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
+                  <Pressable
+                    style={styles.stepperButton}
+                    onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}
+                  >
+                    <Text style={styles.stepperLabel}>+</Text>
+                  </Pressable>
                 </View>
-              ),
+              </View>
+              <View style={styles.thresholdRow}>
+                <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
+                <View style={styles.stepper}>
+                  <Pressable
+                    style={styles.stepperButton}
+                    onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}
+                  >
+                    <Text style={styles.stepperLabel}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
+                  <Pressable
+                    style={styles.stepperButton}
+                    onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}
+                  >
+                    <Text style={styles.stepperLabel}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </>
           )}
         </View>
-      )}
-      </ScrollView>
+
+        {(derived.buildingCounts.lubricantPlant > 0 ||
+          derived.buildingCounts.jetFuelPlant > 0 ||
+          derived.buildingCounts.petrochemicalPlant > 0) && (
+          <View style={styles.autoTradeCard}>
+            <View style={styles.autoTradeHeader}>
+              <Text style={styles.autoTradeTitle}>⚖️ Feedstock Priority</Text>
+            </View>
+            <Text style={styles.feedstockPriorityHint}>
+              0% = off (never produces) · 100% = normal · 200% = highest priority when feedstock is
+              short. Only matters when plants are competing for limited feedstock.
+            </Text>
+            {(
+              [
+                { buildingKey: 'lubricantPlant', label: 'Lubricants' },
+                { buildingKey: 'jetFuelPlant', label: 'Jet Fuel' },
+                { buildingKey: 'petrochemicalPlant', label: 'Petrochemicals' },
+              ] as const
+            ).map(
+              ({ buildingKey, label }) =>
+                derived.buildingCounts[buildingKey] > 0 && (
+                  <View key={buildingKey} style={styles.thresholdRow}>
+                    <Text style={styles.thresholdLabel}>{label}</Text>
+                    <View style={styles.stepper}>
+                      <Pressable
+                        style={styles.stepperButton}
+                        onPress={() => adjustFeedstockPriority(buildingKey, -1)}
+                      >
+                        <Text style={styles.stepperLabel}>−</Text>
+                      </Pressable>
+                      <Text style={styles.stepperValue}>
+                        {Math.round(game.feedstockPriority[buildingKey] * 100)}%
+                      </Text>
+                      <Pressable
+                        style={styles.stepperButton}
+                        onPress={() => adjustFeedstockPriority(buildingKey, 1)}
+                      >
+                        <Text style={styles.stepperLabel}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ),
+            )}
+          </View>
+        )}
+      </Sheet>
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
@@ -734,6 +804,23 @@ const styles = StyleSheet.create({
     color: colors.orange,
     fontWeight: '700',
     marginTop: 4,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  automationButton: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.sm,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  automationButtonLabel: {
+    fontSize: 16,
   },
   gridWrap: {
     paddingHorizontal: spacing.lg,
