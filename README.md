@@ -1,6 +1,6 @@
 # Refinery Story — Mobile (Expo)
 
-> ## 👋 START HERE — Session Handoff (last updated: Per-Plant Staff Assignment shipped)
+> ## 👋 START HERE — Session Handoff (last updated: Demolish/Move/Swap buildings shipped)
 >
 > **If you're a new Claude picking this up: read this block fully before
 > doing anything else.** Past sessions have repeatedly lost track of
@@ -20,7 +20,8 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including Demolish/Move/Swap buildings (commit `b831f3c`) is committed
+> including the doc-update commit for Demolish/Move/Swap buildings
+> (commit `c5ee9af`) is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -32,7 +33,27 @@
 >    Plant) of the "Production Complexity Expansion".
 > 2. A fix making building-level upgrades (Lv1-3) actually affect the 4
 >    production plants' output (was dead code before).
-> 3. Mobile UI for selling products + Feedstock Priority.
+> 3. Mobile UI for selling products + Feedstock Priority. **Correction
+>    (found 2026-06-16): only Feedstock Priority survived into the
+>    current code (it's in `app/game/(tabs)/index.tsx`, not
+>    `business.tsx` as originally written here). The dedicated "Sell
+>    Products" section (Sell 1/10/All, `SellProductRow` component, 5
+>    products including recycledMaterial/plasticPellets) does NOT exist
+>    in the current codebase -- `SellProductRow` and `FeedstockPriorityRow`
+>    components are both gone, and `SELLABLE_PRODUCTS`/`SellableProductKey`
+>    in `data/products.ts` reverted to only 3 products (lubricants/
+>    jetFuel/petrochemicals), missing the 2 added later in the session.
+>    What DOES exist for selling: a tap-to-sell-all chip row on the
+>    Refinery tab (`index.tsx`, the `products` array, hardcoded to those
+>    same 3 product keys) -- recycledMaterial and plasticPellets currently
+>    have NO sell UI anywhere, even though the backend `sellProduct`
+>    action supports any product key and production for both already
+>    works. This is the same class of issue as the Building Info sheet
+>    reverting mid-session (see item 7's `UPGRADEABLE` note) -- some
+>    UI-layer commit from earlier in development didn't make it into what
+>    became this `devMobile` history. Treat any "shipped" UI claim in this
+>    doc with a quick grep-to-verify if it matters for your task; backend
+>    logic claims have held up better than UI claims so far.
 > 4. A design doc for two related items: per-plant staff assignment
 >    (Part A) and per-product storage tanks (Part B).
 > 5. **Part B (Tank Farm)**: 5 storage buildings, one per secondary
@@ -125,6 +146,10 @@
 >   (those need a small extension to the HiddenEventTimeCondition/
 >   HiddenEventGameCondition/HiddenEventReward unions + their evaluator
 >   functions in gameCalculations.ts).
+> - **Fix the missing Sell Products UI** (found 2026-06-16, see item 3's
+>   correction above and the new gap entry in "## What's NOT done"
+>   below): recycledMaterial and plasticPellets currently have no way to
+>   be sold in the app at all.
 > - Possible follow-up polish on Per-Plant Staff Assignment AND
 >   Demolish/Move/Swap: neither has been visually tested on a real
 >   device/simulator (this environment has none -- only `tsc` +
@@ -1025,8 +1050,21 @@ Phase-1-3's Waste Treatment/Power/Polymer Plants) and verifying it in
 isolation, THEN doing Part A (the bigger per-cell rewrite) on top, is lower
 risk than the reverse or combining them.
 
+## What's NOT done / known gaps
 
-
+- **Regression: dedicated "Sell Products" UI is missing.** Found
+  2026-06-16 while updating this doc -- see the correction on item 3 in
+  the handoff block above for full detail. `SellProductRow`/
+  `FeedstockPriorityRow` components don't exist, `SELLABLE_PRODUCTS` in
+  `data/products.ts` only has 3 of 5 products (missing recycledMaterial/
+  plasticPellets), and there's currently NO sell UI at all for those 2
+  products (the Refinery tab's tap-to-sell-all chips only cover
+  lubricants/jetFuel/petrochemicals). The backend `sellProduct` action
+  and `SELLABLE_PRODUCTS`-adjacent data already support any product key,
+  so this is fixable without touching game logic -- just needs the UI
+  layer rebuilt (or extending the existing Refinery-tab chip row to all
+  5 products, which would be the smaller fix). Not done in this doc-update
+  pass since the user only asked for documentation accuracy, not a fix.
 - **SHIPPED: electricity-gate Tier-1 gasoline + Polymer Plant** (commit
   `7d8aa03`). Gasoline production now caps `batchesProduced` by remaining
   electricity (1 per batch) once >= 1 Power Plant is built; Polymer Plant
@@ -1094,21 +1132,33 @@ island" bar is a possible follow-up if this blended look isn't enough.
 
 ```
 app/
-  _layout.tsx          root layout -- Settings/GameProvider + global modals/banner
+  _layout.tsx          root layout -- Settings/GameProvider + global modals/banners
   index.tsx             Main menu + splash
   settings.tsx          Settings screen
   store.tsx             Remove Ads / mock store
   game/
     (tabs)/
       _layout.tsx         bottom tab bar (Refinery/Staff/Business/Stats)
-      index.tsx           Refinery: grid, build/upgrade modals, buy/sell
-      staff.tsx           hire workers, train/assign employees
-      business.tsx        contracts / research / perks / shipments / standing orders
+      index.tsx           Refinery: grid, build/upgrade/demolish/move/swap,
+                           buy/sell, Feedstock Priority, hidden-event mystery
+                           rows (build picker)
+      staff.tsx           hire workers, train/assign employees (per-cell),
+                           hidden-event mystery rows (recruitment)
+      business.tsx        contracts (incl. hidden-event mystery rows) /
+                           research / perks / shipments / standing orders
       stats.tsx           era/ESG/season/progress/asphalt/log, rename, save, reset
 src/
   game/                 ported pure logic (types, data, calculations, storage)
-  components/           BuildingTile, BuildingGrid, ResourceBar, Sheet, ListRow,
-                         ChoiceEventModal, AwardModal, EraBanner
+                         data/hiddenEvents.ts -- Hidden Event configs (just data,
+                         add more here without touching other files)
+  components/           AnimatedPressable, AwardModal, BuildingGrid, BuildingTile,
+                         ChoiceEventModal, ComboDiscoveryBanner, EraBanner,
+                         FloatingNumbers, HiddenEventBanner, ListRow, ProgressBar,
+                         ResourceBar, Sheet, WinCelebrationModal
+                         (verify this list against `ls src/components/` if it
+                         matters for your task -- see item 3's correction above
+                         for why this doc's component claims have been wrong
+                         before)
   hooks/
     useGameLoop.ts       load/save/tick + all game actions (exports `tick` too)
     GameContext.tsx      shared provider/hook (useGame)
