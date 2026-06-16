@@ -33,6 +33,7 @@ import {
   getCellAssignedToEmployee,
   getEmployeeAssignedToCell,
   getProductSellPrice,
+  formatGameClockTime,
   getSeasonLabel,
   getUpgradeCost,
   getUpgradeProductionRequirement,
@@ -100,6 +101,11 @@ export default function RefineryScreen() {
     { label: 'Gasoline', value: `${game.gasoline}/${derived.maxGasolineStorage}`, color: colors.green },
     { label: 'ESG', value: `${Math.round(game.esgScore)}`, color: colors.teal },
     { label: 'Season', value: `${seasonPct}%`, color: colors.orange },
+    {
+      label: 'Time',
+      value: `${formatGameClockTime(derived.gameClock)}${derived.gameClock.isDaytime ? '☀️' : '🌙'}`,
+      color: derived.gameClock.isDaytime ? colors.gold : colors.blueDark,
+    },
   ]
 
   const handleCellPress = (index: number) => {
@@ -149,6 +155,7 @@ export default function RefineryScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
+      {!derived.gameClock.isDaytime && <View style={styles.nightOverlay} pointerEvents="none" />}
       <View style={styles.header}>
         <AnimatedPressable
           onPress={() => {
@@ -526,6 +533,16 @@ export default function RefineryScreen() {
 }
 
 const styles = StyleSheet.create({
+  nightOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#0A1A33',
+    opacity: 0.12,
+    zIndex: 1,
+  },
   infoLevel: {
     fontWeight: '800',
     color: colors.ink,

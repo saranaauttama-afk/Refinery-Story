@@ -475,6 +475,16 @@ export type ActiveMilestone = Milestone & {
   progress: MilestoneProgress | null
 }
 
+// In-game calendar clock (day/night cycle + day-of-week/day-of-month),
+// derived purely from tickCount. See CALENDAR_BALANCE in data/balance.ts
+// for why this is independent of the year/season system.
+export type GameClock = {
+  hourOfDay: number
+  dayOfWeek: number
+  dayOfMonth: number
+  isDaytime: boolean
+}
+
 export type DerivedStats = {
   activeContracts: ActiveContract[]
   activeMilestones: ActiveMilestone[]
@@ -537,6 +547,7 @@ export type DerivedStats = {
   progressPercent: number
   sellPrice: number
   seasonalGasolineMultiplier: number
+  gameClock: GameClock
   sellPriceMultiplier: number
   statusLabel: BilingualTextValue
   storageMultiplier: number

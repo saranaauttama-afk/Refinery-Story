@@ -1,5 +1,6 @@
 import {
   AWARDS_BALANCE,
+  CALENDAR_BALANCE,
   BONUS_BALANCE,
   BUILDING_UPGRADE_BALANCE,
   CORE_BALANCE,
@@ -51,6 +52,7 @@ import type {
   ChoiceEvent,
   ComboStats,
   DerivedStats,
+  GameClock,
   GameState,
   GridCell,
   Employee,
@@ -853,6 +855,32 @@ export function getSeasonLabel(tickCount: number, yearStartTick: number): Biling
   return text.stats.seasonOff
 }
 
+// --- In-game calendar clock (day/night + day-of-week/day-of-month) ---
+// Deliberately independent of the year/season system above -- see
+// CALENDAR_BALANCE's comment for why. Everything here is derived purely
+// from tickCount (no new GameState field needed), same pattern as season.
+// GameClock type lives in types.ts (avoids a circular import since
+// DerivedStats also references it).
+export function getGameClock(tickCount: number): GameClock {
+  const { dayLengthTicks, dayStartHour, nightStartHour, daysPerWeek, daysPerMonth } = CALENDAR_BALANCE
+  const ticksIntoDay = tickCount % dayLengthTicks
+  const hourOfDay = Math.floor((ticksIntoDay / dayLengthTicks) * 24)
+  const absoluteDay = Math.floor(tickCount / dayLengthTicks)
+  return {
+    hourOfDay,
+    dayOfWeek: absoluteDay % daysPerWeek,
+    dayOfMonth: absoluteDay % daysPerMonth,
+    isDaytime: hourOfDay >= dayStartHour && hourOfDay < nightStartHour,
+  }
+}
+
+// 24-hour "HH:00" label for the resource bar / clock display. Minutes
+// aren't tracked (hourOfDay is the finest granularity exposed), so this is
+// always on the hour.
+export function formatGameClockTime(clock: GameClock): string {
+  return `${clock.hourOfDay.toString().padStart(2, '0')}:00`
+}
+
 // Base sell price per secondary product (gasoline has its own combo-aware price).
 const PRODUCT_BASE_PRICE: Record<string, number> = {
   lubricants: ECONOMY_BALANCE.lubricantPrice,
@@ -1384,6 +1412,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     progressPercent,
     sellPrice,
     seasonalGasolineMultiplier,
+    gameClock: getGameClock(game.tickCount),
     sellPriceMultiplier,
     statusLabel,
     storageMultiplier,

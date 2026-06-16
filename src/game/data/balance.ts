@@ -45,6 +45,32 @@ export const BOOST_BALANCE = {
   productionMultiplier: 2,
 } as const
 
+// In-game calendar clock (day/night cycle + day-of-week/day-of-month for
+// Hidden Event trigger conditions). Deliberately INDEPENDENT of
+// AWARDS_BALANCE.yearLengthTicks (the existing 12-real-minute "year" used
+// for seasonal demand/awards) -- tying a 6-minute "day" to a 12-minute
+// "year" would mean 1 year = 2 days, which doesn't read as a calendar at
+// all. Instead this clock runs its own day/week/month cycle for flavor and
+// Hidden Event timing only; it does not affect seasonal demand, awards, or
+// any other existing system. Not meant to be calendar-accurate (no real
+// "365 days" or leap years) -- day-of-month/day-of-week are just numbers
+// derived from tickCount for trigger conditions to check against, tunable
+// independently of each other.
+export const CALENDAR_BALANCE = {
+  // 1 in-game day = 6 real minutes = 1800 ticks @ 200ms/tick.
+  dayLengthTicks: 1800,
+  // Hour-of-day boundaries for the day/night visual tint (24-hour clock,
+  // 0-23). 6 = sunrise (screen brightens), 18 = sunset (screen dims).
+  dayStartHour: 6,
+  nightStartHour: 18,
+  // 7 in-game days per "week" (for weekday-based Hidden Event conditions).
+  daysPerWeek: 7,
+  // 30 in-game days per "month" (for day-of-month Hidden Event conditions).
+  // Not tied to daysPerWeek (30 isn't a multiple of 7) -- intentional, this
+  // is a flavor calendar, not a real one.
+  daysPerMonth: 30,
+} as const
+
 export const EXPANSION_BALANCE = [
   { level: 0, size: 3, cells: 9 },
   { level: 1, size: 4, cells: 16, cost: 25000, requiresRefineryLevel: 5 },
