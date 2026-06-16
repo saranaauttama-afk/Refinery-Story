@@ -32,6 +32,27 @@ export const CORE_BALANCE = {
   choiceEventFallbackTicks: 1200,
 } as const
 
+// Demolish/Move/Swap buildings -- lets the player fix an early layout
+// mistake or rearrange for a new Hidden Combo without losing the
+// building's accumulated level/staff assignment (those travel WITH the
+// building, see demolishBuilding/moveBuilding/swapBuildings in
+// useGameLoop.ts).
+export const GRID_EDIT_BALANCE = {
+  // Demolish refunds a fraction of the ORIGINAL purchase cost (not
+  // anything spent on upgrades) -- 50%, enough to make demolishing a
+  // genuine mistake recoverable without making "buy then immediately
+  // demolish for a discount loop" attractive (buying then demolishing
+  // always nets a 50% loss).
+  demolishRefundRate: 0.5,
+  // Move (to an empty cell) and Swap (two occupied cells) are flat fees,
+  // not tied to building cost -- intentionally much cheaper than
+  // buy+demolish (which would cost the building's full price plus lose
+  // the 50% demolish refund) so rearranging stays a viable alternative to
+  // re-buying, not just a worse version of it.
+  moveCost: 200,
+  swapCost: 100,
+} as const
+
 // Active "🔥 Boost" button (mobile-only): a player-activated temporary
 // production multiplier with a cooldown -- gives players something to
 // actively tap instead of only waiting on auto-trade/ticks.

@@ -65,6 +65,7 @@ import {
   BUILDING_UPGRADE_BALANCE,
   PLANT_PRODUCTION,
   POWER_PLANT_BALANCE,
+  GRID_EDIT_BALANCE,
   PRODUCTION_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
   POLYMER_PLANT_BALANCE,
@@ -856,6 +857,136 @@ export function useGameLoop() {
     [update],
   )
 
+  // Removes a building from the grid, refunding GRID_EDIT_BALANCE.
+  // demolishRefundRate (50%) of its ORIGINAL purchase cost -- upgrade
+  // spend on that cell is not refunded, it's simply lost along with the
+  // building. Clears that cell's level (back to the grid's default,
+  // matching how a fresh empty cell behaves) and unassigns any specialist
+  // staff working there (their employee record is untouched, just freed
+  // up to be assigned elsewhere). No-op on an already-empty cell.
+  const demolishBuilding = useCallback(
+    (cellIndex: number) =>
+      update((current) => {
+        const building = current.grid[cellIndex]
+        if (!building) return current
+        const refund = Math.round(BUILDINGS[building].cost * GRID_EDIT_BALANCE.demolishRefundRate)
+        const grid = [...current.grid]
+        grid[cellIndex] = null
+        const gridLevels = [...current.gridLevels]
+        gridLevels[cellIndex] = 1
+        const assignments = { ...current.assignments }
+        delete assignments[cellIndex]
+        return {
+          ...current,
+          money: current.money + refund,
+          grid,
+          gridLevels,
+          assignments,
+          activityLog: addLog(
+            current.activityLog,
+            `Demolished ${BUILDINGS[building].name.en} (+$${refund} refund)`,
+          ),
+        }
+      }),
+    [update],
+  )
+
+  // Moves a building from an occupied cell to an EMPTY one, for a flat fee
+  // (GRID_EDIT_BALANCE.moveCost). The building's level and any assigned
+  // specialist travel WITH it -- since gridLevels/assignments are both
+  // keyed by cellIndex, this means re-keying both: fromIndex's level moves
+  // to toIndex (fromIndex resets to the default), and if an employee was
+  // assigned at fromIndex, their assignment key moves to toIndex too. A
+  // Lv3 Petrochemical Plant with a chemicalEngineer assigned stays exactly
+  // as productive after the move, just relocated. No-op if fromIndex is
+  // empty, toIndex is already occupied, fromIndex === toIndex, or the
+  // player can't afford the fee.
+  const moveBuilding = useCallback(
+    (fromIndex: number, toIndex: number) =>
+      update((current) => {
+        const building = current.grid[fromIndex]
+        if (!building) return current
+        if (current.grid[toIndex] !== null) return current
+        if (fromIndex === toIndex) return current
+        if (current.money < GRID_EDIT_BALANCE.moveCost) return current
+
+        const grid = [...current.grid]
+        grid[fromIndex] = null
+        grid[toIndex] = building
+
+        const gridLevels = [...current.gridLevels]
+        const level = gridLevels[fromIndex] ?? 1
+        gridLevels[fromIndex] = 1
+        gridLevels[toIndex] = level
+
+        const assignments = { ...current.assignments }
+        const assignedEmployeeId = assignments[fromIndex]
+        delete assignments[fromIndex]
+        if (assignedEmployeeId) assignments[toIndex] = assignedEmployeeId
+
+        return {
+          ...current,
+          money: current.money - GRID_EDIT_BALANCE.moveCost,
+          grid,
+          gridLevels,
+          assignments,
+          activityLog: addLog(
+            current.activityLog,
+            `Moved ${BUILDINGS[building].name.en} (-$${GRID_EDIT_BALANCE.moveCost})`,
+          ),
+        }
+      }),
+    [update],
+  )
+
+  // Swaps the buildings (and their levels + any assigned specialists) at
+  // two OCCUPIED cells, for a flat fee (GRID_EDIT_BALANCE.swapCost) --
+  // cheaper than two moves, since it's a single rearrangement. Useful for
+  // chasing a Hidden Combo (adjacency-based) without demolishing+rebuying
+  // either building. No-op if either cell is empty, the two indices are
+  // the same, or the player can't afford the fee.
+  const swapBuildings = useCallback(
+    (indexA: number, indexB: number) =>
+      update((current) => {
+        const buildingA = current.grid[indexA]
+        const buildingB = current.grid[indexB]
+        if (!buildingA || !buildingB) return current
+        if (indexA === indexB) return current
+        if (current.money < GRID_EDIT_BALANCE.swapCost) return current
+
+        const grid = [...current.grid]
+        grid[indexA] = buildingB
+        grid[indexB] = buildingA
+
+        const gridLevels = [...current.gridLevels]
+        const levelA = gridLevels[indexA] ?? 1
+        const levelB = gridLevels[indexB] ?? 1
+        gridLevels[indexA] = levelB
+        gridLevels[indexB] = levelA
+
+        const assignments = { ...current.assignments }
+        const employeeAtA = assignments[indexA]
+        const employeeAtB = assignments[indexB]
+        if (employeeAtB) assignments[indexA] = employeeAtB
+        else delete assignments[indexA]
+        if (employeeAtA) assignments[indexB] = employeeAtA
+        else delete assignments[indexB]
+
+        return {
+          ...current,
+          money: current.money - GRID_EDIT_BALANCE.swapCost,
+          grid,
+          gridLevels,
+          assignments,
+          activityLog: addLog(
+            current.activityLog,
+            `Swapped ${BUILDINGS[buildingA].name.en} and ${BUILDINGS[buildingB].name.en} (-$${GRID_EDIT_BALANCE.swapCost})`,
+          ),
+        }
+      }),
+    [update],
+  )
+
   // Hidden Event system: reveals + grants the reward for an 'unlocked'
   // (condition met, not yet claimed) Hidden Event. No-op if the key isn't
   // unlocked or is already claimed -- the UI should only ever call this
@@ -1293,6 +1424,9 @@ export function useGameLoop() {
     sellGasoline,
     sellProduct,
     placeBuilding,
+    demolishBuilding,
+    moveBuilding,
+    swapBuildings,
     claimHiddenEvent,
     upgradeBuilding,
     upgradeRefinery,

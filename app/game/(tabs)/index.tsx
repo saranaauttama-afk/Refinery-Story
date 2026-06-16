@@ -26,7 +26,7 @@ import { colors, radii, spacing } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE } from '../../../src/game/data/balance'
 import type { BuildingType } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -71,6 +71,9 @@ export default function RefineryScreen() {
     sellGasoline,
     sellProduct,
     placeBuilding,
+    demolishBuilding,
+    moveBuilding,
+    swapBuildings,
     claimHiddenEvent,
     upgradeBuilding,
     upgradeRefinery,
@@ -84,6 +87,15 @@ export default function RefineryScreen() {
   const { width } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell, setInfoCell] = useState<number | null>(null)
+  // Move/Swap buildings: when set, the NEXT grid tap is interpreted as
+  // the target cell instead of opening the normal build-picker/info
+  // sheet. Started from the Building Info sheet's Move/Swap button (which
+  // closes the sheet and sets this), cleared after the target tap
+  // resolves (whether it succeeds or is rejected by moveBuilding/
+  // swapBuildings -- e.g. tapping an occupied cell while in 'move' mode
+  // just silently no-ops, matching how the underlying action already
+  // guards against invalid targets).
+  const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
 
   if (!loaded || !game || !derived) {
     return (
@@ -111,6 +123,15 @@ export default function RefineryScreen() {
   ]
 
   const handleCellPress = (index: number) => {
+    if (gridEditMode) {
+      if (gridEditMode.type === 'move') {
+        moveBuilding(gridEditMode.fromIndex, index)
+      } else {
+        swapBuildings(gridEditMode.fromIndex, index)
+      }
+      setGridEditMode(null)
+      return
+    }
     const cell = game.grid[index]
     if (cell === null) {
       setPickerCell(index)
@@ -204,7 +225,16 @@ export default function RefineryScreen() {
           isActive={game.crudeOil > 0}
           employeeCount={game.employees.length}
         />
-        <Text style={styles.hint}>Tap an empty tile to build · tap a built tile for info</Text>
+        {gridEditMode ? (
+          <Pressable onPress={() => setGridEditMode(null)}>
+            <Text style={styles.hintActive}>
+              {gridEditMode.type === 'move' ? 'Tap an empty tile to move there' : 'Tap a building to swap with'}
+              {' · tap here to cancel'}
+            </Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.hint}>Tap an empty tile to build · tap a built tile for info</Text>
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -552,6 +582,36 @@ export default function RefineryScreen() {
                     ))}
                 </>
               )}
+              <Text style={styles.infoSectionTitle}>Rearrange</Text>
+              <ListRow
+                title="Move"
+                subtitle={`Relocate to an empty cell · $${GRID_EDIT_BALANCE.moveCost.toLocaleString()} · level & staff travel with it`}
+                actionLabel="Move"
+                disabled={game.money < GRID_EDIT_BALANCE.moveCost}
+                onPress={() => {
+                  setGridEditMode({ type: 'move', fromIndex: infoCell })
+                  setInfoCell(null)
+                }}
+              />
+              <ListRow
+                title="Swap"
+                subtitle={`Trade places with another building · $${GRID_EDIT_BALANCE.swapCost.toLocaleString()} · both levels & staff travel`}
+                actionLabel="Swap"
+                disabled={game.money < GRID_EDIT_BALANCE.swapCost}
+                onPress={() => {
+                  setGridEditMode({ type: 'swap', fromIndex: infoCell })
+                  setInfoCell(null)
+                }}
+              />
+              <ListRow
+                title="Demolish"
+                subtitle={`Remove this building · +$${Math.round(config.cost * GRID_EDIT_BALANCE.demolishRefundRate).toLocaleString()} refund (level/upgrades not refunded)`}
+                actionLabel="Demolish"
+                onPress={() => {
+                  demolishBuilding(infoCell)
+                  setInfoCell(null)
+                }}
+              />
             </>
           )
         })()}
@@ -677,6 +737,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 11,
     color: colors.inkMuted,
+    marginTop: spacing.xs,
+  },
+  hintActive: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.orangeDark,
     marginTop: spacing.xs,
   },
   actions: {
