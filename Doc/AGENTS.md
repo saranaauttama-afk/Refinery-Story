@@ -1,5 +1,16 @@
 # Refinery Story - AI Development Rules
 
+> ⚠️ **Two codebases exist in this repo: `src/` (the original web app,
+> what the rest of this file describes) and `mobile/` (an Expo/React
+> Native port, started later). As of 2026-06-15, `mobile/` is the ACTIVE
+> codebase -- almost all current work happens there, on the `devMobile`
+> branch. If the user's request sounds like it's about the game in
+> general (not explicitly "the web version"), check
+> `mobile/README.md` FIRST (it has its own "START HERE" handoff section
+> at the top) before assuming this Doc/ folder's CURRENT_TASK.md is the
+> relevant one -- it describes `src/` work only and may be stale relative
+> to `mobile/`.**
+
 ## Project Vision
 
 Refinery Story is a Kairosoft-inspired refinery management simulation game.
@@ -91,9 +102,13 @@ Unless explicitly requested.
 
 ## Before Making Changes
 
-Always read:
+First, determine which codebase the request is about: if it's about
+`mobile/` (the active Expo app) or unclear, read `mobile/README.md` first
+-- it has its own up-to-date "START HERE" handoff section and supersedes
+everything below for mobile work. Only if the request is specifically
+about the web app in `src/`, read in this order:
 
-1. AGENTS.md
+1. AGENTS.md (this file)
 2. CURRENT_TASK.md
 3. GAME_DESIGN.md (rewritten to match current state — trust this over memory)
 

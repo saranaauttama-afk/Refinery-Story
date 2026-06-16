@@ -1,5 +1,12 @@
 # Seasonal Demand Volatility — COMPLETE (2026-06-13)
 
+> ⚠️ **This file describes the `src/` web app only, last updated
+> 2026-06-13. If you're looking for the CURRENT current task, the active
+> codebase as of 2026-06-15 is `mobile/` (Expo app, `devMobile` branch) --
+> go read `mobile/README.md`'s "START HERE" section at the top instead.
+> This file is kept for `src/` historical reference but is not the
+> up-to-date entry point for the project as a whole.**
+
 Branch: `feature/seasonal-volatility` (off perk-diversity-pass). BACKLOG
 "Strategic Differentiation #4" -- last item of this session.
 
