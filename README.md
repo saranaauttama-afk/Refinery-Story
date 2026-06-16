@@ -20,7 +20,8 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including the Sell Products UI fix (commit `560675c`) is committed
+> including wiring the 9 existing building icons into BuildingTile
+> (commit `496b33d`) is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -130,13 +131,30 @@
 >     restored `SELLABLE_PRODUCTS` in `data/products.ts` to list all 5
 >     (groundwork; nothing consumes that array directly yet). See commit
 >     `560675c`.
+> 14. **Wired the 9 existing building icons in**: `assets/icons/` had 9
+>     hand-designed isometric SVGs sitting unused since before the
+>     Production Complexity Expansion added 8 more building types. New
+>     `src/buildingIcons.ts` embeds their SVG markup as string constants
+>     (Metro has no .svg-as-text transformer configured, so this avoids
+>     touching the build pipeline); `BuildingTile.tsx` renders via
+>     `SvgXml` when an icon exists for that BuildingType, falling back to
+>     the original colored box + shortName otherwise. The 8 newer
+>     buildings (Power Plant, Waste Treatment Plant, Polymer Plant, the 5
+>     Tank Farm buildings) still use the colored-box fallback -- no new
+>     icons were created for them (the user explicitly chose "ship the 9
+>     that exist now" over waiting to hand-author 11 more). See commit
+>     `496b33d`. Considered but explicitly declined: Rival Refineries
+>     already exists in full (3 rivals, year-end ranking shown in
+>     AwardModal) -- the user passed on adding a "view past years"
+>     history page to Stats tab when offered.
 >
 > **What's next**: nothing specific has been requested yet. The original
 > backlog list was fully cleared (see items 1-9 above and the "SHIPPED:"
 > entries in "## What's NOT done / known gaps" below), then the user
-> requested several brand-new features in sequence (items 10-12 above:
+> requested several brand-new features in sequence (items 10-14 above:
 > in-game calendar clock, Hidden Event system, Demolish/Move/Swap
-> buildings) which are now all shipped too. This project's pattern so
+> buildings, the Sell Products fix, and wiring in the 9 existing building
+> icons) which are now all shipped too. This project's pattern so
 > far has been: backlog gets cleared, then the user comes back with a
 > new feature idea -- there's no telling what's next until they say. If
 > they ask "what's next" with no specific idea, ask them, or suggest:
@@ -154,6 +172,16 @@
 >   functions in gameCalculations.ts).
 > - **Fix the missing Sell Products UI** -- DONE, see item 13 above /
 >   the "SHIPPED (fixed 2026-06-16)" entry in "## What's NOT done".
+> - **8 more building icons**: Power Plant, Waste Treatment Plant,
+>   Polymer Plant, and the 5 Tank Farm buildings still use the
+>   colored-box fallback in BuildingTile -- no SVG icons exist for them
+>   (this environment has no image generation tool; the 9 done in item
+>   14 already existed as files, this would mean hand-authoring new SVG
+>   markup in the same isometric style, which is possible but wasn't
+>   asked for yet). Also: product icons are missing recycledMaterial/
+>   plasticPellets (6 of 7 exist) and worker icons are missing
+>   polymerEngineer (9 of 10 exist) -- neither is wired into any UI at
+>   all yet, unlike buildings.
 > - Possible follow-up polish on Per-Plant Staff Assignment AND
 >   Demolish/Move/Swap: neither has been visually tested on a real
 >   device/simulator (this environment has none -- only `tsc` +
@@ -1086,9 +1114,13 @@ risk than the reverse or combining them.
   "1 flagship + 1 specialist" design intent well enough -- revisit only if
   players still build multiple Jet Fuel/Petrochem Plants in a way that
   feels unintended despite Priority being available. Not implemented.
-- **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,
-  PT...) on the grid, per `src/buildingColors.ts`. The 30 isometric SVGs
-  generated earlier are in `assets/icons/` but not wired in (by request).
+- **Icons partially wired (commit `496b33d`)**: the 9 original building
+  types render their real isometric SVG icon now (via `SvgXml` +
+  `src/buildingIcons.ts`). The 8 buildings added later, plus
+  recycledMaterial/plasticPellets product icons and the polymerEngineer
+  worker icon, still use the colored-box-with-shortName/code placeholder
+  -- no SVG art exists for them (`assets/icons/` only has icons for
+  things that existed before the Production Complexity Expansion).
 - **App icon / splash image**: not configured in `app.json` (Expo needs a
   1024x1024 PNG) -- the in-app splash screen (`app/index.tsx`) is a custom
   component, separate from the native splash Expo shows before JS loads.
