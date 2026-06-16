@@ -49,6 +49,15 @@ export const EXPANSION_BALANCE = [
   { level: 0, size: 3, cells: 9 },
   { level: 1, size: 4, cells: 16, cost: 25000, requiresRefineryLevel: 5 },
   { level: 2, size: 5, cells: 25, cost: 100000, requiresRefineryLevel: 10 },
+  // Grid Expansion Tier 4 (backlog item, see README "What's NOT done" for
+  // the original discussion). Added once the "revisit" condition was met:
+  // Production Complexity Expansion shipped 3 new building types (Power
+  // Plant, Waste Treatment Plant, Polymer Plant), bringing the total to 12
+  // -- a 5x5 (25-cell) grid is tight for that many building types plus
+  // their dedicated Tank Farm storage buildings. Cost and level gate follow
+  // the existing pattern (each tier roughly 4x the previous cost, gated
+  // ~5-10 refinery levels past the previous tier's requirement).
+  { level: 3, size: 6, cells: 36, cost: 400000, requiresRefineryLevel: 20 },
 ] as const
 
 export type PaidExpansionEntry = {
