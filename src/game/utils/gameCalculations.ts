@@ -542,6 +542,10 @@ export function getBuildingEffectLines(
           label: 'Crude consumed per plant',
           value: `-${POWER_PLANT_BALANCE.crudePerCycle} / ${seconds}s`,
         },
+        {
+          label: 'Powers',
+          value: 'Jet Fuel, Petrochemical, Lubricant & Polymer Plants, plus gasoline production',
+        },
       ]
     }
     case 'wasteTreatmentPlant': {
@@ -596,7 +600,26 @@ export function getBuildingEffectLines(
         inputLine.warning =
           'Not enough petrochemicals in stock for this plant to run its next cycle. Petrochemicals are still sellable directly -- keep some in reserve, or build more Petrochemical Plants.'
       }
-      return [line, inputLine]
+      const lines = [line, inputLine]
+
+      // Electricity supply vs demand (Production Complexity Expansion
+      // Phase 2/3, completed). Only relevant once >= 1 Power Plant is
+      // built -- before that, Polymer Plant doesn't need electricity at
+      // all (matches the 3 PLANT_PRODUCTION plants' pattern).
+      if (derived.buildingCounts.powerPlant > 0) {
+        const electricitySupplyPerCycle = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
+        const electricityLine: BuildingEffectLine = {
+          label: 'Electricity demand (this plant)',
+          value: `${POLYMER_PLANT_BALANCE.electricityPerCycle} / ${seconds}s`,
+        }
+        if (derived.electricityDemandPerCycle > electricitySupplyPerCycle) {
+          const pct = Math.round((electricitySupplyPerCycle / derived.electricityDemandPerCycle) * 100)
+          electricityLine.warning = `Electricity supply (${electricitySupplyPerCycle}/${seconds}s) covers only ${pct}% of total demand (${derived.electricityDemandPerCycle}/${seconds}s) -- this plant may not run every cycle. Build more Power Plants for full output.`
+        }
+        lines.push(electricityLine)
+      }
+
+      return lines
     }
     case 'lubricantTank':
     case 'jetFuelTank':
@@ -1126,10 +1149,17 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // harmless to compute unconditionally and is useful for the UI even
   // before the player builds their first Power Plant.
   const maxElectricityStorage = buildingCounts.powerPlant * POWER_PLANT_BALANCE.maxElectricityStorage
-  const electricityDemandPerCycle = PLANT_PRODUCTION.reduce(
-    (sum, plant) => sum + buildingCounts[plant.buildingKey] * plant.electricityPerCycle,
-    0,
-  )
+  // Electricity demand per 25-tick (5s) cycle, for the UI's supply-vs-demand
+  // display. Includes the 3 PLANT_PRODUCTION plants AND Polymer Plant (same
+  // 25-tick cadence, standalone block -- see useGameLoop.ts). Does NOT
+  // include Tier-1 gasoline production, which runs on its own much shorter
+  // productionInterval cadence and isn't directly comparable to a
+  // per-25-tick number -- its electricity gating is enforced in the tick
+  // loop (PRODUCTION_BALANCE.electricityPerGasolineBatch) but not reflected
+  // in this aggregate display.
+  const electricityDemandPerCycle =
+    PLANT_PRODUCTION.reduce((sum, plant) => sum + buildingCounts[plant.buildingKey] * plant.electricityPerCycle, 0) +
+    buildingCounts.polymerPlant * POLYMER_PLANT_BALANCE.electricityPerCycle
   // Feedstock produced per distillation cycle across all units, boosted by
   // crude→distillation adjacency (reuses the combo system) AND by Distillation
   // Unit level upgrades. distillationUpgradeProductionMultiplier already boosts

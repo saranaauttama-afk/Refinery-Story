@@ -114,6 +114,19 @@ export const PRODUCTION_BALANCE = {
   minProductionMs: 180,
   refineryUpgradeSpeedStepMs: 120,
   distillationUnitSpeedBonusMs: 120,
+  // Production Complexity Expansion Phase 2 (completed): electricity cost
+  // per batch of Tier-1 gasoline production. Only enforced once the player
+  // has built >= 1 Power Plant -- before that, gasoline production is
+  // unaffected (fully backward compatible with every save before this).
+  // Deliberately small relative to POWER_PLANT_BALANCE.electricityPerCycle
+  // (12 electricity / 5s cycle = ~2.4/tick at the 25-tick cadence) since
+  // gasoline's own production cadence runs much faster (productionInterval
+  // is typically well under 1s once Operators/research/perks are factored
+  // in) -- a 1-electricity-per-batch cost keeps Tier-1 gasoline from being
+  // trivially starved by a single Power Plant while still making it
+  // compete for the same pool as the downstream plants, completing the
+  // original "ALL production buildings" intent from the Phase 2 design.
+  electricityPerGasolineBatch: 1,
 } as const
 
 export const STORAGE_BALANCE = {
@@ -527,6 +540,16 @@ export const POLYMER_PLANT_BALANCE = {
   petrochemicalsPerCycle: 10,
   plasticPelletsPerCycle: 5,
   maxPlasticPelletsStorage: 200,
+  // Production Complexity Expansion Phase 2/3 (completed): electricity
+  // consumed per cycle, same cadence/pattern as the 3 PLANT_PRODUCTION
+  // plants' electricityPerCycle (3/4/5 for lubricant/jetFuel/petrochemical,
+  // increasing with tier). Polymer Plant is the most advanced tier, so 6
+  // continues that progression. Only enforced once the player has built
+  // >= 1 Power Plant -- before that, this is a no-op (fully backward
+  // compatible). This was the other half of the "electricity-gate Tier-1
+  // gasoline + Polymer Plant" backlog item -- previously Polymer Plant had
+  // no electricity cost at all, unlike every other production building.
+  electricityPerCycle: 6,
 } as const
 
 // Tank Farm (Per-Product Storage, design doc Part B): 5 dedicated storage

@@ -62,6 +62,7 @@ import {
   BUILDING_UPGRADE_BALANCE,
   PLANT_PRODUCTION,
   POWER_PLANT_BALANCE,
+  PRODUCTION_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
   POLYMER_PLANT_BALANCE,
   BONUS_BALANCE,
@@ -325,7 +326,20 @@ export function tick(current: GameState): GameState {
     if (polymerPlantCount > 0 && nextTick % POLYMER_PLANT_BALANCE.intervalTicks === 0) {
       const petrochemicalsNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle
       const plasticPelletsSpace = stats.maxPlasticPelletsStorage - productInventory.plasticPellets
-      if (productInventory.petrochemicals >= petrochemicalsNeeded && plasticPelletsSpace > 0) {
+      // Production Complexity Expansion Phase 2/3 (completed): Polymer
+      // Plant now also competes for the electricity pool, same as the 3
+      // PLANT_PRODUCTION plants. Runs before the downstream-plants loop
+      // below, so it draws from whatever Power Plants generated this tick
+      // before downstream plants get their share -- same ordering as the
+      // Waste Treatment Plant block above. With 0 Power Plants built,
+      // electricitySufficient stays true (no-op).
+      const electricityNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.electricityPerCycle
+      const electricitySufficient = stats.buildingCounts.powerPlant <= 0 || electricity >= electricityNeeded
+      if (
+        productInventory.petrochemicals >= petrochemicalsNeeded &&
+        plasticPelletsSpace > 0 &&
+        electricitySufficient
+      ) {
         const totalOutput = getTotalCellOutput(
           current,
           'polymerPlant',
@@ -339,6 +353,9 @@ export function tick(current: GameState): GameState {
             ...productInventory,
             petrochemicals: productInventory.petrochemicals - petrochemicalsNeeded,
             plasticPellets: productInventory.plasticPellets + produced,
+          }
+          if (stats.buildingCounts.powerPlant > 0) {
+            electricity -= electricityNeeded
           }
         }
       }
@@ -471,7 +488,23 @@ export function tick(current: GameState): GameState {
 
   if (nextProgress >= interval) {
     const storageRoom = stats.maxGasolineStorage - gasoline
-    const batchesProduced = Math.min(Math.floor(nextProgress / interval), crudeOil, storageRoom)
+    // Production Complexity Expansion Phase 2 (completed): once the player
+    // has built >= 1 Power Plant, Tier-1 gasoline production also competes
+    // for the same electricity pool as the downstream plants -- capping
+    // batchesProduced by however many batches the remaining electricity can
+    // cover, same as the existing crudeOil/storageRoom caps. With 0 Power
+    // Plants built, electricityBatchCap stays at Infinity (no-op), so every
+    // save without a Power Plant behaves exactly as before this change.
+    const electricityBatchCap =
+      stats.buildingCounts.powerPlant > 0
+        ? Math.floor(electricity / PRODUCTION_BALANCE.electricityPerGasolineBatch)
+        : Infinity
+    const batchesProduced = Math.min(
+      Math.floor(nextProgress / interval),
+      crudeOil,
+      storageRoom,
+      electricityBatchCap,
+    )
 
     if (batchesProduced >= 1) {
       const perkYieldMultiplier = 1 + stats.perkProductionBonusRate
@@ -480,11 +513,15 @@ export function tick(current: GameState): GameState {
       gasolineYieldCarry = produced === Math.floor(rawYield) ? rawYield - produced : 0
 
       crudeOil -= batchesProduced
+      const electricityRemaining = stats.buildingCounts.powerPlant > 0 ? electricity - batchesProduced * PRODUCTION_BALANCE.electricityPerGasolineBatch : Infinity
+      if (stats.buildingCounts.powerPlant > 0) {
+        electricity = electricityRemaining
+      }
       gasoline += produced
       totalGasolineProduced += produced
 
       productionProgress =
-        crudeOil > 0 && gasoline < stats.maxGasolineStorage
+        crudeOil > 0 && gasoline < stats.maxGasolineStorage && electricityRemaining > 0
           ? nextProgress - batchesProduced * interval
           : 0
     } else {
