@@ -1087,8 +1087,9 @@ risk than the reverse or combining them.
   players still build multiple Jet Fuel/Petrochem Plants in a way that
   feels unintended despite Priority being available. Not implemented.
 - **Icons are placeholders** -- colored boxes with 2-letter codes (CT, DU,
-  PT...) on the grid, per `src/buildingColors.ts`. The 30 isometric SVGs
-  generated earlier are in `assets/icons/` but not wired in (by request).
+  PT...) on the grid, per `src/buildingColors.ts`. The earlier exploratory
+  SVG icon set was removed so the next art pass can restart cleanly from the
+  current low-poly art docs instead of inheriting half-covered legacy assets.
 - **App icon / splash image**: not configured in `app.json` (Expo needs a
   1024x1024 PNG) -- the in-app splash screen (`app/index.tsx`) is a custom
   component, separate from the native splash Expo shows before JS loads.
@@ -1167,5 +1168,4 @@ src/
     SettingsContext.tsx   shared provider/hook (useSettingsContext, useLang)
   theme.ts              shared color palette
   buildingColors.ts     placeholder per-building tile colors
-assets/icons/           30 isometric SVGs (generated, not wired in yet)
 ```

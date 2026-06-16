@@ -1,9 +1,8 @@
 import type { BuildingType } from './game/types'
 import { colors } from './theme'
 
-// Placeholder colors for the grid until real icons are wired in -- chosen to
-// roughly track the isometric icon set's per-building palette (assets/icons)
-// so swapping in real icons later won't feel like a different game.
+// Placeholder colors for the grid until the new art pass lands -- chosen to
+// preserve the intended per-building palette mapping for future assets.
 export const BUILDING_COLORS: Record<BuildingType, string> = {
   crudeTank: colors.steelMid,
   distillationUnit: colors.steelDark,

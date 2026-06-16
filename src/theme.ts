@@ -1,5 +1,4 @@
-// Shared palette -- matches the isometric icon set (assets/icons) so the UI
-// and icons feel like one consistent visual language.
+// Shared palette for the UI and the planned low-poly industrial art pass.
 export const colors = {
   // Backgrounds
   cream: '#F4EAD7',

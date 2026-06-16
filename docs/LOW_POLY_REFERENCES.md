@@ -170,13 +170,6 @@ Useful current references inside the repo:
 - `src/theme.ts` for the palette
 - `src/buildingColors.ts` for current building-family color mapping
 - `docs/ART_BIBLE.md` for full art rules
-- `assets/icons/` for legacy coverage only
-
-How to use the existing SVGs:
-
-- use them to understand which systems already had an icon concept
-- use them to compare coverage gaps
-- do not copy their final look blindly if it fights the current Art Bible
 
 ## Final Reference Summary
 

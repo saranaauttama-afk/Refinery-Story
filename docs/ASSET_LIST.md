@@ -19,7 +19,7 @@ Current in-project visual coverage:
 
 - `BuildingTile` still uses colored placeholder boxes with 2-letter labels.
 - Most screens rely on text, color, borders, and a few emoji markers.
-- `assets/icons/` contains 30 legacy SVGs that cover only part of the game.
+- no production-ready asset set is currently wired into the app
 - The existing SVG set is useful for coverage audit and silhouette continuity,
   but it is not the final low poly industrial / miniature diorama target.
 
@@ -243,7 +243,7 @@ Category breakdown:
 ## Notes for Production
 
 - Do not create every P2 asset before the core Home (Refinery) set is working.
-- Existing `assets/icons/` files can be used as silhouette coverage references only.
+- a fresh asset set should be created from the current Art Bible, not from deleted legacy icons
 - Buildings, products, resource icons, and the grid plinth system should be
   treated as the first visual milestone because they affect the primary play
   loop every session.
