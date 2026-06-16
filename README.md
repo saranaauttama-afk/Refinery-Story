@@ -20,7 +20,8 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including Per-Plant Staff Assignment (commit `659c48e`) is committed
+> including electricity-gating gasoline/Polymer Plant (commit `7d8aa03`)
+> is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -61,13 +62,28 @@
 >    `getSafeAssignments` in `gameStorage.ts`). Verified with 9 isolated
 >    `node -e` simulation cases (4 output-scaling, 5 migration) before
 >    committing -- see commit `659c48e`'s message for details.
+> 8. **Grid Expansion Tier 4 (6x6)**: a 4th `EXPANSION_BALANCE` entry (36
+>    cells, Lv20, $400k). Pure data addition -- every consumer was already
+>    written generically against the array/grid length.
+> 9. **Electricity-gating Tier-1 gasoline + Polymer Plant**: the last
+>    remaining backlog item. Gasoline production now caps its batch count
+>    by remaining electricity once a Power Plant is built (1 electricity
+>    per batch); Polymer Plant gained an `electricityPerCycle: 6` cost.
+>    Both no-op with 0 Power Plants. See commit `7d8aa03`.
 >
-> **What's next**: nothing specific has been requested yet. Known backlog
-> (don't start unprompted -- offer if asked "what's next"):
-> - Electricity-gating Tier-1 gasoline + Polymer Plant (deferred from
->   Phase 2/3 scope) -- the only remaining backlog item from the original
->   list. Touches the core gasoline-yield formula, so treat as its own
->   focused change with its own verification pass.
+> **What's next**: nothing specific has been requested yet. **The original
+> backlog list is now fully cleared** (Production Complexity Expansion
+> Phase 1-3, the plant-upgrade-output fix, mobile UI, Tank Farm storage,
+> Per-Plant Staff Assignment, Grid Expansion Tier 4, and
+> electricity-gating gasoline/Polymer Plant are all shipped -- see "What
+> got shipped" above and the "SHIPPED:" entries in "## What's NOT done /
+> known gaps" below). If the user asks "what's next" again with no
+> specific idea, there's no pre-baked answer anymore -- ask them what
+> direction they want, or suggest a fresh angle (visual polish now that
+> all 12 building types + 5 tank types exist but still render as
+> placeholder colored boxes with 2-letter codes; the "Possible follow-up
+> polish" item below; or something the user has in mind that hasn't come
+> up yet).
 > - Possible follow-up polish on Per-Plant Staff Assignment: the Building
 >   Info sheet and Staff tab work, but haven't been visually tested on a
 >   real device/simulator (this environment has none -- only `tsc` +
@@ -787,13 +803,16 @@ all passed. No formal test suite run (none exists for this codebase; the
 271-assertion suite referenced elsewhere in this doc is from an earlier
 session and may be stale -- re-verify before relying on it).
 
-**Not yet done from the original Phase 1-3 scope**: Tier-1 gasoline
-production is NOT electricity-gated (only the 3 downstream plants +
-Polymer Plant's own simple check) -- Phase 2's "ALL production buildings"
-was intentionally scoped down to avoid touching the core gasoline-yield
-formula. Polymer Plant's electricity consumption was also deferred (it has
-no `electricityPerCycle` cost, unlike the other 3 plants) for the same
-reason.
+**Update**: the gap noted below (Tier-1 gasoline and Polymer Plant not
+electricity-gated) was closed in commit `7d8aa03` -- see "SHIPPED:
+electricity-gate Tier-1 gasoline + Polymer Plant" further down. Original
+note kept for context: Tier-1 gasoline production was NOT
+electricity-gated at the time Phase 1-3 shipped (only the 3 downstream
+plants + Polymer Plant's own simple petrochemicals check) -- Phase 2's
+"ALL production buildings" was intentionally scoped down at the time to
+avoid touching the core gasoline-yield formula in the same change as
+everything else. Polymer Plant's electricity consumption was also
+deferred for the same reason.
 
 ## Per-Plant Staff Assignment + Per-Product Storage: Part A SHIPPED, Part B SHIPPED
 
@@ -967,14 +986,12 @@ risk than the reverse or combining them.
 
 
 
-- **Backlog: electricity-gate Tier-1 gasoline + Polymer Plant.** See "Not
-  yet done from the original Phase 1-3 scope" above -- Phase 2's
-  electricity throttle currently only covers the 3 original downstream
-  plants. Extending it to Tier-1 gasoline production and adding an
-  `electricityPerCycle` cost to Polymer Plant would complete the original
-  "ALL production buildings" intent, but touches the core gasoline-yield
-  formula (highest risk in the original Phase 2 description) -- do as its
-  own focused change with its own verification pass.
+- **SHIPPED: electricity-gate Tier-1 gasoline + Polymer Plant** (commit
+  `7d8aa03`). Gasoline production now caps `batchesProduced` by remaining
+  electricity (1 per batch) once >= 1 Power Plant is built; Polymer Plant
+  gained an `electricityPerCycle: 6` cost, same pattern as the other 3
+  plants. Both fully backward compatible (no-op with 0 Power Plants).
+  Verified in isolation (3 gasoline cases + 4 Polymer Plant cases).
 - **SHIPPED: Grid Expansion Tier 4 (6x6)**. Added a 4th `EXPANSION_BALANCE`
   entry: 36 cells, Lv20, $400k (commit `7827b58`). Pure data addition --
   every consumer (expandGrid, calculateDerivedStats, the expansion UI,
