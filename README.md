@@ -20,8 +20,8 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including electricity-gating gasoline/Polymer Plant (commit `7d8aa03`)
-> is committed
+> including the Hidden Event system + in-game calendar clock (commit
+> `580bb88`) is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -70,20 +70,50 @@
 >    by remaining electricity once a Power Plant is built (1 electricity
 >    per batch); Polymer Plant gained an `electricityPerCycle: 6` cost.
 >    Both no-op with 0 Power Plants. See commit `7d8aa03`.
+> 10. **In-game calendar clock**: a NEW simulated day/night cycle (1
+>     in-game day = 6 real minutes, 24-hour clock, sunrise 6:00/sunset
+>     18:00), plus free-running day-of-week (7 days) and day-of-month (30
+>     days). Deliberately independent of the existing 12-real-minute
+>     "year" used for seasonal demand/awards. New `GameClock` type +
+>     `getGameClock(tickCount)`, exposed via `derived.gameClock`. UI: a
+>     "Time" resource-bar chip + a subtle night-tint overlay. See commit
+>     `d9dca4d`.
+> 11. **Hidden Event system**: separate from Hidden Combos (building-
+>     adjacency-based) -- gated by the calendar clock above, optionally
+>     combined with an in-game condition (refinery level, money, building
+>     count). 3 reward kinds (contract/building/staff), 3 difficulty
+>     tiers (easy = hour-of-day only, recurs ~every 6 real minutes;
+>     medium = day-of-week + a light condition, ~weekly; hard = day-of-
+>     month + a harder condition, ~monthly and late-game only). Once a
+>     condition is met it stays "unlocked" (a "???" mystery card)
+>     indefinitely until the player taps to claim -- no deadline. 5
+>     example events in `data/hiddenEvents.ts`; adding more is just
+>     adding entries there. UI: a "???" `ListRow` on the Business tab
+>     (contracts), build picker (buildings -- also shows a ✨ "FREE"
+>     badge on the actual building once granted), and Staff tab (staff),
+>     plus a global "✨ Something happened..." banner (deliberately never
+>     reveals the reward, just nudges the player to go find the card).
+>     See commits `41413aa` (backend) and `580bb88` (UI).
 >
-> **What's next**: nothing specific has been requested yet. **The original
-> backlog list is now fully cleared** (Production Complexity Expansion
-> Phase 1-3, the plant-upgrade-output fix, mobile UI, Tank Farm storage,
-> Per-Plant Staff Assignment, Grid Expansion Tier 4, and
-> electricity-gating gasoline/Polymer Plant are all shipped -- see "What
-> got shipped" above and the "SHIPPED:" entries in "## What's NOT done /
-> known gaps" below). If the user asks "what's next" again with no
-> specific idea, there's no pre-baked answer anymore -- ask them what
-> direction they want, or suggest a fresh angle (visual polish now that
-> all 12 building types + 5 tank types exist but still render as
-> placeholder colored boxes with 2-letter codes; the "Possible follow-up
-> polish" item below; or something the user has in mind that hasn't come
-> up yet).
+> **What's next**: nothing specific has been requested yet. The original
+> backlog list was fully cleared (see items 1-9 above and the "SHIPPED:"
+> entries in "## What's NOT done / known gaps" below), then the user
+> requested a brand-new feature (items 10-11 above: in-game calendar
+> clock + Hidden Event system) which is now also shipped. If the user
+> asks "what's next" again with no specific idea, there's no pre-baked
+> answer -- ask them, or suggest:
+> - **Time balancing**: the user explicitly said "เดี๋ยวค่อยบาลานซ์ทีหลัง"
+>   (balance it later) about CALENDAR_BALANCE.dayLengthTicks (currently
+>   6 real minutes/day) -- they may want this tuned once they've played
+>   with it a bit (faster/slower day cycle, different sunrise/sunset
+>   hours, etc).
+> - **More Hidden Events**: only 5 example events exist right now (2
+>   easy/2 medium/1 hard, one of each reward kind). Adding more is pure
+>   data in `data/hiddenEvents.ts` -- no other code changes needed unless
+>   a genuinely new time/game condition shape or reward kind is wanted
+>   (those need a small extension to the HiddenEventTimeCondition/
+>   HiddenEventGameCondition/HiddenEventReward unions + their evaluator
+>   functions in gameCalculations.ts).
 > - Possible follow-up polish on Per-Plant Staff Assignment: the Building
 >   Info sheet and Staff tab work, but haven't been visually tested on a
 >   real device/simulator (this environment has none -- only `tsc` +
