@@ -30,7 +30,8 @@ import type { BuildingType } from '../../../src/game/types'
 import {
   CRUDE_COST,
   getBuildingEffectLines,
-  getAssignmentCapacity,
+  getCellAssignedToEmployee,
+  getEmployeeAssignedToCell,
   getProductSellPrice,
   getSeasonLabel,
   getUpgradeCost,
@@ -40,7 +41,21 @@ import {
 import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src/hooks/useGameLoop'
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
-const UPGRADEABLE: BuildingType[] = ['crudeTank', 'distillationUnit', 'productTank']
+// Keep in sync with the isUpgradeable check in useGameLoop.ts
+// upgradeBuilding() -- every building with a ...ByLevel table in
+// BUILDING_UPGRADE_BALANCE.
+const UPGRADEABLE: BuildingType[] = [
+  'crudeTank',
+  'distillationUnit',
+  'productTank',
+  'laboratory',
+  'maintenanceWorkshop',
+  'salesOffice',
+  'lubricantPlant',
+  'jetFuelPlant',
+  'petrochemicalPlant',
+  'polymerPlant',
+]
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -60,7 +75,8 @@ export default function RefineryScreen() {
     updateAutoTrade,
     activateBoost,
     adjustFeedstockPriority,
-    toggleAssignment,
+    assignEmployeeToCell,
+    unassignCell,
   } = useGame()
   const { width } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
@@ -410,7 +426,7 @@ export default function RefineryScreen() {
           if (!cell) return null
           const level = game.gridLevels[infoCell] ?? 1
           const config = BUILDINGS[cell]
-          const effectLines = getBuildingEffectLines(cell, level, game, derived)
+          const effectLines = getBuildingEffectLines(cell, level, game, derived, infoCell)
           const isUpgradeable = UPGRADEABLE.includes(cell)
           const maxed = level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
           const upgradeCost =
@@ -418,14 +434,24 @@ export default function RefineryScreen() {
               ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
               : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
           const plant = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
-          const specialistType = plant?.specialistWorker
+          // polymerPlant isn't in PLANT_PRODUCTION (standalone production
+          // block, see useGameLoop.ts) but still has a specialist worker.
+          const specialistType = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker
           const specialistName = specialistType
             ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType
             : null
-          const capacity = specialistType ? getAssignmentCapacity(derived.buildingCounts, specialistType) : 0
-          const assignedIds = specialistType ? game.assignments[specialistType] ?? [] : []
+          // Per-Plant Staff Assignment (design doc Part A): this section
+          // is about ONE specific cell (infoCell), not a shared pool.
+          // assignedEmployee is whoever's on THIS tile, if anyone;
+          // eligibleEmployees is every hired employee of the matching
+          // type who ISN'T currently assigned anywhere else (so this list
+          // doubles as "available to assign" -- someone already on
+          // another plant has to be unassigned there first).
+          const assignedEmployee = specialistType ? getEmployeeAssignedToCell(game, infoCell) : null
           const eligibleEmployees = specialistType
-            ? game.employees.filter((e) => e.type === specialistType)
+            ? game.employees.filter(
+                (e) => e.type === specialistType && getCellAssignedToEmployee(game, e.id) === null,
+              )
             : []
 
           return (
@@ -457,33 +483,38 @@ export default function RefineryScreen() {
               {specialistType && (
                 <>
                   <Text style={styles.infoSectionTitle}>
-                    {specialistName} assignment ({Math.min(assignedIds.length, capacity)}/{capacity})
+                    {specialistName} assigned to this plant
                   </Text>
-                  <Text style={styles.infoHint}>
-                    Shared pool across all {capacity} {config.name.en}
-                    {capacity > 1 ? 's' : ''} -- assigning here boosts their combined output, not just
-                    this tile.
-                  </Text>
-                  {eligibleEmployees.length === 0 && (
+                  {assignedEmployee ? (
+                    <ListRow
+                      title={assignedEmployee.name}
+                      subtitle={`Lv${assignedEmployee.level}${assignedEmployee.trait === 'veteran' ? ' · Veteran' : ''}`}
+                      badge="ASSIGNED"
+                      actionLabel="Unassign"
+                      onPress={() => unassignCell(infoCell)}
+                    />
+                  ) : (
                     <Text style={styles.infoHint}>
-                      Hire a {specialistName} from the Staff tab to assign here.
+                      No one assigned -- pick a {specialistName} below to boost THIS plant's
+                      output (not other {config.name.en}s).
                     </Text>
                   )}
-                  {eligibleEmployees.map((employee) => {
-                    const assigned = assignedIds.includes(employee.id)
-                    const full = !assigned && assignedIds.length >= capacity
-                    return (
+                  {!assignedEmployee && eligibleEmployees.length === 0 && (
+                    <Text style={styles.infoHint}>
+                      Hire a {specialistName} from the Staff tab to assign here, or unassign one
+                      from another plant first.
+                    </Text>
+                  )}
+                  {!assignedEmployee &&
+                    eligibleEmployees.map((employee) => (
                       <ListRow
                         key={employee.id}
                         title={employee.name}
                         subtitle={`Lv${employee.level}${employee.trait === 'veteran' ? ' · Veteran' : ''}`}
-                        badge={assigned ? 'ASSIGNED' : undefined}
-                        actionLabel={assigned ? 'Unassign' : 'Assign'}
-                        disabled={full}
-                        onPress={() => toggleAssignment(employee.id, employee.type)}
+                        actionLabel="Assign"
+                        onPress={() => assignEmployeeToCell(employee.id, infoCell)}
                       />
-                    )
-                  })}
+                    ))}
                 </>
               )}
             </>

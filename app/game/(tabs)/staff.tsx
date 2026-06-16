@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -11,8 +12,8 @@ import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
-import { getAssignmentCapacity, getTrainingCost, TICK_MS } from '../../../src/game/utils/gameCalculations'
-import type { RecruitmentTier, WorkerType } from '../../../src/game/types'
+import { getCellAssignedToEmployee, getTrainingCost, TICK_MS } from '../../../src/game/utils/gameCalculations'
+import type { BuildingType, RecruitmentTier, WorkerType } from '../../../src/game/types'
 
 const TIER_BADGES: Record<RecruitmentTier, string> = {
   rookie: '',
@@ -29,18 +30,25 @@ const TIER_BORDER_COLORS: Record<RecruitmentTier, string> = {
 }
 
 // Worker types that can be assigned to a specific plant for a specialist
-// output bonus (see PLANT_PRODUCTION.specialistWorker).
-const SPECIALIST_TYPES: WorkerType[] = PLANT_PRODUCTION.map((p) => p.specialistWorker).filter(
-  (t): t is 'aviationSpecialist' | 'chemicalEngineer' => !!t,
-)
+// output bonus (see PLANT_PRODUCTION.specialistWorker). polymerEngineer
+// is added manually since Polymer Plant is a standalone production block,
+// not part of PLANT_PRODUCTION (see useGameLoop.ts).
+const SPECIALIST_TYPES: WorkerType[] = [
+  ...PLANT_PRODUCTION.map((p) => p.specialistWorker).filter(
+    (t): t is 'aviationSpecialist' | 'chemicalEngineer' => !!t,
+  ),
+  'polymerEngineer',
+]
 
-// e.g. { aviationSpecialist: 'Jet Fuel Plant', chemicalEngineer: 'Petrochemical Plant' }
-const SPECIALIST_PLANT_NAME: Partial<Record<WorkerType, string>> = Object.fromEntries(
-  PLANT_PRODUCTION.filter((p) => p.specialistWorker).map((p) => [
-    p.specialistWorker as WorkerType,
-    BUILDINGS[p.buildingKey].name.en,
-  ]),
-)
+// Worker type -> the building it can be assigned to. e.g.
+// { aviationSpecialist: 'jetFuelPlant', chemicalEngineer: 'petrochemicalPlant',
+//   polymerEngineer: 'polymerPlant' }
+const SPECIALIST_BUILDING: Partial<Record<WorkerType, BuildingType>> = {
+  ...Object.fromEntries(
+    PLANT_PRODUCTION.filter((p) => p.specialistWorker).map((p) => [p.specialistWorker as WorkerType, p.buildingKey]),
+  ),
+  polymerEngineer: 'polymerPlant',
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -52,9 +60,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function StaffScreen() {
-  const { game, loaded, derived, hireCandidate, refreshRecruitmentPool, trainEmployee, toggleAssignment } = useGame()
+  const { game, loaded, derived, hireCandidate, refreshRecruitmentPool, trainEmployee, assignEmployeeToCell, unassignCell } =
+    useGame()
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
+  // Per-Plant Staff Assignment: which employee's cell-picker is currently
+  // open (tapping "Assign" reveals a list of that worker type's plant
+  // instances to choose from, since assignment is now per-cell, not a
+  // pool toggle). null = no picker open.
+  const [pickerEmployeeId, setPickerEmployeeId] = useState<string | null>(null)
 
   if (!loaded || !game || !derived) {
     return (
@@ -64,7 +78,6 @@ export default function StaffScreen() {
     )
   }
 
-  const buildingCounts = derived.buildingCounts
   const refreshCost = getManualRefreshCost(game.refineryLevel)
   const canManualRefresh = game.money >= refreshCost
   const refreshSecondsLeft = Math.max(
@@ -151,8 +164,18 @@ export default function StaffScreen() {
             const cost = getTrainingCost(employee.level)
             const canTrain = !maxed && game.money >= cost.money && game.researchPoints >= cost.rp
             const isSpecialist = SPECIALIST_TYPES.includes(employee.type)
-            const assigned = (game.assignments[employee.type] ?? []).includes(employee.id)
-            const capacity = getAssignmentCapacity(buildingCounts, employee.type)
+            const assignedCellIndex = getCellAssignedToEmployee(game, employee.id)
+            const buildingKey = SPECIALIST_BUILDING[employee.type]
+            // All grid cells matching this worker's plant type, in grid
+            // order, numbered #1/#2/... for display -- this is the list
+            // the picker shows when "Assign" is tapped.
+            const eligibleCells = buildingKey
+              ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, cellIndex) => {
+                  if (cell === buildingKey) acc.push({ cellIndex, label: `${BUILDINGS[buildingKey].name.en} #${acc.length + 1}` })
+                  return acc
+                }, [])
+              : []
+            const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
 
             return (
               <View key={employee.id} style={styles.employeeCard}>
@@ -185,21 +208,55 @@ export default function StaffScreen() {
                   </AnimatedPressable>
                   {isSpecialist && (
                     <Pressable
-                      disabled={!assigned && (game.assignments[employee.type]?.length ?? 0) >= capacity}
-                      onPress={() => toggleAssignment(employee.id, employee.type)}
+                      disabled={eligibleCells.length === 0}
+                      onPress={() => {
+                        if (assignedCellIndex !== null) {
+                          unassignCell(assignedCellIndex)
+                          setPickerEmployeeId(null)
+                        } else {
+                          setPickerEmployeeId(pickerEmployeeId === employee.id ? null : employee.id)
+                        }
+                      }}
                       style={[
                         styles.smallButton,
-                        assigned ? styles.smallButtonActive : styles.smallButtonDisabled,
+                        assignedCellIndex !== null ? styles.smallButtonActive : styles.smallButtonDisabled,
                       ]}
                     >
                       <Text style={styles.smallButtonLabel}>
-                        {assigned
-                          ? `Assigned · ${SPECIALIST_PLANT_NAME[employee.type] ?? ''}`
-                          : `Assign to ${SPECIALIST_PLANT_NAME[employee.type] ?? ''} (${(game.assignments[employee.type]?.length ?? 0)}/${capacity})`}
+                        {assignedCellIndex !== null
+                          ? `Assigned · ${assignedLabel ?? ''} (tap to unassign)`
+                          : eligibleCells.length === 0
+                            ? `No ${BUILDINGS[buildingKey!]?.name.en ?? ''} built yet`
+                            : 'Assign to a plant...'}
                       </Text>
                     </Pressable>
                   )}
                 </View>
+                {pickerEmployeeId === employee.id && assignedCellIndex === null && (
+                  <View style={styles.cellPicker}>
+                    {eligibleCells.map(({ cellIndex, label }) => {
+                      const occupant = game.employees.find(
+                        (e) => getCellAssignedToEmployee(game, e.id) === cellIndex,
+                      )
+                      return (
+                        <Pressable
+                          key={cellIndex}
+                          onPress={() => {
+                            assignEmployeeToCell(employee.id, cellIndex)
+                            setPickerEmployeeId(null)
+                            haptics.confirm()
+                          }}
+                          style={styles.cellPickerOption}
+                        >
+                          <Text style={styles.cellPickerOptionLabel}>
+                            {label}
+                            {occupant ? ` (currently: ${occupant.name})` : ''}
+                          </Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                )}
               </View>
             )
           })}
@@ -324,6 +381,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  cellPicker: {
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamBorder,
+    paddingTop: spacing.xs,
+    gap: 4,
+  },
+  cellPickerOption: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.cream,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.creamBorder,
+  },
+  cellPickerOptionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.ink,
   },
   smallButton: {
     borderRadius: radii.sm,

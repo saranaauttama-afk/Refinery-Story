@@ -349,35 +349,56 @@ export function createNewEmployee(employees: Employee[], type: WorkerType): Empl
   }
 }
 
-// --- Individual Staff Phase 3: specialist plant assignments ---
+// --- Per-Plant Staff Assignment (design doc Part A) ---
 
-// How many specialist slots a plant has = how many of that building exist.
-// Returns 0 for worker types that aren't a plant specialist.
+// How many specialist slots a plant TYPE has in total = how many of that
+// building exist on the grid. Used for "X total slots" display purposes
+// (e.g. Staff tab); the actual assign/unassign action is per-cell, not
+// against this aggregate.
 export function getAssignmentCapacity(buildingCounts: BuildingCounts, type: WorkerType): number {
   const plant = PLANT_PRODUCTION.find((p) => p.specialistWorker === type)
-  return plant ? buildingCounts[plant.buildingKey] : 0
+  if (plant) return buildingCounts[plant.buildingKey]
+  if (type === 'polymerEngineer') return buildingCounts.polymerPlant
+  return 0
 }
 
-// Specialist output multiplier for one plant config, based on ASSIGNED
-// employees only (capped at plantCount slots). Each assigned employee
-// contributes specialistBonusRate * their OWN effectiveness multiplier —
-// unassigned specialists of that type contribute nothing. Replaces the old
-// flat `1 + workerCounts[type] * rate`.
-export function getSpecialistMultiplier(
+// The employee assigned to a specific grid cell, if any. Returns null if
+// the cell has no assignment, or if the assigned id doesn't match a live
+// employee (defensive -- shouldn't happen, but a stale id is better
+// treated as "no one assigned" than crashing).
+export function getEmployeeAssignedToCell(game: GameState, cellIndex: number): Employee | null {
+  const employeeId = game.assignments[cellIndex]
+  if (!employeeId) return null
+  return game.employees.find((e) => e.id === employeeId) ?? null
+}
+
+// The cellIndex (if any) a given employee is currently assigned to. Used
+// by the Staff tab ("Assigned: Petrochemical Plant #2" / "Unassigned")
+// and to enforce "1 employee = at most 1 cell" when assigning elsewhere.
+export function getCellAssignedToEmployee(game: GameState, employeeId: string): number | null {
+  for (const [cellIndex, id] of Object.entries(game.assignments)) {
+    if (id === employeeId) return Number(cellIndex)
+  }
+  return null
+}
+
+// Specialist output multiplier for ONE plant cell, based on whichever
+// single employee (if any) is assigned to that specific cellIndex. This
+// is the per-cell replacement for the old pool-based getSpecialistMultiplier
+// -- 1 assigned specialist now only ever boosts the ONE cell they're
+// assigned to, not every plant of that type (see design doc Part A for
+// why the old aggregate model was an economy-breaking scaling problem).
+export function getSpecialistMultiplierForCell(
   game: GameState,
+  cellIndex: number,
   specialistWorker: WorkerType | undefined,
   specialistBonusRate: number | undefined,
-  plantCount: number,
 ): number {
   if (!specialistWorker || !specialistBonusRate) return 1
-  const assignedIds = (game.assignments[specialistWorker] ?? []).slice(0, plantCount)
-  const bonus = assignedIds.reduce((sum, id) => {
-    const employee = game.employees.find(
-      (e) => e.id === id && e.type === specialistWorker,
-    )
-    return employee ? sum + getEmployeeMultiplier(employee) * specialistBonusRate! : sum
-  }, 0)
-  return 1 + bonus
+  const employee = getEmployeeAssignedToCell(game, cellIndex)
+  if (!employee || employee.type !== specialistWorker) return 1
+  return 1 + getEmployeeMultiplier(employee) * specialistBonusRate
+
 }
 
 // One line of "what does this tile do right now" info, for the Building
@@ -398,6 +419,7 @@ export function getBuildingEffectLines(
   level: number,
   game: GameState,
   derived: DerivedStats,
+  cellIndex: number,
 ): BuildingEffectLine[] {
   switch (cell) {
     case 'crudeTank':
@@ -436,31 +458,33 @@ export function getBuildingEffectLines(
     case 'petrochemicalPlant': {
       const plant = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
       if (!plant) return []
-      const plantCount = derived.buildingCounts[cell]
       const seconds = (plant.intervalTicks * TICK_MS) / 1000
       const base = plant.outputPerCycle
-      const specialistMultiplier = getSpecialistMultiplier(game, plant.specialistWorker, plant.specialistBonusRate, plantCount)
-      const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(derived, plant.buildingKey)
-      const boosted = Math.round(base * specialistMultiplier * outputUpgradeMultiplier)
+      const specialistMultiplier = getSpecialistMultiplierForCell(
+        game,
+        cellIndex,
+        plant.specialistWorker,
+        plant.specialistBonusRate,
+      )
+      const levelMultiplier = getCellLevelMultiplier(level, cell)
+      const boosted = Math.round(base * specialistMultiplier * levelMultiplier)
       const bonusAmount = boosted - base
       let bonus: string | undefined
       if (bonusAmount > 0) {
         const parts: string[] = []
-        if (plant.specialistWorker) {
-          const assignedCount = (game.assignments[plant.specialistWorker] ?? []).slice(0, plantCount).length
-          if (assignedCount > 0) {
-            const specialistName = WORKERS.find((w) => w.key === plant.specialistWorker)?.name.en ?? 'specialist'
-            parts.push(`${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''}`)
-          }
+        const assignedEmployee = getEmployeeAssignedToCell(game, cellIndex)
+        if (plant.specialistWorker && assignedEmployee?.type === plant.specialistWorker) {
+          const specialistName = WORKERS.find((w) => w.key === plant.specialistWorker)?.name.en ?? 'specialist'
+          parts.push(`assigned ${specialistName}`)
         }
-        if (outputUpgradeMultiplier > 1) {
-          parts.push('plant level upgrades')
+        if (levelMultiplier > 1) {
+          parts.push('this plant\'s level upgrades')
         }
         bonus = `(+${bonusAmount} from ${parts.join(' + ')})`
       }
       const line: BuildingEffectLine = {
-        label: 'Output per plant',
-        value: `${base} ${plant.productKey} / ${seconds}s`,
+        label: 'Output from this plant',
+        value: `${boosted} ${plant.productKey} / ${seconds}s`,
         bonus,
       }
 
@@ -496,7 +520,7 @@ export function getBuildingEffectLines(
         const electricitySupplyPerCycle = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
         const electricityLine: BuildingEffectLine = {
           label: 'Electricity demand (this plant)',
-          value: `${plantCount * plant.electricityPerCycle} / ${seconds}s`,
+          value: `${plant.electricityPerCycle} / ${seconds}s`,
         }
         if (derived.electricityDemandPerCycle > electricitySupplyPerCycle) {
           const pct = Math.round((electricitySupplyPerCycle / derived.electricityDemandPerCycle) * 100)
@@ -537,31 +561,31 @@ export function getBuildingEffectLines(
       const plantCount = derived.buildingCounts.polymerPlant
       const seconds = (POLYMER_PLANT_BALANCE.intervalTicks * TICK_MS) / 1000
       const base = POLYMER_PLANT_BALANCE.plasticPelletsPerCycle
-      const specialistMultiplier = getSpecialistMultiplier(
+      const specialistMultiplier = getSpecialistMultiplierForCell(
         game,
+        cellIndex,
         'polymerEngineer',
         BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
-        plantCount,
       )
-      const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(derived, 'polymerPlant')
-      const boosted = Math.round(base * specialistMultiplier * outputUpgradeMultiplier)
+      const levelMultiplier = getCellLevelMultiplier(level, 'polymerPlant')
+      const boosted = Math.round(base * specialistMultiplier * levelMultiplier)
       const bonusAmount = boosted - base
       let bonus: string | undefined
       if (bonusAmount > 0) {
         const parts: string[] = []
-        const assignedCount = (game.assignments.polymerEngineer ?? []).slice(0, plantCount).length
-        if (assignedCount > 0) {
+        const assignedEmployee = getEmployeeAssignedToCell(game, cellIndex)
+        if (assignedEmployee?.type === 'polymerEngineer') {
           const specialistName = WORKERS.find((w) => w.key === 'polymerEngineer')?.name.en ?? 'Polymer Engineer'
-          parts.push(`${assignedCount} ${specialistName}${assignedCount > 1 ? 's' : ''}`)
+          parts.push(`assigned ${specialistName}`)
         }
-        if (outputUpgradeMultiplier > 1) {
-          parts.push('plant level upgrades')
+        if (levelMultiplier > 1) {
+          parts.push('this plant\'s level upgrades')
         }
         bonus = `(+${bonusAmount} from ${parts.join(' + ')})`
       }
       const line: BuildingEffectLine = {
-        label: 'Output per plant',
-        value: `${base} plasticPellets / ${seconds}s`,
+        label: 'Output from this plant',
+        value: `${boosted} plasticPellets / ${seconds}s`,
         bonus,
       }
       const inputLine: BuildingEffectLine = {
@@ -640,26 +664,66 @@ export function getBuildingEffectLines(
 // score down; safetyOfficer staff (scaled by their own effectiveness, incl.
 // level/veteran) pull it up. Net can be positive or negative depending on
 // how a player has built. Caller clamps to [minScore, maxScore].
-// Production Complexity Expansion: maps a PLANT_PRODUCTION buildingKey to
-// its summed per-instance output-upgrade multiplier (see
-// ...OutputBonusRateByLevel in BUILDING_UPGRADE_BALANCE and the per-cell
-// loop above). Used by the downstream-plants loop alongside the
-// specialist multiplier.
-export function getPlantOutputUpgradeMultiplier(
-  derived: DerivedStats,
-  buildingKey: 'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant' | 'polymerPlant',
-): number {
-  switch (buildingKey) {
-    case 'lubricantPlant':
-      return derived.lubricantPlantOutputMultiplier
-    case 'jetFuelPlant':
-      return derived.jetFuelPlantOutputMultiplier
-    case 'petrochemicalPlant':
-      return derived.petrochemicalPlantOutputMultiplier
-    case 'polymerPlant':
-      return derived.polymerPlantOutputMultiplier
-  }
+// Per-Plant Staff Assignment (design doc Part A): per-cell level-upgrade
+// multiplier, replacing the old "summed across all instances" version.
+// Direct lookup against that ONE cell's own gridLevels entry -- a Lv2
+// plant gets ×1.25 regardless of what level any other plant of the same
+// type is at. (The old getPlantOutputUpgradeMultiplier summed
+// ...OutputBonusRateByLevel[level] across every cell of a buildingKey,
+// which was correct for the old aggregate tick-loop model but not for
+// per-cell computation -- see design doc for why.)
+function getCellLevelMultiplier(level: number, buildingKey: BuildingType): number {
+  const byLevel = (() => {
+    switch (buildingKey) {
+      case 'lubricantPlant':
+        return BUILDING_UPGRADE_BALANCE.lubricantPlantOutputBonusRateByLevel
+      case 'jetFuelPlant':
+        return BUILDING_UPGRADE_BALANCE.jetFuelPlantOutputBonusRateByLevel
+      case 'petrochemicalPlant':
+        return BUILDING_UPGRADE_BALANCE.petrochemicalPlantOutputBonusRateByLevel
+      case 'polymerPlant':
+        return BUILDING_UPGRADE_BALANCE.polymerPlantOutputBonusRateByLevel
+      default:
+        return undefined
+    }
+  })()
+  if (!byLevel) return 1
+  return 1 + (byLevel[level] ?? 0)
 }
+
+// Total output-per-cycle for ALL cells of one plant buildingKey, summing
+// each cell's own (base output * that cell's level multiplier * that
+// cell's assigned-specialist multiplier). This is the per-cell
+// replacement for the old aggregate `plantCount * outputPerCycle *
+// specialistMultiplier * outputUpgradeMultiplier` formula -- a Lv3 plant
+// with a high-level specialist assigned now contributes much more than a
+// Lv1 plant with no one assigned, rather than every plant of that type
+// getting the same blended bonus. Returns 0 if the buildingKey isn't
+// found on the grid at all (defensive; callers should already know
+// plantCount > 0 before calling this).
+export function getTotalCellOutput(
+  game: GameState,
+  buildingKey: 'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant' | 'polymerPlant',
+  baseOutputPerCycle: number,
+  specialistWorker: WorkerType | undefined,
+  specialistBonusRate: number | undefined,
+): number {
+  let total = 0
+  for (let cellIndex = 0; cellIndex < game.grid.length; cellIndex++) {
+    if (game.grid[cellIndex] !== buildingKey) continue
+    const level = game.gridLevels[cellIndex] ?? 1
+    const levelMultiplier = getCellLevelMultiplier(level, buildingKey)
+    const specialistMultiplier = getSpecialistMultiplierForCell(
+      game,
+      cellIndex,
+      specialistWorker,
+      specialistBonusRate,
+    )
+    total += baseOutputPerCycle * levelMultiplier * specialistMultiplier
+  }
+  return total
+}
+
 
 // Tank Farm (Per-Product Storage, design doc Part B): maps a
 // PLANT_PRODUCTION productKey to its current maxStorage (base +
@@ -995,13 +1059,6 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   let laboratoryRpBonusTotal = 0
   let workshopPenaltyMultiplier = 1
   let salesOfficeContractBonusTotal = 0
-  // Production Complexity Expansion: per-plant-type output bonus, summed
-  // across all instances of that building (same pattern as
-  // distillationUpgradeBonusRate).
-  let lubricantPlantOutputBonusRate = 0
-  let jetFuelPlantOutputBonusRate = 0
-  let petrochemicalPlantOutputBonusRate = 0
-  let polymerPlantOutputBonusRate = 0
   for (let i = 0; i < game.grid.length; i++) {
     const cell = game.grid[i]
     if (!cell) continue
@@ -1022,24 +1079,9 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     } else if (cell === 'salesOffice') {
       salesOfficeContractBonusTotal +=
         BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1
-    } else if (cell === 'lubricantPlant') {
-      lubricantPlantOutputBonusRate += BUILDING_UPGRADE_BALANCE.lubricantPlantOutputBonusRateByLevel[level] ?? 0
-    } else if (cell === 'jetFuelPlant') {
-      jetFuelPlantOutputBonusRate += BUILDING_UPGRADE_BALANCE.jetFuelPlantOutputBonusRateByLevel[level] ?? 0
-    } else if (cell === 'petrochemicalPlant') {
-      petrochemicalPlantOutputBonusRate +=
-        BUILDING_UPGRADE_BALANCE.petrochemicalPlantOutputBonusRateByLevel[level] ?? 0
-    } else if (cell === 'polymerPlant') {
-      polymerPlantOutputBonusRate += BUILDING_UPGRADE_BALANCE.polymerPlantOutputBonusRateByLevel[level] ?? 0
     }
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
-  // Production Complexity Expansion: per-plant-type output multipliers from
-  // building-level upgrades (1 = no bonus, matches pre-upgrade behavior).
-  const lubricantPlantOutputMultiplier = 1 + lubricantPlantOutputBonusRate
-  const jetFuelPlantOutputMultiplier = 1 + jetFuelPlantOutputBonusRate
-  const petrochemicalPlantOutputMultiplier = 1 + petrochemicalPlantOutputBonusRate
-  const polymerPlantOutputMultiplier = 1 + polymerPlantOutputBonusRate
 
   // --- Process chain: feedstock storage + distillation output ---
   // Feedstock cap scales with how much distillation capacity you've built.
@@ -1304,10 +1346,6 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     maxPetrochemicalsStorage,
     maxRecycledMaterialStorage,
     maxPlasticPelletsStorage,
-    lubricantPlantOutputMultiplier,
-    jetFuelPlantOutputMultiplier,
-    petrochemicalPlantOutputMultiplier,
-    polymerPlantOutputMultiplier,
     maxElectricityStorage,
     electricityDemandPerCycle,
     feedstockPerDistillationCycle,

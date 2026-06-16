@@ -81,11 +81,16 @@ export type GameState = {
   // hired worker, in hire order. Invariant: for every WorkerType,
   // employees.filter(e => e.type === type).length === workerCounts[type].
   employees: Employee[]
-  // Individual Staff Phase 3: employee IDs assigned to plant-specialist
-  // roles, keyed by WorkerType ('aviationSpecialist' -> jetFuelPlant,
-  // 'chemicalEngineer' -> petrochemicalPlant). Capacity = that plant's
-  // building count. Unassigned specialists contribute no plant bonus.
-  assignments: Partial<Record<WorkerType, string[]>>
+  // Per-Plant Staff Assignment (design doc Part A, replaces the old
+  // shared-pool model): maps a grid cellIndex -> the employeeId assigned
+  // to that specific plant instance. An employee can be assigned to at
+  // most 1 cell; a cell can have at most 1 assigned employee. Only cells
+  // whose building has a specialistWorker (jetFuelPlant ->
+  // aviationSpecialist, petrochemicalPlant -> chemicalEngineer,
+  // polymerPlant -> polymerEngineer) are valid keys -- enforced by the
+  // assignEmployeeToCell action, not by the type. Unassigned plants (no
+  // entry for that cellIndex) get no specialist bonus.
+  assignments: Record<number, string>
   // Mobile-only: recruitment pool ("3 candidates apply, pick one" hiring
   // flow). See data/recruitment.ts. recruitmentRefreshAt is the tickCount
   // at which the whole pool auto-refreshes; recruitmentNameCounter is a
@@ -524,13 +529,6 @@ export type DerivedStats = {
   maxPetrochemicalsStorage: number
   maxRecycledMaterialStorage: number
   maxPlasticPelletsStorage: number
-  // Production Complexity Expansion: per-plant-type output multipliers
-  // from building-level upgrades, applied alongside the specialist
-  // multiplier in the downstream-plants loop and the Polymer Plant block.
-  lubricantPlantOutputMultiplier: number
-  jetFuelPlantOutputMultiplier: number
-  petrochemicalPlantOutputMultiplier: number
-  polymerPlantOutputMultiplier: number
   maxElectricityStorage: number
   electricityDemandPerCycle: number
   feedstockPerDistillationCycle: number

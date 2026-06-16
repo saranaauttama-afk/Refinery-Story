@@ -12,7 +12,6 @@ import type {
   ResearchItem,
   StandingOrderKey,
   WorkerConfig,
-  WorkerType,
 } from '../game/types'
 import {
   applyChoiceEventOption,
@@ -31,17 +30,16 @@ import {
   addLog,
   createInitialGameState,
   createNewEmployee,
-  getAssignmentCapacity,
   getDemandShiftDelta,
   getEsgDrift,
-  getPlantOutputUpgradeMultiplier,
   getProductMaxStorage,
+  getTotalCellOutput,
   getWasteGeneratedPerTick,
   getWasteOverflowEsgPenalty,
   getNewlyDiscoveredCombos,
   getProductSellPrice,
   getRandomEvent,
-  getSpecialistMultiplier,
+  getSpecialistMultiplierForCell,
   getTrainingCost,
   getUpgradeCost,
   getUpgradeProductionRequirement,
@@ -328,19 +326,14 @@ export function tick(current: GameState): GameState {
       const petrochemicalsNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle
       const plasticPelletsSpace = stats.maxPlasticPelletsStorage - productInventory.plasticPellets
       if (productInventory.petrochemicals >= petrochemicalsNeeded && plasticPelletsSpace > 0) {
-        const specialistMultiplier = getSpecialistMultiplier(
+        const totalOutput = getTotalCellOutput(
           current,
+          'polymerPlant',
+          POLYMER_PLANT_BALANCE.plasticPelletsPerCycle,
           'polymerEngineer',
           BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
-          polymerPlantCount,
         )
-        const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(stats, 'polymerPlant')
-        const produced = Math.min(
-          Math.round(
-            polymerPlantCount * POLYMER_PLANT_BALANCE.plasticPelletsPerCycle * specialistMultiplier * outputUpgradeMultiplier,
-          ),
-          plasticPelletsSpace,
-        )
+        const produced = Math.min(Math.round(totalOutput), plasticPelletsSpace)
         if (produced > 0) {
           productInventory = {
             ...productInventory,
@@ -424,12 +417,15 @@ export function tick(current: GameState): GameState {
     const combinedSufficient = sufficient && electricitySufficient
 
     for (const plant of eligiblePlants) {
-      const plantCount = stats.buildingCounts[plant.buildingKey]
       const productSpace = getProductMaxStorage(stats, plant.productKey) - productInventory[plant.productKey]
-      const specialistMultiplier = getSpecialistMultiplier(current, plant.specialistWorker, plant.specialistBonusRate, plantCount)
-      const outputUpgradeMultiplier = getPlantOutputUpgradeMultiplier(stats, plant.buildingKey)
       const priority = current.feedstockPriority[plant.buildingKey] ?? 1
-      const normalOutput = plantCount * plant.outputPerCycle * specialistMultiplier * outputUpgradeMultiplier
+      const normalOutput = getTotalCellOutput(
+        current,
+        plant.buildingKey,
+        plant.outputPerCycle,
+        plant.specialistWorker,
+        plant.specialistBonusRate,
+      )
       // Full share: round as before (preserves old behavior exactly when
       // both feedstock and electricity are sufficient). Reduced share:
       // floor of (normal output * priority * combinedShareRatio), capped
@@ -1000,22 +996,41 @@ export function useGameLoop() {
     [update],
   )
 
-  const toggleAssignment = useCallback(
-    (employeeId: string, type: WorkerType) =>
+  // Per-Plant Staff Assignment (design doc Part A): assigns an employee to
+  // a SPECIFIC grid cell, not a worker-type pool. Validates the cell holds
+  // a building whose specialistWorker matches the employee's type
+  // (including polymerEngineer -> polymerPlant, which isn't in
+  // PLANT_PRODUCTION). Enforces "1 employee = at most 1 cell" by clearing
+  // any previous assignment for this employee, and "1 cell = at most 1
+  // employee" by overwriting whatever was on the target cell.
+  const assignEmployeeToCell = useCallback(
+    (employeeId: string, cellIndex: number) =>
       update((current) => {
-        const employee = current.employees.find((e) => e.id === employeeId && e.type === type)
+        const employee = current.employees.find((e) => e.id === employeeId)
         if (!employee) return current
-        const capacity = getAssignmentCapacity(calculateDerivedStats(current).buildingCounts, type)
-        const list = current.assignments[type] ?? []
-        const isAssigned = list.includes(employeeId)
-        let nextList: string[]
-        if (isAssigned) {
-          nextList = list.filter((id) => id !== employeeId)
-        } else {
-          if (list.length >= capacity) return current
-          nextList = [...list, employeeId]
+        const cell = current.grid[cellIndex]
+        if (!cell) return current
+        const expectedWorker =
+          cell === 'polymerPlant' ? 'polymerEngineer' : PLANT_PRODUCTION.find((p) => p.buildingKey === cell)?.specialistWorker
+        if (expectedWorker !== employee.type) return current
+        const nextAssignments = { ...current.assignments }
+        // Clear this employee's previous cell, if any.
+        for (const key of Object.keys(nextAssignments)) {
+          if (nextAssignments[Number(key)] === employeeId) delete nextAssignments[Number(key)]
         }
-        return { ...current, assignments: { ...current.assignments, [type]: nextList } }
+        nextAssignments[cellIndex] = employeeId
+        return { ...current, assignments: nextAssignments }
+      }),
+    [update],
+  )
+
+  const unassignCell = useCallback(
+    (cellIndex: number) =>
+      update((current) => {
+        if (!(cellIndex in current.assignments)) return current
+        const nextAssignments = { ...current.assignments }
+        delete nextAssignments[cellIndex]
+        return { ...current, assignments: nextAssignments }
       }),
     [update],
   )
@@ -1130,7 +1145,8 @@ export function useGameLoop() {
     activateBoost,
     adjustFeedstockPriority,
     trainEmployee,
-    toggleAssignment,
+    assignEmployeeToCell,
+    unassignCell,
     produceAsphalt,
     fulfillStandingOrder,
     buyShipment,

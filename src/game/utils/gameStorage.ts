@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import type {
   AwardRecord,
   BilingualTextValue,
+  BuildingType,
   Employee,
   GameState,
   PendingShipment,
@@ -13,7 +14,7 @@ import type {
   YearStats,
 } from '../types'
 import { text } from '../translations'
-import { countBuildings, createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
+import { createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
 import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { getStaffName } from '../data/staffNames'
@@ -199,40 +200,84 @@ function clampLevel(level: number): number {
   return Math.max(1, Math.min(5, Math.floor(level)))
 }
 
-// Individual Staff Phase 3: sanitize plant-specialist assignments. For each
-// specialist worker type (aviationSpecialist -> jetFuelPlant,
-// chemicalEngineer -> petrochemicalPlant): keep only valid employee IDs of
-// the correct type, capped at plant capacity. If the saved list is empty but
-// employees of that type exist (old saves, or saves from before this
-// feature), auto-assign in hire order up to capacity — keeps existing saves
-// productive rather than a sudden cliff to zero specialist bonus.
+// Per-Plant Staff Assignment (design doc Part A): sanitize the per-cell
+// assignments map. Two cases:
+//  - New-shape save: value.assignments is already Record<cellIndex,
+//    employeeId> (an object with numeric-string keys, not arrays). Keep
+//    only entries where the cellIndex actually holds a building matching
+//    the employee's specialistWorker type, the employee exists and is the
+//    right type, and no employee or cell is reused (first occurrence wins
+//    if a save was somehow corrupted into claiming one employee for two
+//    cells, or one cell for two employees).
+//  - Old-shape save (pool: Partial<Record<WorkerType, string[]>>, arrays
+//    keyed by worker type) or no assignments field: migrate. For each
+//    specialist worker type, walk that type's matching buildingKey's
+//    cells in grid order and assign the pooled employee IDs to the first
+//    N cells (N = however many were in the pool, capped at the cell
+//    count). This roughly preserves "total assigned bonus was spread
+//    across N plants" -> "N specific plants now have 1 assignee each",
+//    though the SPECIFIC cell-to-employee pairing is arbitrary (grid
+//    order) since the old model had no per-cell information to preserve.
+//    If the pool was empty but employees of that type exist (very old
+//    saves, from before specialist assignment existed at all), auto-fill
+//    by hire order up to the cell count -- keeps existing saves productive
+//    rather than a sudden cliff to zero specialist bonus.
 function getSafeAssignments(
   value: unknown,
   employees: Employee[],
   grid: GameState['grid'],
-): Partial<Record<WorkerType, string[]>> {
-  const buildingCounts = countBuildings(grid)
+): Record<number, string> {
   const raw = isRecord(value) ? value.assignments : undefined
-  const result: Partial<Record<WorkerType, string[]>> = {}
+  const result: Record<number, string> = {}
+  const usedEmployeeIds = new Set<string>()
 
+  // Map each specialist worker type -> its plant's buildingKey. polymerEngineer
+  // isn't in PLANT_PRODUCTION (Polymer Plant is a standalone production
+  // block, see useGameLoop.ts) so it's added explicitly.
+  const specialistBuildingKey: Partial<Record<WorkerType, BuildingType>> = {
+    polymerEngineer: 'polymerPlant',
+  }
   for (const plant of PLANT_PRODUCTION) {
-    const type = plant.specialistWorker
-    if (!type) continue
-    const capacity = buildingCounts[plant.buildingKey]
-    const ofType = getEmployeesByType(employees, type)
-    const validIds = new Set(ofType.map((employee) => employee.id))
-    const saved = isRecord(raw) && Array.isArray(raw[type])
+    if (plant.specialistWorker) specialistBuildingKey[plant.specialistWorker] = plant.buildingKey
+  }
+
+  const isNewShape =
+    isRecord(raw) &&
+    Object.keys(raw).every((key) => /^\d+$/.test(key) && typeof raw[key] === 'string')
+
+  if (isNewShape) {
+    for (const [cellKey, employeeId] of Object.entries(raw as Record<string, unknown>)) {
+      const cellIndex = Number(cellKey)
+      const cell = grid[cellIndex]
+      if (!cell || typeof employeeId !== 'string' || usedEmployeeIds.has(employeeId)) continue
+      const employee = employees.find((e) => e.id === employeeId)
+      if (!employee) continue
+      if (specialistBuildingKey[employee.type] !== cell) continue
+      result[cellIndex] = employeeId
+      usedEmployeeIds.add(employeeId)
+    }
+    return result
+  }
+
+  // Old pool shape (or missing entirely): migrate type-by-type.
+  for (const [type, buildingKey] of Object.entries(specialistBuildingKey) as [WorkerType, BuildingType][]) {
+    const cellIndices = grid.reduce<number[]>((acc, cell, i) => {
+      if (cell === buildingKey) acc.push(i)
+      return acc
+    }, [])
+    if (cellIndices.length === 0) continue
+
+    const ofType = getEmployeesByType(employees, type).filter((e) => !usedEmployeeIds.has(e.id))
+    const pooled = isRecord(raw) && Array.isArray(raw[type])
       ? (raw[type] as unknown[]).filter(
-          (id): id is string => typeof id === 'string' && validIds.has(id),
+          (id): id is string => typeof id === 'string' && ofType.some((e) => e.id === id),
         )
       : []
 
-    if (saved.length > 0) {
-      result[type] = saved.slice(0, capacity)
-    } else if (ofType.length > 0 && capacity > 0) {
-      result[type] = ofType.slice(0, capacity).map((employee) => employee.id)
-    } else {
-      result[type] = []
+    const idsToAssign = pooled.length > 0 ? pooled : ofType.map((e) => e.id)
+    for (let i = 0; i < Math.min(idsToAssign.length, cellIndices.length); i++) {
+      result[cellIndices[i]] = idsToAssign[i]
+      usedEmployeeIds.add(idsToAssign[i])
     }
   }
 
