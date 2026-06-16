@@ -1,5 +1,69 @@
 # Refinery Story — Mobile (Expo)
 
+> ## 👋 START HERE — Session Handoff (2026-06-15 night session, end of session)
+>
+> **If you're a new Claude picking this up: read this block, then go
+> straight to "## DESIGN (not started): Per-Plant Staff Assignment +
+> Per-Product Storage" below for the next task. You don't need to read
+> the rest of this file unless you need historical context.**
+>
+> **Where things stand**: `devMobile` branch, HEAD = `8cbf9e5`. All work
+> from tonight's session is committed AND pushed to GitHub already --
+> nothing pending, nothing to recover. `tsc --noEmit` is clean in
+> `mobile/`. The user communicates in Thai, gives instructions like "ทำ
+> Part B เลย" (do Part B), and wants ONE short Thai summary at the end of
+> each task, not step-by-step narration while working.
+>
+> **What got shipped tonight, in order** (all merged into `devMobile`):
+> 1. Phase 1 (waste byproduct), Phase 2 (electricity), Phase 3 (Polymer
+>    Plant) of the "Production Complexity Expansion" -- in `mobile/src/`.
+> 2. A fix making building-level upgrades (Lv1-3) actually affect the 4
+>    production plants' output (they were dead code before -- the
+>    upgrade button itself was also broken for most building types).
+> 3. Mobile UI for selling products + Feedstock Priority (the backend
+>    logic existed but had no screen to use it from).
+> 4. README updated so "Phase 1-3" no longer says "deferred, not started"
+>    (it used to, which is stale/wrong as of this session).
+> 5. A detailed design doc (not implemented) for two related future
+>    items: per-plant staff assignment, and per-product storage tanks.
+> 6. **Part B of that design** (Tank Farm: 5 storage buildings, one per
+>    secondary product) -- IMPLEMENTED tonight, see commit `8cbf9e5`.
+>
+> **What's next, in priority order**:
+> 1. **Part A of the design doc (Per-Plant Staff Assignment) -- NOT
+>    started.** This is the natural next task and is large (changes the
+>    core tick loop's output computation from aggregate to per-cell, plus
+>    UI, plus save migration). See the "## DESIGN..." section below for
+>    the full spec. Confirm with the user before starting -- it's a
+>    bigger lift than anything else in this file and deserves its own
+>    focused session/branch (`feature/per-plant-staff-assignment` or
+>    similar).
+> 2. Two smaller backlog items the user has NOT asked for explicitly but
+>    are sitting in "## What's NOT done": Grid Expansion Tier 4 (6x6,
+>    revisit-condition now met with 12 building types), and
+>    electricity-gating Tier-1 gasoline + Polymer Plant. Don't start
+>    these unprompted -- offer them if the user asks "what's next" again.
+>
+> **Workflow notes for continuing**:
+> - Repo has TWO codebases: `src/` (older web app) and `mobile/src/`
+>   (active Expo app, this is the one that matters -- almost everything
+>   happens here). `devMobile` branch is the main dev branch for both.
+> - Pattern used all session: create a feature branch off `devMobile`,
+>   implement, run `cd mobile && npx tsc --noEmit` until clean, verify
+>   any new math/logic with a quick isolated `node -e "..."` simulation
+>   (several examples earlier in this file's git log), commit with a
+>   detailed message, merge `--ff-only` into `devMobile` (or a real merge
+>   if branches diverged), push. The user wants ONE short Thai summary
+>   after each task is pushed, not progress updates during the work.
+> - GitHub push needs a token: `git push
+>   https://TOKEN@github.com/saranaauttama-afk/Refinery-Story.git
+>   BRANCH_NAME`. No token is hardcoded here for security -- ask the user
+>   for a fresh one if `git push` fails with an auth error (the one used
+>   tonight was session-scoped and may have expired).
+> - If you (new Claude) don't have this conversation's full history,
+>   that's fine -- this file plus `git log --oneline -30` on `devMobile`
+>   should be enough to reconstruct what happened and why.
+
 Expo / React Native port of Refinery Story, restructured as a mobile game
 (bottom-tab navigation, one screen at a time) instead of the web version's
 long stacked-panel layout.
