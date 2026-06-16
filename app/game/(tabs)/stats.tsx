@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
-import { colors, radii, spacing } from '../../../src/theme'
+import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { ASPHALT_BALANCE, EXPANSION_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
 import { getEsgTier, getSeasonLabel } from '../../../src/game/utils/gameCalculations'
 
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
   },
   section: {
     marginBottom: spacing.lg,

@@ -8,7 +8,7 @@ import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
-import { colors, radii, spacing } from '../../../src/theme'
+import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
   },
   section: {
     marginBottom: spacing.lg,

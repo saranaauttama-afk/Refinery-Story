@@ -16,14 +16,15 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import BuildingGrid from '../../../src/components/BuildingGrid'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
-import ProductionOverview from '../../../src/components/ProductionOverview'
+import CollapsibleCard from '../../../src/components/CollapsibleCard'
+import ProductionOverview, { type ProductionOverviewRow } from '../../../src/components/ProductionOverview'
 import ProgressBar from '../../../src/components/ProgressBar'
 import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
-import { colors, radii, spacing } from '../../../src/theme'
+import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
@@ -222,6 +223,19 @@ export default function RefineryScreen() {
     { key: 'plasticPellets', label: 'Pellets', color: colors.teal },
   ]
 
+  const productionRows: ProductionOverviewRow[] = [
+    { key: 'gasoline', label: 'Gasoline', current: game.gasoline, max: derived.maxGasolineStorage, color: colors.green },
+    ...products
+      .filter((p) => game.productInventory[p.key] > 0 || derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+      .map((p) => ({
+        key: p.key,
+        label: p.label,
+        current: game.productInventory[p.key],
+        max: PRODUCT_MAX_STORAGE(derived, p.key),
+        color: p.color,
+      })),
+  ]
+
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
@@ -323,20 +337,12 @@ export default function RefineryScreen() {
         </AnimatedPressable>
       </View>
 
-      <ProductionOverview
-        rows={[
-          { key: 'gasoline', label: 'Gasoline', current: game.gasoline, max: derived.maxGasolineStorage, color: colors.green },
-          ...products
-            .filter((p) => game.productInventory[p.key] > 0 || derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
-            .map((p) => ({
-              key: p.key,
-              label: p.label,
-              current: game.productInventory[p.key],
-              max: PRODUCT_MAX_STORAGE(derived, p.key),
-              color: p.color,
-            })),
-        ]}
-      />
+      <CollapsibleCard
+        title="📊 Production Overview"
+        summary={`${productionRows.length} product${productionRows.length === 1 ? '' : 's'}`}
+      >
+        <ProductionOverview rows={productionRows} />
+      </CollapsibleCard>
 
       <View style={styles.productsWrap}>
         {products.map((p) => {
@@ -771,7 +777,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
   },
   loadingScreen: {
     flex: 1,

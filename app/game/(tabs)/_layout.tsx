@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 import { BarChart3, Briefcase, Factory, Users } from 'lucide-react-native'
-import { colors, radii } from '../../../src/theme'
+import { colors, radii, spacing } from '../../../src/theme'
 
 // Wraps a tab icon so the active tab gets a small rounded "pressed button"
 // highlight instead of a text label / color-only change -- reads more like
@@ -71,12 +71,23 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    // Same color as every screen's background -- no separate "app bar"
-    // strip, just icons sitting on the same canvas as the game.
-    backgroundColor: colors.cream,
+    // Floating pill instead of a full-width strip docked to the screen
+    // edge -- margins on every side, rounded corners all around (not just
+    // the top), and a soft shadow so it reads as a card sitting ABOVE the
+    // background rather than part of it.
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.md,
+    height: 64,
+    borderRadius: radii.lg,
     borderTopWidth: 0,
-    elevation: 0,
-    shadowOpacity: 0,
+    backgroundColor: colors.cream,
+    elevation: 8,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   iconWrap: {
     width: 44,
