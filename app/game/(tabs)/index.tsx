@@ -169,10 +169,16 @@ export default function RefineryScreen() {
     ? BOOST_BALANCE.durationTicks - (game.boostActiveUntilTick - game.tickCount)
     : BOOST_BALANCE.cooldownTicks - (game.boostAvailableAtTick - game.tickCount)
 
-  const products: { key: 'lubricants' | 'jetFuel' | 'petrochemicals'; label: string; color: string }[] = [
+  const products: {
+    key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
+    label: string
+    color: string
+  }[] = [
     { key: 'lubricants', label: 'Lubricants', color: colors.goldDark },
     { key: 'jetFuel', label: 'Jet Fuel', color: colors.blue },
     { key: 'petrochemicals', label: 'Petrochem', color: colors.purple },
+    { key: 'recycledMaterial', label: 'Recycled', color: colors.greenDark },
+    { key: 'plasticPellets', label: 'Pellets', color: colors.teal },
   ]
 
   return (
@@ -779,12 +785,14 @@ const styles = StyleSheet.create({
   },
   productsWrap: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.md,
   },
   productChip: {
-    flex: 1,
+    flexBasis: '30%',
+    flexGrow: 1,
     borderWidth: 2,
     borderRadius: radii.md,
     padding: spacing.sm,

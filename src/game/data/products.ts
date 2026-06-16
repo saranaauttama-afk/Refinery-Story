@@ -3,6 +3,8 @@ import {
   JET_FUEL_PLANT_BALANCE,
   LUBRICANT_PLANT_BALANCE,
   PETROCHEMICAL_PLANT_BALANCE,
+  WASTE_TREATMENT_PLANT_BALANCE,
+  POLYMER_PLANT_BALANCE,
 } from './balance'
 import { text } from '../translations'
 import type { BilingualTextValue } from '../types'
@@ -21,7 +23,7 @@ export type ProductTextBundle = {
   sellDisabledEmpty: BilingualTextValue
 }
 
-export type SellableProductKey = 'jetFuel' | 'lubricants' | 'petrochemicals'
+export type SellableProductKey = 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
 
 export type SellableProductConfig = {
   key: SellableProductKey
@@ -31,7 +33,7 @@ export type SellableProductConfig = {
   copy: ProductTextBundle
 }
 
-// The three plant-produced, directly-sold products. Asphalt is intentionally NOT
+// The five plant-produced, directly-sold products. Asphalt is intentionally NOT
 // here — it is manually produced and has no direct sell (standing orders only),
 // so it keeps its own bespoke panel.
 export const SELLABLE_PRODUCTS: SellableProductConfig[] = [
@@ -55,5 +57,19 @@ export const SELLABLE_PRODUCTS: SellableProductConfig[] = [
     plantUnlockLevel: PETROCHEMICAL_PLANT_BALANCE.unlockLevel,
     className: 'petrochemicals-panel',
     copy: text.petrochemicals,
+  },
+  {
+    key: 'recycledMaterial',
+    unlockLevel: WASTE_TREATMENT_PLANT_BALANCE.unlockLevel,
+    plantUnlockLevel: WASTE_TREATMENT_PLANT_BALANCE.unlockLevel,
+    className: 'recycled-material-panel',
+    copy: text.recycledMaterial,
+  },
+  {
+    key: 'plasticPellets',
+    unlockLevel: POLYMER_PLANT_BALANCE.unlockLevel,
+    plantUnlockLevel: POLYMER_PLANT_BALANCE.unlockLevel,
+    className: 'plastic-pellets-panel',
+    copy: text.plasticPellets,
   },
 ]
