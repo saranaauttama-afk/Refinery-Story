@@ -20,8 +20,7 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including the doc-update commit for Demolish/Move/Swap buildings
-> (commit `c5ee9af`) is committed
+> including the Sell Products UI fix (commit `560675c`) is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -124,6 +123,13 @@
 >     "Rearrange" section in the Building Info sheet; Move/Swap enter a
 >     "pick target cell" mode with a grid-hint prompt + cancel. See
 >     commit `b831f3c`.
+> 13. **Sell Products UI fix**: closed a documentation-discovered
+>     regression where recycledMaterial/plasticPellets had no sell UI
+>     anywhere (only the original 3 products did). Extended the existing
+>     Refinery-tab tap-to-sell-all chip row to all 5 products, and
+>     restored `SELLABLE_PRODUCTS` in `data/products.ts` to list all 5
+>     (groundwork; nothing consumes that array directly yet). See commit
+>     `560675c`.
 >
 > **What's next**: nothing specific has been requested yet. The original
 > backlog list was fully cleared (see items 1-9 above and the "SHIPPED:"
@@ -146,10 +152,8 @@
 >   (those need a small extension to the HiddenEventTimeCondition/
 >   HiddenEventGameCondition/HiddenEventReward unions + their evaluator
 >   functions in gameCalculations.ts).
-> - **Fix the missing Sell Products UI** (found 2026-06-16, see item 3's
->   correction above and the new gap entry in "## What's NOT done"
->   below): recycledMaterial and plasticPellets currently have no way to
->   be sold in the app at all.
+> - **Fix the missing Sell Products UI** -- DONE, see item 13 above /
+>   the "SHIPPED (fixed 2026-06-16)" entry in "## What's NOT done".
 > - Possible follow-up polish on Per-Plant Staff Assignment AND
 >   Demolish/Move/Swap: neither has been visually tested on a real
 >   device/simulator (this environment has none -- only `tsc` +
@@ -1052,19 +1056,16 @@ risk than the reverse or combining them.
 
 ## What's NOT done / known gaps
 
-- **Regression: dedicated "Sell Products" UI is missing.** Found
-  2026-06-16 while updating this doc -- see the correction on item 3 in
-  the handoff block above for full detail. `SellProductRow`/
-  `FeedstockPriorityRow` components don't exist, `SELLABLE_PRODUCTS` in
-  `data/products.ts` only has 3 of 5 products (missing recycledMaterial/
-  plasticPellets), and there's currently NO sell UI at all for those 2
-  products (the Refinery tab's tap-to-sell-all chips only cover
-  lubricants/jetFuel/petrochemicals). The backend `sellProduct` action
-  and `SELLABLE_PRODUCTS`-adjacent data already support any product key,
-  so this is fixable without touching game logic -- just needs the UI
-  layer rebuilt (or extending the existing Refinery-tab chip row to all
-  5 products, which would be the smaller fix). Not done in this doc-update
-  pass since the user only asked for documentation accuracy, not a fix.
+- **SHIPPED (fixed 2026-06-16): Sell Products UI gap.** Was: a
+  regression where recycledMaterial/plasticPellets had no sell UI at all
+  (only lubricants/jetFuel/petrochemicals had a tap-to-sell-all chip on
+  the Refinery tab). Fix took the smaller path noted below at the time --
+  extended the existing chip row to all 5 products (now wraps into 2 rows
+  via flexBasis, same pattern as ResourceBar) rather than rebuilding the
+  lost SellProductRow/Sell-1/10/All component system. Also restored
+  SELLABLE_PRODUCTS/SellableProductKey in `data/products.ts` to all 5
+  (groundwork only -- nothing currently consumes that array directly).
+  See commit `560675c`.
 - **SHIPPED: electricity-gate Tier-1 gasoline + Polymer Plant** (commit
   `7d8aa03`). Gasoline production now caps `batchesProduced` by remaining
   electricity (1 per batch) once >= 1 Power Plant is built; Polymer Plant
