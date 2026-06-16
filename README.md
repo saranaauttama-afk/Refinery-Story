@@ -20,8 +20,7 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including the Hidden Event system + in-game calendar clock (commit
-> `580bb88`) is committed
+> including Demolish/Move/Swap buildings (commit `b831f3c`) is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -94,14 +93,26 @@
 >     plus a global "✨ Something happened..." banner (deliberately never
 >     reveals the reward, just nudges the player to go find the card).
 >     See commits `41413aa` (backend) and `580bb88` (UI).
+> 12. **Demolish/Move/Swap buildings**: fixes a layout mistake or
+>     rearranges for a Hidden Combo without losing a building's
+>     accumulated level/staff assignment. Demolish refunds 50% of
+>     original cost (not upgrade spend); Move/Swap are flat fees ($200/
+>     $100) cheaper than buy+demolish-and-rebuild, with level + any
+>     assigned specialist traveling with the building (re-keyed since
+>     gridLevels/assignments are indexed by cellIndex). UI: a
+>     "Rearrange" section in the Building Info sheet; Move/Swap enter a
+>     "pick target cell" mode with a grid-hint prompt + cancel. See
+>     commit `b831f3c`.
 >
 > **What's next**: nothing specific has been requested yet. The original
 > backlog list was fully cleared (see items 1-9 above and the "SHIPPED:"
 > entries in "## What's NOT done / known gaps" below), then the user
-> requested a brand-new feature (items 10-11 above: in-game calendar
-> clock + Hidden Event system) which is now also shipped. If the user
-> asks "what's next" again with no specific idea, there's no pre-baked
-> answer -- ask them, or suggest:
+> requested several brand-new features in sequence (items 10-12 above:
+> in-game calendar clock, Hidden Event system, Demolish/Move/Swap
+> buildings) which are now all shipped too. This project's pattern so
+> far has been: backlog gets cleared, then the user comes back with a
+> new feature idea -- there's no telling what's next until they say. If
+> they ask "what's next" with no specific idea, ask them, or suggest:
 > - **Time balancing**: the user explicitly said "เดี๋ยวค่อยบาลานซ์ทีหลัง"
 >   (balance it later) about CALENDAR_BALANCE.dayLengthTicks (currently
 >   6 real minutes/day) -- they may want this tuned once they've played
@@ -114,9 +125,9 @@
 >   (those need a small extension to the HiddenEventTimeCondition/
 >   HiddenEventGameCondition/HiddenEventReward unions + their evaluator
 >   functions in gameCalculations.ts).
-> - Possible follow-up polish on Per-Plant Staff Assignment: the Building
->   Info sheet and Staff tab work, but haven't been visually tested on a
->   real device/simulator (this environment has none -- only `tsc` +
+> - Possible follow-up polish on Per-Plant Staff Assignment AND
+>   Demolish/Move/Swap: neither has been visually tested on a real
+>   device/simulator (this environment has none -- only `tsc` +
 >   isolated logic simulations were used to verify, same as every other
 >   feature in this project's history). Flag to the user if they hit a UI
 >   issue.
