@@ -1,6 +1,6 @@
 # Refinery Story — Mobile (Expo)
 
-> ## 👋 START HERE — Session Handoff (last updated: Demolish/Move/Swap buildings shipped)
+> ## 👋 START HERE — Session Handoff (last updated: floating tab bar + collapsible card shipped)
 >
 > **If you're a new Claude picking this up: read this block fully before
 > doing anything else.** Past sessions have repeatedly lost track of
@@ -20,8 +20,8 @@
 > -- do not treat anything in there as current.
 >
 > **Where things stand**: `devMobile` branch, all work up through and
-> including wiring the 9 existing building icons into BuildingTile
-> (commit `496b33d`) is committed
+> including the floating tab bar + collapsible Production Overview card
+> (commit `8d7703d`) is committed
 > AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
 > --noEmit` (from repo root) is clean. The user communicates in Thai,
 > gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
@@ -147,17 +147,50 @@
 >     already exists in full (3 rivals, year-end ranking shown in
 >     AwardModal) -- the user passed on adding a "view past years"
 >     history page to Stats tab when offered.
+> 15. **Refinery tab dashboard redesign** (commit `fa2e414`): the user
+>     shared a reference mockup (full pixel-art tycoon dashboard with a
+>     sidebar, top stat bar with rates, persistent Production Overview +
+>     Current Contract panels, a "Next Day" turn button) and asked to get
+>     closer to that feel WITHOUT adopting the parts that don't fit a
+>     mobile/real-time game -- explicitly kept the existing bottom tab
+>     bar (not a sidebar), real-time ticking (no turn button), and
+>     tap-to-inspect buildings (no floating labels on the grid). What
+>     changed: new "Production Overview" panel
+>     (`src/components/ProductionOverview.tsx`) showing each active
+>     product's stock level (current/max storage) as a colored progress
+>     bar -- chosen over a fabricated "production rate %" since stock
+>     level is the one thing the game already computes honestly for
+>     every product. Auto-trade + Feedstock Priority (previously two long
+>     cards always visible in the main scroll) moved into a new
+>     "Automation" modal opened via a ⚙️ button next to the header,
+>     shortening the main scroll considerably.
+> 16. **Floating tab bar + collapsible Production Overview** (commit
+>     `8d7703d`), two follow-up requests after seeing the redesign: the
+>     bottom tab bar is now `position: 'absolute'` with margins on every
+>     side and full corner rounding (was a docked full-width strip) --
+>     required adding a shared `FLOATING_TAB_BAR_CLEARANCE` bottom-padding
+>     constant to all 4 tab screens since React Navigation no longer
+>     auto-insets for an absolute-positioned bar. New reusable
+>     `CollapsibleCard` component (`LayoutAnimation`-based tap to expand/
+>     collapse) wraps Production Overview specifically -- it's the one
+>     card that genuinely grows over time as more products unlock; the
+>     Boost card and next-goal card were deliberately left uncollapsed
+>     (reasons in the commit message: Boost's "long" state is exactly
+>     when its live countdown matters most; next-goal already has a
+>     conflicting tap-to-navigate-to-Achievements behavior).
 >
 > **What's next**: nothing specific has been requested yet. The original
 > backlog list was fully cleared (see items 1-9 above and the "SHIPPED:"
 > entries in "## What's NOT done / known gaps" below), then the user
-> requested several brand-new features in sequence (items 10-14 above:
+> requested several brand-new features in sequence (items 10-16 above:
 > in-game calendar clock, Hidden Event system, Demolish/Move/Swap
-> buildings, the Sell Products fix, and wiring in the 9 existing building
-> icons) which are now all shipped too. This project's pattern so
-> far has been: backlog gets cleared, then the user comes back with a
-> new feature idea -- there's no telling what's next until they say. If
-> they ask "what's next" with no specific idea, ask them, or suggest:
+> buildings, the Sell Products fix, wiring in the 9 existing building
+> icons, the Refinery tab dashboard redesign, and the floating tab
+> bar + collapsible card follow-up) which are now all shipped too. This
+> project's pattern so far has been: backlog gets cleared, then the user
+> comes back with a new feature idea -- there's no telling what's next
+> until they say. If they ask "what's next" with no specific idea, ask
+> them, or suggest:
 > - **Time balancing**: the user explicitly said "เดี๋ยวค่อยบาลานซ์ทีหลัง"
 >   (balance it later) about CALENDAR_BALANCE.dayLengthTicks (currently
 >   6 real minutes/day) -- they may want this tuned once they've played
@@ -182,12 +215,14 @@
 >   plasticPellets (6 of 7 exist) and worker icons are missing
 >   polymerEngineer (9 of 10 exist) -- neither is wired into any UI at
 >   all yet, unlike buildings.
-> - Possible follow-up polish on Per-Plant Staff Assignment AND
->   Demolish/Move/Swap: neither has been visually tested on a real
->   device/simulator (this environment has none -- only `tsc` +
->   isolated logic simulations were used to verify, same as every other
->   feature in this project's history). Flag to the user if they hit a UI
->   issue.
+> - **Standing caveat: nothing in this project has been visually tested
+>   on a real device/simulator** (this environment has none -- every UI
+>   change, from Per-Plant Staff Assignment through the floating tab bar,
+>   has only been verified via `npx tsc --noEmit` plus isolated
+>   `node -e` logic simulations). If the user reports a UI issue (layout,
+>   spacing, an animation not firing, colors looking wrong), that's the
+>   most likely explanation -- fix based on their description rather than
+>   assuming the code is definitely correct just because tsc passed.
 >
 > **Workflow pattern used throughout this project's history**: create a
 > feature branch off `devMobile`, implement, run `npx tsc --noEmit` until
