@@ -1,85 +1,98 @@
 # Refinery Story — Mobile (Expo)
 
-> ## 👋 START HERE — Session Handoff (last updated 2026-06-15, repo cleanup)
+> ## 👋 START HERE — Session Handoff (last updated: Per-Plant Staff Assignment shipped)
 >
-> **If you're a new Claude picking this up: read this block, then go
-> straight to "## DESIGN (not started): Per-Plant Staff Assignment +
-> Per-Product Storage" below for the next task. You don't need to read
-> the rest of this file unless you need historical context.**
+> **If you're a new Claude picking this up: read this block fully before
+> doing anything else.** Past sessions have repeatedly lost track of
+> current state because new sessions found stale docs elsewhere (an old
+> `Doc/CURRENT_TASK.md` from a deleted web app once sent a session down
+> the wrong path entirely) or this block itself fell behind the actual
+> code. Treat this block as the only source of truth for "what's the
+> state right now" -- if anything below conflicts with what you find in
+> the actual code or git log, the code/git log wins, and you should
+> update this block to match before doing new work.
 >
-> **Repo structure note**: this repo used to contain TWO codebases -- an
-> older web app (Vite/React) at the repo root, and this Expo app nested
-> under `mobile/`. Both have since been cleaned up: the web app was
-> deleted entirely (its design docs are archived at
-> `docs-archive/web-app-docs-2026-06-13/` for historical reference only),
-> and this Expo app was moved UP to the repo root -- there is no more
-> `mobile/` prefix. If you see old chat history, commit messages, or
-> stale notes referencing `mobile/src/`, `cd mobile && ...`, or
-> `mobile/README.md`, mentally drop the `mobile/` prefix -- those paths
-> are now just `src/`, `npx tsc --noEmit` (run from repo root), and this
-> file (`README.md` at repo root) respectively.
+> **Repo structure**: single codebase, this repo root IS the Expo app
+> (`src/`, `app/`, `npx tsc --noEmit` all run from here directly, no
+> `mobile/` prefix). An old web app used to live here too; it was deleted
+> in a 2026-06-15 cleanup. Its old design docs are archived at
+> `docs-archive/web-app-docs-2026-06-13/` for historical reference only
+> -- do not treat anything in there as current.
 >
-> **Where things stand**: `devMobile` branch (still named that, even
-> though there's no more `mobile/` subfolder -- a rename wasn't part of
-> this cleanup). All work through the Tank Farm storage feature is
-> committed AND pushed to GitHub already -- nothing pending, nothing to
-> recover. `npx tsc --noEmit` (from repo root) is clean. The user
-> communicates in Thai, gives instructions like "ทำ Part B เลย" (do Part
-> B), and wants ONE short Thai summary at the end of each task, not
-> step-by-step narration while working.
+> **Where things stand**: `devMobile` branch, all work up through and
+> including Per-Plant Staff Assignment (commit `659c48e`) is committed
+> AND pushed to GitHub -- nothing pending, nothing to recover. `npx tsc
+> --noEmit` (from repo root) is clean. The user communicates in Thai,
+> gives short directive instructions (e.g. "ทำ Part B เลย" = "do Part B"),
+> and wants ONE short Thai summary at the end of a task, not step-by-step
+> narration while working.
 >
-> **What got shipped before this cleanup, in order** (all merged into
-> `devMobile`):
+> **What got shipped, in order** (all merged into `devMobile`):
 > 1. Phase 1 (waste byproduct), Phase 2 (electricity), Phase 3 (Polymer
 >    Plant) of the "Production Complexity Expansion".
 > 2. A fix making building-level upgrades (Lv1-3) actually affect the 4
->    production plants' output (they were dead code before -- the
->    upgrade button itself was also broken for most building types).
-> 3. Mobile UI for selling products + Feedstock Priority (the backend
->    logic existed but had no screen to use it from).
-> 4. README updated so "Phase 1-3" no longer says "deferred, not started".
-> 5. A detailed design doc (not implemented) for two related future
->    items: per-plant staff assignment, and per-product storage tanks.
-> 6. **Part B of that design** (Tank Farm: 5 storage buildings, one per
->    secondary product) -- IMPLEMENTED.
-> 7. **This cleanup**: deleted the old web app + its `Doc/` folder
->    (archived, not deleted -- see `docs-archive/`), moved this Expo app
->    from `mobile/` up to the repo root, merged `.gitignore`s, fixed
->    stale path references in this file and `AGENTS.md`.
+>    production plants' output (was dead code before).
+> 3. Mobile UI for selling products + Feedstock Priority.
+> 4. A design doc for two related items: per-plant staff assignment
+>    (Part A) and per-product storage tanks (Part B).
+> 5. **Part B (Tank Farm)**: 5 storage buildings, one per secondary
+>    product -- IMPLEMENTED.
+> 6. **Repo cleanup**: deleted the old web app (archived its docs to
+>    `docs-archive/`), moved this Expo app from `mobile/` up to the repo
+>    root, added pointer/handoff docs at multiple entry points
+>    (`AGENTS.md` here and in the old `Doc/` location) so future sessions
+>    don't repeat the "found stale docs, summarized the wrong project"
+>    mistake.
+> 7. **Part A (Per-Plant Staff Assignment)**: `GameState.assignments`
+>    changed from a shared worker-type pool (`Partial<Record<WorkerType,
+>    string[]>>`) to per-cell (`Record<cellIndex, employeeId>`). This
+>    fixed a real economy-breaking bug: under the old model, 1 assigned
+>    specialist's bonus multiplied the AGGREGATE output of every plant of
+>    that type, so hiring got more and more overpowered as the player
+>    built more plants. Now a specialist only boosts the ONE specific
+>    plant cell they're assigned to. Building-level upgrade bonuses
+>    (Lv1-3) are also now per-cell instead of summed across instances,
+>    for the same reason. New core helper: `getTotalCellOutput` in
+>    `gameCalculations.ts` -- if you need to understand or extend
+>    plant-output math, start there. UI: Staff tab has a cell-picker when
+>    assigning ("Petrochemical Plant #2", shows current occupant if any);
+>    Building Info sheet shows per-tile assignment, not a pool roster.
+>    Save migration handles old pool-shaped saves automatically (see
+>    `getSafeAssignments` in `gameStorage.ts`). Verified with 9 isolated
+>    `node -e` simulation cases (4 output-scaling, 5 migration) before
+>    committing -- see commit `659c48e`'s message for details.
 >
-> **What's next, in priority order**:
-> 1. **Part A of the design doc (Per-Plant Staff Assignment) -- NOT
->    started.** This is the natural next task and is large (changes the
->    core tick loop's output computation from aggregate to per-cell, plus
->    UI, plus save migration). See the "## DESIGN..." section below for
->    the full spec. Confirm with the user before starting -- it's a
->    bigger lift than anything else in this file and deserves its own
->    focused session/branch (`feature/per-plant-staff-assignment` or
->    similar).
-> 2. Two smaller backlog items the user has NOT asked for explicitly but
->    are sitting in "## What's NOT done": Grid Expansion Tier 4 (6x6,
->    revisit-condition now met with 12 building types), and
->    electricity-gating Tier-1 gasoline + Polymer Plant. Don't start
->    these unprompted -- offer them if the user asks "what's next" again.
+> **What's next**: nothing specific has been requested yet. Known backlog
+> (don't start unprompted -- offer if asked "what's next"):
+> - Grid Expansion Tier 4 (6x6) -- revisit-condition (12 building types)
+>   is now met, but not started.
+> - Electricity-gating Tier-1 gasoline + Polymer Plant (deferred from
+>   Phase 2/3 scope).
+> - Possible follow-up polish on Part A: the Building Info sheet and
+>   Staff tab work, but haven't been visually tested on a real device/
+>   simulator (this environment has no simulator -- only `tsc` + isolated
+>   logic simulations were used to verify, same as every other feature in
+>   this project's history). Flag to the user if they hit a UI issue.
 >
-> **Workflow notes for continuing**:
-> - Single codebase now -- this repo root IS the Expo app (no more
->   `src/` vs `mobile/src/` distinction; just `src/`).
-> - Pattern used throughout: create a feature branch off `devMobile`,
->   implement, run `npx tsc --noEmit` (from repo root) until clean,
->   verify any new math/logic with a quick isolated `node -e "..."`
->   simulation (several examples in this repo's git log), commit with a
->   detailed message, merge `--ff-only` into `devMobile` (or a real merge
->   if branches diverged), push. The user wants ONE short Thai summary
->   after each task is pushed, not progress updates during the work.
-> - GitHub push needs a token: `git push
->   https://TOKEN@github.com/saranaauttama-afk/Refinery-Story.git
->   BRANCH_NAME`. No token is hardcoded here for security -- ask the user
->   for a fresh one if `git push` fails with an auth error (the one used
->   tonight was session-scoped and may have expired).
-> - If you (new Claude) don't have this conversation's full history,
->   that's fine -- this file plus `git log --oneline -30` on `devMobile`
->   should be enough to reconstruct what happened and why.
+> **Workflow pattern used throughout this project's history**: create a
+> feature branch off `devMobile`, implement, run `npx tsc --noEmit` until
+> clean, verify new math/logic with a quick isolated `node -e "..."`
+> simulation (see git log for many examples), commit with a detailed
+> message explaining WHY not just what, merge `--ff-only` into
+> `devMobile` (or a real merge if branches diverged), push, then give the
+> user one short Thai summary. Don't narrate step-by-step while working.
+>
+> GitHub push needs a token: `git push
+> https://TOKEN@github.com/saranaauttama-afk/Refinery-Story.git
+> BRANCH_NAME`. No token is hardcoded here for security -- ask the user
+> for a fresh one if push fails with an auth error.
+>
+> **If you're picking this up without this conversation's history**: this
+> block plus `git log --oneline -30` on `devMobile` should be enough.
+> Read the actual code for current behavior, not any doc's description of
+> a past proposal (docs can lag; the "## ...SHIPPED" sections below this
+> block try to stay current but verify against code if anything seems
+> off).
 
 Expo / React Native port of Refinery Story, restructured as a mobile game
 (bottom-tab navigation, one screen at a time) instead of the web version's
@@ -781,7 +794,14 @@ formula. Polymer Plant's electricity consumption was also deferred (it has
 no `electricityPerCycle` cost, unlike the other 3 plants) for the same
 reason.
 
-## DESIGN (not started): Per-Plant Staff Assignment + Per-Product Storage
+## Per-Plant Staff Assignment + Per-Product Storage: Part A SHIPPED, Part B SHIPPED
+
+> Both parts of this design are now implemented (Part B shipped earlier;
+> Part A shipped in commit `659c48e`). The detailed design below is kept
+> for reference on the rationale and approach, but treat it as historical
+> -- check the actual code (gameCalculations.ts, useGameLoop.ts,
+> gameStorage.ts, app/game/(tabs)/staff.tsx and index.tsx) for current
+> behavior, not this doc's original proposal wording.
 
 Two related backlog items, designed together on 2026-06-15 because both
 touch the same per-instance ("which specific tile") concept that the
