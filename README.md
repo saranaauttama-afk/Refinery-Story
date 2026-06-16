@@ -64,15 +64,16 @@
 >
 > **What's next**: nothing specific has been requested yet. Known backlog
 > (don't start unprompted -- offer if asked "what's next"):
-> - Grid Expansion Tier 4 (6x6) -- revisit-condition (12 building types)
->   is now met, but not started.
 > - Electricity-gating Tier-1 gasoline + Polymer Plant (deferred from
->   Phase 2/3 scope).
-> - Possible follow-up polish on Part A: the Building Info sheet and
->   Staff tab work, but haven't been visually tested on a real device/
->   simulator (this environment has no simulator -- only `tsc` + isolated
->   logic simulations were used to verify, same as every other feature in
->   this project's history). Flag to the user if they hit a UI issue.
+>   Phase 2/3 scope) -- the only remaining backlog item from the original
+>   list. Touches the core gasoline-yield formula, so treat as its own
+>   focused change with its own verification pass.
+> - Possible follow-up polish on Per-Plant Staff Assignment: the Building
+>   Info sheet and Staff tab work, but haven't been visually tested on a
+>   real device/simulator (this environment has none -- only `tsc` +
+>   isolated logic simulations were used to verify, same as every other
+>   feature in this project's history). Flag to the user if they hit a UI
+>   issue.
 >
 > **Workflow pattern used throughout this project's history**: create a
 > feature branch off `devMobile`, implement, run `npx tsc --noEmit` until
@@ -974,18 +975,13 @@ risk than the reverse or combining them.
   "ALL production buildings" intent, but touches the core gasoline-yield
   formula (highest risk in the original Phase 2 description) -- do as its
   own focused change with its own verification pass.
-- **Backlog: Grid Expansion Tier 4 (6x6)**. Current expansion ladder tops
-  out at 5x5 (25 cells, Lv10, $100k) -- see `EXPANSION_BALANCE`. Production
-  Complexity Expansion (above, now shipped) added 3 new building types
-  (Waste Treatment Plant, Power Plant, Polymer Plant) on top of the
-  existing 9 (12 total), which may push endgame layouts tight on a 5x5
-  grid -- this is the "revisit" point the original note was waiting for.
-  Still not started: measure actual endgame cell-usage with 12 building
-  types before committing to a 6x6 (36 cells) tier gated to a high
-  refinery level (~Lv20) with a cost well above the 5x5's $100k, following
-  the existing `EXPANSION_BALANCE` pattern. Grid-size changes touch layout
-  UI, save migration, and adjacency-combo balance, so keep this as its own
-  phase.
+- **SHIPPED: Grid Expansion Tier 4 (6x6)**. Added a 4th `EXPANSION_BALANCE`
+  entry: 36 cells, Lv20, $400k (commit `7827b58`). Pure data addition --
+  every consumer (expandGrid, calculateDerivedStats, the expansion UI,
+  grid validation, BuildingGrid rendering, combo adjacency detection) was
+  already written generically against the array/grid length, with no
+  hardcoded tier count or cell count anywhere. Verified in isolation (4
+  expandGrid cases, 3 combo-adjacency cases on a 36-cell grid).
 - **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Originally deferred
   in favor of Feedstock Priority (shipped above). Feedstock Priority's 0%
   setting already gives players a way to effectively "turn off" a plant
