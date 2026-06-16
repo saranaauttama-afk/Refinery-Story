@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
+import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDINGS } from '../../../src/game/data/buildings'
+import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
 import { getCellAssignedToEmployee, getTrainingCost, TICK_MS } from '../../../src/game/utils/gameCalculations'
@@ -60,8 +62,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function StaffScreen() {
-  const { game, loaded, derived, hireCandidate, refreshRecruitmentPool, trainEmployee, assignEmployeeToCell, unassignCell } =
-    useGame()
+  const {
+    game,
+    loaded,
+    derived,
+    hireCandidate,
+    refreshRecruitmentPool,
+    trainEmployee,
+    assignEmployeeToCell,
+    unassignCell,
+    claimHiddenEvent,
+  } = useGame()
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
   // Per-Plant Staff Assignment: which employee's cell-picker is currently
@@ -94,6 +105,18 @@ export default function StaffScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.list}>
         <Section title="Recruitment">
+          {HIDDEN_EVENTS.filter(
+            (e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked',
+          ).map((event) => (
+            <ListRow
+              key={event.key}
+              title="??? Mystery Applicant"
+              subtitle="Something unusual happened. Tap to find out what."
+              badge="???"
+              actionLabel="Reveal"
+              onPress={() => claimHiddenEvent(event.key)}
+            />
+          ))}
           <View style={styles.recruitmentHeader}>
             <Text style={styles.recruitmentHint}>
               {refreshSecondsLeft > 0

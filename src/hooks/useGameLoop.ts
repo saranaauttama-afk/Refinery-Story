@@ -7,6 +7,7 @@ import type {
   Contract,
   Employee,
   EraConfig,
+  HiddenEventConfig,
   GameState,
   PerkConfig,
   RecruitmentCandidate,
@@ -584,6 +585,12 @@ export function useGameLoop() {
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
   const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
   const [pendingComboDiscovery, setPendingComboDiscovery] = useState<HiddenComboConfig | null>(null)
+  // Hidden Event banner: which difficulty just unlocked (for the toast's
+  // styling/copy only -- never the actual reward, since the design
+  // requires a separate tap-to-claim step on the relevant tab to reveal
+  // it). Distinct from pendingComboDiscovery's combo (which IS revealed
+  // immediately, no separate claim step) -- different UX on purpose.
+  const [pendingHiddenEventUnlock, setPendingHiddenEventUnlock] = useState<HiddenEventConfig | null>(null)
 
   // Shows a choice event (if none is currently pending) and stamps
   // lastChoiceEventTick so the fallback timer restarts from "now".
@@ -658,6 +665,7 @@ export function useGameLoop() {
               ...Object.fromEntries(newlyUnlockedEvents.map((e) => [e.key, 'unlocked' as const])),
             },
           }
+          setPendingHiddenEventUnlock(newlyUnlockedEvents[0])
         }
 
         if (next.tickCount - next.yearStartTick >= AWARDS_BALANCE.yearLengthTicks) {
@@ -1280,6 +1288,7 @@ export function useGameLoop() {
     pendingEraBanner,
     pendingWinCelebration,
     pendingComboDiscovery,
+    pendingHiddenEventUnlock,
     buyCrude,
     sellGasoline,
     sellProduct,
@@ -1355,5 +1364,6 @@ export function useGameLoop() {
     dismissEraBanner: () => setPendingEraBanner(null),
     dismissWinCelebration: () => setPendingWinCelebration(false),
     dismissComboDiscovery: () => setPendingComboDiscovery(null),
+    dismissHiddenEventUnlock: () => setPendingHiddenEventUnlock(null),
   }
 }

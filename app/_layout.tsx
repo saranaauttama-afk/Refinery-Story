@@ -7,6 +7,7 @@ import AwardModal from '../src/components/AwardModal'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
 import ComboDiscoveryBanner from '../src/components/ComboDiscoveryBanner'
 import EraBanner from '../src/components/EraBanner'
+import HiddenEventBanner from '../src/components/HiddenEventBanner'
 import WinCelebrationModal from '../src/components/WinCelebrationModal'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
 import { useHaptics } from '../src/hooks/useHaptics'
@@ -20,11 +21,13 @@ function GlobalOverlays() {
     pendingEraBanner,
     pendingWinCelebration,
     pendingComboDiscovery,
+    pendingHiddenEventUnlock,
     chooseEventOption,
     dismissAward,
     dismissEraBanner,
     dismissWinCelebration,
     dismissComboDiscovery,
+    dismissHiddenEventUnlock,
   } = useGame()
   const haptics = useHaptics()
   const lastMilestoneCount = useRef<number | null>(null)
@@ -50,10 +53,18 @@ function GlobalOverlays() {
     if (pendingComboDiscovery) haptics.success()
   }, [pendingComboDiscovery, haptics])
 
+  // Success haptic when a Hidden Event newly unlocks (separate system
+  // from combos -- gated by the in-game calendar clock, see
+  // HiddenEventConfig).
+  useEffect(() => {
+    if (pendingHiddenEventUnlock) haptics.success()
+  }, [pendingHiddenEventUnlock, haptics])
+
   return (
     <>
       <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} />
       <ComboDiscoveryBanner combo={pendingComboDiscovery} onDismiss={dismissComboDiscovery} />
+      <HiddenEventBanner event={pendingHiddenEventUnlock} onDismiss={dismissHiddenEventUnlock} />
       <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />
       <AwardModal record={pendingAward} onDismiss={dismissAward} />
       <WinCelebrationModal visible={pendingWinCelebration} game={game} onDismiss={dismissWinCelebration} />

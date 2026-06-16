@@ -7,6 +7,7 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { colors, spacing } from '../../../src/theme'
 import { PERKS } from '../../../src/game/data/perks'
 import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
+import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { text } from '../../../src/game/translations'
 import type { ActiveContract, GameState } from '../../../src/game/types'
 
@@ -36,8 +37,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function BusinessScreen() {
-  const { game, loaded, derived, unlockResearch, installPerk, completeContract, buyShipment, fulfillStandingOrder } =
-    useGame()
+  const {
+    game,
+    loaded,
+    derived,
+    unlockResearch,
+    installPerk,
+    completeContract,
+    buyShipment,
+    fulfillStandingOrder,
+    claimHiddenEvent,
+  } = useGame()
   const [showCompletedContracts, setShowCompletedContracts] = useState(false)
 
   if (!loaded || !game || !derived) {
@@ -66,6 +76,18 @@ export default function BusinessScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.list}>
         <Section title="Contracts">
+          {HIDDEN_EVENTS.filter(
+            (e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked',
+          ).map((event) => (
+            <ListRow
+              key={event.key}
+              title="??? Mystery Contract"
+              subtitle="Something unusual happened. Tap to find out what."
+              badge="???"
+              actionLabel="Reveal"
+              onPress={() => claimHiddenEvent(event.key)}
+            />
+          ))}
           {incompleteContracts.map((contract) => {
             const { have, need, unit } = contractProgress(contract, game)
             const ready = have >= need

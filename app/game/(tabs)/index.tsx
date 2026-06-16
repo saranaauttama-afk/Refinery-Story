@@ -24,6 +24,7 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
+import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import type { BuildingType } from '../../../src/game/types'
@@ -70,6 +71,7 @@ export default function RefineryScreen() {
     sellGasoline,
     sellProduct,
     placeBuilding,
+    claimHiddenEvent,
     upgradeBuilding,
     upgradeRefinery,
     autoTrade,
@@ -400,16 +402,42 @@ export default function RefineryScreen() {
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
+        {HIDDEN_EVENTS.filter(
+          (e) => e.reward.kind === 'building' && game.hiddenEventStatus[e.key] === 'unlocked',
+        ).map((event) => (
+          <ListRow
+            key={event.key}
+            title="??? Mystery Delivery"
+            subtitle="Something unusual happened. Tap to find out what."
+            badge="???"
+            actionLabel="Reveal"
+            onPress={() => claimHiddenEvent(event.key)}
+          />
+        ))}
         {BUILDING_KEYS.map((key) => {
           const b = BUILDINGS[key]
           const unlockLevel = b.unlockLevel ?? 1
-          const locked = game.refineryLevel < unlockLevel
-          const affordable = game.money >= b.cost
+          // A claimed Hidden Event 'building' reward grants free/discounted
+          // placements that bypass the normal unlock level AND cost -- see
+          // placeBuilding in useGameLoop.ts. Shown with a special badge and
+          // subtitle while uses remain, taking priority over the normal
+          // locked/cost display for this building.
+          const hiddenUses = game.hiddenBuildingUsesRemaining[key] ?? 0
+          const hasHiddenGrant = hiddenUses > 0
+          const locked = !hasHiddenGrant && game.refineryLevel < unlockLevel
+          const affordable = hasHiddenGrant || game.money >= b.cost
           return (
             <ListRow
               key={key}
               title={b.name.en}
-              subtitle={locked ? `Requires refinery Lv${unlockLevel}` : `$${b.cost.toLocaleString()}`}
+              subtitle={
+                hasHiddenGrant
+                  ? `FREE (Hidden Event reward · ${hiddenUses} left)`
+                  : locked
+                    ? `Requires refinery Lv${unlockLevel}`
+                    : `$${b.cost.toLocaleString()}`
+              }
+              badge={hasHiddenGrant ? '✨' : undefined}
               actionLabel="Build"
               disabled={locked || !affordable}
               onPress={() => {
