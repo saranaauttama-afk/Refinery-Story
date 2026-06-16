@@ -128,6 +128,29 @@ export type GameState = {
   gasolineYieldCarry: number
   // Keys of HIDDEN_COMBOS already discovered/rewarded (one-time each).
   discoveredCombos: string[]
+  // Hidden Event system (separate from discoveredCombos above): keys of
+  // HiddenEventConfig entries that have been unlocked (condition met) OR
+  // claimed. Unlocked-but-not-yet-claimed events are tracked the same way
+  // claimed ones are -- see hiddenEventState below for which is which.
+  // Once a key is in this array its trigger condition is never
+  // re-evaluated (so a one-time event can't re-trigger after being
+  // claimed and its condition becomes true again later).
+  discoveredHiddenEvents: string[]
+  // For each discoveredHiddenEvents key: 'unlocked' (condition met, "???"
+  // card showing, not yet claimed -- stays this way indefinitely, no
+  // deadline) or 'claimed' (player tapped to reveal + take the reward).
+  hiddenEventStatus: Partial<Record<string, 'unlocked' | 'claimed'>>
+  // Remaining free/discounted placements for a claimed 'building'-reward
+  // Hidden Event, keyed by BuildingType. Decremented each time the player
+  // places that building while uses remain; the build picker shows it as
+  // a special option only while count > 0.
+  hiddenBuildingUsesRemaining: Partial<Record<BuildingType, number>>
+  // Contracts granted by a claimed 'contract'-reward Hidden Event. Kept
+  // separate from the static CONTRACTS array (which never changes at
+  // runtime) -- the contracts UI/derived stats merge this in alongside
+  // CONTRACTS so claimed hidden contracts show up and are completable
+  // exactly like normal ones, just sourced from here instead.
+  hiddenContracts: Contract[]
   // System 2: Refinery Upgrade Perk Tree
   upgradePoints: number
   unlockedPerks: PerkKey[]
@@ -483,6 +506,80 @@ export type GameClock = {
   dayOfWeek: number
   dayOfMonth: number
   isDaytime: boolean
+}
+
+// --- Hidden Event system ---
+// Separate from Hidden Combos (building-adjacency based, see
+// HIDDEN_COMBOS) -- these are gated by the in-game calendar clock
+// (GameClock above) instead, optionally combined with an in-game state
+// condition. Checked every tick; once a config's condition is true AND
+// it hasn't been unlocked yet, it becomes a claimable "???" card that
+// stays available indefinitely until the player claims it (no deadline,
+// no expiry -- see design discussion).
+//
+// Time conditions are deliberately data-only (not arbitrary functions) so
+// they stay simple to read/balance and there's exactly one place
+// (getIsTimeConditionMet) that knows how to evaluate them.
+export type HiddenEventTimeCondition =
+  // True during [startHour, endHour) every in-game day (wraps past
+  // midnight if endHour <= startHour, e.g. 22-2 means 22:00-01:59).
+  | { type: 'hourRange'; startHour: number; endHour: number }
+  // True on one specific day of the week (0-6, see CALENDAR_BALANCE).
+  | { type: 'dayOfWeek'; day: number }
+  // True on one specific day of the month (0-29).
+  | { type: 'dayOfMonth'; day: number }
+
+// In-game state conditions, beyond just timing. Kept to the handful of
+// shapes actually needed rather than a generic expression language.
+export type HiddenEventGameCondition =
+  | { type: 'minRefineryLevel'; level: number }
+  | { type: 'minMoney'; amount: number }
+  | { type: 'minBuildingCount'; building: BuildingType; count: number }
+
+export type HiddenEventDifficulty = 'easy' | 'medium' | 'hard'
+
+export type HiddenEventReward =
+  | {
+      kind: 'contract'
+      // A fully-formed Contract (see Contract type) that gets added to
+      // the player's contract list once unlocked. Shown as "???" (no
+      // name/reward/requirement visible) until claimed.
+      contract: Contract
+    }
+  | {
+      kind: 'building'
+      // A building the player can place for a limited number of uses
+      // once unlocked (tracked via GameState.hiddenBuildingUsesRemaining)
+      // -- not a permanently-unlocked new BuildingType, since the build
+      // picker UI assumes a fixed building list. Reusing BuildingType
+      // keeps this additive: cost/effect come from the SAME balance
+      // tables as the normal building, this just grants free/discounted
+      // placements.
+      building: BuildingType
+      uses: number
+      costOverride?: number
+    }
+  | {
+      kind: 'staff'
+      // A one-off named "legendary" hire: a WorkerConfig-shaped employee
+      // that gets added directly to GameState.employees once claimed
+      // (bypassing the normal recruitment pool/cost), pre-set to a given
+      // level and always the 'veteran' trait.
+      workerType: WorkerType
+      name: string
+      startingLevel: number
+    }
+
+export type HiddenEventConfig = {
+  key: string
+  difficulty: HiddenEventDifficulty
+  // ALL conditions must be true (AND) for the event to unlock.
+  timeConditions: HiddenEventTimeCondition[]
+  gameConditions?: HiddenEventGameCondition[]
+  name: BilingualTextValue
+  // Flavor text shown only AFTER the event is unlocked/revealed.
+  revealMessage: BilingualTextValue
+  reward: HiddenEventReward
 }
 
 export type DerivedStats = {

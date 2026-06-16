@@ -32,6 +32,7 @@ import { CONTRACTS } from '../data/contracts'
 import { getCurrentEra, getNextEra } from '../data/eras'
 import { RANDOM_EVENTS } from '../data/events'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
+import { HIDDEN_EVENTS } from '../data/hiddenEvents'
 import type { HiddenComboConfig } from '../data/hiddenCombos'
 import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
@@ -53,6 +54,9 @@ import type {
   ComboStats,
   DerivedStats,
   GameClock,
+  HiddenEventConfig,
+  HiddenEventGameCondition,
+  HiddenEventTimeCondition,
   GameState,
   GridCell,
   Employee,
@@ -171,6 +175,10 @@ export function createInitialGameState(): GameState {
     petrochemicalsDemandMultiplier: 1,
     gasolineYieldCarry: 0,
     discoveredCombos: [],
+    discoveredHiddenEvents: [],
+    hiddenEventStatus: {},
+    hiddenBuildingUsesRemaining: {},
+    hiddenContracts: [],
     upgradePoints: 0,
     unlockedPerks: [],
     highestEraIndex: 0,
@@ -1014,6 +1022,66 @@ export function getNewlyDiscoveredCombos(
   return HIDDEN_COMBOS.filter((combo) => found.has(combo.key))
 }
 
+// --- Hidden Event system ---
+// See HiddenEventConfig in types.ts for the full design rationale. These
+// functions are pure (grid/clock/state in, boolean/list out) so they're
+// easy to unit-test in isolation, same as the combo functions above.
+
+function getIsTimeConditionMet(condition: HiddenEventTimeCondition, clock: GameClock): boolean {
+  switch (condition.type) {
+    case 'hourRange': {
+      const { startHour, endHour } = condition
+      if (startHour === endHour) return true // 24h window, always true
+      if (startHour < endHour) {
+        return clock.hourOfDay >= startHour && clock.hourOfDay < endHour
+      }
+      // Wraps past midnight, e.g. 22-2 means 22:00-23:59 or 0:00-1:59.
+      return clock.hourOfDay >= startHour || clock.hourOfDay < endHour
+    }
+    case 'dayOfWeek':
+      return clock.dayOfWeek === condition.day
+    case 'dayOfMonth':
+      return clock.dayOfMonth === condition.day
+  }
+}
+
+function getIsGameConditionMet(condition: HiddenEventGameCondition, game: GameState, derived: DerivedStats): boolean {
+  switch (condition.type) {
+    case 'minRefineryLevel':
+      return game.refineryLevel >= condition.level
+    case 'minMoney':
+      return game.money >= condition.amount
+    case 'minBuildingCount':
+      return derived.buildingCounts[condition.building] >= condition.count
+  }
+}
+
+function getIsHiddenEventConditionMet(config: HiddenEventConfig, game: GameState, derived: DerivedStats): boolean {
+  if (!config.timeConditions.every((c) => getIsTimeConditionMet(c, derived.gameClock))) return false
+  if (config.gameConditions && !config.gameConditions.every((c) => getIsGameConditionMet(c, game, derived))) {
+    return false
+  }
+  return true
+}
+
+// Checked every tick (cheap -- HIDDEN_EVENTS is a short, hand-curated
+// list). Returns configs whose condition just became true and that
+// aren't already in `discovered` -- once a key is in `discovered` its
+// condition is never re-evaluated, so a one-time event can't re-trigger
+// later when its time/game condition becomes true again (e.g. next
+// Friday). The caller (useGameLoop.ts) marks these 'unlocked' (not yet
+// claimed) and they stay that way indefinitely until the player taps to
+// claim -- see design discussion: no deadline, no expiry.
+export function getNewlyUnlockedHiddenEvents(
+  game: GameState,
+  derived: DerivedStats,
+  discovered: string[],
+): HiddenEventConfig[] {
+  return HIDDEN_EVENTS.filter(
+    (config) => !discovered.includes(config.key) && getIsHiddenEventConditionMet(config, game, derived),
+  )
+}
+
 export function countBuildings(grid: GridCell[]) {
   return grid.reduce((counts, cell) => {
     if (cell) {
@@ -1319,7 +1387,12 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     researchSellPriceBonus
   const upgradeCost = getUpgradeCost(game.refineryLevel)
   const availableSpace = game.grid.filter((cell) => cell === null).length
-  const activeContracts = CONTRACTS.map((contract) => ({
+  // Hidden Event 'contract' rewards are appended to game.hiddenContracts
+  // when claimed (see claimHiddenEvent in useGameLoop.ts) -- merged in
+  // here so they show up and behave exactly like normal contracts
+  // (completable, same reward-multiplier scaling) without duplicating
+  // this mapping logic.
+  const activeContracts = [...CONTRACTS, ...game.hiddenContracts].map((contract) => ({
     ...contract,
     isCompleted: game.completedContractIds.includes(contract.id),
     isUnlocked: game.refineryLevel >= contract.unlockLevel,

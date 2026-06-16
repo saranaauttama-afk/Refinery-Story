@@ -3,6 +3,7 @@ import type {
   AwardRecord,
   BilingualTextValue,
   BuildingType,
+  Contract,
   Employee,
   GameState,
   PendingShipment,
@@ -17,6 +18,8 @@ import { text } from '../translations'
 import { createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
 import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
+import { HIDDEN_EVENTS } from '../data/hiddenEvents'
+import { BUILDINGS } from '../data/buildings'
 import { getStaffName } from '../data/staffNames'
 import { generateRecruitmentPool, getUnlockedWorkerTypes, RECRUITMENT_BALANCE } from '../data/recruitment'
 
@@ -471,6 +474,57 @@ export function sanitizeLoadedGameState(value: unknown) {
     discoveredCombos: getSafeStringArray(value.discoveredCombos, []).filter((key) =>
       HIDDEN_COMBOS.some((combo) => combo.key === key),
     ),
+    // Hidden Event system: discoveredHiddenEvents keys not matching a
+    // current HIDDEN_EVENTS entry are dropped (same defensive pattern as
+    // discoveredCombos above -- handles a removed/renamed event key
+    // gracefully instead of leaving orphaned state). hiddenEventStatus is
+    // filtered to only keep entries for keys that survived that same
+    // filter, and only valid 'unlocked'/'claimed' values. hiddenContracts
+    // entries are kept as-is (they're full Contract objects, not just
+    // keys, so there's no HIDDEN_EVENTS lookup to validate against --
+    // worst case a stale one shows up as an extra contract, which is
+    // harmless and matches how CONTRACTS itself is never validated either).
+    discoveredHiddenEvents: getSafeStringArray(value.discoveredHiddenEvents, []).filter((key) =>
+      HIDDEN_EVENTS.some((event) => event.key === key),
+    ),
+    hiddenEventStatus: (() => {
+      const raw = isRecord(value) ? value.hiddenEventStatus : undefined
+      if (!isRecord(raw)) return {}
+      const result: Partial<Record<string, 'unlocked' | 'claimed'>> = {}
+      for (const [key, status] of Object.entries(raw)) {
+        if (
+          HIDDEN_EVENTS.some((event) => event.key === key) &&
+          (status === 'unlocked' || status === 'claimed')
+        ) {
+          result[key] = status
+        }
+      }
+      return result
+    })(),
+    hiddenBuildingUsesRemaining: (() => {
+      const raw = isRecord(value) ? value.hiddenBuildingUsesRemaining : undefined
+      if (!isRecord(raw)) return {}
+      const result: Partial<Record<BuildingType, number>> = {}
+      for (const [building, uses] of Object.entries(raw)) {
+        if (typeof uses === 'number' && uses > 0 && building in BUILDINGS) {
+          result[building as BuildingType] = Math.floor(uses)
+        }
+      }
+      return result
+    })(),
+    hiddenContracts: (() => {
+      const raw = isRecord(value) ? value.hiddenContracts : undefined
+      if (!Array.isArray(raw)) return []
+      return raw.filter(
+        (c): c is Contract =>
+          isRecord(c) &&
+          typeof c.id === 'number' &&
+          typeof c.gasolineRequired === 'number' &&
+          typeof c.reward === 'number' &&
+          typeof c.rpReward === 'number' &&
+          typeof c.reputationReward === 'number',
+      )
+    })(),
     upgradePoints: getSafeNumber(value.upgradePoints, 0),
     unlockedPerks: getSafePerks(value.unlockedPerks),
     highestEraIndex: getSafeNumber(value.highestEraIndex, 0),

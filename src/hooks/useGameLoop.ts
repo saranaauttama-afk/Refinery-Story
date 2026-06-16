@@ -5,6 +5,7 @@ import type {
   BuildingType,
   ChoiceEvent,
   Contract,
+  Employee,
   EraConfig,
   GameState,
   PerkConfig,
@@ -37,6 +38,7 @@ import {
   getWasteGeneratedPerTick,
   getWasteOverflowEsgPenalty,
   getNewlyDiscoveredCombos,
+  getNewlyUnlockedHiddenEvents,
   getProductSellPrice,
   getRandomEvent,
   getSpecialistMultiplierForCell,
@@ -75,6 +77,7 @@ import { text } from '../game/translations'
 import { BUILDINGS } from '../game/data/buildings'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
 import type { HiddenComboConfig } from '../game/data/hiddenCombos'
+import { HIDDEN_EVENTS } from '../game/data/hiddenEvents'
 import {
   generateRecruitmentPool,
   getManualRefreshCost,
@@ -626,10 +629,35 @@ export function useGameLoop() {
           next = { ...next, activityLog: addLog(next.activityLog, levelUpLog) }
         }
 
-        const era = calculateDerivedStats(next).currentEra
+        const derivedForTick = calculateDerivedStats(next)
+        const era = derivedForTick.currentEra
         if (era.index > next.highestEraIndex) {
           next = { ...next, highestEraIndex: era.index }
           setPendingEraBanner(era)
+        }
+
+        // Hidden Event system: checked every tick (cheap -- short,
+        // hand-curated list) since time-based conditions can become true
+        // without any player action (e.g. the clock turning midnight).
+        // Newly-met conditions get marked 'unlocked' and stay that way
+        // indefinitely until the player taps to claim -- no deadline.
+        const newlyUnlockedEvents = getNewlyUnlockedHiddenEvents(
+          next,
+          derivedForTick,
+          next.discoveredHiddenEvents,
+        )
+        if (newlyUnlockedEvents.length > 0) {
+          next = {
+            ...next,
+            discoveredHiddenEvents: [
+              ...next.discoveredHiddenEvents,
+              ...newlyUnlockedEvents.map((e) => e.key),
+            ],
+            hiddenEventStatus: {
+              ...next.hiddenEventStatus,
+              ...Object.fromEntries(newlyUnlockedEvents.map((e) => [e.key, 'unlocked' as const])),
+            },
+          }
         }
 
         if (next.tickCount - next.yearStartTick >= AWARDS_BALANCE.yearLengthTicks) {
@@ -754,7 +782,16 @@ export function useGameLoop() {
         const cell = current.grid[cellIndex]
         const buildingData = BUILDINGS[building]
         const unlockLevel = buildingData.unlockLevel ?? 1
-        if (cell !== null || current.money < buildingData.cost || current.refineryLevel < unlockLevel) {
+        // Hidden Event 'building' rewards grant a limited number of free/
+        // discounted placements that bypass the normal cost AND unlock
+        // level (see HiddenEventReward in types.ts) -- the reward itself
+        // is the access, the player shouldn't also need to already be
+        // unlocked for it normally.
+        const hiddenUsesRemaining = current.hiddenBuildingUsesRemaining[building] ?? 0
+        const usingHiddenGrant = hiddenUsesRemaining > 0
+        const effectiveCost = usingHiddenGrant ? 0 : buildingData.cost
+        if (cell !== null) return current
+        if (!usingHiddenGrant && (current.money < effectiveCost || current.refineryLevel < unlockLevel)) {
           return current
         }
         const grid = [...current.grid]
@@ -764,10 +801,23 @@ export function useGameLoop() {
 
         let next: GameState = {
           ...current,
-          money: current.money - buildingData.cost,
+          money: current.money - effectiveCost,
           grid,
           gridLevels,
-          activityLog: addLog(current.activityLog, `Built ${buildingData.name.en} (-$${buildingData.cost})`),
+          ...(usingHiddenGrant
+            ? {
+                hiddenBuildingUsesRemaining: {
+                  ...current.hiddenBuildingUsesRemaining,
+                  [building]: hiddenUsesRemaining - 1,
+                },
+              }
+            : {}),
+          activityLog: addLog(
+            current.activityLog,
+            usingHiddenGrant
+              ? `Built ${buildingData.name.en} (free -- Hidden Event reward)`
+              : `Built ${buildingData.name.en} (-$${buildingData.cost})`,
+          ),
         }
 
         // 🧩 Hidden combos: placing a building can newly complete a 3-in-a-
@@ -791,6 +841,69 @@ export function useGameLoop() {
         }
         if (newlyFound.length > 0) {
           setPendingComboDiscovery(newlyFound[0])
+        }
+
+        return next
+      }),
+    [update],
+  )
+
+  // Hidden Event system: reveals + grants the reward for an 'unlocked'
+  // (condition met, not yet claimed) Hidden Event. No-op if the key isn't
+  // unlocked or is already claimed -- the UI should only ever call this
+  // for keys in 'unlocked' status, but this guards against stale taps.
+  const claimHiddenEvent = useCallback(
+    (key: string) =>
+      update((current) => {
+        if (current.hiddenEventStatus[key] !== 'unlocked') return current
+        const config = HIDDEN_EVENTS.find((e) => e.key === key)
+        if (!config) return current
+
+        let next: GameState = {
+          ...current,
+          hiddenEventStatus: { ...current.hiddenEventStatus, [key]: 'claimed' },
+          activityLog: addLog(current.activityLog, `✨ Hidden Event: ${config.name.en}!`),
+        }
+
+        switch (config.reward.kind) {
+          case 'contract': {
+            next = { ...next, hiddenContracts: [...next.hiddenContracts, config.reward.contract] }
+            break
+          }
+          case 'building': {
+            const { building, uses, costOverride } = config.reward
+            next = {
+              ...next,
+              hiddenBuildingUsesRemaining: {
+                ...next.hiddenBuildingUsesRemaining,
+                [building]: (next.hiddenBuildingUsesRemaining[building] ?? 0) + uses,
+              },
+              // costOverride currently always 0 (free) in HIDDEN_EVENTS,
+              // but the field exists for a future discounted-not-free
+              // event -- placeBuilding always treats any hidden grant as
+              // free (see its usingHiddenGrant branch), so a non-zero
+              // costOverride isn't wired up yet. Flag if this ever
+              // matters: would need placeBuilding to read it instead of
+              // hardcoding 0.
+              ...(costOverride !== undefined && costOverride !== 0
+                ? { activityLog: addLog(next.activityLog, 'Note: costOverride != 0 is not yet implemented') }
+                : {}),
+            }
+            break
+          }
+          case 'staff': {
+            const { workerType, name, startingLevel } = config.reward
+            const employee: Employee = {
+              id: `hidden-${key}`,
+              type: workerType,
+              name,
+              level: startingLevel,
+              xp: 0,
+              trait: 'veteran',
+            }
+            next = { ...next, employees: [...next.employees, employee] }
+            break
+          }
         }
 
         return next
@@ -1171,6 +1284,7 @@ export function useGameLoop() {
     sellGasoline,
     sellProduct,
     placeBuilding,
+    claimHiddenEvent,
     upgradeBuilding,
     upgradeRefinery,
     expandGrid,
