@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
+import BottomDrawer from '../../../src/components/BottomDrawer'
 import BuildingGrid from '../../../src/components/BuildingGrid'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
@@ -22,6 +23,7 @@ import ProgressBar from '../../../src/components/ProgressBar'
 import StatBoxRow from '../../../src/components/StatBoxRow'
 import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
+import ZoomableGridCanvas from '../../../src/components/ZoomableGridCanvas'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
@@ -123,7 +125,7 @@ export default function RefineryScreen() {
     assignEmployeeToCell,
     unassignCell,
   } = useGame()
-  const { width } = useWindowDimensions()
+  const { width, height } = useWindowDimensions()
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell, setInfoCell] = useState<number | null>(null)
   // Move/Swap buildings: when set, the NEXT grid tap is interpreted as
@@ -244,211 +246,237 @@ export default function RefineryScreen() {
   // working toward" without leaving the Refinery tab.
   const currentContract = derived.activeContracts.find((c) => c.isUnlocked && !c.isCompleted)
 
+  // Natural (unscaled) pixel size of the grid, used as the "content size"
+  // ZoomableGridCanvas clamps panning against. Based on a fixed base tile
+  // size rather than the screen width (which is now irrelevant to grid
+  // sizing -- the canvas can be panned/zoomed independently of the
+  // viewport) so the grid renders at a consistent, comfortable tap-target
+  // size regardless of device.
+  const cols = Math.round(Math.sqrt(game.grid.length))
+  const baseTileSize = 84
+  const gridCanvasWidth = cols * baseTileSize + spacing.md * 2
+
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
       {!derived.gameClock.isDaytime && <View style={styles.nightOverlay} pointerEvents="none" />}
-      <View style={styles.header}>
-        <AnimatedPressable
-          onPress={() => {
-            if (canUpgrade) {
-              spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
-              haptics.confirm()
-            }
-            upgradeRefinery()
-          }}
-        >
-          <Text style={styles.title}>
-            {game.refineryName} · Lv{game.refineryLevel}
-          </Text>
-          <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>{upgradeSubtitle}</Text>
-        </AnimatedPressable>
-        <View style={styles.headerRight}>
-          <Text style={styles.season}>{seasonLabel.en}</Text>
-          <Pressable
-            style={styles.automationButton}
-            onPress={() => setAutomationModalOpen(true)}
-          >
-            <Text style={styles.automationButtonLabel}>⚙️</Text>
-          </Pressable>
+
+      {/* Background layer: the building grid, full-screen, pannable +
+          pinch-zoomable. A small ⤢ button (mid-right edge, rendered by
+          ZoomableGridCanvas itself) resets framing. */}
+      <ZoomableGridCanvas contentWidth={gridCanvasWidth} contentHeight={gridCanvasWidth}>
+        <View style={styles.gridWrap}>
+          <BuildingGrid
+            grid={game.grid}
+            gridLevels={game.gridLevels}
+            containerWidth={gridCanvasWidth}
+            onCellPress={handleCellPress}
+            isActive={game.crudeOil > 0}
+            employeeCount={game.employees.length}
+          />
         </View>
-      </View>
+      </ZoomableGridCanvas>
 
-      <StatBoxRow
-        boxes={[
-          { key: 'era', label: `Era ${derived.currentEra.index + 1}`, value: `Lv${game.refineryLevel}`, color: colors.ink },
-          { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
-          { key: 'reputation', label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}`, color: colors.purple },
-        ]}
-      />
+      {/* Floating top overlay: header + grouped stat boxes. Sits ABOVE
+          the grid layer (position: absolute), doesn't scroll with it. */}
+      <View style={styles.topOverlay} pointerEvents="box-none">
+        <View style={styles.header}>
+          <AnimatedPressable
+            onPress={() => {
+              if (canUpgrade) {
+                spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+                haptics.confirm()
+              }
+              upgradeRefinery()
+            }}
+          >
+            <Text style={styles.title}>
+              {game.refineryName} · Lv{game.refineryLevel}
+            </Text>
+            <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>{upgradeSubtitle}</Text>
+          </AnimatedPressable>
+          <View style={styles.headerRight}>
+            <Text style={styles.season}>{seasonLabel.en}</Text>
+            <Pressable style={styles.automationButton} onPress={() => setAutomationModalOpen(true)}>
+              <Text style={styles.automationButtonLabel}>⚙️</Text>
+            </Pressable>
+          </View>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-      {nextGoal && (
-        <Pressable style={styles.nextGoalCard} onPress={() => router.push('/achievements')}>
-          <Text style={styles.nextGoalLabel}>🎯 Next: {nextGoal.name.en}</Text>
-          {nextGoal.progress ? (
-            <View style={styles.nextGoalProgressRow}>
-              <ProgressBar current={nextGoal.progress.current} target={nextGoal.progress.target} />
-              <Text style={styles.nextGoalProgressLabel}>
-                {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
-              </Text>
-            </View>
-          ) : (
-            <Text style={styles.nextGoalRequirement}>{nextGoal.requirement.en}</Text>
-          )}
-        </Pressable>
-      )}
-
-      <ResourceBar stats={stats} />
-
-      <View style={styles.gridWrap}>
-        <BuildingGrid
-          grid={game.grid}
-          gridLevels={game.gridLevels}
-          containerWidth={width - spacing.lg * 2}
-          onCellPress={handleCellPress}
-          isActive={game.crudeOil > 0}
-          employeeCount={game.employees.length}
+        <StatBoxRow
+          boxes={[
+            { key: 'era', label: `Era ${derived.currentEra.index + 1}`, value: `Lv${game.refineryLevel}`, color: colors.ink },
+            { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
+            { key: 'reputation', label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}`, color: colors.purple },
+          ]}
         />
-        {gridEditMode ? (
-          <Pressable onPress={() => setGridEditMode(null)}>
+
+        <ResourceBar stats={stats} />
+
+        {/* The old "Tap an empty tile to build · tap a built tile for
+            info" hint (always visible) was intentionally dropped here --
+            it doesn't fit the floating-HUD design's goal of minimal
+            persistent chrome over the grid, and the interaction is
+            fairly self-evident once a player taps anything. Still shown
+            for the one case that's NOT self-evident: an active grid-edit
+            (move/swap) in progress, where the player needs to know what
+            their next tap will do. */}
+        {gridEditMode && (
+          <Pressable onPress={() => setGridEditMode(null)} style={styles.gridEditHint}>
             <Text style={styles.hintActive}>
               {gridEditMode.type === 'move' ? 'Tap an empty tile to move there' : 'Tap a building to swap with'}
               {' · tap here to cancel'}
             </Text>
           </Pressable>
-        ) : (
-          <Text style={styles.hint}>Tap an empty tile to build · tap a built tile for info</Text>
         )}
       </View>
 
-      <View style={styles.actions}>
-        <AnimatedPressable
-          style={[styles.actionButton, styles.buyButton]}
-          onPress={() => {
-            const actualBuy = Math.min(10, Math.floor(game.money / CRUDE_COST), derived.maxCrudeStorage - game.crudeOil)
-            if (actualBuy > 0) {
-              spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
-              haptics.tap()
-            }
-            buyCrude(10)
-          }}
-        >
-          <Text style={styles.actionLabel}>Buy 10 Crude</Text>
-          <Text style={styles.actionSub}>${CRUDE_COST}/unit</Text>
-        </AnimatedPressable>
-        <AnimatedPressable
-          style={[styles.actionButton, styles.sellButton]}
-          onPress={() => {
-            const actualSell = Math.min(10, game.gasoline)
-            if (actualSell > 0) {
-              spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
-              haptics.tap()
-            }
-            sellGasoline(10)
-          }}
-        >
-          <Text style={styles.actionLabel}>Sell 10 Gas</Text>
-          <Text style={styles.actionSub}>${derived.sellPrice}/unit</Text>
-        </AnimatedPressable>
-      </View>
-
-      <CollapsibleCard
-        title="📊 Production Overview"
-        summary={`${productionRows.length} product${productionRows.length === 1 ? '' : 's'}`}
-      >
-        <ProductionOverview rows={productionRows} />
-      </CollapsibleCard>
-
-      {currentContract &&
-        (() => {
-          const { have, need, unit } = getContractProgress(currentContract, game)
-          return (
-            <Pressable
-              style={styles.contractCard}
-              onPress={() => router.push('/game/business')}
-            >
-              <Text style={styles.contractTitle}>📋 Current Contract</Text>
-              <Text style={styles.contractName}>{currentContract.name.en}</Text>
-              <View style={styles.contractProgressRow}>
-                <ProgressBar current={have} target={need} color={colors.blue} />
-                <Text style={styles.contractProgressLabel}>
-                  {have.toLocaleString()}/{need.toLocaleString()} {unit}
-                </Text>
-              </View>
-              <Text style={styles.contractReward}>
-                Reward: ${currentContract.currentReward.toLocaleString()} · +{currentContract.currentRpReward} RP
-              </Text>
+      {/* Floating bottom drawer: everything else (next goal, buy/sell
+          actions, Production Overview, Current Contract, sell chips,
+          Boost) -- peeks a small sliver by default so the grid stays
+          mostly visible, drag the handle up to see it all. */}
+      <BottomDrawer title="📊 Dashboard" bottomOffset={FLOATING_TAB_BAR_CLEARANCE}>
+        <ScrollView contentContainerStyle={styles.drawerScrollContent}>
+          {nextGoal && (
+            <Pressable style={styles.nextGoalCard} onPress={() => router.push('/achievements')}>
+              <Text style={styles.nextGoalLabel}>🎯 Next: {nextGoal.name.en}</Text>
+              {nextGoal.progress ? (
+                <View style={styles.nextGoalProgressRow}>
+                  <ProgressBar current={nextGoal.progress.current} target={nextGoal.progress.target} />
+                  <Text style={styles.nextGoalProgressLabel}>
+                    {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.nextGoalRequirement}>{nextGoal.requirement.en}</Text>
+              )}
             </Pressable>
-          )
-        })()}
+          )}
 
-      <View style={styles.productsWrap}>
-        {products.map((p) => {
-          const have = game.productInventory[p.key]
-          const price = getProductSellPrice(
-            p.key,
-            derived.productSellMultiplier,
-            p.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1,
-          )
-          return (
+          <View style={styles.actions}>
             <AnimatedPressable
-              key={p.key}
-              style={[styles.productChip, { borderColor: p.color, opacity: have > 0 ? 1 : 0.5 }]}
-              disabled={have <= 0}
+              style={[styles.actionButton, styles.buyButton]}
               onPress={() => {
-                if (have > 0) {
-                  spawnFloat(`+$${(have * price).toLocaleString()}`, 'income')
+                const actualBuy = Math.min(10, Math.floor(game.money / CRUDE_COST), derived.maxCrudeStorage - game.crudeOil)
+                if (actualBuy > 0) {
+                  spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
                   haptics.tap()
                 }
-                sellProduct(p.key, have)
+                buyCrude(10)
               }}
             >
-              <Text style={[styles.productLabel, { color: p.color }]}>{p.label}</Text>
-              <Text style={styles.productValue}>
-                {have} · sell @${price}
-              </Text>
+              <Text style={styles.actionLabel}>Buy 10 Crude</Text>
+              <Text style={styles.actionSub}>${CRUDE_COST}/unit</Text>
             </AnimatedPressable>
-          )
-        })}
-      </View>
+            <AnimatedPressable
+              style={[styles.actionButton, styles.sellButton]}
+              onPress={() => {
+                const actualSell = Math.min(10, game.gasoline)
+                if (actualSell > 0) {
+                  spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
+                  haptics.tap()
+                }
+                sellGasoline(10)
+              }}
+            >
+              <Text style={styles.actionLabel}>Sell 10 Gas</Text>
+              <Text style={styles.actionSub}>${derived.sellPrice}/unit</Text>
+            </AnimatedPressable>
+          </View>
 
-      <View style={[styles.boostCard, boostActive && styles.boostCardActive]}>
-        {boostActive ? (
-          <>
-            <Text style={styles.boostTitle}>🔥 Boost active! x{BOOST_BALANCE.productionMultiplier} gasoline</Text>
-            <View style={styles.boostProgressRow}>
-              <ProgressBar current={boostElapsed} target={BOOST_BALANCE.durationTicks} />
-              <Text style={styles.boostTimeLabel}>{boostActiveSecondsLeft}s left</Text>
-            </View>
-          </>
-        ) : boostOnCooldown ? (
-          <>
-            <Text style={styles.boostTitleMuted}>🔥 Boost recharging...</Text>
-            <View style={styles.boostProgressRow}>
-              <ProgressBar current={boostElapsed} target={BOOST_BALANCE.cooldownTicks} />
-              <Text style={styles.boostTimeLabel}>{boostCooldownSecondsLeft}s</Text>
-            </View>
-          </>
-        ) : (
-          <AnimatedPressable
-            style={styles.boostButton}
-            onPress={() => {
-              if (boostReady) {
-                haptics.confirm()
-                activateBoost()
-              }
-            }}
+          <CollapsibleCard
+            title="📊 Production Overview"
+            summary={`${productionRows.length} product${productionRows.length === 1 ? '' : 's'}`}
           >
-            <Text style={styles.boostButtonLabel}>
-              🔥 Activate Boost · x{BOOST_BALANCE.productionMultiplier} gasoline for{' '}
-              {Math.round((BOOST_BALANCE.durationTicks * TICK_MS) / 1000)}s
-            </Text>
-          </AnimatedPressable>
-        )}
-      </View>
+            <ProductionOverview rows={productionRows} />
+          </CollapsibleCard>
 
-      </ScrollView>
+          {currentContract &&
+            (() => {
+              const { have, need, unit } = getContractProgress(currentContract, game)
+              return (
+                <Pressable style={styles.contractCard} onPress={() => router.push('/game/business')}>
+                  <Text style={styles.contractTitle}>📋 Current Contract</Text>
+                  <Text style={styles.contractName}>{currentContract.name.en}</Text>
+                  <View style={styles.contractProgressRow}>
+                    <ProgressBar current={have} target={need} color={colors.blue} />
+                    <Text style={styles.contractProgressLabel}>
+                      {have.toLocaleString()}/{need.toLocaleString()} {unit}
+                    </Text>
+                  </View>
+                  <Text style={styles.contractReward}>
+                    Reward: ${currentContract.currentReward.toLocaleString()} · +{currentContract.currentRpReward} RP
+                  </Text>
+                </Pressable>
+              )
+            })()}
+
+          <View style={styles.productsWrap}>
+            {products.map((p) => {
+              const have = game.productInventory[p.key]
+              const price = getProductSellPrice(
+                p.key,
+                derived.productSellMultiplier,
+                p.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1,
+              )
+              return (
+                <AnimatedPressable
+                  key={p.key}
+                  style={[styles.productChip, { borderColor: p.color, opacity: have > 0 ? 1 : 0.5 }]}
+                  disabled={have <= 0}
+                  onPress={() => {
+                    if (have > 0) {
+                      spawnFloat(`+$${(have * price).toLocaleString()}`, 'income')
+                      haptics.tap()
+                    }
+                    sellProduct(p.key, have)
+                  }}
+                >
+                  <Text style={[styles.productLabel, { color: p.color }]}>{p.label}</Text>
+                  <Text style={styles.productValue}>
+                    {have} · sell @${price}
+                  </Text>
+                </AnimatedPressable>
+              )
+            })}
+          </View>
+
+          <View style={[styles.boostCard, boostActive && styles.boostCardActive]}>
+            {boostActive ? (
+              <>
+                <Text style={styles.boostTitle}>🔥 Boost active! x{BOOST_BALANCE.productionMultiplier} gasoline</Text>
+                <View style={styles.boostProgressRow}>
+                  <ProgressBar current={boostElapsed} target={BOOST_BALANCE.durationTicks} />
+                  <Text style={styles.boostTimeLabel}>{boostActiveSecondsLeft}s left</Text>
+                </View>
+              </>
+            ) : boostOnCooldown ? (
+              <>
+                <Text style={styles.boostTitleMuted}>🔥 Boost recharging...</Text>
+                <View style={styles.boostProgressRow}>
+                  <ProgressBar current={boostElapsed} target={BOOST_BALANCE.cooldownTicks} />
+                  <Text style={styles.boostTimeLabel}>{boostCooldownSecondsLeft}s</Text>
+                </View>
+              </>
+            ) : (
+              <AnimatedPressable
+                style={styles.boostButton}
+                onPress={() => {
+                  if (boostReady) {
+                    haptics.confirm()
+                    activateBoost()
+                  }
+                }}
+              >
+                <Text style={styles.boostButtonLabel}>
+                  🔥 Activate Boost · x{BOOST_BALANCE.productionMultiplier} gasoline for{' '}
+                  {Math.round((BOOST_BALANCE.durationTicks * TICK_MS) / 1000)}s
+                </Text>
+              </AnimatedPressable>
+            )}
+          </View>
+        </ScrollView>
+      </BottomDrawer>
 
       {/* Automation: Auto-trade + Feedstock Priority, moved out of the
           main scroll (dashboard redesign) so the Refinery tab stays a
@@ -752,6 +780,17 @@ const styles = StyleSheet.create({
     opacity: 0.12,
     zIndex: 1,
   },
+  topOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
+  gridEditHint: {
+    marginTop: spacing.xs,
+    alignItems: 'center',
+  },
   infoLevel: {
     fontWeight: '800',
     color: colors.ink,
@@ -815,8 +854,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  scrollContent: {
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
+  drawerScrollContent: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
   loadingScreen: {
     flex: 1,
@@ -867,10 +907,7 @@ const styles = StyleSheet.create({
   automationButtonLabel: {
     fontSize: 16,
   },
-  gridWrap: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-  },
+  gridWrap: {},
   hint: {
     textAlign: 'center',
     fontSize: 11,
