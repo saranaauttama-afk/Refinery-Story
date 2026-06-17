@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import BottomDrawer from '../../../src/components/BottomDrawer'
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
@@ -46,13 +47,15 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
+      <View style={styles.header} pointerEvents="box-none">
         <Text style={styles.title}>Stats</Text>
         <Pressable onPress={() => router.push('/')}>
           <Text style={styles.menuLink}>☰ Main Menu</Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.list}>
+
+      <BottomDrawer title="📈 Stats" bottomOffset={FLOATING_TAB_BAR_CLEARANCE}>
+        <ScrollView contentContainerStyle={styles.list}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Era</Text>
           <Stat label="Current era" value={derived.currentEra.name.en} />
@@ -186,7 +189,8 @@ export default function StatsScreen() {
             onPress={() => router.push('/store')}
           />
         </View>
-      </ScrollView>
+        </ScrollView>
+      </BottomDrawer>
     </SafeAreaView>
   )
 }
@@ -203,6 +207,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -222,7 +231,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
+    paddingBottom: spacing.xl,
   },
   section: {
     marginBottom: spacing.lg,

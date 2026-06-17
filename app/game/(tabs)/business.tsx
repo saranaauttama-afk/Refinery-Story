@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import BottomDrawer from '../../../src/components/BottomDrawer'
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { colors, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
@@ -52,13 +53,15 @@ export default function BusinessScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
+      <View style={styles.header} pointerEvents="box-none">
         <Text style={styles.title}>Business</Text>
         <Text style={styles.subtitle}>
           RP {game.researchPoints} · Upgrade pts {game.upgradePoints} · Rep {game.reputation}
         </Text>
       </View>
-      <ScrollView contentContainerStyle={styles.list}>
+
+      <BottomDrawer title="💼 Business" bottomOffset={FLOATING_TAB_BAR_CLEARANCE}>
+        <ScrollView contentContainerStyle={styles.list}>
         <Section title="Contracts">
           {HIDDEN_EVENTS.filter(
             (e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked',
@@ -210,7 +213,8 @@ export default function BusinessScreen() {
             )
           })}
         </Section>
-      </ScrollView>
+        </ScrollView>
+      </BottomDrawer>
     </SafeAreaView>
   )
 }
@@ -227,6 +231,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
@@ -243,7 +252,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
+    paddingBottom: spacing.xl,
   },
   section: {
     marginBottom: spacing.lg,

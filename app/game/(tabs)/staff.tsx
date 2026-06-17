@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
+import BottomDrawer from '../../../src/components/BottomDrawer'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -99,11 +100,20 @@ export default function StaffScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
-      <View style={styles.header}>
+
+      {/* Floating top overlay -- same pattern as the Refinery tab
+          (position: absolute, sits above whatever's behind it). No grid
+          to pan/zoom here, so the background is just the screen's flat
+          color; the floating-overlay treatment is kept anyway for
+          consistency with the Refinery tab, per the layered-architecture
+          discussion. */}
+      <View style={styles.header} pointerEvents="box-none">
         <Text style={styles.title}>Staff</Text>
         <Text style={styles.subtitle}>{game.employees.length} employees hired</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.list}>
+
+      <BottomDrawer title="👷 Staff" bottomOffset={FLOATING_TAB_BAR_CLEARANCE}>
+        <ScrollView contentContainerStyle={styles.list}>
         <Section title="Recruitment">
           {HIDDEN_EVENTS.filter(
             (e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked',
@@ -284,7 +294,8 @@ export default function StaffScreen() {
             )
           })}
         </Section>
-      </ScrollView>
+        </ScrollView>
+      </BottomDrawer>
     </SafeAreaView>
   )
 }
@@ -301,6 +312,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
@@ -317,7 +333,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
+    paddingBottom: spacing.xl,
   },
   section: {
     marginBottom: spacing.lg,
