@@ -8,24 +8,8 @@ import { colors, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { PERKS } from '../../../src/game/data/perks'
 import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
+import { getContractProgress } from '../../../src/game/utils/gameCalculations'
 import { text } from '../../../src/game/translations'
-import type { ActiveContract, GameState } from '../../../src/game/types'
-
-function contractProgress(contract: ActiveContract, game: GameState) {
-  if ((contract.petrochemicalsRequired ?? 0) > 0) {
-    return { have: game.productInventory.petrochemicals, need: contract.petrochemicalsRequired ?? 0, unit: 'petrochem' }
-  }
-  if ((contract.lubricantsRequired ?? 0) > 0) {
-    return { have: game.productInventory.lubricants, need: contract.lubricantsRequired ?? 0, unit: 'lubricants' }
-  }
-  if ((contract.jetFuelRequired ?? 0) > 0) {
-    return { have: game.productInventory.jetFuel, need: contract.jetFuelRequired ?? 0, unit: 'jet fuel' }
-  }
-  if ((contract.asphaltRequired ?? 0) > 0) {
-    return { have: game.productInventory.asphalt, need: contract.asphaltRequired ?? 0, unit: 'asphalt' }
-  }
-  return { have: game.gasoline, need: contract.gasolineRequired, unit: 'gasoline' }
-}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -89,7 +73,7 @@ export default function BusinessScreen() {
             />
           ))}
           {incompleteContracts.map((contract) => {
-            const { have, need, unit } = contractProgress(contract, game)
+            const { have, need, unit } = getContractProgress(contract, game)
             const ready = have >= need
             // "NEW" = this contract just became available at your current
             // refinery level. Disappears once you complete it, or once you
@@ -123,7 +107,7 @@ export default function BusinessScreen() {
           )}
           {showCompletedContracts &&
             completedContracts.map((contract) => {
-              const { have, need, unit } = contractProgress(contract, game)
+              const { have, need, unit } = getContractProgress(contract, game)
               return (
                 <ListRow
                   key={contract.id}

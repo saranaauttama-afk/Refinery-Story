@@ -45,6 +45,7 @@ import { serializeBilingualText, text } from '../translations'
 import type {
   ActiveWorkerItem,
   AwardGrade,
+  ActiveContract,
   AwardRecord,
   RivalResult,
   BuildingCounts,
@@ -774,6 +775,31 @@ export function getProductMaxStorage(
     case 'petrochemicals':
       return derived.maxPetrochemicalsStorage
   }
+}
+
+// Which inventory the contract's reward is tied to, and how much of it the
+// player currently has vs needs. Each Contract has exactly one of the
+// X Required fields set (gasolineRequired is always present as a fallback
+// of 0 for non-gasoline contracts -- see CONTRACT_BALANCE). Shared between
+// the Business tab's contract list and the Refinery tab's "Current
+// Contract" dashboard card so both compute this identically.
+export function getContractProgress(
+  contract: ActiveContract,
+  game: GameState,
+): { have: number; need: number; unit: string } {
+  if ((contract.petrochemicalsRequired ?? 0) > 0) {
+    return { have: game.productInventory.petrochemicals, need: contract.petrochemicalsRequired ?? 0, unit: 'petrochem' }
+  }
+  if ((contract.lubricantsRequired ?? 0) > 0) {
+    return { have: game.productInventory.lubricants, need: contract.lubricantsRequired ?? 0, unit: 'lubricants' }
+  }
+  if ((contract.jetFuelRequired ?? 0) > 0) {
+    return { have: game.productInventory.jetFuel, need: contract.jetFuelRequired ?? 0, unit: 'jet fuel' }
+  }
+  if ((contract.asphaltRequired ?? 0) > 0) {
+    return { have: game.productInventory.asphalt, need: contract.asphaltRequired ?? 0, unit: 'asphalt' }
+  }
+  return { have: game.gasoline, need: contract.gasolineRequired, unit: 'gasoline' }
 }
 
 export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {

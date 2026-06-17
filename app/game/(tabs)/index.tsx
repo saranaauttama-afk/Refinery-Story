@@ -19,6 +19,7 @@ import ListRow from '../../../src/components/ListRow'
 import CollapsibleCard from '../../../src/components/CollapsibleCard'
 import ProductionOverview, { type ProductionOverviewRow } from '../../../src/components/ProductionOverview'
 import ProgressBar from '../../../src/components/ProgressBar'
+import StatBoxRow from '../../../src/components/StatBoxRow'
 import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
@@ -34,6 +35,7 @@ import {
   CRUDE_COST,
   getBuildingEffectLines,
   getCellAssignedToEmployee,
+  getContractProgress,
   getEmployeeAssignedToCell,
   getProductSellPrice,
   formatGameClockTime,
@@ -236,6 +238,12 @@ export default function RefineryScreen() {
       })),
   ]
 
+  // Current Contract dashboard card: the first unlocked, not-yet-completed
+  // contract, same selection a player would see first in the Business
+  // tab's Contracts section -- gives a persistent glance at "what am I
+  // working toward" without leaving the Refinery tab.
+  const currentContract = derived.activeContracts.find((c) => c.isUnlocked && !c.isCompleted)
+
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
@@ -265,6 +273,14 @@ export default function RefineryScreen() {
           </Pressable>
         </View>
       </View>
+
+      <StatBoxRow
+        boxes={[
+          { key: 'era', label: `Era ${derived.currentEra.index + 1}`, value: `Lv${game.refineryLevel}`, color: colors.ink },
+          { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
+          { key: 'reputation', label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}`, color: colors.purple },
+        ]}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
       {nextGoal && (
@@ -343,6 +359,29 @@ export default function RefineryScreen() {
       >
         <ProductionOverview rows={productionRows} />
       </CollapsibleCard>
+
+      {currentContract &&
+        (() => {
+          const { have, need, unit } = getContractProgress(currentContract, game)
+          return (
+            <Pressable
+              style={styles.contractCard}
+              onPress={() => router.push('/game/business')}
+            >
+              <Text style={styles.contractTitle}>📋 Current Contract</Text>
+              <Text style={styles.contractName}>{currentContract.name.en}</Text>
+              <View style={styles.contractProgressRow}>
+                <ProgressBar current={have} target={need} color={colors.blue} />
+                <Text style={styles.contractProgressLabel}>
+                  {have.toLocaleString()}/{need.toLocaleString()} {unit}
+                </Text>
+              </View>
+              <Text style={styles.contractReward}>
+                Reward: ${currentContract.currentReward.toLocaleString()} · +{currentContract.currentRpReward} RP
+              </Text>
+            </Pressable>
+          )
+        })()}
 
       <View style={styles.productsWrap}>
         {products.map((p) => {
@@ -982,6 +1021,42 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.inkMuted,
     fontWeight: '700',
+  },
+  contractCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    borderRadius: 14,
+    padding: spacing.md,
+  },
+  contractTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 14,
+  },
+  contractName: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    marginTop: 2,
+    marginBottom: spacing.sm,
+  },
+  contractProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  contractProgressLabel: {
+    fontSize: 11,
+    color: colors.inkMuted,
+    fontWeight: '700',
+  },
+  contractReward: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.goldDark,
+    marginTop: spacing.sm,
   },
   autoTradeHeader: {
     flexDirection: 'row',
