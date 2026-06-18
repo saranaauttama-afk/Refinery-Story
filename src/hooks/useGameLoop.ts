@@ -5,6 +5,7 @@ import type {
   BuildingType,
   ChoiceEvent,
   Contract,
+  DerivedStats,
   Employee,
   EraConfig,
   HiddenEventConfig,
@@ -77,6 +78,7 @@ import {
 } from '../game/data/balance'
 import { text } from '../game/translations'
 import { BUILDINGS } from '../game/data/buildings'
+import { SELLABLE_PRODUCTS, type SellableProductKey } from '../game/data/products'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
 import type { HiddenComboConfig } from '../game/data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../game/data/hiddenEvents'
@@ -104,21 +106,70 @@ export type AutoTradeSettings = {
   enabled: boolean
   buyThreshold: number // 0-100, % of maxCrudeStorage below which to top up
   sellThreshold: number // 0-100, % of maxGasolineStorage above which to sell down to
+  // One threshold per secondary product (lubricants, jetFuel,
+  // petrochemicals, recycledMaterial, plasticPellets), same meaning as
+  // sellThreshold above but for that product's own storage cap. Only
+  // acted on for products the player actually has a plant for (checked
+  // via buildingCounts in applyAutoTrade) -- a missing/undefined entry
+  // here just means "use the default", not "off"; per-product on/off
+  // isn't separately tracked since there's no real reason to want
+  // crude/gasoline auto-trade on but a specific secondary product's
+  // auto-sell off while the master switch is on.
+  productSellThresholds: Partial<Record<SellableProductKey, number>>
 }
 
 const AUTO_TRADE_KEY = 'refinery-story-autotrade'
-const DEFAULT_AUTO_TRADE: AutoTradeSettings = { enabled: false, buyThreshold: 20, sellThreshold: 80 }
+const DEFAULT_PRODUCT_SELL_THRESHOLD = 80
+const DEFAULT_AUTO_TRADE: AutoTradeSettings = {
+  enabled: false,
+  buyThreshold: 20,
+  sellThreshold: 80,
+  productSellThresholds: {},
+}
 
 function sanitizeAutoTrade(value: unknown): AutoTradeSettings {
   if (typeof value !== 'object' || value === null) return DEFAULT_AUTO_TRADE
   const v = value as Partial<AutoTradeSettings>
   const clamp = (n: unknown, fallback: number) =>
     typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : fallback
+  const rawProductThresholds =
+    typeof v.productSellThresholds === 'object' && v.productSellThresholds !== null
+      ? (v.productSellThresholds as Partial<Record<SellableProductKey, unknown>>)
+      : {}
+  const productSellThresholds: Partial<Record<SellableProductKey, number>> = {}
+  for (const product of SELLABLE_PRODUCTS) {
+    const raw = rawProductThresholds[product.key]
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      productSellThresholds[product.key] = clamp(raw, DEFAULT_PRODUCT_SELL_THRESHOLD)
+    }
+  }
   return {
     enabled: typeof v.enabled === 'boolean' ? v.enabled : DEFAULT_AUTO_TRADE.enabled,
     buyThreshold: clamp(v.buyThreshold, DEFAULT_AUTO_TRADE.buyThreshold),
     sellThreshold: clamp(v.sellThreshold, DEFAULT_AUTO_TRADE.sellThreshold),
+    productSellThresholds,
   }
+}
+
+// Maps each secondary product to the building that produces it (used to
+// gate auto-sell on "does the player actually have this plant") and to a
+// getter for that product's max storage field on DerivedStats (each
+// product has its own differently-named maxXStorage field, so this is
+// just a lookup table rather than a switch repeated at every call site).
+const PRODUCT_PLANT_BUILDING: Record<SellableProductKey, BuildingType> = {
+  lubricants: 'lubricantPlant',
+  jetFuel: 'jetFuelPlant',
+  petrochemicals: 'petrochemicalPlant',
+  recycledMaterial: 'wasteTreatmentPlant',
+  plasticPellets: 'polymerPlant',
+}
+
+const PRODUCT_MAX_STORAGE_KEY: Record<SellableProductKey, (stats: DerivedStats) => number> = {
+  lubricants: (stats) => stats.maxLubricantsStorage,
+  jetFuel: (stats) => stats.maxJetFuelStorage,
+  petrochemicals: (stats) => stats.maxPetrochemicalsStorage,
+  recycledMaterial: (stats) => stats.maxRecycledMaterialStorage,
+  plasticPellets: (stats) => stats.maxPlasticPelletsStorage,
 }
 
 // Pure, exported for testing. Runs after the main tick: top up crude toward
@@ -164,6 +215,40 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
       if (excess > 0) {
         next = { ...next, gasoline: next.gasoline - excess, money: next.money + excess * stats.sellPrice }
       }
+    }
+  }
+
+  // Same threshold/buffer/overshoot pattern as gasoline above, but for
+  // each of the 5 secondary products (lubricants, jetFuel,
+  // petrochemicals, recycledMaterial, plasticPellets) -- this is what
+  // lets a player who's built e.g. a Lubricant Plant stop manually
+  // tapping the sell chip every few minutes once Auto-trade is on. Only
+  // acts on a product if the player has at least one of its producing
+  // plant (checked via the same buildingCounts the rest of the game uses
+  // for "is this plant built yet" gating) -- no point auto-selling a
+  // product that's permanently at 0 because there's nothing producing
+  // it, and showing an active threshold for it would be confusing UI
+  // noise on top of being a no-op.
+  for (const product of SELLABLE_PRODUCTS) {
+    const plantBuilding = PRODUCT_PLANT_BUILDING[product.key]
+    if ((stats.buildingCounts[plantBuilding] ?? 0) <= 0) continue
+    const maxStorage = PRODUCT_MAX_STORAGE_KEY[product.key](stats)
+    if (maxStorage <= 0) continue
+    const threshold = settings.productSellThresholds[product.key] ?? DEFAULT_PRODUCT_SELL_THRESHOLD
+    const have = next.productInventory[product.key]
+    const pct = (have / maxStorage) * 100
+    if (pct <= threshold) continue
+    const targetPct = Math.max(0, threshold - AUTO_TRADE_BUFFER_PERCENT)
+    const targetAmount = Math.floor((targetPct / 100) * maxStorage)
+    const excess = Math.max(0, have - targetAmount)
+    if (excess <= 0) continue
+    const demandMultiplier = product.key === 'petrochemicals' ? next.petrochemicalsDemandMultiplier : 1
+    const price = getProductSellPrice(product.key, stats.productSellMultiplier, demandMultiplier)
+    if (price <= 0) continue
+    next = {
+      ...next,
+      productInventory: { ...next.productInventory, [product.key]: have - excess },
+      money: next.money + excess * price,
     }
   }
 

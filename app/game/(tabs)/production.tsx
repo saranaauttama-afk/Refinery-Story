@@ -386,6 +386,16 @@ export default function ProductionScreen() {
     color: PRODUCT_COLORS[key],
   }))
 
+  // updateAutoTrade does a shallow merge ({ ...current, ...partial }), so
+  // passing a fresh productSellThresholds object would wipe out every
+  // other product's customized threshold, not just set this one -- this
+  // merges into the existing per-product map first.
+  const adjustProductSellThreshold = (key: ManagedProductKey, delta: number) => {
+    const current = autoTrade.productSellThresholds[key] ?? 80
+    const next = Math.min(100, Math.max(0, current + delta))
+    updateAutoTrade({ productSellThresholds: { ...autoTrade.productSellThresholds, [key]: next } })
+  }
+
   const productionSignals = getProductionSignals(game, derived)
   const healthRows = getProductionHealth(productionSignals)
   const bottlenecks = getProductionBottlenecks(productionSignals)
@@ -553,6 +563,39 @@ export default function ProductionScreen() {
                     </Pressable>
                   </View>
                 </View>
+
+                {/* One row per secondary product the player has a plant
+                    for -- building e.g. a Lubricant Plant adds a "Sell
+                    lubricants above X%" row, so Auto-trade covers it
+                    without a manual sell-chip tap every few minutes.
+                    Hidden for products with no plant built yet. */}
+                {products
+                  .filter((product) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[product.key]] > 0)
+                  .map((product) => {
+                    const threshold = autoTrade.productSellThresholds[product.key] ?? 80
+                    return (
+                      <View key={product.key} style={styles.thresholdRow}>
+                        <Text style={styles.thresholdLabel}>
+                          Sell {product.label.toLowerCase()} above {threshold}%
+                        </Text>
+                        <View style={styles.stepper}>
+                          <Pressable
+                            style={styles.stepperButton}
+                            onPress={() => adjustProductSellThreshold(product.key, -5)}
+                          >
+                            <Text style={styles.stepperLabel}>-</Text>
+                          </Pressable>
+                          <Text style={styles.stepperValue}>{threshold}%</Text>
+                          <Pressable
+                            style={styles.stepperButton}
+                            onPress={() => adjustProductSellThreshold(product.key, 5)}
+                          >
+                            <Text style={styles.stepperLabel}>+</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )
+                  })}
               </>
             )}
           </View>

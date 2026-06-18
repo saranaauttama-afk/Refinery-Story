@@ -128,6 +128,19 @@ export default function RefineryScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setTradePanelOpen((v) => !v)
   }
+
+  // updateAutoTrade does a shallow merge ({ ...current, ...partial }), so
+  // passing a fresh productSellThresholds object would WIPE OUT every
+  // other product's customized threshold, not just set this one -- this
+  // helper merges into the existing per-product map first.
+  const adjustProductSellThreshold = (
+    key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
+    delta: number,
+  ) => {
+    const current = autoTrade.productSellThresholds[key] ?? 80
+    const next = Math.min(100, Math.max(0, current + delta))
+    updateAutoTrade({ productSellThresholds: { ...autoTrade.productSellThresholds, [key]: next } })
+  }
   const [secondaryOpen, setSecondaryOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
 
@@ -392,6 +405,7 @@ export default function RefineryScreen() {
         <View style={styles.tradePanelWrap} pointerEvents="box-none">
           {tradePanelOpen && (
             <View style={styles.tradePanel}>
+              <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.tradeActionsRow}>
                 <AnimatedPressable
                   style={[styles.tradeActionBtn, styles.buyBtn]}
@@ -463,8 +477,37 @@ export default function RefineryScreen() {
                       </Pressable>
                     </View>
                   </View>
+
+                  {/* One row per secondary product the player has a plant
+                      for -- e.g. building a Lubricant Plant adds a
+                      "Sell lubricants above X%" row here, so Auto-trade
+                      covers it without a separate manual sell-chip tap
+                      every few minutes. Hidden entirely for products with
+                      no plant built yet (nothing to gate a threshold on). */}
+                  {products
+                    .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+                    .map((p) => {
+                      const threshold = autoTrade.productSellThresholds[p.key] ?? 80
+                      return (
+                        <View key={p.key} style={styles.thresholdRow}>
+                          <Text style={styles.thresholdLabel}>
+                            Sell {p.label.toLowerCase()} above {threshold}%
+                          </Text>
+                          <View style={styles.stepper}>
+                            <Pressable style={styles.stepperButton} onPress={() => adjustProductSellThreshold(p.key, -5)}>
+                              <Text style={styles.stepperLabel}>−</Text>
+                            </Pressable>
+                            <Text style={styles.stepperValue}>{threshold}%</Text>
+                            <Pressable style={styles.stepperButton} onPress={() => adjustProductSellThreshold(p.key, 5)}>
+                              <Text style={styles.stepperLabel}>+</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      )
+                    })}
                 </>
               )}
+              </ScrollView>
             </View>
           )}
 
@@ -1036,6 +1079,7 @@ const styles = StyleSheet.create({
   },
   tradePanel: {
     width: 260,
+    maxHeight: 420,
     backgroundColor: colors.white,
     borderRadius: radii.md,
     borderWidth: 2,
