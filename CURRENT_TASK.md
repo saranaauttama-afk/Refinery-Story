@@ -1,141 +1,118 @@
 # CURRENT_TASK
 
-## Branch Name
+## Branch
 
 `feature/ui-skeleton-v1`
 
-## Current Task
+## Current State
 
-**Factory Layout Final Pass — Refinery Dominance**
+UI Foundation is complete. Factory Scene experiments are in progress.
+The screen architecture is now layered (not a dashboard stack), but the
+refinery scene still does not fully resemble the intended Kairosoft-style
+management game. Documentation consolidation pass is in progress.
 
-## Why This Pass Was Needed
+---
 
-After the layered composition commit (6ffa3a6), the scene structure was
-architecturally correct but the proportions were wrong:
+## Completed Work
 
-- `SKY_RATIO = 0.33` gave the sky 33 % of scene height — atmosphere was eating
-  one third of the screen where gameplay should live.
-- `HORIZON_H = 28` — the treeline separator strip was unnecessarily thick.
-- The goal panel was ~64 px tall (name + ProgressBar + progress text) — a full
-  card-height element floating in the game area that scrolled the grid down.
-- Action buttons had generous padding, adding more dead height.
+### UI Foundation Phase 1 — 5-Tab Navigation Skeleton
+- Factory tab
+- Production tab
+- Staff tab
+- Business tab
+- HQ tab (placeholder)
+- Stats tab hidden from nav (still in code)
 
-Result: on a 800 px scene, the grid didn't start until ~415 px from the top.
-Only ~285 px remained for grid tiles before the action buttons. That is not
-"refinery as focus" — that is "UI as focus".
+### UI Foundation Phase 2A — Factory Cleanup / Grid-First Layout
+- Compact header with inline time
+- Primary resources only (Money / Crude / Gas)
+- Goal card compressed
+- Grid made more prominent
 
-## Layout Before vs After
+### UI Foundation Phase 2B — Production Extraction
+- Production Overview moved out of Factory
+- Non-gasoline inventory surfaced in Production tab
+- Automation moved to Production tab
+- Factory now focuses on grid, goal, and buy/sell core loop
 
-### Before (6ffa3a6)
-```
-0 px         ─ top safe area
-0–264 px     sky (33 % of 800 px)
-264–292 px   horizon strip (28 px)
-292–330 px   resource strip straddles boundary
-338–402 px   goal panel (64 px tall)
-402 px        first grid tile
-402–574 px   grid (4×4 ≈ 320 px + hint)
-674–734 px   floating action buttons
-734–800 px   tab bar clearance
-```
-Grid visible area ≈ 172 px before needing to scroll.
+### UI Foundation Phase 2C — Production Health & Bottlenecks
+- Production Health card added to Production tab
+- Bottlenecks card added to Production tab
+- Production tab explains operational problems using derived state
 
-### After (this commit)
-```
-0 px         ─ top safe area
-0–96 px      sky (12 % of 800 px)
-96–110 px    horizon strip (14 px)
-110–129 px   resource strip straddles boundary  (resourceTop = 110 - 19 = 91)
-137–165 px   goal chip (28 px tall)             (goalTop = 129 + 8 = 137)
-165–228 px   grid padding clears overlays        (gridPaddingTop ≈ 63 px from yardTop 110)
-228 px        first grid tile                    (yardTop 110 + 63 + grid margin)
-228–548 px   grid (4×4 ≈ 320 px)
-548–556 px   hint text
-556–100 px   FLOATING_TAB_BAR_CLEARANCE bottom padding
-```
-Grid visible area ≈ 328 px before needing to scroll — ~1.9× more visible yard.
-Refinery occupies roughly 70 % of the Factory scene above the tab bar.
+### Visual Layer Phase 1 — Building Identity System
+- Per-building icons via `BUILDING_TILE_ICONS`
+- Category accent colors via `BUILDING_CATEGORY_ACCENT`
+- Category surface colors via `BUILDING_CATEGORY_SURFACE`
+- Level badges (L1/L2/L3) on occupied tiles
+- Staff and status badge foundations
 
-## What Changed
+### Visual Layer Phase 2 — Silhouette & Scene Experiments
+- `BuildingSilhouette` component added
+- Abbreviation-first tiles replaced with silhouette-first tiles
+- Factory tab converted from dashboard stack to layered scene composition:
+  - `StyleSheet.absoluteFillObject` background (sky + horizon + yard)
+  - Grid positioned absolute in lower ~70 % of scene
+  - HUD floating (name, level, time, events button)
+  - Resource strip floating at sky/yard boundary
+  - Goal chip compact one-line pill
+  - Buy/Sell floating above bottom nav
 
-### `app/game/(tabs)/index.tsx`
+---
 
-1. **`SKY_RATIO` reduced** `0.33 → 0.12`
-   Sky is now atmosphere only (~12 % of scene). Provides color and day/night
-   mood without consuming playable space.
+## Current Status
 
-2. **`HORIZON_H` reduced** `28 → 14 px`
-   Thinner treeline separator. Still visible as a color break.
+| Area | Status |
+|---|---|
+| 5-tab navigation | ✅ complete |
+| Factory scene architecture (layered) | ✅ complete |
+| Factory visual identity (Kairosoft-like) | 🔄 in progress |
+| Production health / bottlenecks | ✅ complete |
+| Building silhouettes | 🔄 partial |
+| Roads / pipes / yard detail | ❌ not started |
+| HQ progression hub | ❌ not started |
+| Day/night visual impact | 🔄 minimal |
+| Workers / trucks / logistics | ❌ future |
+| Era visual progression | ❌ future |
 
-3. **`GOAL_H` reduced** `64 → 28 px`
-   Goal UI redesigned as a compact single-line chip pill instead of a card.
+---
 
-4. **Goal JSX replaced** — tall `goalPanel` (name + ProgressBar + num) →
-   compact `goalChip` (icon + name + 56 px inline track + n/total text).
-   All on one row, 28 px tall. Progress still visible; functionality preserved.
-
-5. **`bgSkyHaze` height reduced** `22 → 10 px` to remain proportional to the
-   shorter sky.
-
-6. **Action button `paddingVertical` reduced** `spacing.sm (8) → 6 px`.
-   Slightly less visual weight; still clearly tappable.
-
-## What Was Intentionally Not Changed
-
-- All gameplay logic, save format, balance
-- Grid interactions (build, inspect, move, swap, demolish)
-- Resource strip (Money / Crude / Gas + ··· chip)
-- Buy Crude / Sell Gas functionality
-- More Info sheet, Events sheet, Build picker, Building Info sheet
-- Bottom tab navigation
-- Production, Staff, Business, HQ screens
-- Layered composition architecture (absoluteFill background, zIndex layers)
-
-## Files Changed
-
-- [app/game/(tabs)/index.tsx](app/game/(tabs)/index.tsx)
-- [CURRENT_TASK.md](CURRENT_TASK.md)
-
-## Manual Test Checklist
-
-- [ ] App launches without error
-- [ ] Existing saves load correctly
-- [ ] Factory opens — sky area is narrow (atmosphere only, ~10–15 % of screen)
-- [ ] Refinery yard visually dominates the lower ~70 % of the screen
-- [ ] Goal chip is compact one-line pill with inline progress bar
-- [ ] Goal chip is tappable and navigates to achievements
-- [ ] Resource strip ($ / Crude / Gas) visible and correct
-- [ ] `···` chip opens More Info sheet with secondary stats
-- [ ] Buy Crude button works; floating above tab bar
-- [ ] Sell Gas button works; floating above tab bar
-- [ ] Tap empty tile → Build sheet opens → building can be placed
-- [ ] Tap occupied tile → Building Info sheet opens → upgrade/move/demolish work
-- [ ] Grid edit mode (Move / Swap) works from Building Info sheet
-- [ ] ⚙️ button opens Events sheet
-- [ ] Night mode: sky turns dark, night veil applies
-- [ ] Bottom tab navigation works — all 5 tabs accessible
-- [ ] `npx tsc --noEmit` passes with no errors
-
-## Typecheck Status
-
-- `npx tsc --noEmit`: ✅ passed (no output = no errors)
-
-## Known Issues (carried forward)
+## Known Issues
 
 - Require cycle: `gameCalculations.ts → recruitment.ts → gameCalculations.ts`
-- Expo Linking scheme warning (build-time config)
-- Android emulator instability is emulator-level, not app code
+- Expo Linking scheme warning (build-time config, not app code)
+- Android emulator instability — emulator-level, not app code
 - `Stats` screen hidden from tabs intentionally
 - Windows: use `cmd /c npm run typecheck` or `npx tsc --noEmit` directly
 
+---
+
+## Files Changed on This Branch
+
+- `CURRENT_TASK.md`
+- `app/game/(tabs)/_layout.tsx`
+- `app/game/(tabs)/index.tsx`
+- `app/game/(tabs)/production.tsx`
+- `app/game/(tabs)/hq.tsx`
+- `src/components/BuildingGrid.tsx`
+- `src/components/BuildingTile.tsx`
+- `src/components/BuildingSilhouette.tsx`
+- `src/buildingIdentity.ts`
+- `src/theme.ts`
+- `app.json`
+- `package.json`
+- `package-lock.json`
+- `.gitignore`
+- `eas.json`
+- `Doc/` (multiple docs added/updated)
+- `PROJECT_UI_AUDIT.md`
+
+---
+
 ## Next Recommended Task
 
-Visual Layer Phase 3 — Road / Pipe / Ground Detail
+See `Doc/NEXT_TASK.md` for the full recommendation.
 
-The refinery yard now has space and visual dominance. Next:
-
-- Add pipe/road segments between building tiles as decorative connectors
-- Use simple View strips or dotted lines — no image assets
-- Suggest crude-in / product-out flow between building categories
-- Keep all gameplay and save format unchanged
-- Do not add trucks, workers, smoke, or animation yet
+**Short version:** Visual Layer Phase 3A — Road & Yard Foundation.
+Add pipe/road connectors between building tiles as decorative non-interactive
+elements. No assets, no animation. Builds on the current layered composition.
