@@ -1,15 +1,22 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
+  LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  UIManager,
   View,
   useWindowDimensions,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true)
+}
 import { Clock3 } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -111,7 +118,16 @@ export default function RefineryScreen() {
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
-  const [automationModalOpen, setAutomationModalOpen] = useState(false)
+  // Drives the unified Trade panel's expand/collapse (Buy/Sell + Auto-
+  // trade combined into one floating panel above the tab bar -- replaces
+  // the old separate "Automation" sheet, which was dead code ({false &&
+  // ...}) on this branch, and the old always-expanded Buy/Sell button
+  // pair). Starts collapsed.
+  const [tradePanelOpen, setTradePanelOpen] = useState(false)
+  const toggleTradePanel = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setTradePanelOpen((v) => !v)
+  }
   const [secondaryOpen, setSecondaryOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
 
@@ -363,40 +379,102 @@ export default function RefineryScreen() {
           </Pressable>
         )}
 
-        {/* ── Layer 4: Buy / Sell floating above tab bar ────────────────── */}
-        <View style={styles.floatingActions}>
-          <AnimatedPressable
-            style={[styles.actionBtn, styles.buyBtn]}
-            onPress={() => {
-              const actualBuy = Math.min(
-                10,
-                Math.floor(game.money / CRUDE_COST),
-                derived.maxCrudeStorage - game.crudeOil,
-              )
-              if (actualBuy > 0) {
-                spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
-                haptics.tap()
-              }
-              buyCrude(10)
-            }}
-          >
-            <Text style={styles.actionBtnLabel}>Buy 10 Crude</Text>
-            <Text style={styles.actionBtnSub}>${CRUDE_COST}/unit</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={[styles.actionBtn, styles.sellBtn]}
-            onPress={() => {
-              const actualSell = Math.min(10, game.gasoline)
-              if (actualSell > 0) {
-                spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
-                haptics.tap()
-              }
-              sellGasoline(10)
-            }}
-          >
-            <Text style={styles.actionBtnLabel}>Sell 10 Gas</Text>
-            <Text style={styles.actionBtnSub}>${derived.sellPrice}/unit</Text>
-          </AnimatedPressable>
+        {/* ── Layer 4: Unified Trade panel (Buy/Sell + Auto-trade) ──────────
+            Replaces the old always-full-size Buy/Sell button pair. Per
+            feedback: those buttons are only really needed in the first
+            few minutes before Auto-trade gets turned on, after which
+            they're just large dead space sitting above the tab bar. Now
+            collapses to a small pill (shows the Auto-trade on/off status
+            even collapsed, so that's still glanceable) and expands
+            upward into the full panel -- smaller Buy/Sell buttons plus
+            the Auto-trade toggle/thresholds in the same place, instead
+            of a separate Automation sheet. */}
+        <View style={styles.tradePanelWrap} pointerEvents="box-none">
+          {tradePanelOpen && (
+            <View style={styles.tradePanel}>
+              <View style={styles.tradeActionsRow}>
+                <AnimatedPressable
+                  style={[styles.tradeActionBtn, styles.buyBtn]}
+                  onPress={() => {
+                    const actualBuy = Math.min(
+                      10,
+                      Math.floor(game.money / CRUDE_COST),
+                      derived.maxCrudeStorage - game.crudeOil,
+                    )
+                    if (actualBuy > 0) {
+                      spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
+                      haptics.tap()
+                    }
+                    buyCrude(10)
+                  }}
+                >
+                  <Text style={styles.tradeActionLabel}>Buy 10 Crude</Text>
+                  <Text style={styles.tradeActionSub}>${CRUDE_COST}/unit</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={[styles.tradeActionBtn, styles.sellBtn]}
+                  onPress={() => {
+                    const actualSell = Math.min(10, game.gasoline)
+                    if (actualSell > 0) {
+                      spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
+                      haptics.tap()
+                    }
+                    sellGasoline(10)
+                  }}
+                >
+                  <Text style={styles.tradeActionLabel}>Sell 10 Gas</Text>
+                  <Text style={styles.tradeActionSub}>${derived.sellPrice}/unit</Text>
+                </AnimatedPressable>
+              </View>
+
+              <View style={styles.tradeDivider} />
+
+              <View style={styles.autoTradeHeaderRow}>
+                <Text style={styles.autoTradeRowTitle}>🔄 Auto-trade</Text>
+                <Switch
+                  value={autoTrade.enabled}
+                  onValueChange={(v) => updateAutoTrade({ enabled: v })}
+                  trackColor={{ false: colors.creamBorder, true: colors.green }}
+                />
+              </View>
+              {autoTrade.enabled && (
+                <>
+                  <View style={styles.thresholdRow}>
+                    <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
+                    <View style={styles.stepper}>
+                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}>
+                        <Text style={styles.stepperLabel}>−</Text>
+                      </Pressable>
+                      <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
+                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}>
+                        <Text style={styles.stepperLabel}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                  <View style={styles.thresholdRow}>
+                    <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
+                    <View style={styles.stepper}>
+                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}>
+                        <Text style={styles.stepperLabel}>−</Text>
+                      </Pressable>
+                      <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
+                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}>
+                        <Text style={styles.stepperLabel}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </>
+              )}
+            </View>
+          )}
+
+          <Pressable style={styles.tradePill} onPress={toggleTradePanel}>
+            <Text style={styles.tradePillIcon}>{autoTrade.enabled ? '🔄' : '💱'}</Text>
+            <Text style={styles.tradePillLabel}>
+              {autoTrade.enabled ? 'Auto: ON' : 'Trade'}
+            </Text>
+            <Text style={styles.tradePillChevron}>{tradePanelOpen ? '▾' : '▴'}</Text>
+          </Pressable>
         </View>
 
       </View>{/* end scene */}
@@ -454,76 +532,12 @@ export default function RefineryScreen() {
         )}
       </Sheet>
 
-      {/* ── Automation sheet (hidden pending design) ──────────────────────── */}
-      {false && <Sheet visible={automationModalOpen} title="⚙️ Automation" onClose={() => setAutomationModalOpen(false)}>
-        <View style={styles.autoTradeCard}>
-          <View style={styles.autoTradeHeader}>
-            <Text style={styles.autoTradeTitle}>🔄 Auto-trade</Text>
-            <Switch
-              value={autoTrade.enabled}
-              onValueChange={(v) => updateAutoTrade({ enabled: v })}
-              trackColor={{ false: colors.creamBorder, true: colors.green }}
-            />
-          </View>
-          {autoTrade.enabled && (
-            <>
-              <View style={styles.thresholdRow}>
-                <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
-                <View style={styles.stepper}>
-                  <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}>
-                    <Text style={styles.stepperLabel}>−</Text>
-                  </Pressable>
-                  <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
-                  <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}>
-                    <Text style={styles.stepperLabel}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-              <View style={styles.thresholdRow}>
-                <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
-                <View style={styles.stepper}>
-                  <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}>
-                    <Text style={styles.stepperLabel}>−</Text>
-                  </Pressable>
-                  <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
-                  <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}>
-                    <Text style={styles.stepperLabel}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </>
-          )}
-        </View>
-        {(safeDerived.buildingCounts.lubricantPlant > 0 ||
-          safeDerived.buildingCounts.jetFuelPlant > 0 ||
-          safeDerived.buildingCounts.petrochemicalPlant > 0) && (
-          <View style={styles.autoTradeCard}>
-            <View style={styles.autoTradeHeader}>
-              <Text style={styles.autoTradeTitle}>⚖️ Feedstock Priority</Text>
-            </View>
-            <Text style={styles.feedstockPriorityHint}>
-              0% = off · 100% = normal · 200% = highest priority when feedstock is short.
-            </Text>
-            {([ { buildingKey: 'lubricantPlant', label: 'Lubricants' }, { buildingKey: 'jetFuelPlant', label: 'Jet Fuel' }, { buildingKey: 'petrochemicalPlant', label: 'Petrochemicals' } ] as const).map(
-              ({ buildingKey, label }) =>
-                safeDerived.buildingCounts[buildingKey] > 0 && (
-                  <View key={buildingKey} style={styles.thresholdRow}>
-                    <Text style={styles.thresholdLabel}>{label}</Text>
-                    <View style={styles.stepper}>
-                      <Pressable style={styles.stepperButton} onPress={() => adjustFeedstockPriority(buildingKey, -1)}>
-                        <Text style={styles.stepperLabel}>−</Text>
-                      </Pressable>
-                      <Text style={styles.stepperValue}>{Math.round(safeGame.feedstockPriority[buildingKey] * 100)}%</Text>
-                      <Pressable style={styles.stepperButton} onPress={() => adjustFeedstockPriority(buildingKey, 1)}>
-                        <Text style={styles.stepperLabel}>+</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                ),
-            )}
-          </View>
-        )}
-      </Sheet>}
+      {/* The old "Automation" sheet (Auto-trade toggle/thresholds +
+          Feedstock Priority) lived here as dead code ({false && ...} --
+          never rendered). Auto-trade now lives in the unified Trade
+          panel above (Layer 4); Feedstock Priority already has a home in
+          the Production tab (app/game/(tabs)/production.tsx), so nothing
+          was lost by removing this duplicate. */}
 
       {/* ── Build picker ─────────────────────────────────────────────────── */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
@@ -983,25 +997,65 @@ const styles = StyleSheet.create({
   },
 
   // ── Layer 4: Floating action buttons ──────────────────────────────────────
-  floatingActions: {
+  // ── Unified Trade panel (Buy/Sell + Auto-trade, collapsible) ───────────
+  tradePanelWrap: {
     position: 'absolute',
     bottom: FLOATING_TAB_BAR_CLEARANCE,
-    left: spacing.md,
     right: spacing.md,
-    flexDirection: 'row',
-    gap: spacing.md,
+    alignItems: 'flex-end',
     zIndex: 20,
   },
-  actionBtn: {
-    flex: 1,
-    borderRadius: radii.md,
-    paddingVertical: 6,
+  tradePill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.white,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    marginTop: spacing.sm,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.14,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
+  },
+  tradePillIcon: {
+    fontSize: 14,
+  },
+  tradePillLabel: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
+  },
+  tradePillChevron: {
+    fontSize: 11,
+    color: colors.inkMuted,
+  },
+  tradePanel: {
+    width: 260,
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    padding: spacing.md,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  tradeActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  tradeActionBtn: {
+    flex: 1,
+    borderRadius: radii.md,
+    paddingVertical: 6,
+    alignItems: 'center',
   },
   buyBtn: {
     backgroundColor: colors.steelLight,
@@ -1013,15 +1067,30 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.greenDark,
   },
-  actionBtnLabel: {
+  tradeActionLabel: {
     fontWeight: '800',
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 13,
   },
-  actionBtnSub: {
+  tradeActionSub: {
     color: colors.inkMuted,
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 2,
+  },
+  tradeDivider: {
+    height: 1,
+    backgroundColor: colors.creamBorder,
+    marginVertical: spacing.sm,
+  },
+  autoTradeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  autoTradeRowTitle: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 13,
   },
 
   // ── More Info sheet rows ──────────────────────────────────────────────────
