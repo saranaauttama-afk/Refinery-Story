@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import BottomDrawer from '../../../src/components/BottomDrawer'
-import BuildingGrid from '../../../src/components/BuildingGrid'
+import IsometricBuildingGrid, { getIsometricBounds } from '../../../src/components/IsometricBuildingGrid'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import CollapsibleCard from '../../../src/components/CollapsibleCard'
@@ -250,10 +250,12 @@ export default function RefineryScreen() {
   // size rather than the screen width (which is now irrelevant to grid
   // sizing -- the canvas can be panned/zoomed independently of the
   // viewport) so the grid renders at a consistent, comfortable tap-target
-  // size regardless of device.
-  const cols = Math.round(Math.sqrt(game.grid.length))
+  // size regardless of device. getIsometricBounds computes the actual
+  // diamond-shaped bounding box (wider than a plain square grid of the
+  // same tile count, since the isometric layout fans out sideways) so
+  // ZoomableGridCanvas's pan-clamping bounds match what's really rendered.
   const baseTileSize = 84
-  const gridCanvasWidth = cols * baseTileSize + spacing.md * 2
+  const isoBounds = getIsometricBounds(game.grid.length, baseTileSize, baseTileSize)
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -261,14 +263,15 @@ export default function RefineryScreen() {
       {!derived.gameClock.isDaytime && <View style={styles.nightOverlay} pointerEvents="none" />}
 
       {/* Background layer: the building grid, full-screen, pannable +
-          pinch-zoomable. A small ⤢ button (mid-right edge, rendered by
+          pinch-zoomable, laid out as an isometric diamond (not a plain
+          square grid). A small ⤢ button (mid-right edge, rendered by
           ZoomableGridCanvas itself) resets framing. */}
-      <ZoomableGridCanvas contentWidth={gridCanvasWidth} contentHeight={gridCanvasWidth}>
+      <ZoomableGridCanvas contentWidth={isoBounds.width} contentHeight={isoBounds.height}>
         <View style={styles.gridWrap}>
-          <BuildingGrid
+          <IsometricBuildingGrid
             grid={game.grid}
             gridLevels={game.gridLevels}
-            containerWidth={gridCanvasWidth}
+            tileSize={baseTileSize}
             onCellPress={handleCellPress}
             isActive={game.crudeOil > 0}
             employeeCount={game.employees.length}

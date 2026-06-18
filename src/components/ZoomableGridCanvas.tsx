@@ -161,8 +161,8 @@ function ZoomableGridCanvas({
         <Defs>
           <LinearGradient id="skyToWater" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor="#9FD8F0" />
-            <Stop offset="0.6" stopColor="#C9E8D8" />
-            <Stop offset="0.67" stopColor="#5B8DBF" />
+            <Stop offset="0.28" stopColor="#C9E8D8" />
+            <Stop offset="0.34" stopColor="#5B8DBF" />
             <Stop offset="1" stopColor="#2C5C82" />
           </LinearGradient>
         </Defs>
@@ -193,16 +193,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     alignItems: 'center',
-    // Pushes the grid up into roughly the top 2/3 of the canvas (the
-    // "ground" portion of the sky->water gradient backdrop) instead of
-    // sitting dead-center -- justifyContent 'center' would put it right
-    // at the screen's vertical midpoint, straddling the gradient's
-    // water transition. This is a coarse approximation until there's a
-    // real isometric scene with actual ground/water art -- the grid
-    // itself doesn't "know" about the gradient, this is just where the
-    // empty space around it is biased toward.
+    // Pushes the grid DOWN into roughly the bottom 2/3 of the canvas
+    // (per explicit correction: top 1/3 = sky, bottom 2/3 = the grid's
+    // "ground" zone, where the sky->water gradient backdrop transitions
+    // around the 1/3 mark) instead of sitting dead-center --
+    // justifyContent 'center' would put it right at the screen's
+    // vertical midpoint, straddling the gradient transition too high.
+    // This is a coarse approximation until there's a real isometric
+    // scene with actual ground/water art -- the grid itself doesn't
+    // "know" about the gradient, this is just where the empty space
+    // around it is biased toward.
     justifyContent: 'flex-start',
-    paddingTop: '15%',
+    paddingTop: '38%',
   },
   resetButton: {
     position: 'absolute',
