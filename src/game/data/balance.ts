@@ -25,11 +25,19 @@ export const CORE_BALANCE = {
   // to process doesn't generate operational events.
   randomEventIntervalTicks: 150,
   // Choice events are primarily milestone-triggered (see
-  // completedMilestoneKeys / hasNewMilestone in useGameLoop.ts). This is a
-  // fallback: if ~4 min of game time (1200 ticks) pass with no milestone
-  // and no event currently shown, fire one anyway so longer gaps between
-  // milestones still get occasional choice events.
-  choiceEventFallbackTicks: 1200,
+  // completedMilestoneKeys / hasNewMilestone in useGameLoop.ts) -- those
+  // still fire immediately, uncapped, whenever a milestone completes.
+  // This is a fallback: if a full in-game day (1800 ticks --
+  // CALENDAR_BALANCE.dayLengthTicks) passes with no milestone and no
+  // event currently shown, fire one anyway so longer gaps between
+  // milestones still get occasional choice events, capped to roughly
+  // once per in-game day rather than the previous ~4 real minutes
+  // (1200 ticks), which worked out to ~1.5x per in-game day -- felt too
+  // frequent per explicit feedback. Deliberately the same numeric value
+  // as dayLengthTicks rather than importing CALENDAR_BALANCE here (would
+  // create an import cycle between balance constants); if dayLengthTicks
+  // ever changes, this should be revisited to match.
+  choiceEventFallbackTicks: 1800,
 } as const
 
 // Demolish/Move/Swap buildings -- lets the player fix an early layout
