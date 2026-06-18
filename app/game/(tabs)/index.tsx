@@ -223,7 +223,7 @@ export default function RefineryScreen() {
       <View style={styles.scene}>
 
         {/* ── Layer 0: Background (absoluteFill, no pointer events) ─────── */}
-        <View style={[StyleSheet.absoluteFillObject, styles.sceneBg]} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, styles.sceneBg]} pointerEvents="none">
           {/* Sky */}
           <View style={[styles.bgSky, { height: skyH }, !isDaytime && styles.bgSkyNight]}>
             <View style={styles.bgSkySheen} />
@@ -240,7 +240,7 @@ export default function RefineryScreen() {
 
         {/* Night veil */}
         {!isDaytime && (
-          <View style={[StyleSheet.absoluteFillObject, styles.nightOverlay]} pointerEvents="none" />
+          <View style={[StyleSheet.absoluteFill, styles.nightOverlay]} pointerEvents="none" />
         )}
 
         {/* ── Layer 1: Grid (absolute, starts at yardTop) ───────────────── */}
