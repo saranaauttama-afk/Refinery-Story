@@ -10,18 +10,16 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { ChevronDown, ChevronUp, Clock3 } from 'lucide-react-native'
+import { Clock3 } from 'lucide-react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import BuildingGrid from '../../../src/components/BuildingGrid'
+import CollapsibleCard from '../../../src/components/CollapsibleCard'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
-import CollapsibleCard from '../../../src/components/CollapsibleCard'
 import ProductionOverview, { type ProductionOverviewRow } from '../../../src/components/ProductionOverview'
 import ProgressBar from '../../../src/components/ProgressBar'
-import StatBoxRow from '../../../src/components/StatBoxRow'
-import ResourceBar from '../../../src/components/ResourceBar'
 import Sheet from '../../../src/components/Sheet'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -130,11 +128,8 @@ export default function RefineryScreen() {
   // just silently no-ops, matching how the underlying action already
   // guards against invalid targets).
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
-  // Refinery-tab dashboard redesign: Auto-trade + Feedstock Priority moved
-  // out of the main scroll into a dedicated modal (opened via the ⚙️
-  // button next to the header), so the main view stays a shorter,
-  // dashboard-like glance instead of a long settings list.
   const [automationModalOpen, setAutomationModalOpen] = useState(false)
+  // secondaryOpen: opens the "More Info" bottom sheet with secondary stats
   const [secondaryOpen, setSecondaryOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
 
@@ -151,31 +146,13 @@ export default function RefineryScreen() {
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((event) => game.hiddenEventStatus[event.key] === 'unlocked')
   const firstEmptyCellIndex = game.grid.findIndex((cell) => cell === null)
   const timeLabel = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
-  const primaryStats = [
-    { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
-    { key: 'crude', label: 'Crude', value: `${game.crudeOil}/${derived.maxCrudeStorage}`, color: colors.steelDark },
-    { key: 'gasoline', label: 'Gasoline', value: `${game.gasoline}/${derived.maxGasolineStorage}`, color: colors.greenDark },
-  ]
+
   const secondaryStats = [
     { label: 'Feedstock', value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
     { label: 'ESG', value: `${Math.round(game.esgScore)}` },
     { label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}` },
     { label: 'Season', value: `${seasonLabel.en} · ${seasonPct}%` },
     { label: 'Era', value: derived.currentEra.name.en },
-  ]
-
-  const stats = [
-    { label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.gold },
-    { label: 'Crude', value: `${game.crudeOil}/${derived.maxCrudeStorage}`, color: colors.steelDark },
-    { label: 'Feedstock', value: `${game.feedstock}/${derived.maxFeedstockStorage}`, color: colors.steelMid },
-    { label: 'Gasoline', value: `${game.gasoline}/${derived.maxGasolineStorage}`, color: colors.green },
-    { label: 'ESG', value: `${Math.round(game.esgScore)}`, color: colors.teal },
-    { label: 'Season', value: `${seasonPct}%`, color: colors.orange },
-    {
-      label: 'Time',
-      value: `${formatGameClockTime(derived.gameClock)}${derived.gameClock.isDaytime ? '☀️' : '🌙'}`,
-      color: derived.gameClock.isDaytime ? colors.gold : colors.blueDark,
-    },
   ]
 
   const handleCellPress = (index: number) => {
@@ -201,15 +178,6 @@ export default function RefineryScreen() {
   const hasEnoughMoney = game.money >= upgradeCost
   const hasEnoughProduction = game.totalGasolineProduced >= upgradeProductionRequired
   const canUpgrade = hasEnoughMoney && hasEnoughProduction
-
-  let upgradeSubtitle: string
-  if (canUpgrade) {
-    upgradeSubtitle = `Tap to upgrade · $${upgradeCost.toLocaleString()}`
-  } else if (!hasEnoughProduction) {
-    upgradeSubtitle = `Produce ${game.totalGasolineProduced}/${upgradeProductionRequired} gasoline to unlock (then $${upgradeCost.toLocaleString()})`
-  } else {
-    upgradeSubtitle = `Need $${upgradeCost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`
-  }
 
   const nextGoal = derived.activeMilestones.find((m) => !m.isCompleted)
 
@@ -250,228 +218,184 @@ export default function RefineryScreen() {
       })),
   ]
 
-  // Current Contract dashboard card: the first unlocked, not-yet-completed
-  // contract, same selection a player would see first in the Business
-  // tab's Contracts section -- gives a persistent glance at "what am I
-  // working toward" without leaving the Refinery tab.
   const safeGame = game
   const safeDerived = derived
   const currentContract = derived.activeContracts.find((c) => c.isUnlocked && !c.isCompleted)!
 
+  const isDaytime = derived.gameClock.isDaytime
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
-      {!derived.gameClock.isDaytime && <View style={styles.nightOverlay} pointerEvents="none" />}
-      <View style={styles.header}>
-        <AnimatedPressable
-          style={styles.headerTitleWrap}
-          onPress={() => {
-            if (canUpgrade) {
-              spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
-              haptics.confirm()
-            }
-            upgradeRefinery()
-          }}
-        >
-          <Text style={styles.title}>
-            {game.refineryName} · Lv{game.refineryLevel}
-          </Text>
-          <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>
-            {canUpgrade ? 'Upgrade ready · tap name' : 'Tap name for upgrade requirements'}
-          </Text>
-        </AnimatedPressable>
-        <View style={styles.headerRight}>
-          <View style={styles.timePill}>
-            <Clock3 color={derived.gameClock.isDaytime ? colors.orangeDark : colors.blueDark} size={14} />
-            <Text style={styles.timeLabel}>{timeLabel}</Text>
-          </View>
-          <Pressable
-            style={styles.automationButton}
-            onPress={() => setEventModalOpen(true)}
+
+      {/* ─── SCENE CONTAINER ─────────────────────────────────────────── */}
+      <View style={styles.scene}>
+
+        {/* Night veil over entire scene */}
+        {!isDaytime && <View style={styles.nightOverlay} pointerEvents="none" />}
+
+        {/* ── SKY / ATMOSPHERE ──────────────────────────────────────── */}
+        <View style={[styles.skyArea, !isDaytime && styles.skyAreaNight]}>
+          {/* Atmospheric depth layers */}
+          <View style={styles.skyHighlight} />
+          <View style={styles.skyHaze} />
+          <View style={styles.skyHorizon} />
+
+          {/* HUD: refinery name + level — top left */}
+          <AnimatedPressable
+            style={styles.nameHud}
+            onPress={() => {
+              if (canUpgrade) {
+                spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+                haptics.confirm()
+              }
+              upgradeRefinery()
+            }}
           >
-            <Text style={styles.automationButtonLabel}>⚙️</Text>
-          </Pressable>
+            <Text style={styles.nameText}>{game.refineryName}</Text>
+            <View style={[styles.lvPill, canUpgrade && styles.lvPillReady]}>
+              <Text style={styles.lvPillText}>Lv{game.refineryLevel}{canUpgrade ? ' ↑' : ''}</Text>
+            </View>
+          </AnimatedPressable>
+
+          {/* HUD: time + events — top right */}
+          <View style={styles.topRightHud}>
+            <View style={styles.timePill}>
+              <Clock3
+                color={isDaytime ? colors.orangeDark : colors.blueDark}
+                size={11}
+              />
+              <Text style={styles.timePillLabel}>{timeLabel}</Text>
+            </View>
+            <Pressable
+              style={styles.eventsBtn}
+              onPress={() => setEventModalOpen(true)}
+            >
+              <Text style={styles.eventsBtnLabel}>⚙️</Text>
+            </Pressable>
+          </View>
+
+          {/* Goal panel — floating near sky / yard boundary */}
+          {nextGoal && (
+            <Pressable style={styles.goalPanel} onPress={() => router.push('/achievements')}>
+              <Text style={styles.goalName}>🎯 {nextGoal.name.en}</Text>
+              {nextGoal.progress ? (
+                <View style={styles.goalProgressRow}>
+                  <ProgressBar current={nextGoal.progress.current} target={nextGoal.progress.target} />
+                  <Text style={styles.goalProgressNum}>
+                    {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.goalReq}>{nextGoal.requirement.en}</Text>
+              )}
+            </Pressable>
+          )}
+        </View>
+
+        {/* ── FACTORY YARD ──────────────────────────────────────────── */}
+        <View style={styles.yardArea}>
+          {/* Decorative road/path strips */}
+          <View style={styles.yardRoad} />
+          <View style={styles.yardRoad2} />
+
+          {/* Resource HUD strip — floats at top of yard */}
+          <View style={styles.resourceHud}>
+            <View style={styles.resChip}>
+              <Text style={styles.resLabel}>$</Text>
+              <Text style={styles.resVal}>{Math.floor(game.money).toLocaleString()}</Text>
+            </View>
+            <View style={styles.resSep} />
+            <View style={styles.resChip}>
+              <Text style={styles.resLabel}>Crude</Text>
+              <Text style={[styles.resVal, game.crudeOil === 0 && styles.resValWarn]}>
+                {game.crudeOil}/{derived.maxCrudeStorage}
+              </Text>
+            </View>
+            <View style={styles.resSep} />
+            <View style={styles.resChip}>
+              <Text style={styles.resLabel}>Gas</Text>
+              <Text style={[styles.resVal, styles.resValGas]}>
+                {game.gasoline}/{derived.maxGasolineStorage}
+              </Text>
+            </View>
+            <Pressable style={styles.moreChip} onPress={() => setSecondaryOpen((v) => !v)}>
+              <Text style={styles.moreChipLabel}>···</Text>
+            </Pressable>
+          </View>
+
+          {/* Grid embedded in the yard */}
+          <ScrollView
+            style={styles.yardScroll}
+            contentContainerStyle={styles.yardScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <BuildingGrid
+              game={game}
+              derived={derived}
+              grid={game.grid}
+              gridLevels={game.gridLevels}
+              containerWidth={width - spacing.md * 2}
+              onCellPress={handleCellPress}
+              isActive={game.crudeOil > 0}
+            />
+            {gridEditMode ? (
+              <Pressable onPress={() => setGridEditMode(null)}>
+                <Text style={styles.hintActive}>
+                  {gridEditMode.type === 'move' ? 'Tap empty to move there' : 'Tap a building to swap with'}
+                  {' · tap here to cancel'}
+                </Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.hint}>Tap empty to build · tap built for info</Text>
+            )}
+          </ScrollView>
+
+          {/* Buy / Sell — floating above bottom nav */}
+          <View style={styles.floatingActions}>
+            <AnimatedPressable
+              style={[styles.actionBtn, styles.buyBtn]}
+              onPress={() => {
+                const actualBuy = Math.min(10, Math.floor(game.money / CRUDE_COST), derived.maxCrudeStorage - game.crudeOil)
+                if (actualBuy > 0) {
+                  spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
+                  haptics.tap()
+                }
+                buyCrude(10)
+              }}
+            >
+              <Text style={styles.actionBtnLabel}>Buy 10 Crude</Text>
+              <Text style={styles.actionBtnSub}>${CRUDE_COST}/unit</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={[styles.actionBtn, styles.sellBtn]}
+              onPress={() => {
+                const actualSell = Math.min(10, game.gasoline)
+                if (actualSell > 0) {
+                  spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
+                  haptics.tap()
+                }
+                sellGasoline(10)
+              }}
+            >
+              <Text style={styles.actionBtnLabel}>Sell 10 Gas</Text>
+              <Text style={styles.actionBtnSub}>${derived.sellPrice}/unit</Text>
+            </AnimatedPressable>
+          </View>
         </View>
       </View>
 
-      <StatBoxRow boxes={primaryStats} />
+      {/* More Info bottom sheet */}
+      <Sheet visible={secondaryOpen} title="More Info" onClose={() => setSecondaryOpen(false)}>
+        {secondaryStats.map((stat) => (
+          <View key={stat.label} style={styles.infoStatRow}>
+            <Text style={styles.infoStatLabel}>{stat.label}</Text>
+            <Text style={styles.infoStatValue}>{stat.value}</Text>
+          </View>
+        ))}
+      </Sheet>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-      {nextGoal && (
-        <Pressable style={styles.nextGoalCard} onPress={() => router.push('/achievements')}>
-          <Text style={styles.nextGoalLabel}>🎯 Next: {nextGoal.name.en}</Text>
-          {nextGoal.progress ? (
-            <View style={styles.nextGoalProgressRow}>
-              <ProgressBar current={nextGoal.progress.current} target={nextGoal.progress.target} />
-              <Text style={styles.nextGoalProgressLabel}>
-                {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
-              </Text>
-            </View>
-          ) : (
-            <Text style={styles.nextGoalRequirement}>{nextGoal.requirement.en}</Text>
-          )}
-        </Pressable>
-      )}
-
-      <View style={styles.secondaryToolsRow}>
-        <Pressable style={styles.secondaryToggleButton} onPress={() => setSecondaryOpen((value) => !value)}>
-          <Text style={styles.secondaryToggleLabel}>More info</Text>
-          {secondaryOpen ? <ChevronUp color={colors.inkMuted} size={16} /> : <ChevronDown color={colors.inkMuted} size={16} />}
-        </Pressable>
-      </View>
-
-      {secondaryOpen && <ResourceBar stats={secondaryStats.map((stat, index) => ({ ...stat, color: [colors.steelMid, colors.teal, colors.purple, colors.orange, colors.ink][index] }))} />}
-
-      <View style={styles.gridWrap}>
-        <BuildingGrid
-          game={game}
-          derived={derived}
-          grid={game.grid}
-          gridLevels={game.gridLevels}
-          containerWidth={width - spacing.md * 2}
-          onCellPress={handleCellPress}
-          isActive={game.crudeOil > 0}
-        />
-        {gridEditMode ? (
-          <Pressable onPress={() => setGridEditMode(null)}>
-            <Text style={styles.hintActive}>
-              {gridEditMode.type === 'move' ? 'Tap an empty tile to move there' : 'Tap a building to swap with'}
-              {' · tap here to cancel'}
-            </Text>
-          </Pressable>
-        ) : (
-          <Text style={styles.hint}>Tap an empty tile to build · tap a built tile for info</Text>
-        )}
-      </View>
-
-      <View style={styles.actions}>
-        <AnimatedPressable
-          style={[styles.actionButton, styles.buyButton]}
-          onPress={() => {
-            const actualBuy = Math.min(10, Math.floor(game.money / CRUDE_COST), derived.maxCrudeStorage - game.crudeOil)
-            if (actualBuy > 0) {
-              spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
-              haptics.tap()
-            }
-            buyCrude(10)
-          }}
-        >
-          <Text style={styles.actionLabel}>Buy 10 Crude</Text>
-          <Text style={styles.actionSub}>${CRUDE_COST}/unit</Text>
-        </AnimatedPressable>
-        <AnimatedPressable
-          style={[styles.actionButton, styles.sellButton]}
-          onPress={() => {
-            const actualSell = Math.min(10, game.gasoline)
-            if (actualSell > 0) {
-              spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
-              haptics.tap()
-            }
-            sellGasoline(10)
-          }}
-        >
-          <Text style={styles.actionLabel}>Sell 10 Gas</Text>
-          <Text style={styles.actionSub}>${derived.sellPrice}/unit</Text>
-        </AnimatedPressable>
-      </View>
-
-      {false && <CollapsibleCard
-        title="📊 Production Overview"
-        summary={`${productionRows.length} product${productionRows.length === 1 ? '' : 's'}`}
-      >
-        <ProductionOverview rows={productionRows} />
-      </CollapsibleCard>}
-
-      {false && currentContract &&
-        (() => {
-          const { have, need, unit } = getContractProgress(currentContract, safeGame)
-          return (
-            <Pressable
-              style={styles.contractCard}
-              onPress={() => router.push('/game/business')}
-            >
-              <Text style={styles.contractTitle}>📋 Current Contract</Text>
-              <Text style={styles.contractName}>{currentContract.name.en}</Text>
-              <View style={styles.contractProgressRow}>
-                <ProgressBar current={have} target={need} color={colors.blue} />
-                <Text style={styles.contractProgressLabel}>
-                  {have.toLocaleString()}/{need.toLocaleString()} {unit}
-                </Text>
-              </View>
-              <Text style={styles.contractReward}>
-                Reward: ${currentContract.currentReward.toLocaleString()} · +{currentContract.currentRpReward} RP
-              </Text>
-            </Pressable>
-          )
-        })()}
-
-      {false && <View style={styles.productsWrap}>
-        {products.map((p) => {
-          const have = safeGame.productInventory[p.key]
-          const price = getProductSellPrice(
-            p.key,
-            safeDerived.productSellMultiplier,
-            p.key === 'petrochemicals' ? safeGame.petrochemicalsDemandMultiplier : 1,
-          )
-          return (
-            <AnimatedPressable
-              key={p.key}
-              style={[styles.productChip, { borderColor: p.color, opacity: have > 0 ? 1 : 0.5 }]}
-              disabled={have <= 0}
-              onPress={() => {
-                if (have > 0) {
-                  spawnFloat(`+$${(have * price).toLocaleString()}`, 'income')
-                  haptics.tap()
-                }
-                sellProduct(p.key, have)
-              }}
-            >
-              <Text style={[styles.productLabel, { color: p.color }]}>{p.label}</Text>
-              <Text style={styles.productValue}>
-                {have} · sell @${price}
-              </Text>
-            </AnimatedPressable>
-          )
-        })}
-      </View>}
-
-      {false && <View style={[styles.boostCard, boostActive && styles.boostCardActive]}>
-        {boostActive ? (
-          <>
-            <Text style={styles.boostTitle}>🔥 Boost active! x{BOOST_BALANCE.productionMultiplier} gasoline</Text>
-            <View style={styles.boostProgressRow}>
-              <ProgressBar current={boostElapsed} target={BOOST_BALANCE.durationTicks} />
-              <Text style={styles.boostTimeLabel}>{boostActiveSecondsLeft}s left</Text>
-            </View>
-          </>
-        ) : boostOnCooldown ? (
-          <>
-            <Text style={styles.boostTitleMuted}>🔥 Boost recharging...</Text>
-            <View style={styles.boostProgressRow}>
-              <ProgressBar current={boostElapsed} target={BOOST_BALANCE.cooldownTicks} />
-              <Text style={styles.boostTimeLabel}>{boostCooldownSecondsLeft}s</Text>
-            </View>
-          </>
-        ) : (
-          <AnimatedPressable
-            style={styles.boostButton}
-            onPress={() => {
-              if (boostReady) {
-                haptics.confirm()
-                activateBoost()
-              }
-            }}
-          >
-            <Text style={styles.boostButtonLabel}>
-              🔥 Activate Boost · x{BOOST_BALANCE.productionMultiplier} gasoline for{' '}
-              {Math.round((BOOST_BALANCE.durationTicks * TICK_MS) / 1000)}s
-            </Text>
-          </AnimatedPressable>
-        )}
-      </View>}
-
-      </ScrollView>
-
+      {/* Events sheet */}
       <Sheet visible={eventModalOpen} title="Events" onClose={() => setEventModalOpen(false)}>
         {claimableHiddenEvents.length === 0 ? (
           <Text style={styles.eventEmpty}>No claimable surprises right now. Keep building and checking the clock.</Text>
@@ -522,9 +446,7 @@ export default function RefineryScreen() {
         )}
       </Sheet>
 
-      {/* Automation: Auto-trade + Feedstock Priority, moved out of the
-          main scroll (dashboard redesign) so the Refinery tab stays a
-          short glance-able view; opened via the ⚙️ header button. */}
+      {/* Automation sheet (hidden pending design) */}
       {false && <Sheet visible={automationModalOpen} title="⚙️ Automation" onClose={() => setAutomationModalOpen(false)}>
         <View style={styles.autoTradeCard}>
           <View style={styles.autoTradeHeader}>
@@ -640,11 +562,6 @@ export default function RefineryScreen() {
         {BUILDING_KEYS.map((key) => {
           const b = BUILDINGS[key]
           const unlockLevel = b.unlockLevel ?? 1
-          // A claimed Hidden Event 'building' reward grants free/discounted
-          // placements that bypass the normal unlock level AND cost -- see
-          // placeBuilding in useGameLoop.ts. Shown with a special badge and
-          // subtitle while uses remain, taking priority over the normal
-          // locked/cost display for this building.
           const hiddenUses = game.hiddenBuildingUsesRemaining[key] ?? 0
           const hasHiddenGrant = hiddenUses > 0
           const locked = !hasHiddenGrant && game.refineryLevel < unlockLevel
@@ -692,19 +609,10 @@ export default function RefineryScreen() {
               ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
               : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
           const plant = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
-          // polymerPlant isn't in PLANT_PRODUCTION (standalone production
-          // block, see useGameLoop.ts) but still has a specialist worker.
           const specialistType = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker
           const specialistName = specialistType
             ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType
             : null
-          // Per-Plant Staff Assignment (design doc Part A): this section
-          // is about ONE specific cell (infoCell), not a shared pool.
-          // assignedEmployee is whoever's on THIS tile, if anyone;
-          // eligibleEmployees is every hired employee of the matching
-          // type who ISN'T currently assigned anywhere else (so this list
-          // doubles as "available to assign" -- someone already on
-          // another plant has to be unassigned there first).
           const assignedEmployee = specialistType ? getEmployeeAssignedToCell(game, infoCell) : null
           const eligibleEmployees = specialistType
             ? game.employees.filter(
@@ -813,17 +721,370 @@ export default function RefineryScreen() {
   )
 }
 
+// ─── Sky palette ─────────────────────────────────────────────────────────────
+const SKY_DAY = '#6FA8C8'
+const SKY_NIGHT = '#0D1B2E'
+const YARD_GROUND = '#B8A882'
+const YARD_ROAD_COLOR = 'rgba(100,90,70,0.18)'
+
 const styles = StyleSheet.create({
+  // ── Loading ──────────────────────────────────────────────────────────────
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ── Root ─────────────────────────────────────────────────────────────────
+  screen: {
+    flex: 1,
+    backgroundColor: SKY_NIGHT,
+  },
+
+  // ── Scene container ───────────────────────────────────────────────────────
+  scene: {
+    flex: 1,
+  },
+
   nightOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0A1A33',
-    opacity: 0.12,
-    zIndex: 1,
+    backgroundColor: '#050D1A',
+    opacity: 0.22,
+    zIndex: 50,
   },
+
+  // ── Sky area (top 1/3) ────────────────────────────────────────────────────
+  skyArea: {
+    flex: 1,
+    backgroundColor: SKY_DAY,
+    overflow: 'hidden',
+  },
+  skyAreaNight: {
+    backgroundColor: SKY_NIGHT,
+  },
+  // Lighter wash near the top of the sky
+  skyHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+    backgroundColor: '#FFFFFF',
+    opacity: 0.08,
+  },
+  // Warm industrial haze near the horizon
+  skyHaze: {
+    position: 'absolute',
+    bottom: 26,
+    left: 0,
+    right: 0,
+    height: 18,
+    backgroundColor: '#C8B888',
+    opacity: 0.35,
+  },
+  // Land / treeline silhouette strip
+  skyHorizon: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 26,
+    backgroundColor: '#6A7A5A',
+  },
+
+  // HUD: refinery name — top left
+  nameHud: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    zIndex: 10,
+  },
+  nameText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  lvPill: {
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    borderRadius: radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  lvPillReady: {
+    backgroundColor: colors.gold,
+  },
+  lvPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  // HUD: time + events — top right
+  topRightHud: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    zIndex: 10,
+  },
+  timePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+  },
+  timePillLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  eventsBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventsBtnLabel: {
+    fontSize: 14,
+  },
+
+  // Goal panel — floating near sky / yard boundary
+  goalPanel: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: spacing.md,
+    right: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  goalName: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 12,
+  },
+  goalProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+  },
+  goalProgressNum: {
+    fontSize: 10,
+    color: colors.inkMuted,
+    fontWeight: '700',
+  },
+  goalReq: {
+    color: colors.inkMuted,
+    fontSize: 10,
+    marginTop: 2,
+  },
+
+  // ── Factory yard (bottom 2/3) ─────────────────────────────────────────────
+  yardArea: {
+    flex: 2,
+    backgroundColor: YARD_GROUND,
+    overflow: 'hidden',
+  },
+
+  // Decorative path / road strips
+  yardRoad: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: YARD_ROAD_COLOR,
+    zIndex: 0,
+  },
+  yardRoad2: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: YARD_ROAD_COLOR,
+    zIndex: 0,
+  },
+
+  // Resource HUD strip — absolute at top of yard
+  resourceHud: {
+    position: 'absolute',
+    top: spacing.xs,
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30,42,56,0.88)',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    zIndex: 10,
+    gap: spacing.xs,
+  },
+  resChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  resLabel: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.60)',
+    fontWeight: '700',
+  },
+  resVal: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  resValWarn: {
+    color: colors.orange,
+  },
+  resValGas: {
+    color: '#9EE09E',
+  },
+  resSep: {
+    width: 1,
+    height: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginHorizontal: 3,
+  },
+  moreChip: {
+    marginLeft: 'auto' as any,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  moreChipLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 3,
+    lineHeight: 14,
+  },
+
+  // Grid scroll area inside yard
+  yardScroll: {
+    flex: 1,
+  },
+  yardScrollContent: {
+    paddingTop: 44,
+    paddingHorizontal: spacing.md,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 64,
+    alignItems: 'center',
+  },
+
+  hint: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: 'rgba(43,58,74,0.45)',
+    marginTop: spacing.xs,
+  },
+  hintActive: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.orangeDark,
+    marginTop: spacing.xs,
+  },
+
+  // Buy / Sell floating above tab bar
+  floatingActions: {
+    position: 'absolute',
+    bottom: FLOATING_TAB_BAR_CLEARANCE,
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.md,
+    zIndex: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  buyBtn: {
+    backgroundColor: colors.steelLight,
+    borderWidth: 2,
+    borderColor: colors.steelDark,
+  },
+  sellBtn: {
+    backgroundColor: colors.green,
+    borderWidth: 2,
+    borderColor: colors.greenDark,
+  },
+  actionBtnLabel: {
+    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 14,
+  },
+  actionBtnSub: {
+    color: colors.inkMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  // ── More Info sheet rows ──────────────────────────────────────────────────
+  infoStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.creamBorder,
+  },
+  infoStatLabel: {
+    color: colors.inkMuted,
+    fontSize: 13,
+  },
+  infoStatValue: {
+    color: colors.ink,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+
+  // ── Events sheet ─────────────────────────────────────────────────────────
+  eventEmpty: {
+    color: colors.inkMuted,
+    fontSize: 13,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+
+  // ── Building info sheet ───────────────────────────────────────────────────
   infoLevel: {
     fontWeight: '800',
     color: colors.ink,
@@ -866,11 +1127,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: spacing.xs,
   },
-  feedstockPriorityHint: {
-    color: colors.inkMuted,
-    fontSize: 11,
-    marginBottom: spacing.sm,
-  },
   infoSectionTitle: {
     fontWeight: '800',
     color: colors.ink,
@@ -883,194 +1139,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: spacing.sm,
   },
-  screen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-  },
-  scrollContent: {
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  headerTitleWrap: {
-    flex: 1,
-    paddingRight: spacing.sm,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: 11,
+
+  // ── Automation sheet (kept for future use) ────────────────────────────────
+  feedstockPriorityHint: {
     color: colors.inkMuted,
-    marginTop: 1,
-  },
-  subtitleMuted: {
-    opacity: 0.6,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  timePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  timeLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  automationButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.sm,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  automationButtonLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  gridWrap: {
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.xs,
-  },
-  hint: {
-    textAlign: 'center',
-    fontSize: 11,
-    color: colors.inkMuted,
-    marginTop: spacing.xs,
-  },
-  hintActive: {
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.orangeDark,
-    marginTop: spacing.xs,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: radii.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.ink,
-  },
-  buyButton: {
-    backgroundColor: colors.steelLight,
-  },
-  sellButton: {
-    backgroundColor: colors.green,
-  },
-  actionLabel: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 14,
-  },
-  actionSub: {
-    color: colors.ink,
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.7,
-  },
-  productsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
-  },
-  productChip: {
-    flexBasis: '30%',
-    flexGrow: 1,
-    borderWidth: 2,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-    backgroundColor: colors.white,
-  },
-  productLabel: {
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  productValue: {
-    fontSize: 11,
-    color: colors.ink,
-    marginTop: 2,
-  },
-  boostCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-  },
-  boostCardActive: {
-    borderColor: colors.orange,
-    backgroundColor: '#FFF3E8',
-  },
-  boostTitle: {
-    fontWeight: '800',
-    color: colors.orangeDark,
-    fontSize: 13,
-  },
-  boostTitleMuted: {
-    fontWeight: '800',
-    color: colors.inkMuted,
-    fontSize: 13,
-  },
-  boostProgressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  boostTimeLabel: {
-    fontSize: 11,
-    color: colors.inkMuted,
-    fontWeight: '700',
-  },
-  boostButton: {
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  boostButtonLabel: {
-    fontWeight: '800',
-    color: colors.orangeDark,
-    fontSize: 13,
+    marginBottom: spacing.sm,
   },
   autoTradeCard: {
     marginHorizontal: spacing.lg,
@@ -1080,132 +1154,6 @@ const styles = StyleSheet.create({
     borderColor: colors.creamBorder,
     borderRadius: radii.md,
     padding: spacing.sm,
-  },
-  nextGoalCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.xs,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.gold,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  nextGoalTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  nextGoalLabel: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 12,
-    flex: 1,
-  },
-  nextGoalCta: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.blue,
-  },
-  nextGoalRequirement: {
-    color: colors.inkMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  nextGoalProgressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: 4,
-  },
-  nextGoalProgressLabel: {
-    fontSize: 11,
-    color: colors.inkMuted,
-    fontWeight: '700',
-  },
-  secondaryToolsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  secondaryToggleButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: radii.md,
-    paddingVertical: spacing.xs,
-  },
-  secondaryToggleLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.inkMuted,
-  },
-  secondaryToolButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  secondaryToolLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.inkMuted,
-  },
-  eventEmpty: {
-    color: colors.inkMuted,
-    fontSize: 13,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  contractCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: 14,
-    padding: spacing.md,
-  },
-  contractTitle: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 14,
-  },
-  contractName: {
-    color: colors.inkMuted,
-    fontSize: 12,
-    marginTop: 2,
-    marginBottom: spacing.sm,
-  },
-  contractProgressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  contractProgressLabel: {
-    fontSize: 11,
-    color: colors.inkMuted,
-    fontWeight: '700',
-  },
-  contractReward: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.goldDark,
-    marginTop: spacing.sm,
   },
   autoTradeHeader: {
     flexDirection: 'row',

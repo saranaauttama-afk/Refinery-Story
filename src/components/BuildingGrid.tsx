@@ -62,9 +62,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     backgroundColor: colors.ground,
-    borderRadius: radii.lg,
+    borderRadius: radii.sm,
     padding: spacing.sm,
     justifyContent: 'center',
+    width: '100%',
   },
 })
 
