@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   LayoutAnimation,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -401,11 +402,36 @@ export default function RefineryScreen() {
             even collapsed, so that's still glanceable) and expands
             upward into the full panel -- smaller Buy/Sell buttons plus
             the Auto-trade toggle/thresholds in the same place, instead
-            of a separate Automation sheet. */}
+            of a separate Automation sheet.
+
+            The expanded panel renders inside a Modal (not just another
+            absolutely-positioned View) -- per feedback that expanding it
+            covered up other floating buttons/menus behind it. React
+            Navigation's tab bar (and possibly other screen-level
+            absolutely-positioned HUD) doesn't reliably respect zIndex
+            against a plain View, a known cross-platform RN/React
+            Navigation quirk; Modal always renders in its own top-level
+            layer above the navigator, which is why Sheet.tsx already
+            uses one for the build/info sheets. Made transparent with no
+            backdrop dimming (unlike Sheet's full-screen takeover) and
+            its content positioned to visually sit right above the pill,
+            so it still reads as "this panel belongs to that pill" rather
+            than a disconnected modal. */}
         <View style={styles.tradePanelWrap} pointerEvents="box-none">
-          {tradePanelOpen && (
-            <View style={styles.tradePanel}>
-              <ScrollView showsVerticalScrollIndicator={false}>
+          <Pressable style={styles.tradePill} onPress={toggleTradePanel}>
+            <Text style={styles.tradePillIcon}>{autoTrade.enabled ? '🔄' : '💱'}</Text>
+            <Text style={styles.tradePillLabel}>
+              {autoTrade.enabled ? 'Auto: ON' : 'Trade'}
+            </Text>
+            <Text style={styles.tradePillChevron}>{tradePanelOpen ? '▾' : '▴'}</Text>
+          </Pressable>
+        </View>
+
+        <Modal visible={tradePanelOpen} transparent animationType="fade" onRequestClose={toggleTradePanel}>
+          <Pressable style={styles.tradeModalBackdrop} onPress={toggleTradePanel}>
+            <View style={styles.tradeModalAnchor}>
+              <Pressable style={styles.tradePanel} onPress={(e) => e.stopPropagation()}>
+                <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.tradeActionsRow}>
                 <AnimatedPressable
                   style={[styles.tradeActionBtn, styles.buyBtn]}
@@ -507,18 +533,11 @@ export default function RefineryScreen() {
                     })}
                 </>
               )}
-              </ScrollView>
+                </ScrollView>
+              </Pressable>
             </View>
-          )}
-
-          <Pressable style={styles.tradePill} onPress={toggleTradePanel}>
-            <Text style={styles.tradePillIcon}>{autoTrade.enabled ? '🔄' : '💱'}</Text>
-            <Text style={styles.tradePillLabel}>
-              {autoTrade.enabled ? 'Auto: ON' : 'Trade'}
-            </Text>
-            <Text style={styles.tradePillChevron}>{tradePanelOpen ? '▾' : '▴'}</Text>
           </Pressable>
-        </View>
+        </Modal>
 
       </View>{/* end scene */}
 
@@ -1076,6 +1095,23 @@ const styles = StyleSheet.create({
   tradePillChevron: {
     fontSize: 11,
     color: colors.inkMuted,
+  },
+  // Backdrop fills the Modal -- transparent (not dimmed like Sheet's
+  // full-screen takeover, since this is meant to feel like a small
+  // popover attached to the pill, not a separate screen) but still
+  // tappable to dismiss, same as tapping outside any other popover.
+  tradeModalBackdrop: {
+    flex: 1,
+  },
+  // Positions the panel to visually sit right above where the pill is
+  // on the real screen underneath the modal (same right/bottom offsets
+  // as tradePanelWrap) -- the Modal itself doesn't know about the pill's
+  // position, so this duplicates the offset rather than trying to share
+  // it, which is simpler than measuring the pill's actual layout.
+  tradeModalAnchor: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: FLOATING_TAB_BAR_CLEARANCE + 56,
   },
   tradePanel: {
     width: 260,
