@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react'
-import { Dimensions, StyleSheet, Text, View } from 'react-native'
+import { type ReactNode, useState } from 'react'
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import { colors, radii, spacing } from '../theme'
@@ -38,7 +38,7 @@ const SCREEN_HEIGHT = Dimensions.get('window').height
 function BottomDrawer({
   children,
   peekHeight = 64,
-  expandedHeightRatio = 0.55,
+  expandedHeightRatio = 0.48,
   title,
   bottomOffset = 0,
 }: BottomDrawerProps) {
@@ -48,8 +48,28 @@ function BottomDrawer({
   const collapsedTranslateY = expandedHeight - peekHeight
   const translateY = useSharedValue(collapsedTranslateY)
   const startY = useSharedValue(collapsedTranslateY)
+  // Plain (non-worklet) React state mirroring whether the drawer is
+  // expanded, used only to decide whether to show the "▾ Close" button --
+  // per explicit feedback, dragging down was the ONLY way to collapse the
+  // drawer, and with no visible close affordance the expanded state
+  // (roughly half the screen, solid background) read as "opened a whole
+  // new page with no way back" rather than a panel on the same screen.
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const snapTo = (target: 'expanded' | 'collapsed') => {
+    translateY.value = withSpring(target === 'collapsed' ? collapsedTranslateY : 0, {
+      damping: 18,
+      stiffness: 180,
+    })
+    setIsExpanded(target === 'expanded')
+  }
 
   const panGesture = Gesture.Pan()
+    // Same reasoning as ZoomableGridCanvas's pan gesture: without a
+    // minimum-drag-distance threshold, RNGH's pan gesture can claim a
+    // plain tap before it reaches the Pressable underneath (the handle
+    // area's tap-to-expand/collapse), since both are on the same element.
+    .minDistance(10)
     .onStart(() => {
       startY.value = translateY.value
     })
@@ -68,6 +88,7 @@ function BottomDrawer({
         damping: 18,
         stiffness: 180,
       })
+      setIsExpanded(!shouldCollapse)
     })
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -77,10 +98,16 @@ function BottomDrawer({
   return (
     <Animated.View style={[styles.drawer, { height: expandedHeight, bottom: bottomOffset }, animatedStyle]}>
       <GestureDetector gesture={panGesture}>
-        <View style={styles.handleArea}>
+        <Pressable
+          style={styles.handleArea}
+          onPress={() => snapTo(isExpanded ? 'collapsed' : 'expanded')}
+        >
           <View style={styles.handle} />
-          <Text style={styles.title}>{title}</Text>
-        </View>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{title}</Text>
+            {isExpanded && <Text style={styles.closeHint}>▾ Tap or drag down to close</Text>}
+          </View>
+        </Pressable>
       </GestureDetector>
       <View style={styles.body}>{children}</View>
     </Animated.View>
@@ -119,6 +146,15 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 13,
     marginTop: spacing.xs,
+  },
+  titleRow: {
+    alignItems: 'center',
+  },
+  closeHint: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.blue,
+    marginTop: 2,
   },
   body: {
     flex: 1,

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import type { BuildingType, GridCell } from '../game/types'
 import BuildingTile from './BuildingTile'
@@ -66,4 +67,13 @@ const styles = StyleSheet.create({
   },
 })
 
-export default BuildingGrid
+// Memoized -- the parent screen re-renders every ~200ms (the game tick),
+// but game.grid/gridLevels keep the SAME array reference across ticks
+// unless a building is actually placed/moved/upgraded (tick() spreads
+// ...current, which copies the array reference, not a deep clone). Skips
+// re-rendering all 9-36 BuildingTile children on ticks where nothing on
+// the grid actually changed -- isActive (crudeOil > 0) is the one prop
+// that's genuinely volatile, so this won't eliminate every re-render, but
+// cuts out a meaningful chunk of unnecessary work, which matters while
+// the user is also actively panning/pinch-zooming this same content.
+export default memo(BuildingGrid)

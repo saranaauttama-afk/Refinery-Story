@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -48,20 +49,6 @@ function ZoomableGridCanvas({
   const viewportWidth = useSharedValue(0)
   const viewportHeight = useSharedValue(0)
 
-  // Clamps translateX/Y so the content can't be dragged so far that the
-  // grid disappears off-screen entirely -- allows roughly half the
-  // content's (scaled) size to go off either edge, not unlimited panning.
-  const clampTranslation = () => {
-    'worklet'
-    if (!contentWidth || !contentHeight) return
-    const scaledWidth = contentWidth * scale.value
-    const scaledHeight = contentHeight * scale.value
-    const maxX = Math.max(0, (scaledWidth - viewportWidth.value) / 2 + scaledWidth * 0.3)
-    const maxY = Math.max(0, (scaledHeight - viewportHeight.value) / 2 + scaledHeight * 0.3)
-    translateX.value = Math.min(maxX, Math.max(-maxX, translateX.value))
-    translateY.value = Math.min(maxY, Math.max(-maxY, translateY.value))
-  }
-
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
@@ -79,12 +66,29 @@ function ZoomableGridCanvas({
           translateY.value = savedTranslateY.value + event.translationY
         })
         .onEnd(() => {
-          clampTranslation()
+          // Inlined rather than calling a separately-declared
+          // clampTranslation() function -- a worklet calling into a
+          // function declared OUTSIDE the gesture callback (even one
+          // marked 'worklet') isn't guaranteed to be bundled into the
+          // same UI-thread closure at compile time, and ended up adding
+          // a noticeable cross-thread-call delay in testing (zoom/pan
+          // felt like it was "catching up" a beat after the finger
+          // moved, instead of tracking it live). Inlining the same
+          // clamp math directly here and in the pinch gesture below
+          // keeps everything in one worklet, no ambiguity.
+          if (contentWidth && contentHeight) {
+            const scaledWidth = contentWidth * scale.value
+            const scaledHeight = contentHeight * scale.value
+            const maxX = Math.max(0, (scaledWidth - viewportWidth.value) / 2 + scaledWidth * 0.3)
+            const maxY = Math.max(0, (scaledHeight - viewportHeight.value) / 2 + scaledHeight * 0.3)
+            translateX.value = Math.min(maxX, Math.max(-maxX, translateX.value))
+            translateY.value = Math.min(maxY, Math.max(-maxY, translateY.value))
+          }
           savedTranslateX.value = translateX.value
           savedTranslateY.value = translateY.value
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [contentWidth, contentHeight],
   )
 
   const pinchGesture = useMemo(
@@ -96,10 +100,17 @@ function ZoomableGridCanvas({
         })
         .onEnd(() => {
           savedScale.value = scale.value
-          clampTranslation()
+          if (contentWidth && contentHeight) {
+            const scaledWidth = contentWidth * scale.value
+            const scaledHeight = contentHeight * scale.value
+            const maxX = Math.max(0, (scaledWidth - viewportWidth.value) / 2 + scaledWidth * 0.3)
+            const maxY = Math.max(0, (scaledHeight - viewportHeight.value) / 2 + scaledHeight * 0.3)
+            translateX.value = Math.min(maxX, Math.max(-maxX, translateX.value))
+            translateY.value = Math.min(maxY, Math.max(-maxY, translateY.value))
+          }
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [minScale, maxScale],
+    [minScale, maxScale, contentWidth, contentHeight],
   )
 
   const composedGesture = useMemo(
@@ -139,6 +150,24 @@ function ZoomableGridCanvas({
 
   return (
     <View style={styles.viewport} onLayout={handleLayout}>
+      {/* Static sky -> water gradient backdrop. Deliberately NOT inside
+          the Animated.View that pans/zooms -- a real isometric scene
+          would have its own ground/sky/sea baked into the artwork and
+          panning would reveal more of it, but until that exists, this
+          gradient acts as a fixed "horizon" behind the grid rather than
+          panning/zooming WITH it (which would look like the sky itself
+          was a draggable object, not a backdrop). */}
+      <Svg style={styles.backdrop} width="100%" height="100%">
+        <Defs>
+          <LinearGradient id="skyToWater" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#9FD8F0" />
+            <Stop offset="0.6" stopColor="#C9E8D8" />
+            <Stop offset="0.67" stopColor="#5B8DBF" />
+            <Stop offset="1" stopColor="#2C5C82" />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#skyToWater)" />
+      </Svg>
       <GestureDetector gesture={composedGesture}>
         <Animated.View style={[styles.content, animatedStyle]}>{children}</Animated.View>
       </GestureDetector>
@@ -154,10 +183,26 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    // Pushes the grid up into roughly the top 2/3 of the canvas (the
+    // "ground" portion of the sky->water gradient backdrop) instead of
+    // sitting dead-center -- justifyContent 'center' would put it right
+    // at the screen's vertical midpoint, straddling the gradient's
+    // water transition. This is a coarse approximation until there's a
+    // real isometric scene with actual ground/water art -- the grid
+    // itself doesn't "know" about the gradient, this is just where the
+    // empty space around it is biased toward.
+    justifyContent: 'flex-start',
+    paddingTop: '15%',
   },
   resetButton: {
     position: 'absolute',

@@ -20,8 +20,8 @@ import ListRow from '../../../src/components/ListRow'
 import CollapsibleCard from '../../../src/components/CollapsibleCard'
 import ProductionOverview, { type ProductionOverviewRow } from '../../../src/components/ProductionOverview'
 import ProgressBar from '../../../src/components/ProgressBar'
-import StatBoxRow from '../../../src/components/StatBoxRow'
-import ResourceBar from '../../../src/components/ResourceBar'
+import IconStatBar from '../../../src/components/IconStatBar'
+import { Coins, Droplet, Fuel, Leaf } from 'lucide-react-native'
 import Sheet from '../../../src/components/Sheet'
 import ZoomableGridCanvas from '../../../src/components/ZoomableGridCanvas'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
@@ -152,20 +152,19 @@ export default function RefineryScreen() {
   }
 
   const seasonLabel = getSeasonLabel(game.tickCount, game.yearStartTick)
-  const seasonPct = Math.round(derived.seasonalGasolineMultiplier * 100)
 
-  const stats = [
-    { label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.gold },
-    { label: 'Crude', value: `${game.crudeOil}/${derived.maxCrudeStorage}`, color: colors.steelDark },
-    { label: 'Feedstock', value: `${game.feedstock}/${derived.maxFeedstockStorage}`, color: colors.steelMid },
-    { label: 'Gasoline', value: `${game.gasoline}/${derived.maxGasolineStorage}`, color: colors.green },
-    { label: 'ESG', value: `${Math.round(game.esgScore)}`, color: colors.teal },
-    { label: 'Season', value: `${seasonPct}%`, color: colors.orange },
-    {
-      label: 'Time',
-      value: `${formatGameClockTime(derived.gameClock)}${derived.gameClock.isDaytime ? '☀️' : '🌙'}`,
-      color: derived.gameClock.isDaytime ? colors.gold : colors.blueDark,
-    },
+  // Kept short and icon-led on purpose -- per feedback, the old header
+  // (3 large StatBox cards + a 7-item ResourceBar wrapping into 2 rows)
+  // added up to badges that spilled down nearly half the screen. Only
+  // the handful of numbers worth checking at-a-glance while looking at
+  // the grid live here; Feedstock/Season/Time/Reputation/Era moved into
+  // the BottomDrawer (Production Overview / Stats tab) where checking
+  // them isn't as time-pressured.
+  const iconStats = [
+    { key: 'money', icon: <Coins size={14} color={colors.goldDark} />, value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
+    { key: 'crude', icon: <Droplet size={14} color={colors.steelDark} />, value: `${game.crudeOil}/${derived.maxCrudeStorage}`, color: colors.steelDark },
+    { key: 'gasoline', icon: <Fuel size={14} color={colors.green} />, value: `${game.gasoline}/${derived.maxGasolineStorage}`, color: colors.green },
+    { key: 'esg', icon: <Leaf size={14} color={colors.teal} />, value: `${Math.round(game.esgScore)}`, color: colors.teal },
   ]
 
   const handleCellPress = (index: number) => {
@@ -303,15 +302,7 @@ export default function RefineryScreen() {
           </View>
         </View>
 
-        <StatBoxRow
-          boxes={[
-            { key: 'era', label: `Era ${derived.currentEra.index + 1}`, value: `Lv${game.refineryLevel}`, color: colors.ink },
-            { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
-            { key: 'reputation', label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}`, color: colors.purple },
-          ]}
-        />
-
-        <ResourceBar stats={stats} />
+        <IconStatBar stats={iconStats} />
 
         {/* The old "Tap an empty tile to build · tap a built tile for
             info" hint (always visible) was intentionally dropped here --
@@ -337,6 +328,21 @@ export default function RefineryScreen() {
           mostly visible, drag the handle up to see it all. */}
       <BottomDrawer title="📊 Dashboard" bottomOffset={FLOATING_TAB_BAR_CLEARANCE}>
         <ScrollView contentContainerStyle={styles.drawerScrollContent}>
+          <IconStatBar
+            stats={[
+              { key: 'era', icon: <Text style={styles.iconStatEmoji}>🏛️</Text>, value: `Era ${derived.currentEra.index + 1} · Lv${game.refineryLevel}`, color: colors.ink },
+              { key: 'reputation', icon: <Text style={styles.iconStatEmoji}>⭐</Text>, value: `${Math.floor(game.reputation).toLocaleString()}`, color: colors.purple },
+              { key: 'feedstock', icon: <Text style={styles.iconStatEmoji}>🧪</Text>, value: `${game.feedstock}/${derived.maxFeedstockStorage}`, color: colors.steelMid },
+              { key: 'season', icon: <Text style={styles.iconStatEmoji}>🍂</Text>, value: `${Math.round(derived.seasonalGasolineMultiplier * 100)}%`, color: colors.orange },
+              {
+                key: 'time',
+                icon: <Text style={styles.iconStatEmoji}>{derived.gameClock.isDaytime ? '☀️' : '🌙'}</Text>,
+                value: formatGameClockTime(derived.gameClock),
+                color: derived.gameClock.isDaytime ? colors.goldDark : colors.blueDark,
+              },
+            ]}
+          />
+
           {nextGoal && (
             <Pressable style={styles.nextGoalCard} onPress={() => router.push('/achievements')}>
               <Text style={styles.nextGoalLabel}>🎯 Next: {nextGoal.name.en}</Text>
@@ -857,6 +863,9 @@ const styles = StyleSheet.create({
   drawerScrollContent: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  iconStatEmoji: {
+    fontSize: 13,
   },
   loadingScreen: {
     flex: 1,
