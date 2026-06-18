@@ -84,11 +84,12 @@ function PRODUCT_MAX_STORAGE(
 }
 
 // ── Scene geometry constants ──────────────────────────────────────────────────
-// Sky occupies the top 33 % of the scene; a treeline strip bridges sky → yard.
-const SKY_RATIO    = 0.33
-const HORIZON_H    = 28   // px — treeline silhouette strip between sky and yard
-const RESOURCE_H   = 38   // px — resource HUD strip height
-const GOAL_H       = 64   // px — goal panel height (generous estimate)
+// Sky is atmosphere only — 12 % keeps it visible without eating play space.
+// Horizon strip is a thin separator.  Goal is a compact 28 px chip.
+const SKY_RATIO    = 0.12
+const HORIZON_H    = 14   // px — thin treeline separator
+const RESOURCE_H   = 38   // px — resource HUD strip height (unchanged)
+const GOAL_H       = 28   // px — compact goal chip height
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -335,22 +336,29 @@ export default function RefineryScreen() {
           </Pressable>
         </View>
 
-        {/* Goal panel — just below resource strip in the yard */}
+        {/* Goal chip — compact single line, floats just below resource strip */}
         {nextGoal && (
           <Pressable
-            style={[styles.goalPanel, { top: goalTop }]}
+            style={[styles.goalChip, { top: goalTop }]}
             onPress={() => router.push('/achievements')}
           >
-            <Text style={styles.goalName}>🎯 {nextGoal.name.en}</Text>
+            <Text style={styles.goalChipIcon}>🎯</Text>
+            <Text style={styles.goalChipName} numberOfLines={1}>{nextGoal.name.en}</Text>
             {nextGoal.progress ? (
-              <View style={styles.goalProgressRow}>
-                <ProgressBar current={nextGoal.progress.current} target={nextGoal.progress.target} />
-                <Text style={styles.goalProgressNum}>
+              <>
+                <View style={styles.goalChipTrack}>
+                  <View style={[styles.goalChipFill, {
+                    width: Math.min(56, Math.round(
+                      nextGoal.progress.current / nextGoal.progress.target * 56
+                    )),
+                  }]} />
+                </View>
+                <Text style={styles.goalChipNum}>
                   {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
                 </Text>
-              </View>
+              </>
             ) : (
-              <Text style={styles.goalReq}>{nextGoal.requirement.en}</Text>
+              <Text style={styles.goalChipReq} numberOfLines={1}>{nextGoal.requirement.en}</Text>
             )}
           </Pressable>
         )}
@@ -725,13 +733,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     opacity: 0.07,
   },
-  // Warm industrial haze near the horizon
+  // Warm industrial haze near the horizon (proportionally smaller with shorter sky)
   bgSkyHaze: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
-    height: 22,
+    height: 10,
     backgroundColor: '#C4B888',
-    opacity: 0.32,
+    opacity: 0.40,
   },
   // Treeline / horizon strip — height set dynamically
   bgHorizon: {
@@ -920,42 +928,58 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
 
-  // Goal panel — top set dynamically (= goalTop)
-  goalPanel: {
+  // Goal chip — compact single-line pill, top set dynamically (= goalTop)
+  goalChip: {
     position: 'absolute',
     left: spacing.md,
     right: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.94)',
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 7,
-    zIndex: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  goalName: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 12,
-  },
-  goalProgressRow: {
+    height: GOAL_H,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: 4,
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.93)',
+    borderRadius: radii.pill,
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
-  goalProgressNum: {
+  goalChipIcon: {
+    fontSize: 12,
+  },
+  goalChipName: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.ink,
+  },
+  goalChipTrack: {
+    width: 56,
+    height: 4,
+    backgroundColor: colors.creamBorder,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  goalChipFill: {
+    height: 4,
+    backgroundColor: colors.goldDark,
+    borderRadius: 2,
+  },
+  goalChipNum: {
     fontSize: 10,
-    color: colors.inkMuted,
     fontWeight: '700',
-  },
-  goalReq: {
     color: colors.inkMuted,
+    minWidth: 36,
+    textAlign: 'right',
+  },
+  goalChipReq: {
     fontSize: 10,
-    marginTop: 2,
+    color: colors.inkMuted,
+    flex: 1,
+    textAlign: 'right',
   },
 
   // ── Layer 4: Floating action buttons ──────────────────────────────────────
@@ -971,13 +995,13 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     borderRadius: radii.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 6,
     alignItems: 'center',
-    elevation: 5,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   buyBtn: {
     backgroundColor: colors.steelLight,

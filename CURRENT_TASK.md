@@ -6,120 +6,114 @@
 
 ## Current Task
 
-**Factory Scene Layout v1 — Layered Composition**
+**Factory Layout Final Pass — Refinery Dominance**
 
-## Why the Previous Stacked Scene Was Rejected
+## Why This Pass Was Needed
 
-The first "scene" attempt (commit b592018) was structurally wrong.
-It used two sibling flex Views stacked vertically inside the tab:
+After the layered composition commit (6ffa3a6), the scene structure was
+architecturally correct but the proportions were wrong:
 
+- `SKY_RATIO = 0.33` gave the sky 33 % of scene height — atmosphere was eating
+  one third of the screen where gameplay should live.
+- `HORIZON_H = 28` — the treeline separator strip was unnecessarily thick.
+- The goal panel was ~64 px tall (name + ProgressBar + progress text) — a full
+  card-height element floating in the game area that scrolled the grid down.
+- Action buttons had generous padding, adding more dead height.
+
+Result: on a 800 px scene, the grid didn't start until ~415 px from the top.
+Only ~285 px remained for grid tiles before the action buttons. That is not
+"refinery as focus" — that is "UI as focus".
+
+## Layout Before vs After
+
+### Before (6ffa3a6)
 ```
-skyArea   (flex: 1)   ← sky section takes its own block of height
-yardArea  (flex: 2)   ← yard section takes the next block of height
+0 px         ─ top safe area
+0–264 px     sky (33 % of 800 px)
+264–292 px   horizon strip (28 px)
+292–330 px   resource strip straddles boundary
+338–402 px   goal panel (64 px tall)
+402 px        first grid tile
+402–574 px   grid (4×4 ≈ 320 px + hint)
+674–734 px   floating action buttons
+734–800 px   tab bar clearance
 ```
+Grid visible area ≈ 172 px before needing to scroll.
 
-This is still a vertical dashboard stack — sky just replaced "Header + StatBoxRow".
-The background was a **participant in document flow** instead of a backdrop.
-The first impression was still "two zones stacked on top of each other", not a
-single game scene with floating UI.
-
-## What Layered Composition Means
-
-In a layered composition, there is **one scene container** (`flex: 1`).
-All elements are positioned within that single container using absolute positioning
-and zIndex. Nothing pushes anything else down.
-
+### After (this commit)
 ```
-Layer 0  (zIndex  0)  Background — absoluteFill behind everything.
-                      Contains sky + horizon + yard drawn as visual shapes.
-                      pointerEvents="none" — never intercepts touches.
-
-Layer 1  (zIndex 10)  Grid / Building Yard — absolute, top = yardTop, fills to bottom.
-                      ScrollView lives inside; only the grid scrolls.
-
-Layer 2  (zIndex 20)  HUD — name/level top-left, time/events top-right.
-                      Floats over the sky portion of the background.
-
-Layer 3  (zIndex 20)  Resource strip + Goal panel.
-                      Resource strip straddles the sky/yard boundary line.
-                      Goal panel sits just below the resource strip.
-                      Neither pushes the grid down.
-
-Layer 4  (zIndex 20)  Buy / Sell buttons — absolute, bottom = FLOATING_TAB_BAR_CLEARANCE.
-                      Float above the bottom nav in thumb reach.
+0 px         ─ top safe area
+0–96 px      sky (12 % of 800 px)
+96–110 px    horizon strip (14 px)
+110–129 px   resource strip straddles boundary  (resourceTop = 110 - 19 = 91)
+137–165 px   goal chip (28 px tall)             (goalTop = 129 + 8 = 137)
+165–228 px   grid padding clears overlays        (gridPaddingTop ≈ 63 px from yardTop 110)
+228 px        first grid tile                    (yardTop 110 + 63 + grid margin)
+228–548 px   grid (4×4 ≈ 320 px)
+548–556 px   hint text
+556–100 px   FLOATING_TAB_BAR_CLEARANCE bottom padding
 ```
-
-The background paints the world.  
-The grid lives in the world.  
-The HUD floats over the world.  
-Nothing is stacked in vertical document flow.
-
-## Scene Geometry
-
-Positions are computed once per render from screen dimensions + safe area insets:
-
-```
-sceneHeight = screenHeight - insets.top      (scene fills below status bar)
-skyH        = sceneHeight × 0.33            (sky is top 33 %)
-HORIZON_H   = 28 px                         (treeline strip)
-yardTop     = skyH + HORIZON_H              (where yard layer starts)
-resourceTop = yardTop − (RESOURCE_H / 2)    (resource strip straddles boundary)
-goalTop     = resourceTop + RESOURCE_H + 8  (goal just below resource strip)
-gridPaddingTop = goalTop − yardTop + GOAL_H + 12  (grid starts below both overlays)
-```
+Grid visible area ≈ 328 px before needing to scroll — ~1.9× more visible yard.
+Refinery occupies roughly 70 % of the Factory scene above the tab bar.
 
 ## What Changed
 
-- **`app/game/(tabs)/index.tsx`** — complete scene composition rebuild:
-  - Added `useSafeAreaInsets` hook for precise position math
-  - Background: `StyleSheet.absoluteFillObject` with `pointerEvents="none"`,
-    flex-column children (sky / horizon / yard) paint the world behind everything
-  - Grid layer: `position: 'absolute', top: yardTop, left: 0, right: 0, bottom: 0`,
-    ScrollView fills this layer, content starts below the resource/goal overlays
-  - HUD: name+level and time+events are individually `position: 'absolute'` with
-    `top: spacing.sm`, `zIndex: 20`
-  - Resource strip: `position: 'absolute'` at `top: resourceTop`, straddles
-    sky/yard boundary, uses `flexDirection: 'row', justifyContent: 'space-between'`
-    (no `marginLeft: 'auto'` hack)
-  - Goal panel: `position: 'absolute'` at `top: goalTop`, semi-transparent white
-  - Buy/Sell: `position: 'absolute'` at `bottom: FLOATING_TAB_BAR_CLEARANCE`
-  - More Info: `···` chip in resource strip opens a Sheet (secondary stats)
+### `app/game/(tabs)/index.tsx`
+
+1. **`SKY_RATIO` reduced** `0.33 → 0.12`
+   Sky is now atmosphere only (~12 % of scene). Provides color and day/night
+   mood without consuming playable space.
+
+2. **`HORIZON_H` reduced** `28 → 14 px`
+   Thinner treeline separator. Still visible as a color break.
+
+3. **`GOAL_H` reduced** `64 → 28 px`
+   Goal UI redesigned as a compact single-line chip pill instead of a card.
+
+4. **Goal JSX replaced** — tall `goalPanel` (name + ProgressBar + num) →
+   compact `goalChip` (icon + name + 56 px inline track + n/total text).
+   All on one row, 28 px tall. Progress still visible; functionality preserved.
+
+5. **`bgSkyHaze` height reduced** `22 → 10 px` to remain proportional to the
+   shorter sky.
+
+6. **Action button `paddingVertical` reduced** `spacing.sm (8) → 6 px`.
+   Slightly less visual weight; still clearly tappable.
 
 ## What Was Intentionally Not Changed
 
-- All gameplay logic (buyCrude, sellGasoline, placeBuilding, etc.)
-- Save format — untouched
-- Balance — untouched
-- Tile build / inspect interaction — fully preserved
-- All Sheet content (Build picker, Building Info, Events, Automation)
-- Grid edit mode (Move / Swap)
+- All gameplay logic, save format, balance
+- Grid interactions (build, inspect, move, swap, demolish)
+- Resource strip (Money / Crude / Gas + ··· chip)
+- Buy Crude / Sell Gas functionality
+- More Info sheet, Events sheet, Build picker, Building Info sheet
 - Bottom tab navigation
-- `BuildingGrid` component (except the `borderRadius` / `width` tweak from v1)
+- Production, Staff, Business, HQ screens
+- Layered composition architecture (absoluteFill background, zIndex layers)
 
 ## Files Changed
 
-- [app/game/(tabs)/index.tsx](app/game/(tabs)/index.tsx) — layered composition rebuild
-- [CURRENT_TASK.md](CURRENT_TASK.md) — this documentation update
+- [app/game/(tabs)/index.tsx](app/game/(tabs)/index.tsx)
+- [CURRENT_TASK.md](CURRENT_TASK.md)
 
 ## Manual Test Checklist
 
 - [ ] App launches without error
-- [ ] Factory tab opens — scene uses layered composition
-- [ ] Sky/background fills the scene behind all UI — not a separate stacked section
-- [ ] HUD (name, level, time, ⚙️) floats over the sky portion
-- [ ] Resource strip visually straddles the sky/yard boundary
-- [ ] Goal panel appears just below the resource strip (floating, not part of scroll)
-- [ ] Building grid sits below the goal panel in the yard area
-- [ ] Grid is scrollable when content exceeds the yard height
+- [ ] Existing saves load correctly
+- [ ] Factory opens — sky area is narrow (atmosphere only, ~10–15 % of screen)
+- [ ] Refinery yard visually dominates the lower ~70 % of the screen
+- [ ] Goal chip is compact one-line pill with inline progress bar
+- [ ] Goal chip is tappable and navigates to achievements
+- [ ] Resource strip ($ / Crude / Gas) visible and correct
+- [ ] `···` chip opens More Info sheet with secondary stats
+- [ ] Buy Crude button works; floating above tab bar
+- [ ] Sell Gas button works; floating above tab bar
 - [ ] Tap empty tile → Build sheet opens → building can be placed
 - [ ] Tap occupied tile → Building Info sheet opens → upgrade/move/demolish work
 - [ ] Grid edit mode (Move / Swap) works from Building Info sheet
 - [ ] ⚙️ button opens Events sheet
-- [ ] `···` chip opens More Info sheet (Feedstock, ESG, Reputation, Season, Era)
-- [ ] Buy Crude button works; floating above tab bar
-- [ ] Sell Gas button works; floating above tab bar
-- [ ] Night mode: sky transitions to dark; night veil applies
-- [ ] Bottom tab navigation — all 5 tabs accessible
+- [ ] Night mode: sky turns dark, night veil applies
+- [ ] Bottom tab navigation works — all 5 tabs accessible
 - [ ] `npx tsc --noEmit` passes with no errors
 
 ## Typecheck Status
@@ -128,21 +122,20 @@ gridPaddingTop = goalTop − yardTop + GOAL_H + 12  (grid starts below both over
 
 ## Known Issues (carried forward)
 
-- Require cycle warning:
-  `src/game/utils/gameCalculations.ts → src/game/data/recruitment.ts → src/game/utils/gameCalculations.ts`
-- Expo Linking scheme warning (build-time config, not app code)
-- Android emulator instability (`System UI isn't responding`) is emulator-level, not app
-- `Stats` screen hidden from tabs intentionally (not final IA cleanup)
-- On Windows, use `cmd /c npm run typecheck` or `npx tsc --noEmit` — `npm.ps1` blocked by execution policy
+- Require cycle: `gameCalculations.ts → recruitment.ts → gameCalculations.ts`
+- Expo Linking scheme warning (build-time config)
+- Android emulator instability is emulator-level, not app code
+- `Stats` screen hidden from tabs intentionally
+- Windows: use `cmd /c npm run typecheck` or `npx tsc --noEmit` directly
 
 ## Next Recommended Task
 
 Visual Layer Phase 3 — Road / Pipe / Ground Detail
 
-Now that the scene has proper layered composition:
+The refinery yard now has space and visual dominance. Next:
 
-- Add a thin pipe / road layer between building tiles in the yard
-- Use simple colored line segments or View strips — no assets
-- Indicate crude-in / product-out flow direction visually
-- Keep interactions and gameplay logic unchanged
-- Build on top of current layered composition — do not revert to stacked layout
+- Add pipe/road segments between building tiles as decorative connectors
+- Use simple View strips or dotted lines — no image assets
+- Suggest crude-in / product-out flow between building categories
+- Keep all gameplay and save format unchanged
+- Do not add trucks, workers, smoke, or animation yet
