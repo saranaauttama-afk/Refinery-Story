@@ -1,29 +1,30 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
-import { SvgXml } from 'react-native-svg'
-import type { BuildingType } from '../game/types'
+
+import {
+  BUILDING_CATEGORY_ACCENT,
+  BUILDING_CATEGORY_BY_TYPE,
+  BUILDING_CATEGORY_SURFACE,
+  BUILDING_TILE_ICONS,
+  type TileStatusBadge,
+} from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
-import { BUILDING_COLORS } from '../buildingColors'
-import { BUILDING_ICONS } from '../buildingIcons'
+import type { BuildingType } from '../game/types'
 import { colors, radii } from '../theme'
+import BuildingSilhouette from './BuildingSilhouette'
 
 type BuildingTileProps = {
   type: BuildingType | null
   level: number
   size: number
   onPress?: () => void
-  // True if this building is part of the active production chain right
-  // now (refinery has crude to process) -- shows a gentle pulsing glow.
   active?: boolean
-  // True if staff are hired and this tile is active -- shows a small
-  // bobbing "👷" worker badge. Minimal stand-in for a future walking-sprite
-  // layer; purely decorative, no game-state changes.
-  showWorker?: boolean
+  staffBadge?: string | null
+  statusBadge?: TileStatusBadge | null
 }
 
-function BuildingTile({ type, level, size, onPress, active, showWorker }: BuildingTileProps) {
+function BuildingTile({ type, level, size, onPress, active, staffBadge, statusBadge }: BuildingTileProps) {
   const glow = useRef(new Animated.Value(0.25)).current
-  const bob = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     if (!active) {
@@ -40,64 +41,68 @@ function BuildingTile({ type, level, size, onPress, active, showWorker }: Buildi
     return () => loop.stop()
   }, [active, glow])
 
-  useEffect(() => {
-    if (!showWorker) {
-      bob.setValue(0)
-      return
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bob, { toValue: -3, duration: 450, useNativeDriver: true }),
-        Animated.timing(bob, { toValue: 0, duration: 450, useNativeDriver: true }),
-      ]),
-    )
-    loop.start()
-    return () => loop.stop()
-  }, [showWorker, bob])
-
   if (!type) {
     return (
-      <Pressable
-        onPress={onPress}
-        style={[styles.tile, styles.empty, { width: size, height: size }]}
-      >
+      <Pressable onPress={onPress} style={[styles.tile, styles.empty, { width: size, height: size }]}>
         <Text style={styles.plus}>+</Text>
       </Pressable>
     )
   }
 
   const config = BUILDINGS[type]
-  const bg = BUILDING_COLORS[type]
-  const icon = BUILDING_ICONS[type]
+  const category = BUILDING_CATEGORY_BY_TYPE[type]
+  const accentColor = BUILDING_CATEGORY_ACCENT[category]
+  const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
+  const Icon = BUILDING_TILE_ICONS[type]
 
   return (
     <Pressable
       onPress={onPress}
       style={[
         styles.tile,
-        { width: size, height: size },
-        icon ? styles.tileWithIcon : { backgroundColor: bg },
+        {
+          width: size,
+          height: size,
+          borderColor: accentColor,
+          backgroundColor: surfaceColor,
+        },
       ]}
     >
       {active && <Animated.View pointerEvents="none" style={[styles.glow, { opacity: glow }]} />}
-      {icon ? (
-        <SvgXml xml={icon} width={size} height={size} />
-      ) : (
-        <Text style={styles.shortName}>{config.shortName}</Text>
-      )}
-      {showWorker && (
-        <Animated.Text
-          pointerEvents="none"
-          style={[styles.worker, { transform: [{ translateY: bob }] }]}
+      <View style={styles.innerShade} />
+      <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+      <View style={styles.content}>
+        <BuildingSilhouette
+          type={type}
+          size={size}
+          accentColor={accentColor}
+          surfaceColor={surfaceColor}
+          Icon={Icon}
+        />
+      </View>
+      {statusBadge ? (
+        <View
+          style={[
+            styles.statusBadge,
+            statusBadge.tone === 'blocked'
+              ? styles.statusBadgeBlocked
+              : statusBadge.tone === 'idle'
+                ? styles.statusBadgeIdle
+                : styles.statusBadgeWarning,
+          ]}
         >
-          👷
-        </Animated.Text>
-      )}
-      {level > 1 && (
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Lv{level}</Text>
+          <Text style={styles.statusBadgeText}>{statusBadge.label}</Text>
         </View>
-      )}
+      ) : null}
+      <View style={styles.levelBadge}>
+        <Text style={styles.levelText}>L{level}</Text>
+      </View>
+      {staffBadge ? (
+        <View style={styles.staffBadge}>
+          <Text style={styles.staffBadgeText}>{staffBadge}</Text>
+        </View>
+      ) : null}
+      <Text style={styles.shortName}>{config.shortName}</Text>
     </Pressable>
   )
 }
@@ -108,8 +113,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.ink,
     margin: 3,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   glow: {
     position: 'absolute',
@@ -121,49 +131,105 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gold,
   },
-  tileWithIcon: {
-    // Icons already render their own cream rounded-card background AND
-    // border (see the rect fill/stroke in each SVG, inset within the
-    // 128x128 viewBox) -- they're self-contained little "tiles" already.
-    // Drop the outer Pressable's border/background so it doesn't double
-    // up with the icon's own.
-    backgroundColor: 'transparent',
-    borderWidth: 0,
+  innerShade: {
+    position: 'absolute',
+    left: 4,
+    right: 4,
+    top: 8,
+    bottom: 4,
+    borderRadius: radii.sm,
+    backgroundColor: '#FFFFFF55',
   },
   empty: {
     backgroundColor: colors.cream,
     borderColor: colors.creamBorder,
     borderStyle: 'dashed',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   plus: {
     color: colors.creamBorder,
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  accentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+  },
+  content: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   shortName: {
-    color: colors.white,
-    fontWeight: '800',
-    fontSize: 16,
+    position: 'absolute',
+    bottom: 3,
+    alignSelf: 'center',
+    color: colors.inkMuted,
+    fontWeight: '700',
+    fontSize: 7,
+    letterSpacing: 0.3,
+    opacity: 0.65,
   },
   levelBadge: {
     position: 'absolute',
-    bottom: 2,
+    top: 2,
     right: 2,
     backgroundColor: colors.ink,
     borderRadius: radii.pill,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   levelText: {
     color: colors.white,
     fontSize: 9,
     fontWeight: '700',
   },
-  worker: {
+  staffBadge: {
     position: 'absolute',
-    top: 2,
     left: 2,
-    fontSize: 12,
+    bottom: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: radii.pill,
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  staffBadgeText: {
+    fontSize: 10,
+  },
+  statusBadge: {
+    position: 'absolute',
+    left: 2,
+    top: 2,
+    borderRadius: radii.pill,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  statusBadgeWarning: {
+    backgroundColor: colors.orangeDark,
+  },
+  statusBadgeBlocked: {
+    backgroundColor: colors.red,
+  },
+  statusBadgeIdle: {
+    backgroundColor: colors.steelMid,
+  },
+  statusBadgeText: {
+    color: colors.white,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 })
 

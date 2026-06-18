@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native'
-import type { BuildingType, GridCell } from '../game/types'
+import { getTileStaffBadge, getTileStatusBadge } from '../buildingIdentity'
+import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import BuildingTile from './BuildingTile'
 import { colors, radii, spacing } from '../theme'
 
@@ -16,6 +17,8 @@ const PRODUCTION_BUILDING_TYPES = new Set<BuildingType>([
 ])
 
 type BuildingGridProps = {
+  game: GameState
+  derived: DerivedStats
   grid: GridCell[]
   gridLevels: number[]
   containerWidth: number
@@ -23,13 +26,9 @@ type BuildingGridProps = {
   // True when the refinery is actively running (crudeOil > 0) -- gates the
   // production-pulse glow on PRODUCTION_BUILDING_TYPES tiles.
   isActive?: boolean
-  // Number of hired staff -- if > 0, active production tiles also show a
-  // small bobbing "👷" badge (minimal stand-in for a future walking-sprite
-  // layer).
-  employeeCount?: number
 }
 
-function BuildingGrid({ grid, gridLevels, containerWidth, onCellPress, isActive, employeeCount }: BuildingGridProps) {
+function BuildingGrid({ game, derived, grid, gridLevels, containerWidth, onCellPress, isActive }: BuildingGridProps) {
   const cols = Math.round(Math.sqrt(grid.length))
   const padding = spacing.md * 2
   const tileMargin = 3 * 2 // BuildingTile's margin on each side
@@ -39,6 +38,8 @@ function BuildingGrid({ grid, gridLevels, containerWidth, onCellPress, isActive,
     <View style={styles.wrap}>
       {grid.map((cell, i) => {
         const isProducing = Boolean(isActive && cell && PRODUCTION_BUILDING_TYPES.has(cell))
+        const staffBadge = cell ? getTileStaffBadge(game, i) : null
+        const statusBadge = cell ? getTileStatusBadge(cell, i, game, derived) : null
         return (
           <BuildingTile
             key={i}
@@ -47,7 +48,8 @@ function BuildingGrid({ grid, gridLevels, containerWidth, onCellPress, isActive,
             size={tileSize}
             onPress={() => onCellPress?.(i)}
             active={isProducing}
-            showWorker={isProducing && Boolean(employeeCount && employeeCount > 0)}
+            staffBadge={staffBadge}
+            statusBadge={statusBadge}
           />
         )
       })}

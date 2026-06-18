@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { ChevronDown, ChevronUp, Clock3 } from 'lucide-react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
@@ -63,12 +64,6 @@ const UPGRADEABLE: BuildingType[] = [
   'polymerPlant',
 ]
 
-// Maps each secondary product to the building that produces it, used by
-// the Production Overview panel to decide whether to show a row for a
-// product the player hasn't built a plant for yet (hidden until either
-// some stock exists or the plant is built -- matches the "no plants"
-// gating pattern used elsewhere, e.g. business.tsx's Sell Products
-// section).
 const PRODUCT_PLANT_BUILDING: Record<
   'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
   BuildingType
@@ -140,6 +135,8 @@ export default function RefineryScreen() {
   // button next to the header), so the main view stays a shorter,
   // dashboard-like glance instead of a long settings list.
   const [automationModalOpen, setAutomationModalOpen] = useState(false)
+  const [secondaryOpen, setSecondaryOpen] = useState(false)
+  const [eventModalOpen, setEventModalOpen] = useState(false)
 
   if (!loaded || !game || !derived) {
     return (
@@ -151,6 +148,21 @@ export default function RefineryScreen() {
 
   const seasonLabel = getSeasonLabel(game.tickCount, game.yearStartTick)
   const seasonPct = Math.round(derived.seasonalGasolineMultiplier * 100)
+  const claimableHiddenEvents = HIDDEN_EVENTS.filter((event) => game.hiddenEventStatus[event.key] === 'unlocked')
+  const firstEmptyCellIndex = game.grid.findIndex((cell) => cell === null)
+  const timeLabel = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
+  const primaryStats = [
+    { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
+    { key: 'crude', label: 'Crude', value: `${game.crudeOil}/${derived.maxCrudeStorage}`, color: colors.steelDark },
+    { key: 'gasoline', label: 'Gasoline', value: `${game.gasoline}/${derived.maxGasolineStorage}`, color: colors.greenDark },
+  ]
+  const secondaryStats = [
+    { label: 'Feedstock', value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
+    { label: 'ESG', value: `${Math.round(game.esgScore)}` },
+    { label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}` },
+    { label: 'Season', value: `${seasonLabel.en} · ${seasonPct}%` },
+    { label: 'Era', value: derived.currentEra.name.en },
+  ]
 
   const stats = [
     { label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.gold },
@@ -242,7 +254,9 @@ export default function RefineryScreen() {
   // contract, same selection a player would see first in the Business
   // tab's Contracts section -- gives a persistent glance at "what am I
   // working toward" without leaving the Refinery tab.
-  const currentContract = derived.activeContracts.find((c) => c.isUnlocked && !c.isCompleted)
+  const safeGame = game
+  const safeDerived = derived
+  const currentContract = derived.activeContracts.find((c) => c.isUnlocked && !c.isCompleted)!
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -250,6 +264,7 @@ export default function RefineryScreen() {
       {!derived.gameClock.isDaytime && <View style={styles.nightOverlay} pointerEvents="none" />}
       <View style={styles.header}>
         <AnimatedPressable
+          style={styles.headerTitleWrap}
           onPress={() => {
             if (canUpgrade) {
               spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
@@ -261,26 +276,25 @@ export default function RefineryScreen() {
           <Text style={styles.title}>
             {game.refineryName} · Lv{game.refineryLevel}
           </Text>
-          <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>{upgradeSubtitle}</Text>
+          <Text style={[styles.subtitle, !canUpgrade && styles.subtitleMuted]}>
+            {canUpgrade ? 'Upgrade ready · tap name' : 'Tap name for upgrade requirements'}
+          </Text>
         </AnimatedPressable>
         <View style={styles.headerRight}>
-          <Text style={styles.season}>{seasonLabel.en}</Text>
+          <View style={styles.timePill}>
+            <Clock3 color={derived.gameClock.isDaytime ? colors.orangeDark : colors.blueDark} size={14} />
+            <Text style={styles.timeLabel}>{timeLabel}</Text>
+          </View>
           <Pressable
             style={styles.automationButton}
-            onPress={() => setAutomationModalOpen(true)}
+            onPress={() => setEventModalOpen(true)}
           >
             <Text style={styles.automationButtonLabel}>⚙️</Text>
           </Pressable>
         </View>
       </View>
 
-      <StatBoxRow
-        boxes={[
-          { key: 'era', label: `Era ${derived.currentEra.index + 1}`, value: `Lv${game.refineryLevel}`, color: colors.ink },
-          { key: 'money', label: 'Money', value: `$${Math.floor(game.money).toLocaleString()}`, color: colors.goldDark },
-          { key: 'reputation', label: 'Reputation', value: `${Math.floor(game.reputation).toLocaleString()}`, color: colors.purple },
-        ]}
-      />
+      <StatBoxRow boxes={primaryStats} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
       {nextGoal && (
@@ -299,16 +313,24 @@ export default function RefineryScreen() {
         </Pressable>
       )}
 
-      <ResourceBar stats={stats} />
+      <View style={styles.secondaryToolsRow}>
+        <Pressable style={styles.secondaryToggleButton} onPress={() => setSecondaryOpen((value) => !value)}>
+          <Text style={styles.secondaryToggleLabel}>More info</Text>
+          {secondaryOpen ? <ChevronUp color={colors.inkMuted} size={16} /> : <ChevronDown color={colors.inkMuted} size={16} />}
+        </Pressable>
+      </View>
+
+      {secondaryOpen && <ResourceBar stats={secondaryStats.map((stat, index) => ({ ...stat, color: [colors.steelMid, colors.teal, colors.purple, colors.orange, colors.ink][index] }))} />}
 
       <View style={styles.gridWrap}>
         <BuildingGrid
+          game={game}
+          derived={derived}
           grid={game.grid}
           gridLevels={game.gridLevels}
-          containerWidth={width - spacing.lg * 2}
+          containerWidth={width - spacing.md * 2}
           onCellPress={handleCellPress}
           isActive={game.crudeOil > 0}
-          employeeCount={game.employees.length}
         />
         {gridEditMode ? (
           <Pressable onPress={() => setGridEditMode(null)}>
@@ -353,16 +375,16 @@ export default function RefineryScreen() {
         </AnimatedPressable>
       </View>
 
-      <CollapsibleCard
+      {false && <CollapsibleCard
         title="📊 Production Overview"
         summary={`${productionRows.length} product${productionRows.length === 1 ? '' : 's'}`}
       >
         <ProductionOverview rows={productionRows} />
-      </CollapsibleCard>
+      </CollapsibleCard>}
 
-      {currentContract &&
+      {false && currentContract &&
         (() => {
-          const { have, need, unit } = getContractProgress(currentContract, game)
+          const { have, need, unit } = getContractProgress(currentContract, safeGame)
           return (
             <Pressable
               style={styles.contractCard}
@@ -383,13 +405,13 @@ export default function RefineryScreen() {
           )
         })()}
 
-      <View style={styles.productsWrap}>
+      {false && <View style={styles.productsWrap}>
         {products.map((p) => {
-          const have = game.productInventory[p.key]
+          const have = safeGame.productInventory[p.key]
           const price = getProductSellPrice(
             p.key,
-            derived.productSellMultiplier,
-            p.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1,
+            safeDerived.productSellMultiplier,
+            p.key === 'petrochemicals' ? safeGame.petrochemicalsDemandMultiplier : 1,
           )
           return (
             <AnimatedPressable
@@ -411,9 +433,9 @@ export default function RefineryScreen() {
             </AnimatedPressable>
           )
         })}
-      </View>
+      </View>}
 
-      <View style={[styles.boostCard, boostActive && styles.boostCardActive]}>
+      {false && <View style={[styles.boostCard, boostActive && styles.boostCardActive]}>
         {boostActive ? (
           <>
             <Text style={styles.boostTitle}>🔥 Boost active! x{BOOST_BALANCE.productionMultiplier} gasoline</Text>
@@ -446,14 +468,64 @@ export default function RefineryScreen() {
             </Text>
           </AnimatedPressable>
         )}
-      </View>
+      </View>}
 
       </ScrollView>
+
+      <Sheet visible={eventModalOpen} title="Events" onClose={() => setEventModalOpen(false)}>
+        {claimableHiddenEvents.length === 0 ? (
+          <Text style={styles.eventEmpty}>No claimable surprises right now. Keep building and checking the clock.</Text>
+        ) : (
+          claimableHiddenEvents.map((event) => {
+            const isBuildingReward = event.reward.kind === 'building'
+            const actionLabel =
+              event.reward.kind === 'staff' ? 'Open Staff' : event.reward.kind === 'contract' ? 'Open Business' : 'Open Build'
+            const subtitle =
+              event.reward.kind === 'staff'
+                ? 'Claimable staff event. Opens the Staff tab.'
+                : event.reward.kind === 'contract'
+                  ? 'Claimable contract event. Opens the Business tab.'
+                  : firstEmptyCellIndex >= 0
+                    ? 'Claimable building event. Opens Build on the first empty tile.'
+                    : 'Needs an empty tile before the build reward can be claimed.'
+            return (
+              <ListRow
+                key={event.key}
+                title={
+                  event.reward.kind === 'staff'
+                    ? 'Mystery Applicant'
+                    : event.reward.kind === 'contract'
+                      ? 'Mystery Contract'
+                      : 'Mystery Delivery'
+                }
+                subtitle={subtitle}
+                badge="???"
+                actionLabel={actionLabel}
+                disabled={isBuildingReward && firstEmptyCellIndex < 0}
+                onPress={() => {
+                  setEventModalOpen(false)
+                  if (event.reward.kind === 'staff') {
+                    router.push('/game/staff')
+                    return
+                  }
+                  if (event.reward.kind === 'contract') {
+                    router.push('/game/business')
+                    return
+                  }
+                  if (firstEmptyCellIndex >= 0) {
+                    setPickerCell(firstEmptyCellIndex)
+                  }
+                }}
+              />
+            )
+          })
+        )}
+      </Sheet>
 
       {/* Automation: Auto-trade + Feedstock Priority, moved out of the
           main scroll (dashboard redesign) so the Refinery tab stays a
           short glance-able view; opened via the ⚙️ header button. */}
-      <Sheet visible={automationModalOpen} title="⚙️ Automation" onClose={() => setAutomationModalOpen(false)}>
+      {false && <Sheet visible={automationModalOpen} title="⚙️ Automation" onClose={() => setAutomationModalOpen(false)}>
         <View style={styles.autoTradeCard}>
           <View style={styles.autoTradeHeader}>
             <Text style={styles.autoTradeTitle}>🔄 Auto-trade</Text>
@@ -505,9 +577,9 @@ export default function RefineryScreen() {
           )}
         </View>
 
-        {(derived.buildingCounts.lubricantPlant > 0 ||
-          derived.buildingCounts.jetFuelPlant > 0 ||
-          derived.buildingCounts.petrochemicalPlant > 0) && (
+        {(safeDerived.buildingCounts.lubricantPlant > 0 ||
+          safeDerived.buildingCounts.jetFuelPlant > 0 ||
+          safeDerived.buildingCounts.petrochemicalPlant > 0) && (
           <View style={styles.autoTradeCard}>
             <View style={styles.autoTradeHeader}>
               <Text style={styles.autoTradeTitle}>⚖️ Feedstock Priority</Text>
@@ -524,7 +596,7 @@ export default function RefineryScreen() {
               ] as const
             ).map(
               ({ buildingKey, label }) =>
-                derived.buildingCounts[buildingKey] > 0 && (
+                safeDerived.buildingCounts[buildingKey] > 0 && (
                   <View key={buildingKey} style={styles.thresholdRow}>
                     <Text style={styles.thresholdLabel}>{label}</Text>
                     <View style={styles.stepper}>
@@ -535,7 +607,7 @@ export default function RefineryScreen() {
                         <Text style={styles.stepperLabel}>−</Text>
                       </Pressable>
                       <Text style={styles.stepperValue}>
-                        {Math.round(game.feedstockPriority[buildingKey] * 100)}%
+                        {Math.round(safeGame.feedstockPriority[buildingKey] * 100)}%
                       </Text>
                       <Pressable
                         style={styles.stepperButton}
@@ -549,7 +621,7 @@ export default function RefineryScreen() {
             )}
           </View>
         )}
-      </Sheet>
+      </Sheet>}
 
       {/* Build picker */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
@@ -827,32 +899,48 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    paddingRight: spacing.sm,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: colors.ink,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.inkMuted,
-    marginTop: 2,
+    marginTop: 1,
   },
   subtitleMuted: {
     opacity: 0.6,
   },
-  season: {
-    fontSize: 13,
-    color: colors.orange,
-    fontWeight: '700',
-    marginTop: 4,
-  },
   headerRight: {
-    alignItems: 'flex-end',
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  timePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  timeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.ink,
   },
   automationButton: {
     width: 32,
@@ -865,11 +953,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   automationButtonLabel: {
-    fontSize: 16,
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.ink,
   },
   gridWrap: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
   },
   hint: {
     textAlign: 'center',
@@ -999,12 +1089,24 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: spacing.xs,
+  },
+  nextGoalTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   nextGoalLabel: {
     fontWeight: '800',
     color: colors.ink,
     fontSize: 12,
+    flex: 1,
+  },
+  nextGoalCta: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.blue,
   },
   nextGoalRequirement: {
     color: colors.inkMuted,
@@ -1021,6 +1123,53 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.inkMuted,
     fontWeight: '700',
+  },
+  secondaryToolsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  secondaryToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    borderRadius: radii.md,
+    paddingVertical: spacing.xs,
+  },
+  secondaryToggleLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.inkMuted,
+  },
+  secondaryToolButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  secondaryToolLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.inkMuted,
+  },
+  eventEmpty: {
+    color: colors.inkMuted,
+    fontSize: 13,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   contractCard: {
     marginHorizontal: spacing.lg,

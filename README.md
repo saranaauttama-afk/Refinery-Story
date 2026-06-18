@@ -28,6 +28,14 @@
 > and wants ONE short Thai summary at the end of a task, not step-by-step
 > narration while working.
 >
+> **Feature branch note**: `feature/ui-skeleton-v1` now contains the
+> current mobile UI direction work (5-tab navigation, Factory cleanup,
+> Production extraction, Production health/bottlenecks, and the first 2
+> visual grid passes). If you are continuing that branch, read
+> [Doc/UI_IMPLEMENTATION_STATUS.md](Doc/UI_IMPLEMENTATION_STATUS.md) and
+> [CURRENT_TASK.md](CURRENT_TASK.md) before relying on the historical
+> `devMobile` notes below.
+>
 > **What got shipped, in order** (all merged into `devMobile`):
 > 1. Phase 1 (waste byproduct), Phase 2 (electricity), Phase 3 (Polymer
 >    Plant) of the "Production Complexity Expansion".

@@ -1,11 +1,11 @@
 import { Tabs } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
-import { BarChart3, Briefcase, Factory, Users } from 'lucide-react-native'
+import { BarChart3, Briefcase, Factory, Package, Shield, Users } from 'lucide-react-native'
 import { colors, radii, spacing } from '../../../src/theme'
 
 // Wraps a tab icon so the active tab gets a small rounded "pressed button"
-// highlight instead of a text label / color-only change -- reads more like
-// a game HUD toolbar than a standard app tab bar.
+// highlight behind the icon while still keeping compact labels visible for
+// the 5-tab skeleton.
 function TabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
   return <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>{children}</View>
 }
@@ -15,19 +15,32 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
         tabBarActiveTintColor: colors.ink,
         tabBarInactiveTintColor: colors.inkMuted,
         tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
+        tabBarItemStyle: styles.tabBarItem,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Refinery',
+          title: 'Factory',
           tabBarIcon: ({ focused, color, size }) => (
             <TabIcon focused={focused}>
               <Factory color={color} size={size} />
+            </TabIcon>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="production"
+        options={{
+          title: 'Production',
+          tabBarIcon: ({ focused, color, size }) => (
+            <TabIcon focused={focused}>
+              <Package color={color} size={size} />
             </TabIcon>
           ),
         }}
@@ -55,8 +68,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="hq"
+        options={{
+          title: 'HQ',
+          tabBarIcon: ({ focused, color, size }) => (
+            <TabIcon focused={focused}>
+              <Shield color={color} size={size} />
+            </TabIcon>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="stats"
         options={{
+          href: null,
           title: 'Stats',
           tabBarIcon: ({ focused, color, size }) => (
             <TabIcon focused={focused}>
@@ -79,7 +104,7 @@ const styles = StyleSheet.create({
     left: spacing.lg,
     right: spacing.lg,
     bottom: spacing.md,
-    height: 64,
+    height: 72,
     borderRadius: radii.lg,
     borderTopWidth: 0,
     backgroundColor: colors.cream,
@@ -88,6 +113,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
+  },
+  tabBarItem: {
+    paddingTop: spacing.xs,
+  },
+  tabBarLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
   },
   iconWrap: {
     width: 44,
