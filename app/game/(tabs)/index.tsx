@@ -268,14 +268,28 @@ export default function RefineryScreen() {
           {/* Sky */}
           <View style={[styles.bgSky, { height: skyH }, !isDaytime && styles.bgSkyNight]}>
             <View style={styles.bgSkySheen} />
+            <View style={styles.bgSeaBand} />
             <View style={styles.bgSkyHaze} />
           </View>
           {/* Treeline / horizon strip */}
           <View style={[styles.bgHorizon, { height: HORIZON_H }]} />
           {/* Yard / factory ground */}
           <View style={styles.bgYard}>
+            <View style={styles.bgDockEdge} />
+            <View style={styles.bgYardZoneStorage} />
+            <View style={styles.bgYardZoneProcess} />
+            <View style={styles.bgYardZoneLogistics} />
             <View style={styles.bgYardRoad} />
             <View style={styles.bgYardRoad2} />
+            <View style={styles.bgYardRoad3} />
+            <View style={styles.bgPipeRun} />
+            <View style={styles.bgPipeBranch} />
+            <View style={styles.bgLoadingStrip} />
+            <View style={styles.bgTankCluster}>
+              <View style={styles.bgTankLarge} />
+              <View style={styles.bgTankMedium} />
+              <View style={styles.bgTankSmall} />
+            </View>
           </View>
         </View>
 
@@ -848,6 +862,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     opacity: 0.07,
   },
+  bgSeaBand: {
+    position: 'absolute',
+    bottom: 2,
+    left: 0,
+    right: 0,
+    height: 12,
+    backgroundColor: 'rgba(87,129,154,0.78)',
+  },
   // Warm industrial haze near the horizon (proportionally smaller with shorter sky)
   bgSkyHaze: {
     position: 'absolute',
@@ -865,18 +887,139 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: YARD_GROUND,
   },
+  bgDockEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 18,
+    backgroundColor: '#7A868E',
+    borderBottomWidth: 4,
+    borderBottomColor: 'rgba(207,189,151,0.92)',
+  },
+  bgYardZoneStorage: {
+    position: 'absolute',
+    top: 30,
+    left: 12,
+    width: '35%',
+    height: 90,
+    borderRadius: 24,
+    backgroundColor: 'rgba(224,214,191,0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(112,95,71,0.14)',
+  },
+  bgYardZoneProcess: {
+    position: 'absolute',
+    top: 70,
+    right: 16,
+    width: '42%',
+    height: 108,
+    borderRadius: 28,
+    backgroundColor: 'rgba(156,138,104,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(94,79,58,0.14)',
+  },
+  bgYardZoneLogistics: {
+    position: 'absolute',
+    right: 18,
+    bottom: 88,
+    left: '18%',
+    height: 84,
+    borderRadius: 24,
+    backgroundColor: 'rgba(135,118,88,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(96,82,60,0.16)',
+  },
   // Decorative road/path strips inside yard
   bgYardRoad: {
     position: 'absolute',
-    top: 52, left: 0, right: 0,
+    top: 54, left: 0, right: 0,
     height: 8,
     backgroundColor: ROAD_COLOR,
   },
   bgYardRoad2: {
     position: 'absolute',
-    top: 76, left: 0, right: 0,
+    top: 82, left: 0, right: 0,
     height: 4,
     backgroundColor: ROAD_COLOR,
+  },
+  bgYardRoad3: {
+    position: 'absolute',
+    bottom: 118,
+    left: 18,
+    right: 18,
+    height: 10,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(96,84,64,0.16)',
+  },
+  bgPipeRun: {
+    position: 'absolute',
+    top: 110,
+    left: '32%',
+    width: 6,
+    height: 138,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(96,110,118,0.34)',
+  },
+  bgPipeBranch: {
+    position: 'absolute',
+    top: 142,
+    left: '32%',
+    right: '20%',
+    height: 6,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(96,110,118,0.26)',
+  },
+  bgLoadingStrip: {
+    position: 'absolute',
+    right: 28,
+    bottom: 128,
+    width: '28%',
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: 'rgba(118,104,82,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(96,84,64,0.18)',
+  },
+  bgTankCluster: {
+    position: 'absolute',
+    top: 44,
+    left: 24,
+    width: 104,
+    height: 72,
+  },
+  bgTankLarge: {
+    position: 'absolute',
+    left: 0,
+    bottom: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(232,224,205,0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(126,108,80,0.18)',
+  },
+  bgTankMedium: {
+    position: 'absolute',
+    left: 28,
+    top: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(232,224,205,0.34)',
+    borderWidth: 1,
+    borderColor: 'rgba(126,108,80,0.16)',
+  },
+  bgTankSmall: {
+    position: 'absolute',
+    left: 56,
+    bottom: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(232,224,205,0.30)',
+    borderWidth: 1,
+    borderColor: 'rgba(126,108,80,0.15)',
   },
 
   // ── Layer 1: Grid ─────────────────────────────────────────────────────────
