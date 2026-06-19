@@ -55,6 +55,10 @@ import {
   saveStoredGameState,
 } from '../game/utils/gameStorage'
 import {
+  remapAnchoredSquareArray,
+  remapAnchoredSquareAssignments,
+} from '../game/utils/gridExpansion'
+import {
   ASPHALT_BALANCE,
   AWARDS_BALANCE,
   BOOST_BALANCE,
@@ -1196,17 +1200,18 @@ export function useGameLoop() {
       update((current) => {
         const nextLevel = current.gridExpansionLevel + 1
         if (nextLevel >= EXPANSION_BALANCE.length) return current
+        const currentEntry = EXPANSION_BALANCE[current.gridExpansionLevel]
         const nextEntry = EXPANSION_BALANCE[nextLevel] as PaidExpansionEntry
         if (current.money < nextEntry.cost || current.refineryLevel < nextEntry.requiresRefineryLevel) {
           return current
         }
-        const newCells = nextEntry.cells - EXPANSION_BALANCE[current.gridExpansionLevel].cells
         return applyWinGoal({
           ...current,
           money: current.money - nextEntry.cost,
           gridExpansionLevel: nextLevel,
-          grid: [...current.grid, ...Array(newCells).fill(null)],
-          gridLevels: [...current.gridLevels, ...Array(newCells).fill(1)],
+          grid: remapAnchoredSquareArray(current.grid, currentEntry.size, nextEntry.size, null),
+          gridLevels: remapAnchoredSquareArray(current.gridLevels, currentEntry.size, nextEntry.size, 1),
+          assignments: remapAnchoredSquareAssignments(current.assignments, currentEntry.size, nextEntry.size),
         })
       }),
     [update],

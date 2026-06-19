@@ -36,7 +36,7 @@ import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE } from '../../../src/game/data/balance'
 import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -319,6 +319,7 @@ export default function RefineryScreen() {
                 gridLevels={game.gridLevels}
                 containerWidth={width - spacing.md * 2}
                 displayGridSize={11}
+                anchorGridSize={EXPANSION_BALANCE[0].size}
                 onCellPress={handleCellPress}
                 isActive={game.crudeOil > 0}
               />

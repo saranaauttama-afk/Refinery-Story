@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import Svg, { Polygon } from 'react-native-svg'
 
 import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE } from '../buildingIdentity'
@@ -6,7 +6,7 @@ import { BUILDINGS } from '../game/data/buildings'
 import type { DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
 
-const TILE_SCALE = 2
+const TILE_SCALE = 1.5
 const TILE_WIDTH = 84 * TILE_SCALE
 const TILE_HEIGHT = 42 * TILE_SCALE
 const SIDE_PADDING = 18 * TILE_SCALE
@@ -27,6 +27,14 @@ const LEVEL_BADGE_MIN_WIDTH = 24 * TILE_SCALE
 const LEVEL_BADGE_PADDING_X = 5 * TILE_SCALE
 const LEVEL_BADGE_PADDING_Y = 2 * TILE_SCALE
 const LEVEL_FONT_SIZE = 8 * TILE_SCALE
+const DEBUG_FONT_SIZE = 7 * TILE_SCALE
+const TOP_CUT_DIAGONALS = 4
+const ACTIVE_ROW_BIAS = 0
+const ACTIVE_COL_BIAS = 0
+const PLANT_IMAGE_WIDTH = 82 * TILE_SCALE
+const PLANT_IMAGE_BOTTOM = -6 * TILE_SCALE
+const DISTILLATION_UNIT_IMAGE_ASPECT_RATIO = 448 / 357
+const DISTILLATION_UNIT_IMAGE = require('../../assets/plants/plant_du_lv1_448.png')
 
 type FactoryDiamondGroundViewProps = {
   game: GameState
@@ -35,6 +43,7 @@ type FactoryDiamondGroundViewProps = {
   gridLevels: number[]
   containerWidth: number
   displayGridSize?: number
+  anchorGridSize?: number
   onCellPress?: (index: number) => void
   isActive?: boolean
 }
@@ -67,14 +76,19 @@ function FactoryDiamondGroundView({
   gridLevels,
   containerWidth,
   displayGridSize,
+  anchorGridSize,
   onCellPress,
 }: FactoryDiamondGroundViewProps) {
   const activeCols = Math.round(Math.sqrt(grid.length))
   const activeRows = activeCols
   const displayCols = Math.max(displayGridSize ?? activeCols, activeCols)
   const displayRows = displayCols
-  const activeRowOffset = Math.floor((displayRows - activeRows) / 2)
-  const activeColOffset = Math.floor((displayCols - activeCols) / 2)
+  const anchorCols = Math.min(anchorGridSize ?? activeCols, displayCols)
+  const anchorRows = anchorCols
+  const anchoredRowOffset = Math.floor((displayRows - anchorRows) / 2)
+  const activeRowOffset = Math.max(0, anchoredRowOffset - ACTIVE_ROW_BIAS)
+  const anchoredColOffset = Math.floor((displayCols - anchorCols) / 2)
+  const activeColOffset = Math.max(0, anchoredColOffset - ACTIVE_COL_BIAS)
   const tileLayouts = Array.from({ length: displayCols * displayRows }, (_, displayIndex) => {
     const row = Math.floor(displayIndex / displayCols)
     const col = displayIndex % displayCols
@@ -91,6 +105,7 @@ function FactoryDiamondGroundView({
       displayIndex,
       row,
       col,
+      diagonal: row + col,
       x,
       y,
       right: x + TILE_WIDTH,
@@ -98,10 +113,11 @@ function FactoryDiamondGroundView({
       activeIndex,
     }
   })
-  const minX = Math.min(...tileLayouts.map((tile) => tile.x))
-  const maxX = Math.max(...tileLayouts.map((tile) => tile.right))
-  const minY = Math.min(...tileLayouts.map((tile) => tile.y))
-  const maxY = Math.max(...tileLayouts.map((tile) => tile.bottom))
+  const visibleTiles = tileLayouts.filter((tile) => tile.diagonal >= TOP_CUT_DIAGONALS)
+  const minX = Math.min(...visibleTiles.map((tile) => tile.x))
+  const maxX = Math.max(...visibleTiles.map((tile) => tile.right))
+  const minY = Math.min(...visibleTiles.map((tile) => tile.y))
+  const maxY = Math.max(...visibleTiles.map((tile) => tile.bottom))
   const worldWidth = maxX - minX
   const worldHeight = maxY - minY
   const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
@@ -111,10 +127,11 @@ function FactoryDiamondGroundView({
 
   return (
     <View style={[styles.map, { width: mapWidth, height: mapHeight }]}>
-      {tileLayouts.map((tile) => {
+      {visibleTiles.map((tile) => {
         const activeIndex = tile.activeIndex
         const isDisabled = activeIndex === null
         const cell = activeIndex === null ? null : grid[activeIndex]
+        const debugLabel = `${tile.row + 1},${tile.col + 1}`
         const x = tile.x + offsetX
         const y = tile.y + offsetY
         const zIndex = 10 + tile.row + tile.col
@@ -136,6 +153,7 @@ function FactoryDiamondGroundView({
                   strokeWidth={0.8}
                 />
               </Svg>
+              <Text style={styles.debugLabelDisabled}>{debugLabel}</Text>
             </View>
           )
         }
@@ -157,6 +175,7 @@ function FactoryDiamondGroundView({
                 />
               </Svg>
               <Text style={styles.plusLabel}>+</Text>
+              <Text style={styles.debugLabel}>{debugLabel}</Text>
             </Pressable>
           )
         }
@@ -165,6 +184,7 @@ function FactoryDiamondGroundView({
         const accentColor = BUILDING_CATEGORY_ACCENT[category]
         const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
         const code = BUILDINGS[cell].shortName
+        const usesPlantImage = cell === 'distillationUnit'
 
         return (
           <Pressable
@@ -181,7 +201,14 @@ function FactoryDiamondGroundView({
                 strokeWidth={1.1}
               />
             </Svg>
-            <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
+            {usesPlantImage ? (
+              <View style={styles.plantImageAnchor}>
+                <Image source={DISTILLATION_UNIT_IMAGE} style={styles.plantImage} resizeMode="contain" />
+              </View>
+            ) : (
+              <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
+            )}
+            <Text style={styles.debugLabel}>{debugLabel}</Text>
             <View style={styles.levelBadge}>
               <Text style={styles.levelText}>L{gridLevels[activeIndex] ?? 1}</Text>
             </View>
@@ -214,6 +241,33 @@ const styles = StyleSheet.create({
     fontSize: CODE_FONT_SIZE,
     fontWeight: '900',
     letterSpacing: CODE_LETTER_SPACING,
+  },
+  debugLabel: {
+    position: 'absolute',
+    bottom: 8 * TILE_SCALE,
+    left: 10 * TILE_SCALE,
+    color: 'rgba(86, 71, 50, 0.72)',
+    fontSize: DEBUG_FONT_SIZE,
+    fontWeight: '700',
+  },
+  debugLabelDisabled: {
+    position: 'absolute',
+    bottom: 8 * TILE_SCALE,
+    left: 10 * TILE_SCALE,
+    color: 'rgba(110, 95, 72, 0.34)',
+    fontSize: DEBUG_FONT_SIZE,
+    fontWeight: '700',
+  },
+  plantImageAnchor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: PLANT_IMAGE_BOTTOM,
+    alignItems: 'center',
+  },
+  plantImage: {
+    width: PLANT_IMAGE_WIDTH,
+    aspectRatio: DISTILLATION_UNIT_IMAGE_ASPECT_RATIO,
   },
   levelBadge: {
     position: 'absolute',
