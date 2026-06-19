@@ -58,18 +58,17 @@ function FactoryIsometricView({
   const footprintHeight = footprintWidth / 2
   const spriteHeight = footprintWidth * 1.1
 
-  // Offset to shift the whole diamond so the leftmost tile (row=N-1, col=0)
-  // sits at x=0 within the canvas. Must be N*(fw/2) not (N-1)*(fw/2) --
-  // the leftmost tip of an N×N diamond is at (col-row)*fw/2 = (0-N)*fw/2,
-  // so we add N*fw/2 to bring it to zero.
+  // Offset to shift the whole diamond so the leftmost tile (row=N, col=0)
+  // sits at x=0. The leftmost grid corner is isoXY(N,0) = (-N*fw/2+offsetX),
+  // so offsetX must be N*(fw/2).
   const offsetX = N * (footprintWidth / 2)
 
-  // Full canvas width: the diamond spans from x=0 (left tip) to x=N*fw
-  // (right tip at col=N, row=0), plus one tile width for the rightmost
-  // footprint itself.
-  const mapWidth = N * footprintWidth + footprintWidth / 2
-  const maxY = (N - 1 + N - 1) * (footprintHeight / 2) + footprintHeight
-  const mapHeight = maxY + spriteHeight - footprintHeight
+  // Canvas must be wide enough for the rightmost grid corner isoXY(0,N)
+  // plus one tile width, and tall enough for isoXY(N,N) plus sprite height.
+  const rightCornerX = (N - 0) * (footprintWidth / 2) + offsetX // isoXY(0,N).x
+  const mapWidth = rightCornerX + footprintWidth
+  const bottomCornerY = (N + N) * (footprintHeight / 2) // isoXY(N,N).y
+  const mapHeight = bottomCornerY + spriteHeight
 
   // Build SVG grid lines -- draw the (N+1) columns and (N+1) rows of the
   // isometric diamond grid as lines connecting tile corner points.
@@ -111,9 +110,9 @@ function FactoryIsometricView({
             y1={l.y1}
             x2={l.x2}
             y2={l.y2}
-            stroke={colors.creamBorder}
+            stroke="#8B7355"
             strokeWidth={1}
-            opacity={0.6}
+            opacity={0.4}
           />
         ))}
       </Svg>
@@ -171,7 +170,6 @@ function FactoryIsometricView({
             key={i}
             style={[styles.footprintPad, { left: fx, top: fy, width: footprintWidth, height: footprintHeight, zIndex: depth }]}
           >
-            <View style={[styles.groundShadow, { width: footprintWidth * 0.8, height: footprintHeight * 0.7 }]} />
             <Pressable
               onPress={() => onCellPress?.(i)}
               style={[styles.spriteWrap, { width: footprintWidth, height: spriteHeight, bottom: 0 }]}
