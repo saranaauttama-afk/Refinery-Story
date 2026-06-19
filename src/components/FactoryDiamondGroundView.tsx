@@ -32,9 +32,37 @@ const TOP_CUT_DIAGONALS = 4
 const ACTIVE_ROW_BIAS = 0
 const ACTIVE_COL_BIAS = 0
 const PLANT_IMAGE_WIDTH = 82 * TILE_SCALE
-const PLANT_IMAGE_BOTTOM = -6 * TILE_SCALE
 const DISTILLATION_UNIT_IMAGE_ASPECT_RATIO = 448 / 357
 const DISTILLATION_UNIT_IMAGE = require('../../assets/plants/plant_du_lv1_448.png')
+
+// The plant PNG includes its OWN diamond platform baked into the
+// artwork (not just the building) -- measured by scanning the source
+// file for the widest row of non-transparent pixels (a diamond's
+// vertical center is its widest point). That widest row sits at y=244
+// out of 357px total height, i.e. 31.65% up from the image's bottom
+// edge. Positioning the image naively against the CELL's bottom edge
+// (the old approach) ignored this and made the building float well
+// above where its own diamond should sit -- this constant is the
+// fraction needed to correct for it. If a future plant image has
+// different proportions, re-measure with the same row-width-scan
+// approach (see PROJECT chat history) rather than guessing.
+const DU_IMAGE_DIAMOND_CENTER_FROM_BOTTOM_RATIO = 1 - 244 / 357
+// Rendered height of the plant image at PLANT_IMAGE_WIDTH (image keeps
+// its own aspect ratio via resizeMode="contain").
+const DU_IMAGE_RENDERED_HEIGHT = PLANT_IMAGE_WIDTH / DISTILLATION_UNIT_IMAGE_ASPECT_RATIO
+// Where the image's own diamond center lands, measured up from the
+// image's bottom edge once rendered at PLANT_IMAGE_WIDTH.
+const DU_IMAGE_DIAMOND_CENTER_FROM_BOTTOM =
+  DU_IMAGE_RENDERED_HEIGHT * DU_IMAGE_DIAMOND_CENTER_FROM_BOTTOM_RATIO
+// The CELL's own diamond center (the ground tile's widest point) sits
+// at exactly half the tile height, measured from either edge (a
+// diamond is symmetric top-to-bottom).
+const CELL_DIAMOND_CENTER_FROM_BOTTOM = TILE_HEIGHT / 2
+// Final bottom offset: shifts the image up/down so its internal
+// diamond center lines up with the cell's diamond center, instead of
+// (incorrectly) aligning the image's bottom EDGE with the cell's
+// bottom edge.
+const PLANT_IMAGE_BOTTOM = CELL_DIAMOND_CENTER_FROM_BOTTOM - DU_IMAGE_DIAMOND_CENTER_FROM_BOTTOM
 
 type FactoryDiamondGroundViewProps = {
   game: GameState
@@ -192,15 +220,17 @@ function FactoryDiamondGroundView({
             onPress={() => onCellPress?.(activeIndex)}
             style={[styles.cell, { left: x, top: y, zIndex }]}
           >
-            <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
-              <Polygon
-                points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
-                fill={surfaceColor}
-                stroke={accentColor}
-                strokeWidth={1.1}
-              />
-            </Svg>
+            {!usesPlantImage && (
+              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
+                <Polygon
+                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
+                  fill={surfaceColor}
+                  stroke={accentColor}
+                  strokeWidth={1.1}
+                />
+              </Svg>
+            )}
             {usesPlantImage ? (
               <View style={styles.plantImageAnchor}>
                 <Image source={DISTILLATION_UNIT_IMAGE} style={styles.plantImage} resizeMode="contain" />
