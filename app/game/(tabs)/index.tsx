@@ -52,15 +52,18 @@ import {
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src/hooks/useGameLoop'
+import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
 import FactoryMapView from '../../../src/components/FactoryMapView'
 import FactoryIsometricView from '../../../src/components/FactoryIsometricView'
 
-type FactoryViewMode = 'grid' | 'map2_5d' | 'isometric'
+type FactoryViewMode = 'grid' | 'diamond_ground' | 'map2_5d' | 'isometric'
 
 // The reviewed live renderer for this stabilization pass is still the
 // original BuildingGrid/BuildingTile stack. The 2.5D and isometric
-// renderers stay available for later screenshot/device review, but they
-// are NOT the default live experience on this branch.
+// renderers stay available for later screenshot/device review, and the
+// diamond-ground projection prototype now sits beside them for layout
+// evaluation only. None of these experimental renderers are the default
+// live experience on this branch.
 const DEFAULT_FACTORY_VIEW_MODE: FactoryViewMode = 'grid'
 const FACTORY_VIEW_MODE: FactoryViewMode = DEFAULT_FACTORY_VIEW_MODE
 
@@ -305,7 +308,17 @@ export default function RefineryScreen() {
             contentContainerStyle={[styles.gridScrollContent, { paddingTop: gridPaddingTop }]}
             showsVerticalScrollIndicator={false}
           >
-            {FACTORY_VIEW_MODE === 'map2_5d' ? (
+            {FACTORY_VIEW_MODE === 'diamond_ground' ? (
+              <FactoryDiamondGroundView
+                game={game}
+                derived={derived}
+                grid={game.grid}
+                gridLevels={game.gridLevels}
+                containerWidth={width - spacing.md * 2}
+                onCellPress={handleCellPress}
+                isActive={game.crudeOil > 0}
+              />
+            ) : FACTORY_VIEW_MODE === 'map2_5d' ? (
               <FactoryMapView
                 game={game}
                 derived={derived}

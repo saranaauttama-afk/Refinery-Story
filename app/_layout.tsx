@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Stack } from 'expo-router'
+import { Stack, usePathname } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
@@ -72,18 +72,30 @@ function GlobalOverlays() {
   )
 }
 
+function AppShell() {
+  const pathname = usePathname()
+  const showGlobalOverlays =
+    pathname !== '/diamond-ground-prototype' && pathname !== '/factory-scene-prototype'
+
+  return (
+    <>
+      <StatusBar style="dark" />
+      <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="settings" options={{ presentation: 'card' }} />
+        <Stack.Screen name="store" options={{ presentation: 'card' }} />
+        <Stack.Screen name="achievements" options={{ presentation: 'card' }} />
+      </Stack>
+      {showGlobalOverlays ? <GlobalOverlays /> : null}
+    </>
+  )
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SettingsProvider>
         <GameProvider>
-          <StatusBar style="dark" />
-          <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="settings" options={{ presentation: 'card' }} />
-            <Stack.Screen name="store" options={{ presentation: 'card' }} />
-            <Stack.Screen name="achievements" options={{ presentation: 'card' }} />
-          </Stack>
-          <GlobalOverlays />
+          <AppShell />
         </GameProvider>
       </SettingsProvider>
     </GestureHandlerRootView>

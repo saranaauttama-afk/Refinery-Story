@@ -2,7 +2,7 @@
 
 ## Task Name
 
-`Factory Yard Pass 1 - Make the Current Factory Feel Like a Refinery`
+`Refine Diamond Ground Prototype - Clean Projection + Fixed World Scale`
 
 ## Branch
 
@@ -10,62 +10,74 @@
 
 ## What Changed
 
-- Kept the live Factory renderer on `FACTORY_VIEW_MODE = 'grid'`
-- Added refinery-yard background context behind the live Factory scene:
-  concrete yard zoning, dock edge, service lanes, pipe runs, loading strip,
-  and a small tank-cluster decoration
-- Added refinery-yard context inside the live `BuildingGrid` wrapper so the
-  play area feels like placed slots inside a larger industrial yard
-- Retreated the "white card" look on live building cells and turned occupied
-  tiles into concrete-pad landmarks with quieter surface treatment
-- Kept empty build slots visible, lighter, and easy to understand
-- Preserved existing tap behavior, badges, Buy Crude, and Sell Gas
+- Refined `FactoryDiamondGroundView` into a projection-first prototype
+- Removed decorative silhouette-based occupied buildings from prototype mode
+- Replaced occupied buildings with clean code markers plus level badges
+- Simplified empty lots to diamond pads with small plus signs
+- Switched the prototype to fixed tile size instead of screen-fit tile sizing
+- Updated the hidden prototype route with four variants:
+  - empty / 3x3
+  - mid / 5x5
+  - large / 6x6
+  - stress / 10x10
+- Kept the live Factory renderer on `grid`
 
-## Why This Task Chose Live Grid Improvement Instead Of Isometric
+## Why Visual Noise Was Removed
 
-The recent experiments showed that projection alone did not make the Factory
-feel like a refinery. The live grid already has the safest interactions and
-the clearest build/inspect flow, so this pass improves world context around
-that proven layout instead of investing further in isometric rendering.
+The earlier prototype was evaluating too many things at once:
+projection, fake depth, silhouettes, and decorative clutter. This pass
+removes that noise so the review is specifically about whether diamond
+ground projection improves Factory readability and feel.
+
+## Why Fixed Tile Size Was Chosen
+
+A projected world should grow as the grid expands. If tile size shrinks to
+fit the screen, expansion stops feeling like a larger refinery and starts
+feeling like a smaller widget. Fixed tile size keeps world scale honest and
+makes overflow behavior visible for review.
 
 ## Files Changed
 
 - `app/game/(tabs)/index.tsx`
-- `src/components/BuildingGrid.tsx`
-- `src/components/BuildingTile.tsx`
+- `app/diamond-ground-prototype.tsx`
+- `src/components/FactoryDiamondGroundView.tsx`
+- `Doc/FACTORY_DIAMOND_GROUND_PROTOTYPE.md`
 - `CURRENT_TASK.md`
 
 ## What Was Intentionally Not Changed
 
 - No gameplay logic
 - No save format
-- No economy or balance
-- No tab ownership changes
-- No building placement logic rewrite
-- No switch to `isometric`
-- No live use of `FactoryMapView`
-- No new renderer mode
-- No changes to Buy Crude / Sell Gas ownership or placement
+- No build/inspect logic
+- No balance
+- No live default renderer switch
+- No scrolling, panning, or zoom
+- No roads, pipes, workers, smoke, or animation
+- No removal of `BuildingGrid`
+- No removal of `FactoryMapView`
+- No removal of `FactoryIsometricView`
 
 ## Manual Test Checklist
 
 - [ ] App launches
-- [ ] Existing save loads
-- [ ] Factory uses grid renderer
-- [ ] Factory looks more like a refinery yard
-- [ ] Empty tile build works
-- [ ] Occupied tile inspect works
-- [ ] Buy Crude works
-- [ ] Sell Gas works
-- [ ] Production tab still works
-- [ ] HQ expansion access still works
+- [ ] Live Factory default remains `grid`
+- [ ] `/diamond-ground-prototype?variant=empty` works
+- [ ] `/diamond-ground-prototype?variant=mid` works
+- [ ] `/diamond-ground-prototype?variant=large` works
+- [ ] `/diamond-ground-prototype?variant=stress` works
+- [ ] Diamond lots are clean and readable
+- [ ] Occupied lots are label-based and not decorative
+- [ ] Empty lots are diamond pads with plus signs
+- [ ] Fixed tile size is used
+- [ ] Larger grids create larger worlds
+- [ ] Overflow is allowed
 - [ ] `npm run typecheck` passes
 
 ## Next Recommended Task
 
-`Factory Yard Pass 2 - Surface utility and operational context`
+`Diamond Ground Direction Review`
 
-Suggested next step:
-add a light layer of operational context around the live grid, such as
-boost visibility, contract visibility, or production-state cues, while
-keeping Factory readable and gameplay-first.
+Next step should be a design decision, not more polish:
+
+- continue diamond ground as a future 2.5D path, or
+- stop and keep the live grid while pursuing scene-first refinery context elsewhere
