@@ -313,7 +313,7 @@ export default function RefineryScreen() {
                 derived={derived}
                 grid={game.grid}
                 gridLevels={game.gridLevels}
-                containerWidth={width - spacing.md * 2}
+                containerWidth={width}
                 onCellPress={handleCellPress}
                 isActive={game.crudeOil > 0}
               />
