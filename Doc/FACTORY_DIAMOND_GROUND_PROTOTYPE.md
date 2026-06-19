@@ -15,26 +15,27 @@ This remains a prototype only.
 
 ## Clean Projection Review
 
-This refinement removes most of the earlier visual noise so the review is
-about projection instead of art style.
+This refinement removes the remaining non-tile construction lines so the
+review stays focused on the diamond ground itself.
 
 Current prototype rules:
 
 - Empty lots are diamond pads with a small plus
 - Occupied lots are diamond pads with a short building code
 - Occupied lots keep level badges
-- Decorative 3D silhouettes are removed
-- Strong shadows and depth embellishments are removed
-- Background clutter is greatly reduced
+- Decorative silhouettes are removed
+- Shadows and fake depth embellishments are removed
+- Outer guide lines and projection extensions are removed
+- Only the actual playable diamond tile grid remains visible
 
 ## Fixed World Scale Strategy
 
-Tile size is now fixed.
+Tile size remains fixed.
 
 - `tileWidth = 84`
 - `tileHeight = 42`
 
-The renderer no longer shrinks the world to fit the current screen width.
+The renderer does not shrink the world to fit the current screen width.
 Only the visual projection changes. The game still uses the same
 row/column data and the same build/inspect interactions.
 
@@ -47,41 +48,54 @@ With fixed tile size, expansion increases world size naturally:
 - 6x6 reads like a larger refinery district
 - 10x10 stress intentionally exceeds the comfortable viewport
 
-This is the correct behavior for evaluation. The world should grow as the
-grid grows.
+This is still the correct behavior for evaluation. The world should grow
+as the grid grows.
 
 ## Overflow / Future Scrolling Notes
 
 Overflow is intentionally allowed.
 
 - The prototype does not force the entire refinery onto the screen
-- The prototype does not implement pan, scroll, or zoom yet
-- Future work can add scrolling/panning around the same fixed-size world
+- Larger worlds may extend past the preview width
+- Future work can add panning and scrolling around the same fixed-size world
+- Future work can also test real isometric assets on top of this projection
 
-This task stops at world-scale evaluation only.
+This task stops at clean projection and world-scale evaluation only.
+
+## Centering Strategy
+
+The renderer now calculates projected world bounds from the actual tile
+positions and centers that world inside the preview viewport.
+
+That means:
+
+- 3x3, 5x5, 6x6, and 10x10 all use the same centering rule
+- No per-variant visual nudging is required
+- Large worlds can still overflow while remaining centered as much as practical
 
 ## Lessons Learned
 
 - Cleaning the renderer made the projection itself easier to judge
-- Diamond lots immediately reduce the “spreadsheet” feel of the Factory
+- Diamond lots reduce the spreadsheet feel more effectively when stray guide lines are gone
 - Fixed tile size makes expansion feel more like world growth
-- Label-based occupied markers are better for density review than fake 3D art
-- The projection helps ground readability, but by itself still does not
-  solve the full refinery-atmosphere problem
+- World-bounds centering makes the prototype read more intentionally composed
+- Label-based occupied markers remain better for density review than fake 3D art
+- Projection helps readability, but by itself still does not solve full refinery atmosphere
 
 ## Advantages
 
 - Clearer evaluation of the projection itself
-- Stronger builder-style ground language
+- Cleaner builder-style ground language
 - Honest world growth with expansion
+- Better visual centering across different grid sizes
 - Reuses the exact same logical grid model
 
 ## Disadvantages
 
-- Large layouts overflow the viewport quickly
-- Badge density becomes a scaling concern at 6x6 and beyond
+- Large layouts still overflow the viewport quickly
+- Badge density remains a scaling concern at 6x6 and beyond
 - Projection alone still does not create a full refinery scene
-- Future scrolling/panning will be needed if this path continues
+- Future panning, scrolling, and real asset work would still be needed
 
 ## Recommendation
 
@@ -92,5 +106,4 @@ Best next step:
 
 - keep the live `grid` renderer for gameplay safety
 - continue only if the team wants to explore a fixed-scale 2.5D Factory path
-- pair the projection later with better world-context composition, not
-  decorative building art first
+- pair the projection later with panning/scrolling support and real isometric assets

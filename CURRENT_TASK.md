@@ -2,7 +2,7 @@
 
 ## Task Name
 
-`Refine Diamond Ground Prototype - Clean Projection + Fixed World Scale`
+`Refine Diamond Ground Prototype - Centering and Clean Lines`
 
 ## Branch
 
@@ -10,24 +10,24 @@
 
 ## What Changed
 
-- Refined `FactoryDiamondGroundView` into a projection-first prototype
-- Removed decorative silhouette-based occupied buildings from prototype mode
-- Replaced occupied buildings with clean code markers plus level badges
-- Simplified empty lots to diamond pads with small plus signs
-- Switched the prototype to fixed tile size instead of screen-fit tile sizing
-- Updated the hidden prototype route with four variants:
-  - empty / 3x3
-  - mid / 5x5
-  - large / 6x6
-  - stress / 10x10
+- Refined `FactoryDiamondGroundView` into a cleaner projection-first prototype
+- Kept occupied lots as simple code markers with level badges
+- Kept empty lots as diamond pads with small plus signs
+- Removed faint outer guide lines and non-tile projection lines
+- Centered each prototype world from calculated projected world bounds
+- Kept fixed tile size instead of shrinking the world to fit the screen
+- Kept the hidden prototype route variants:
+  - `empty` / `3x3`
+  - `mid` / `5x5`
+  - `large` / `6x6`
+  - `stress` / `10x10`
 - Kept the live Factory renderer on `grid`
 
 ## Why Visual Noise Was Removed
 
-The earlier prototype was evaluating too many things at once:
-projection, fake depth, silhouettes, and decorative clutter. This pass
-removes that noise so the review is specifically about whether diamond
-ground projection improves Factory readability and feel.
+The prototype should now be judged on projection and layout only.
+Removing the leftover outer construction lines prevents the eye from
+reading the scene as a diagram instead of a playable ground plane.
 
 ## Why Fixed Tile Size Was Chosen
 
@@ -36,9 +36,15 @@ fit the screen, expansion stops feeling like a larger refinery and starts
 feeling like a smaller widget. Fixed tile size keeps world scale honest and
 makes overflow behavior visible for review.
 
+## Why World Bounds Are Used For Centering
+
+Centering is now driven by the real projected bounds of the placed tiles,
+not by per-variant offsets. That gives all four variants the same centering
+rule while preserving fixed tile size and allowing larger worlds to
+overflow naturally.
+
 ## Files Changed
 
-- `app/game/(tabs)/index.tsx`
 - `app/diamond-ground-prototype.tsx`
 - `src/components/FactoryDiamondGroundView.tsx`
 - `Doc/FACTORY_DIAMOND_GROUND_PROTOTYPE.md`
@@ -52,6 +58,8 @@ makes overflow behavior visible for review.
 - No balance
 - No live default renderer switch
 - No scrolling, panning, or zoom
+- No building art
+- No shadows or decorative silhouettes
 - No roads, pipes, workers, smoke, or animation
 - No removal of `BuildingGrid`
 - No removal of `FactoryMapView`
@@ -61,16 +69,15 @@ makes overflow behavior visible for review.
 
 - [ ] App launches
 - [ ] Live Factory default remains `grid`
-- [ ] `/diamond-ground-prototype?variant=empty` works
-- [ ] `/diamond-ground-prototype?variant=mid` works
-- [ ] `/diamond-ground-prototype?variant=large` works
-- [ ] `/diamond-ground-prototype?variant=stress` works
-- [ ] Diamond lots are clean and readable
-- [ ] Occupied lots are label-based and not decorative
-- [ ] Empty lots are diamond pads with plus signs
-- [ ] Fixed tile size is used
-- [ ] Larger grids create larger worlds
-- [ ] Overflow is allowed
+- [ ] `/diamond-ground-prototype?variant=empty` is centered
+- [ ] `/diamond-ground-prototype?variant=mid` is centered
+- [ ] `/diamond-ground-prototype?variant=large` is centered
+- [ ] `/diamond-ground-prototype?variant=stress` still uses fixed tile size
+- [ ] No outer guide lines remain
+- [ ] Occupied markers are still readable
+- [ ] Empty markers are still readable
+- [ ] Tile size remains fixed
+- [ ] Overflow is still allowed
 - [ ] `npm run typecheck` passes
 
 ## Next Recommended Task

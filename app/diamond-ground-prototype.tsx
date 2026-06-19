@@ -218,6 +218,7 @@ export default function DiamondGroundPrototypeScreen() {
   const scenario = getScenario(params.variant)
   const derived = calculateDerivedStats(scenario.game)
   const viewportWidth = Math.min(width - spacing.lg * 2, 520)
+  const viewportInnerWidth = viewportWidth - spacing.md * 2
 
   useEffect(() => {
     dismissAward()
@@ -263,7 +264,7 @@ export default function DiamondGroundPrototypeScreen() {
               derived={derived}
               grid={scenario.game.grid}
               gridLevels={scenario.game.gridLevels}
-              containerWidth={viewportWidth}
+              containerWidth={viewportInnerWidth}
             />
           </View>
         </View>
@@ -365,8 +366,8 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   previewViewport: {
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'visible',
     borderRadius: radii.md,
     backgroundColor: '#D7C39D',

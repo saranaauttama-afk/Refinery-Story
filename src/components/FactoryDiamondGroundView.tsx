@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Svg, { Line, Polygon } from 'react-native-svg'
+import Svg, { Polygon } from 'react-native-svg'
 
 import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE } from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
@@ -10,7 +10,7 @@ const TILE_WIDTH = 84
 const TILE_HEIGHT = 42
 const SIDE_PADDING = 18
 const TOP_PADDING = 18
-const FOOTER_SPACE = 18
+const MIN_VIEWPORT_HEIGHT = 220
 
 type FactoryDiamondGroundViewProps = {
   game: GameState
@@ -45,82 +45,54 @@ function isoY(row: number, col: number) {
   return (row + col) * (TILE_HEIGHT / 2) + TOP_PADDING
 }
 
-function getWorldMetrics(rows: number, cols: number) {
-  return {
-    mapWidth: (rows + cols) * (TILE_WIDTH / 2) + SIDE_PADDING * 2,
-    mapHeight: TOP_PADDING + (rows + cols - 2) * (TILE_HEIGHT / 2) + TILE_HEIGHT + FOOTER_SPACE,
-  }
-}
-
 function FactoryDiamondGroundView({
   grid,
   gridLevels,
+  containerWidth,
   onCellPress,
 }: FactoryDiamondGroundViewProps) {
   const cols = Math.round(Math.sqrt(grid.length))
   const rows = cols
-  const { mapWidth, mapHeight } = getWorldMetrics(rows, cols)
-  const planeTopX = isoX(0, 0, rows) + TILE_WIDTH / 2
-  const planeTopY = TOP_PADDING
-  const planeRightX = isoX(0, cols - 1, rows) + TILE_WIDTH
-  const planeRightY = isoY(0, cols - 1) + TILE_HEIGHT / 2
-  const planeBottomX = isoX(rows - 1, cols - 1, rows) + TILE_WIDTH / 2
-  const planeBottomY = isoY(rows - 1, cols - 1) + TILE_HEIGHT
-  const planeLeftX = isoX(rows - 1, 0, rows)
-  const planeLeftY = isoY(rows - 1, 0) + TILE_HEIGHT / 2
+  const tileLayouts = grid.map((_, index) => {
+    const row = Math.floor(index / cols)
+    const col = index % cols
+    const x = isoX(row, col, rows)
+    const y = isoY(row, col)
 
-  const guideLines: { x1: number; y1: number; x2: number; y2: number }[] = []
-  for (let row = 0; row <= rows; row += 1) {
-    guideLines.push({
-      x1: isoX(row, 0, rows),
-      y1: isoY(row, 0),
-      x2: isoX(row, cols, rows),
-      y2: isoY(row, cols),
-    })
-  }
-  for (let col = 0; col <= cols; col += 1) {
-    guideLines.push({
-      x1: isoX(0, col, rows),
-      y1: isoY(0, col),
-      x2: isoX(rows, col, rows),
-      y2: isoY(rows, col),
-    })
-  }
+    return {
+      index,
+      row,
+      col,
+      x,
+      y,
+      right: x + TILE_WIDTH,
+      bottom: y + TILE_HEIGHT,
+    }
+  })
+  const minX = Math.min(...tileLayouts.map((tile) => tile.x))
+  const maxX = Math.max(...tileLayouts.map((tile) => tile.right))
+  const minY = Math.min(...tileLayouts.map((tile) => tile.y))
+  const maxY = Math.max(...tileLayouts.map((tile) => tile.bottom))
+  const worldWidth = maxX - minX
+  const worldHeight = maxY - minY
+  const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
+  const mapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
+  const offsetX = (mapWidth - worldWidth) / 2 - minX
+  const offsetY = (mapHeight - worldHeight) / 2 - minY
 
   return (
     <View style={[styles.map, { width: mapWidth, height: mapHeight }]}>
-      <Svg width={mapWidth} height={mapHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Polygon
-          points={`${planeTopX},${planeTopY} ${planeRightX},${planeRightY} ${planeBottomX},${planeBottomY} ${planeLeftX},${planeLeftY}`}
-          fill="#D7C39D"
-          stroke="#A48A62"
-          strokeWidth={1.8}
-        />
-        {guideLines.map((line, index) => (
-          <Line
-            key={`guide-${index}`}
-            x1={line.x1}
-            y1={line.y1}
-            x2={line.x2}
-            y2={line.y2}
-            stroke="rgba(120, 102, 74, 0.16)"
-            strokeWidth={1}
-          />
-        ))}
-      </Svg>
-
-      {grid.map((cell, index) => {
-        const row = Math.floor(index / cols)
-        const col = index % cols
-        const x = isoX(row, col, rows)
-        const y = isoY(row, col)
-        const zIndex = 10 + row + col
+      {tileLayouts.map((tile) => {
+        const cell = grid[tile.index]
+        const x = tile.x + offsetX
+        const y = tile.y + offsetY
+        const zIndex = 10 + tile.row + tile.col
 
         if (!cell) {
           return (
             <Pressable
-              key={index}
-              onPress={() => onCellPress?.(index)}
+              key={tile.index}
+              onPress={() => onCellPress?.(tile.index)}
               style={[styles.cell, { left: x, top: y, zIndex }]}
             >
               <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
@@ -144,8 +116,8 @@ function FactoryDiamondGroundView({
 
         return (
           <Pressable
-            key={index}
-            onPress={() => onCellPress?.(index)}
+            key={tile.index}
+            onPress={() => onCellPress?.(tile.index)}
             style={[styles.cell, { left: x, top: y, zIndex }]}
           >
             <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
@@ -159,7 +131,7 @@ function FactoryDiamondGroundView({
             </Svg>
             <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
             <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>L{gridLevels[index] ?? 1}</Text>
+              <Text style={styles.levelText}>L{gridLevels[tile.index] ?? 1}</Text>
             </View>
           </Pressable>
         )
