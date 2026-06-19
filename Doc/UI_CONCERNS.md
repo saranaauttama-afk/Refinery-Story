@@ -1,202 +1,167 @@
 # UI Concerns Register
 
-Branch: `feature/ui-skeleton-v1`
-Last updated: 2026-06-18
+Branch: `feature/ui-skeleton-v1`  
+Last updated: 2026-06-19
+
+---
+
+## Stabilized In This Milestone
+
+The following are no longer top concerns on the visible player path:
+
+- Refinery Expansion being hidden inside Stats
+- Settings/save tools being hidden in Main Menu or hidden Stats
+- HQ being placeholder-only
+- Factory Events using a gear icon that looked like Settings
+- Prototype renderer being forced live by default
+
+These are considered stabilized for now, not permanently "finished forever."
 
 ---
 
 ## HIGH PRIORITY
 
-### H1 — Factory does not yet communicate "living refinery"
+### H1 - Factory still does not communicate "living refinery"
 
 **Why it matters:**
-The core product promise is a Kairosoft-style management simulation of an
-oil refinery. If the Factory screen reads as a colored grid instead of a
-living industrial facility, the product identity is weak. First impressions
-shape retention.
+The branch is structurally cleaner, but the core visual fantasy is still not
+landing. The Factory screen is more readable than before, yet it still does
+not fully feel like an industrial facility in motion.
 
 **Current state:**
-Grid on a beige/concrete background. No pipes. No roads. No visual flow.
-Buildings are isolated tiles with no spatial relationship to each other.
 
-**Potential solutions:**
-- Add pipe/road connectors between tiles (non-interactive, visual only)
-- Add subtle shadow depth to tiles to suggest 3D placement
-- Add faint conveyor or flow direction indicators between linked buildings
-- Add era-appropriate background detail (smoke stacks silhouette, water)
+- layered scene is in place
+- grid-first layout is correct
+- background atmosphere exists
+- but the scene still lacks convincing refinery life
 
-**Recommended timing:** Next task (Visual Layer Phase 3A)
+**Recommended timing:** next visual-direction task, after projection review
 
 ---
 
-### H2 — Grid still dominates scene composition
+### H2 - Factory map direction still needs approval
 
 **Why it matters:**
-The goal is a *scene* that contains a grid, not a *grid* that has a scene
-around it. The grid is still the only meaningful visual element on the yard.
+This branch now contains three renderer paths:
+
+- `grid`
+- `map2_5d`
+- `isometric`
+
+The live default is safely back on `grid`, but the future direction has not
+been chosen yet. Starting another visual pass before reviewing the existing
+projection prototypes would create more churn than clarity.
 
 **Current state:**
-Yard background is a flat `#B8A882` with two decorative road strips.
-The grid tiles float on this background without visual integration.
 
-**Potential solutions:**
-- Add a subtle concrete pad / shadow behind the grid
-- Add faint placement grid lines on the yard floor
-- Vary the yard background with texture-like color variation (no assets)
-- Let the grid shape change as buildings are added (don't hard-border it)
+- `grid` is the live reviewed renderer
+- `map2_5d` and `isometric` remain available for review
+- prototype renderers still need screenshot/device judgment before promotion
 
-**Recommended timing:** Visual Layer Phase 3A–3B
-
----
-
-### H3 — Expansion and refinery growth UX needs review
-
-**Why it matters:**
-Players upgrade the refinery to unlock more grid slots. This is a key
-progression moment. Currently it is handled via a tap on the refinery name
-in the HUD, with a small text indicator. This is discoverable only if the
-player taps the name.
-
-**Current state:**
-Level pill shows "Lv5 ↑" in gold when upgrade is ready. Upgrade triggers
-on tap. No fanfare. No visible new tiles appearing. No growth animation.
-
-**Potential solutions:**
-- Show a pulsing indicator near the HUD when upgrade is ready
-- Show grid expanding animation when upgrade completes
-- Display a brief confirmation overlay ("Refinery upgraded to Lv6 — 2 new slots")
-- Separate upgrade into a dedicated short sheet/modal
-
-**Recommended timing:** After Visual Layer Phase 3, before Visual Layer Phase 4
+**Recommended timing:** immediate next task
 
 ---
 
 ## MEDIUM PRIORITY
 
-### M1 — Day/Night cycle exists but has minimal visual impact
+### M1 - Building renderer split remains a maintenance risk
 
 **Why it matters:**
-Day/night is computed and affects the game clock display and a night overlay
-opacity. But the visual change is subtle — a dark sky color and a faint veil.
-The time mechanic is not felt.
+There are still two competing visual systems:
+
+- `BuildingGrid` / `BuildingTile` / `BuildingSilhouette`
+- `FactoryIsometricView`
+
+Even with clearer documentation, future contributors could still update the
+wrong renderer or assume the prototype is authoritative.
 
 **Current state:**
-`isDaytime` controls sky background color and a `0.22` opacity dark overlay.
-No lighting change on building tiles. No ambient light shift on the yard.
-No worker or truck behavior tied to time.
 
-**Potential solutions:**
-- Adjust building tile surface brightness based on time of day
-- Add a warm orange tint to sky near "dusk" transitions
-- Shift yard ground color subtly at night (cooler, darker)
-- Reserve worker/truck movement for Visual Layer Phase 4+
+- live authoritative renderer is documented
+- prototypes now still source category colors/badges from `buildingIdentity`
+- split architecture still exists
 
-**Recommended timing:** Visual Layer Phase 3B or 4
+**Recommended timing:** after renderer direction is approved
 
 ---
 
-### M2 — Building silhouettes still feel generic
+### M2 - Boost UI has weak visible ownership
 
 **Why it matters:**
-The `BuildingSilhouette` component renders a simplified shape per building
-type. The shapes are currently very basic (rectangles + small shapes) and
-don't strongly communicate the building's industrial function.
+Boost logic still exists, but it no longer has a strong visible surface in
+the current Factory flow. Players may not discover or remember it.
 
 **Current state:**
-Silhouettes use the building's icon (`BUILDING_TILE_ICONS`) plus category-
-specific shapes. The family-based silhouette system exists but shapes are
-minimal.
 
-**Potential solutions:**
-- Add chimney-stack shapes to distillation and processing units
-- Add tank dome shapes to crude/product tanks
-- Add antenna/sensor shapes to laboratory
-- Ensure each silhouette reads as distinct at 70 px tile size
+- boost state/actions still exist in code
+- no clear current Factory affordance is visible in the live branch
 
-**Recommended timing:** Visual Layer Phase 3B
+**Recommended timing:** after projection review, before deeper visual polish
 
 ---
 
-### M3 — Goal chip occupies valuable HUD space on small screens
+### M3 - Rankings / award history still need durable ownership
 
 **Why it matters:**
-On a 375 px wide screen (iPhone SE), the goal chip (full width, 28 px)
-combined with the resource strip (28 px) takes 56 px of overlay space
-near the top of the yard. On very short screens this could push grid tiles
-further down.
+Annual ranking still mostly appears during the year-end `AwardModal`, while
+HQ currently provides only summary-level visibility. That is better than
+before, but still not a fully owned progression surface.
 
 **Current state:**
-Goal chip is compact at 28 px but still full width. Goal chip and resource
-strip are two separate rows of overlay.
 
-**Potential solutions:**
-- Merge resource strip and goal chip into one combined bar
-- Make goal chip collapsible (collapsed by default, tap to expand)
-- Move goal entirely to a floating badge in a corner
+- HQ shows award/era summary
+- last ranking can be summarized there
+- full ranking/history still does not have a dedicated visible screen
 
-**Recommended timing:** If screen-size issues are reported, otherwise Low
+**Recommended timing:** after projection review or alongside deeper HQ work
+
+---
+
+### M4 - Hidden Stats route still exists as legacy ownership
+
+**Why it matters:**
+The visible player path is now fixed, but `app/game/(tabs)/stats.tsx` still
+exists as a hidden route. It is useful as a safety net during transition,
+but it is still architectural debt.
+
+**Current state:**
+
+- Stats is hidden from nav
+- HQ now owns visible access to the important systems Stats used to gate
+
+**Recommended timing:** later IA cleanup pass
 
 ---
 
 ## LOW PRIORITY
 
-### L1 — Require cycle warning
+### L1 - Require cycle warning
 
-**Why it matters (low):**
-`gameCalculations.ts → recruitment.ts → gameCalculations.ts` creates a
-circular dependency. No runtime error has been observed, but it is a code
-quality concern and could surface issues in bundler optimizations.
+**Current state:**
+`gameCalculations.ts -> recruitment.ts -> gameCalculations.ts`
 
-**Potential solutions:**
-- Extract the shared type/function used by both into a separate utilities module
-- Refactor one file to not import the other
-
-**Recommended timing:** Technical debt sprint, not UI work
+**Recommended timing:** technical debt pass, not visual work
 
 ---
 
-### L2 — Expo Linking scheme warning
+### L2 - Expo Linking scheme warning
 
-**Why it matters (low):**
-Expo warns that a `scheme` is required in `app.json` for linking to work.
-No linking features are currently used in-app, so this is cosmetic.
+**Current state:**
+build-time config warning still present
 
-**Potential solutions:**
-- Add `"scheme": "refinerystory"` to `app.json`
-
-**Recommended timing:** Before any build submission
+**Recommended timing:** before any build/distribution work
 
 ---
 
-### L3 — Android emulator instability
+### L3 - Prototype renderers still lack real device verification
 
-**Why it matters (low):**
-The Android emulator sometimes shows "System UI isn't responding" and
-Expo may show "Cannot connect to Expo CLI." This is consistent with an
-under-resourced emulator, not app code.
+**Current state:**
+typecheck passes, but prototype visuals/tap behavior still have not been
+verified on device/simulator in this environment
 
-**Potential solutions:**
-- Increase emulator RAM allocation
-- Use a physical device for testing
-- Use Expo Go on device instead of emulator
-
-**Recommended timing:** Dev environment issue, not code work
+**Recommended timing:** during projection review
 
 ---
 
-### L4 — Stats screen hidden but not removed
-
-**Why it matters (low):**
-`app/game/(tabs)/stats.tsx` exists and is hidden via `href: null` in the
-tab layout. It is dead UI that adds confusion for new contributors.
-
-**Potential solutions:**
-- Delete the file when IA is finalized
-- Or repurpose it as an internal debug screen
-
-**Recommended timing:** IA cleanup sprint, not UI work
-
----
-
-*For the intended visual direction, see `Doc/UI_VISION.md`.*
-*For the next task, see `Doc/NEXT_TASK.md`.*
+*For current state and ownership, see `Doc/UI_STATUS.md`.*
+*For the next recommended task, see `Doc/NEXT_TASK.md`.*

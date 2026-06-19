@@ -3,6 +3,7 @@ import Svg, { Line, Polygon } from 'react-native-svg'
 import {
   BUILDING_CATEGORY_ACCENT,
   BUILDING_CATEGORY_BY_TYPE,
+  BUILDING_CATEGORY_SURFACE,
   getTileStaffBadge,
   getTileStatusBadge,
 } from '../buildingIdentity'
@@ -11,20 +12,21 @@ import type { DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
 
 // Fixed tile dimensions -- not calculated from screen width so the map
-// always looks right regardless of device. Canvas is larger than the
-// screen; the player scrolls to explore. Tune these two constants to
-// adjust the overall map scale.
+// always looks right regardless of device. This remains a prototype
+// renderer; the reviewed live renderer still lives in
+// BuildingGrid/BuildingTile. Prototype visuals should still source their
+// category colors/badges from buildingIdentity so future tweaks do not
+// fork the visual language even further.
 const TILE_W = 112   // isometric tile width (ground diamond)
 const TILE_H = 56    // = TILE_W / 2  (standard 2:1 isometric ratio)
-const CANVAS_N = 9   // 9x9 = 81 cells total
 
 // Building placeholder height above the ground diamond.
 // Will be replaced with real art later -- for now just a flat-top
 // isometric box shape drawn in SVG.
 const BOX_H = 40
 
-function isoX(row: number, col: number) {
-  return (col - row) * (TILE_W / 2) + CANVAS_N * (TILE_W / 2)
+function isoX(row: number, col: number, gridSize: number) {
+  return (col - row) * (TILE_W / 2) + gridSize * (TILE_W / 2)
 }
 function isoY(row: number, col: number) {
   return (col + row) * (TILE_H / 2) + BOX_H  // +BOX_H so the top tile's box fits
@@ -59,7 +61,7 @@ type Props = {
 }
 
 export default function FactoryIsometricView({ game, derived, grid, gridLevels, onCellPress }: Props) {
-  const N = CANVAS_N
+  const N = Math.round(Math.sqrt(grid.length))
   // paddingTop reserves room for the tallest building at row=0,col=0
   // whose box extends BOX_H pixels above y=0
   const paddingTop = BOX_H
@@ -69,10 +71,10 @@ export default function FactoryIsometricView({ game, derived, grid, gridLevels, 
   // Grid lines: (N+1) row-lines + (N+1) col-lines
   const lines: { x1:number; y1:number; x2:number; y2:number }[] = []
   for (let r = 0; r <= N; r++) {
-    lines.push({ x1: isoX(r,0), y1: isoY(r,0), x2: isoX(r,N), y2: isoY(r,N) })
+    lines.push({ x1: isoX(r, 0, N), y1: isoY(r, 0), x2: isoX(r, N, N), y2: isoY(r, N) })
   }
   for (let c = 0; c <= N; c++) {
-    lines.push({ x1: isoX(0,c), y1: isoY(0,c), x2: isoX(N,c), y2: isoY(N,c) })
+    lines.push({ x1: isoX(0, c, N), y1: isoY(0, c), x2: isoX(N, c, N), y2: isoY(N, c) })
   }
 
   // Render order: sort cells by depth (row+col) so closer ones draw on top
@@ -95,21 +97,9 @@ export default function FactoryIsometricView({ game, derived, grid, gridLevels, 
 
       {/* Tiles */}
       {cells.map(({ i, row, col, depth }) => {
-        const x = isoX(row, col)
+        const x = isoX(row, col, N)
         const y = isoY(row, col)
-        const isLocked = i >= grid.length
         const cell: GridCell = grid[i] ?? null
-
-        if (isLocked) {
-          return (
-            <View key={i} style={[styles.tile, { left: x, top: y, zIndex: depth }]} pointerEvents="none">
-              <Svg width={TILE_W} height={TILE_H}>
-                <Polygon points={diamondPoints(0, 0)} fill="#C4B49A" opacity={0.35} />
-              </Svg>
-              <Text style={styles.lockIcon}>🔒</Text>
-            </View>
-          )
-        }
 
         if (!cell) {
           return (
@@ -125,25 +115,22 @@ export default function FactoryIsometricView({ game, derived, grid, gridLevels, 
 
         const category = BUILDING_CATEGORY_BY_TYPE[cell]
         const accent = BUILDING_CATEGORY_ACCENT[category]
+        const surface = BUILDING_CATEGORY_SURFACE[category]
         const config = BUILDINGS[cell]
         const staffBadge = getTileStaffBadge(game, i)
         const statusBadge = getTileStatusBadge(cell, i, game, derived)
         const box = isoBoxPoints(0, TILE_H, BOX_H)
-        // Lighten/darken accent for faces
-        const topFill = accent
-        const leftFill = accent + 'BB'   // slightly dimmer
-        const rightFill = accent + '88'  // even dimmer = shadow side
 
         return (
           <Pressable key={i} onPress={() => onCellPress?.(i)}
             style={[styles.tile, { left: x, top: y - BOX_H, zIndex: depth }]}>
             <Svg width={TILE_W} height={TILE_H + BOX_H}>
               {/* Right face (shadow) */}
-              <Polygon points={box.right} fill={rightFill} />
+              <Polygon points={box.right} fill={accent} opacity={0.78} stroke={accent} strokeWidth={1} />
               {/* Left face */}
-              <Polygon points={box.left} fill={leftFill} />
+              <Polygon points={box.left} fill={surface} opacity={0.92} stroke={accent} strokeWidth={1} />
               {/* Top face */}
-              <Polygon points={box.top} fill={topFill} />
+              <Polygon points={box.top} fill={surface} stroke={accent} strokeWidth={1.3} />
             </Svg>
 
             {/* Labels/badges overlaid on the SVG */}
@@ -181,13 +168,6 @@ const styles = StyleSheet.create({
   tile: {
     position: 'absolute',
     width: TILE_W,
-  },
-  lockIcon: {
-    position: 'absolute',
-    left: TILE_W / 2 - 7,
-    top: TILE_H / 2 - 9,
-    fontSize: 10,
-    opacity: 0.4,
   },
   plusLabel: {
     position: 'absolute',

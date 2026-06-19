@@ -1,114 +1,89 @@
 # Next Recommended Task
 
-Branch: `feature/ui-skeleton-v1`
-Last updated: 2026-06-18
+Branch: `feature/ui-skeleton-v1`  
+Last updated: 2026-06-19
 
 ---
 
 ## Immediate Next Task
 
-### Visual Layer Phase 3A — Road & Yard Foundation
+### Factory Map Projection Prototype Review
 
 **Goal:**
-Add visual connective language to the factory yard without changing gameplay,
-save format, or grid interactions.
+Review the existing Factory renderer directions before adding any new visual
+features.
 
-**What to add:**
+This is a review/decision task, not a polish pass.
 
-1. **Pipe / road segments between building categories**
-   - Render thin View strips connecting crude tanks → distillation units
-   - Render thin View strips connecting distillation → product tanks
-   - These are purely decorative — no hit targets, no gameplay effect
-   - Use `pointerEvents="none"` on all connector elements
+### What to review
 
-2. **Subtle concrete pad behind the grid**
-   - A slightly lighter or darker rectangle behind the grid area
-   - Makes the grid feel embedded in a designated zone, not floating
+Compare the three current renderer paths:
 
-3. **Empty slot visual update (optional)**
-   - Replace the dashed border / faint `+` with a subtle placement pad
-   - Low-opacity ground marking that reads as "empty slot here"
+1. `grid`
+2. `map2_5d`
+3. `isometric`
 
-**What NOT to add:**
-- No trucks, workers, smoke, or animation
-- No isometric rendering
-- No image assets
-- No new game logic
+Questions to answer:
 
-**Files likely to change:**
-- `src/components/BuildingGrid.tsx` — connector layer between tiles
-- `src/components/BuildingTile.tsx` — empty slot style update
-- `app/game/(tabs)/index.tsx` — possibly yard background detail
-- `src/buildingIdentity.ts` — pipe connection rules (which building types connect)
+- Which renderer best preserves tap clarity and build/inspect readability?
+- Which renderer best supports the intended Kairosoft-style factory scene?
+- Which renderer is safe enough to become the live default later, if any?
+- Does either prototype need revision before it is worth promoting?
 
-**Success criteria:**
-- A player can visually trace the crude-to-gasoline flow path
-- Grid feels embedded in a yard, not floating on a background
-- All existing build/inspect/buy/sell interactions still work
-- Typecheck passes
+### What NOT to add in this task
+
+- no roads
+- no pipes
+- no workers
+- no trucks
+- no smoke
+- no new animation
+- no new art
+- no new gameplay systems
+- no new isometric pass from scratch
+
+### Success criteria
+
+- renderer choice is reviewed with the user
+- live default remains stable until that review is complete
+- any approved follow-up is scoped from real prototype feedback, not guesswork
 
 ---
 
 ## Task After That
 
-### Visual Layer Phase 3B — Building Silhouette Polish
+### Visual Direction Follow-Up (depends on review result)
 
-**Goal:**
-Make each building type visually distinct at 70 px tile size.
+If the user approves one projection path:
 
-**What to improve:**
-- Crude tank: dome / cylinder shape suggestion
-- Distillation unit: chimney stack shape
-- Product tank: shorter dome, different color tint
-- Laboratory: antenna / precision instrument suggestion
-- Maintenance: tool silhouette
-- Sales office: building-like rectangular form
+- promote/refine only that path
+- keep interactions stable
+- avoid parallel renderer churn
 
-**Files likely to change:**
-- `src/components/BuildingSilhouette.tsx`
-- `src/buildingIdentity.ts`
+If the user rejects both prototypes:
 
----
-
-## Task After That
-
-### Visual Layer Phase 4 — Day/Night Atmosphere
-
-**Goal:**
-Make the day/night cycle visually felt, not just seen in the sky.
-
-**What to change:**
-- Shift yard ground color at night (cooler, slightly darker)
-- Add warm tint to building tile surfaces at dusk
-- Make the night overlay more directional (darker at edges, lighter in center)
-
-**Files likely to change:**
-- `app/game/(tabs)/index.tsx` — conditional yard/tile tint styles
-- `src/components/BuildingTile.tsx` — day/night surface variants
-- `src/theme.ts` — possibly night-mode palette constants
+- return to the current `grid` renderer
+- improve scene support around it instead of forcing projection changes
 
 ---
 
 ## Longer-Term Backlog
 
-| Phase | Task |
-|---|---|
-| Phase 5 | HQ progression hub (real screen replacing placeholder) |
-| Phase 5 | Refinery upgrade animation / expansion reveal |
-| Phase 6 | Worker dots on active production buildings |
-| Phase 6 | Truck appearance on buy/sell actions |
-| Phase 7 | Era visual shifts (palette per era) |
-| Phase 7 | Smoke/steam particles above active units |
-| Phase 8 | Seasonal atmosphere changes |
+| Area | Later work |
+| --- | --- |
+| Factory atmosphere | stronger living-refinery feel |
+| Boost ownership | restore or clarify visible Boost UI |
+| Rankings/history | give awards and ranking history a durable visible home |
+| Renderer architecture | reduce live/prototype split risk |
+| Technical debt | require cycle warning |
+| Build config | Expo `scheme` warning |
 
 ---
 
-## Rules for All Future Tasks
+## Rules For The Next Task
 
-1. Preserve save compatibility at all times
-2. Run `npx tsc --noEmit` before committing
-3. Do not rewrite working systems
-4. Mobile-first — test on 375 px width constraint
-5. Layered composition must be preserved — never revert to dashboard stack
-6. No image assets until pixel art pipeline is established
-7. Incremental: each task should be independently shippable
+1. Keep the live Factory renderer on the reviewed safe default until the user approves a change
+2. Do not delete prototype code during review
+3. Do not change gameplay balance or save format
+4. Run `npx tsc --noEmit` before committing
+5. Prefer one renderer direction over maintaining multiple active visual paths

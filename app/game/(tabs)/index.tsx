@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router'
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
-import { Clock3 } from 'lucide-react-native'
+import { Bell, Clock3 } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
@@ -55,20 +55,14 @@ import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src
 import FactoryMapView from '../../../src/components/FactoryMapView'
 import FactoryIsometricView from '../../../src/components/FactoryIsometricView'
 
-// Temporary feature flag for Factory map visual prototypes (see
-// CURRENT_TASK.md). Three options:
-//   'grid'      -- original BuildingGrid (card grid), untouched, default
-//   'map2_5d'   -- FactoryMapView, the first prototype (shallow 2.5D
-//                  offset: x = col*tileWidth + row*18, y = row*tileHeight*0.72)
-//   'isometric' -- FactoryIsometricView, the second prototype (true
-//                  isometric projection: x=(col-row)*w/2, y=(col+row)*h/2,
-//                  with a proper small ground-footprint diamond separate
-//                  from the taller building sprite drawn on top of it)
-// Defaults to 'grid' -- per the brief for the isometric prototype ("do
-// not replace the current Factory implementation yet"), neither
-// prototype should be the live experience until explicitly reviewed and
-// switched on here.
-const FACTORY_VIEW_MODE: 'grid' | 'map2_5d' | 'isometric' = 'isometric'
+type FactoryViewMode = 'grid' | 'map2_5d' | 'isometric'
+
+// The reviewed live renderer for this stabilization pass is still the
+// original BuildingGrid/BuildingTile stack. The 2.5D and isometric
+// renderers stay available for later screenshot/device review, but they
+// are NOT the default live experience on this branch.
+const DEFAULT_FACTORY_VIEW_MODE: FactoryViewMode = 'grid'
+const FACTORY_VIEW_MODE: FactoryViewMode = DEFAULT_FACTORY_VIEW_MODE
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const UPGRADEABLE: BuildingType[] = [
@@ -372,7 +366,13 @@ export default function RefineryScreen() {
             <Text style={styles.timePillText}>{timeLabel}</Text>
           </View>
           <Pressable style={styles.eventsBtn} onPress={() => setEventModalOpen(true)}>
-            <Text style={styles.eventsBtnLabel}>⚙️</Text>
+            <Bell size={13} color={colors.white} />
+            <Text style={styles.eventsBtnLabel}>Events</Text>
+            {claimableHiddenEvents.length > 0 && (
+              <View style={styles.eventsBadge}>
+                <Text style={styles.eventsBadgeLabel}>{claimableHiddenEvents.length}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
 
@@ -965,15 +965,34 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   eventsBtn: {
-    width: 30,
+    minWidth: 30,
     height: 30,
     borderRadius: radii.sm,
     backgroundColor: 'rgba(0,0,0,0.40)',
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  eventsBtnLabel: {
+    fontSize: 11,
+    color: colors.white,
+    fontWeight: '700',
+  },
+  eventsBadge: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: radii.pill,
+    paddingHorizontal: 4,
+    backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eventsBtnLabel: {
-    fontSize: 14,
+  eventsBadgeLabel: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '800',
   },
 
   // ── Layer 3: Resource strip + goal ────────────────────────────────────────

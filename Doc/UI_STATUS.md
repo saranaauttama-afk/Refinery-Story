@@ -1,7 +1,7 @@
-# UI Status — Master Handoff Document
+# UI Status - Master Handoff Document
 
-Branch: `feature/ui-skeleton-v1`
-Last updated: 2026-06-18
+Branch: `feature/ui-skeleton-v1`  
+Last updated: 2026-06-19
 
 ---
 
@@ -11,228 +11,204 @@ Last updated: 2026-06-18
 
 The primary gameplay screen. Responsible for:
 
-- Displaying the building grid (tap-to-build, tap-to-inspect)
-- Showing the refinery scene (sky + yard background, building tiles in yard)
-- Compact floating HUD: refinery name, level, upgrade indicator
-- Compact floating HUD: time of day, events/settings button
-- Floating resource strip: Money, Crude, Gasoline
-- Floating goal chip: current milestone name + inline progress
-- Floating action buttons: Buy 10 Crude, Sell 10 Gas
-- Sheet modals: Build picker, Building Info, Events, More Info (secondary stats)
+- live grid/build/inspect loop
+- layered scene background (sky + horizon + yard)
+- floating HUD (refinery name, level, time)
+- visible Events entry
+- floating resource strip
+- compact goal chip
+- floating trade pill and trade modal
+- Build / Info / More Info / Events sheets
 
-Factory does NOT handle: production health, automation settings, contracts,
-staff assignment to plants (still accessible via Building Info sheet).
+Important live-state note:
+
+- the reviewed live renderer is currently `BuildingGrid`
+- `FactoryMapView` and `FactoryIsometricView` remain available as prototype renderers behind `FACTORY_VIEW_MODE`
+
+Factory does NOT currently own:
+
+- production health
+- bottleneck summaries
+- durable awards/rankings history
+- research UI
 
 ### Production (`app/game/(tabs)/production.tsx`)
 
 Responsible for:
 
-- Production Overview (inventory levels for all products)
-- Production Health card (identifying bottlenecks, idle buildings)
-- Bottlenecks card (derived state explanations)
-- Automation settings (auto-trade, feedstock priority)
-- Non-gasoline product inventory
+- Production Health
+- Bottlenecks
+- Production Overview
+- inventory visibility for secondary products
+- sell-all actions for secondary products
+- automation settings
+- feedstock priority
 
 ### Staff (`app/game/(tabs)/staff.tsx`)
 
 Responsible for:
 
-- Hiring workers
-- Viewing staff roster
-- Staff stats and traits
+- recruitment
+- training
+- employee roster
+- specialist assignment
 
 ### Business (`app/game/(tabs)/business.tsx`)
 
 Responsible for:
 
-- Active and available contracts
-- Reputation system
-- Unlocking business-level upgrades
+- contracts
+- research unlocks
+- perks
+- crude shipments
+- standing orders
 
 ### HQ (`app/game/(tabs)/hq.tsx`)
 
-Currently a placeholder. Intended future role:
+HQ is now the visible progression and company-tools hub. It owns player
+access to:
 
-- Refinery-level progression hub
-- Era unlock tracking
-- Major milestone display
-- Company identity / branding
+- achievements entry
+- research/business entry
+- awards / era summary
+- refinery growth / expansion
+- rename refinery
+- manual save
+- settings access
+- main menu access
+- reset save access behind confirmation
 
----
+### Stats (`app/game/(tabs)/stats.tsx`)
 
-## B. Current Factory Layout
+Still exists in code, but hidden from the tab bar via `href: null`.
 
-The Factory screen uses **layered composition** — not a vertical dashboard stack.
-All main elements are `position: 'absolute'` within a single `flex: 1` scene container.
+Current role:
 
-### Layer 0 — Background (`zIndex: 0`, `pointerEvents: "none"`)
-
-An `absoluteFill` View containing three stacked children that paint the world:
-
-1. **Sky** (`height: sceneHeight × 0.12`)
-   - Color: `#6FA8C8` (day) / `#0D1B2E` (night)
-   - Subtle highlight sheen and warm haze near horizon
-   - Provides atmosphere without consuming playable space
-
-2. **Horizon strip** (`height: 14 px`)
-   - Color: `#6A7A5A` — treeline / industrial silhouette separator
-
-3. **Yard / Factory Ground** (`flex: 1` — fills remaining ~87 % of scene)
-   - Color: `#B8A882` — dusty concrete
-   - Two decorative road strips (absolute within yard)
-
-This background never intercepts touches. It paints the world behind all gameplay.
-
-### Layer 1 — Grid (`zIndex: 10`)
-
-`position: 'absolute', top: yardTop, left: 0, right: 0, bottom: 0`
-
-Contains a `ScrollView` which holds:
-- `BuildingGrid` — tappable grid of building tiles
-- Hint text ("Tap empty to build · tap built for info")
-
-The `ScrollView` content has `paddingTop` computed to clear the resource strip
-and goal chip overlays above it.
-
-### Layer 2 — HUD (`zIndex: 20`)
-
-Two independently positioned elements:
-
-**Top-left** — Refinery name + level pill
-- Tap to trigger upgrade if ready
-- Level pill turns gold with "↑" when upgrade is available
-
-**Top-right** — Time chip + ⚙️ events button
-- Shows game clock + day of month
-- ⚙️ opens Events sheet (hidden events / mystery rewards)
-
-### Layer 3 — Resource Strip + Goal Chip (`zIndex: 20`)
-
-**Resource strip** — positioned to straddle the sky/yard boundary
-- Dark semi-transparent pill
-- Shows: `$` (money) · Crude (current/max) · Gas (current/max)
-- `···` chip opens the More Info sheet (secondary stats)
-- `justifyContent: 'space-between'` — no marginLeft: 'auto' hack
-
-**Goal chip** — positioned just below the resource strip, inside yard
-- Compact single-line pill (28 px tall)
-- Shows: 🎯 icon · goal name · 56 px inline progress track · n/total
-- Tappable → navigates to achievements screen
-
-### Layer 4 — Action Buttons (`zIndex: 20`)
-
-`position: 'absolute', bottom: FLOATING_TAB_BAR_CLEARANCE`
-
-Two side-by-side buttons:
-- **Buy 10 Crude** (steel blue background)
-- **Sell 10 Gas** (green background)
-
-Float above the bottom nav bar. Always in thumb reach.
-
-### Bottom Navigation
-
-The floating tab bar (`_layout.tsx`) is `position: 'absolute'` at
-`bottom: spacing.md` with `height: 72` and `borderRadius: radii.lg`.
-It is rendered by Expo Router Tabs, not by Factory itself.
-
-`FLOATING_TAB_BAR_CLEARANCE = 72 + 12 + 16 = 100 px` is the constant
-used by all screens for bottom padding.
+- legacy hidden route
+- no longer the intended visible owner of expansion, save tools, or settings access
 
 ---
 
-## C. What Worked
+## B. Current Navigation Ownership
 
-### 5-Tab Structure
-Extracting Production, Staff, Business, and HQ into dedicated tabs made
-Factory focused. Factory now owns the grid loop; Production owns health
-and inventory; Business owns contracts.
+Visible bottom tabs:
 
-### Production Extraction
-Removing Production Overview and Automation from Factory significantly
-reduced Factory's scroll content. Factory is now genuinely compact.
+- Factory
+- Production
+- Staff
+- Business
+- HQ
 
-### Production Health Card
-Surfacing derived bottleneck state ("this building is idle because X")
-in the Production tab gave players a meaningful view into their refinery
-without cluttering Factory.
+Hidden route still present:
 
-### Floating Tab Bar
-The floating pill tab bar gives a premium feel and leaves the Factory scene
-uninterrupted. The entire Factory area extends to the screen edges.
+- Stats
 
-### Layered Composition Architecture
-Using `absoluteFill` background + independently positioned layers (grid,
-HUD, overlays, actions) was the correct structural decision. It enables
-future visual depth without changing the layout model.
+Top-level ownership summary:
 
-### Building Identity System
-Per-category accent colors, surface colors, and level badges make tiles
-visually distinct even before silhouettes were complete. Immediately
-readable at a glance.
+| Area | Visible owner now |
+| --- | --- |
+| Core play / build / inspect | Factory |
+| Production status / automation | Production |
+| Staff management | Staff |
+| Contracts / research / shipments | Business |
+| Progression hub / growth / company tools | HQ |
+| Legacy utility route | hidden Stats |
+
+This means the 5-tab navigation is now functionally honest for the main
+player path, even though the hidden Stats route still exists in code.
 
 ---
 
-## D. What Did NOT Work
+## C. Current Factory Layout
 
-### Large Sky Block (33 % of screen)
-The first "scene" attempt used `flex: 1` (sky) + `flex: 2` (yard) as siblings.
-This was a vertical dashboard stack with a sky section on top — not a scene.
-Sky at 33 % meant the grid didn't appear until 40 %+ down the screen.
-**Rejected.** Sky reduced to 12 %.
+The Factory screen still uses layered composition rather than a dashboard
+stack.
 
-### Stacked Dashboard Layout
-The original Factory layout was a ScrollView with:
-Header → StatBoxRow → GoalCard → MoreInfo toggle → Grid → ActionButtons
-This is a productivity app pattern, not a management game pattern.
-**Rejected.** Replaced with layered absolute composition.
+### Layer 0 - Background
 
-### Building Tiles as Cards
-Early tiles were white cards with abbreviation text (DU, CT, PT...).
-This made the grid feel like a spreadsheet, not a factory floor.
-**Rejected.** Replaced with category-colored tiles + silhouettes.
+- sky
+- horizon strip
+- yard ground
+- decorative road bands
+- optional night overlay
 
-### Abbreviation-First Building Identity
-Putting the abbreviation (DU, CT...) as the primary visual was wrong.
-Players don't memorize abbreviations. The building type should be visually
-recognizable through shape/icon, not text.
-**Rejected.** Silhouette/icon first; abbreviation is now tiny secondary label.
+### Layer 1 - Grid
 
-### Attempting Pure Icon Identity
-The first visual pass tried standard icons (flame, droplet, box) as the
-building's primary visual. These felt generic and disconnected from the
-industrial theme.
-**Partially replaced** by category-specific silhouettes (BuildingSilhouette).
+- `ScrollView`
+- live renderer currently `BuildingGrid`
+- build/inspect hint text
 
----
+### Layer 2 - HUD
 
-## E. Current Visual Problems
+- refinery name + level pill
+- time chip
+- Events button
 
-### 1. Factory still feels like a grid management game
-The grid is the correct primary element, but the surrounding scene doesn't
-make it feel like a *living refinery*. There are no visual cues (pipes,
-roads, smoke) that suggest an industrial operation.
+### Layer 3 - Resource + Goal
 
-### 2. Buildings feel like placed cards
-Each building tile has a rounded border and a colored background. On the
-yard ground, they read as cards placed on a surface rather than objects
-embedded in terrain.
+- money / crude / gas strip
+- `...` More Info affordance
+- compact goal chip
 
-### 3. Refinery scene identity is weak
-A player who has never seen the game would see a colored grid on a beige
-background. The visual language doesn't communicate "oil refinery" or
-"industrial management simulation."
+### Layer 4 - Trade
 
-### 4. Top background area needs refinement
-The 12 % sky area functions but is bare. Even with day/night switching,
-it lacks visual depth or industrial atmosphere (no distant structures,
-no water, no smoke stacks on the horizon).
-
-### 5. Roads / pipes / logistics are not represented
-There is no visual language for how crude flows from tank to distillation
-to product tank. The operational relationships between buildings are invisible.
+- floating trade pill
+- expanded trade modal for crude/gas actions and auto-trade controls
 
 ---
 
-*For concerns with priority levels and recommended timing, see `Doc/UI_CONCERNS.md`.*
-*For the intended visual direction, see `Doc/UI_VISION.md`.*
+## D. What Is Stable Now
+
+### Navigation ownership
+
+- Refinery Expansion is visible again through HQ
+- Settings and save tools are visible again through HQ
+- HQ is no longer placeholder-only
+
+### Renderer state
+
+- Live Factory default is back on the safest reviewed renderer: `grid`
+- Prototype renderers are still preserved for later review
+- Isometric prototype no longer forces a fixed `9x9` world when used
+
+### Events affordance
+
+- Factory Events no longer uses a gear icon that reads as Settings
+
+---
+
+## E. What Remains Deferred
+
+- Factory still does not fully communicate "living refinery"
+- 2.5D/isometric direction still needs user approval before going live
+- Boost UI has no strong visible owner right now
+- Rankings / award history still have summary-level visibility only
+- hidden Stats route still exists as legacy code
+- renderer split remains a maintenance risk
+
+---
+
+## F. Authoritative Renderer Notes
+
+For current live work on this branch:
+
+- `BuildingGrid` + `BuildingTile` + `BuildingSilhouette` are the authoritative shipped Factory renderer stack
+- `FactoryMapView` is a prototype
+- `FactoryIsometricView` is a prototype
+
+If future work changes live Factory visuals, update the authoritative live
+stack first unless the renderer decision has explicitly changed.
+
+---
+
+## G. Known Technical Warnings
+
+- Require cycle remains:
+  `gameCalculations.ts -> recruitment.ts -> gameCalculations.ts`
+- Expo linking `scheme` warning remains
+- Device/simulator visual verification is still missing for prototype renderers
+
+---
+
+*For active concerns and their priority, see `Doc/UI_CONCERNS.md`.*
 *For the next recommended task, see `Doc/NEXT_TASK.md`.*
