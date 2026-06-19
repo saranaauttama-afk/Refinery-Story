@@ -51,7 +51,10 @@ function FactoryIsometricView({
   isActive,
 }: FactoryIsometricViewProps) {
   const N = CANVAS_COLS
-  const footprintWidth = containerWidth / (N + N / 2)
+  // Size tiles so 3 fit across the visible screen -- canvas is larger
+  // than the screen; the player scrolls/pans to see the rest.
+  const VISIBLE_COLS = 3
+  const footprintWidth = containerWidth / (VISIBLE_COLS + VISIBLE_COLS / 2)
   const footprintHeight = footprintWidth / 2
   const spriteHeight = footprintWidth * 1.1
 
