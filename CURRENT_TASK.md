@@ -2,7 +2,7 @@
 
 ## Task Name
 
-`Refine Diamond Ground Prototype - Centering and Clean Lines`
+`Apply Diamond Ground Renderer To Live Factory For Review`
 
 ## Branch
 
@@ -10,81 +10,69 @@
 
 ## What Changed
 
-- Refined `FactoryDiamondGroundView` into a cleaner projection-first prototype
-- Kept occupied lots as simple code markers with level badges
-- Kept empty lots as diamond pads with small plus signs
-- Removed faint outer guide lines and non-tile projection lines
-- Centered each prototype world from calculated projected world bounds
-- Kept fixed tile size instead of shrinking the world to fit the screen
-- Kept the hidden prototype route variants:
-  - `empty` / `3x3`
-  - `mid` / `5x5`
-  - `large` / `6x6`
-  - `stress` / `10x10`
-- Kept the live Factory renderer on `grid`
+- Switched the live Factory review renderer from `grid` to `diamond_ground`
+- Reused the existing cleaned `FactoryDiamondGroundView` instead of creating another renderer
+- Kept the live Factory wired to real game data:
+  - real grid
+  - real buildings
+  - real grid levels
+  - real build tap handler
+  - real inspect tap handler
+- Kept the rest of the Factory UI in place:
+  - HUD
+  - resource strip
+  - goal chip
+  - trade pill
+  - bottom navigation
+- Kept fixed tile size and allowed overflow for larger factory layouts
 
-## Why Visual Noise Was Removed
+## Live Review Status
 
-The prototype should now be judged on projection and layout only.
-Removing the leftover outer construction lines prevents the eye from
-reading the scene as a diagram instead of a playable ground plane.
+`diamond_ground` is now the live review renderer for Factory on this
+branch.
 
-## Why Fixed Tile Size Was Chosen
+The old `grid` renderer still remains available in code as a fallback and
+comparison path. This is a review pass only, not final art direction.
 
-A projected world should grow as the grid expands. If tile size shrinks to
-fit the screen, expansion stops feeling like a larger refinery and starts
-feeling like a smaller widget. Fixed tile size keeps world scale honest and
-makes overflow behavior visible for review.
+## Why This Was Safe To Switch
 
-## Why World Bounds Are Used For Centering
-
-Centering is now driven by the real projected bounds of the placed tiles,
-not by per-variant offsets. That gives all four variants the same centering
-rule while preserving fixed tile size and allowing larger worlds to
-overflow naturally.
+Only the buildable ground view changed. Gameplay logic, save format,
+balance, and tap handling stay on the same live Factory data flow that was
+already connected during the prototype pass.
 
 ## Files Changed
 
-- `app/diamond-ground-prototype.tsx`
-- `src/components/FactoryDiamondGroundView.tsx`
-- `Doc/FACTORY_DIAMOND_GROUND_PROTOTYPE.md`
+- `app/game/(tabs)/index.tsx`
 - `CURRENT_TASK.md`
 
 ## What Was Intentionally Not Changed
 
 - No gameplay logic
 - No save format
-- No build/inspect logic
 - No balance
-- No live default renderer switch
-- No scrolling, panning, or zoom
-- No building art
-- No shadows or decorative silhouettes
-- No roads, pipes, workers, smoke, or animation
-- No removal of `BuildingGrid`
-- No removal of `FactoryMapView`
-- No removal of `FactoryIsometricView`
+- No build/inspect behavior rewrite
+- No removal of the old grid renderer
+- No new renderer implementation
+- No panning, scrolling, or zoom
+- No final art pass
 
 ## Manual Test Checklist
 
-- [ ] App launches
-- [ ] Live Factory default remains `grid`
-- [ ] `/diamond-ground-prototype?variant=empty` is centered
-- [ ] `/diamond-ground-prototype?variant=mid` is centered
-- [ ] `/diamond-ground-prototype?variant=large` is centered
-- [ ] `/diamond-ground-prototype?variant=stress` still uses fixed tile size
-- [ ] No outer guide lines remain
-- [ ] Occupied markers are still readable
-- [ ] Empty markers are still readable
-- [ ] Tile size remains fixed
-- [ ] Overflow is still allowed
+- [ ] New game 3x3 shows diamond ground on live Factory
+- [ ] Existing save loads
+- [ ] Occupied tiles can inspect
+- [ ] Empty tiles can build
+- [ ] Expansion still works
+- [ ] Buy/sell still works
+- [ ] Production tab still works
+- [ ] HQ tab still works
 - [ ] `npm run typecheck` passes
 
 ## Next Recommended Task
 
-`Diamond Ground Direction Review`
+`Live Factory Diamond Ground Navigation Review`
 
-Next step should be a design decision, not more polish:
+Most likely next step:
 
-- continue diamond ground as a future 2.5D path, or
-- stop and keep the live grid while pursuing scene-first refinery context elsewhere
+- add panning/scrolling support for larger live layouts, or
+- begin mapping real isometric assets onto the same diamond ground positions

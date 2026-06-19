@@ -58,13 +58,11 @@ import FactoryIsometricView from '../../../src/components/FactoryIsometricView'
 
 type FactoryViewMode = 'grid' | 'diamond_ground' | 'map2_5d' | 'isometric'
 
-// The reviewed live renderer for this stabilization pass is still the
-// original BuildingGrid/BuildingTile stack. The 2.5D and isometric
-// renderers stay available for later screenshot/device review, and the
-// diamond-ground projection prototype now sits beside them for layout
-// evaluation only. None of these experimental renderers are the default
-// live experience on this branch.
-const DEFAULT_FACTORY_VIEW_MODE: FactoryViewMode = 'grid'
+// The cleaned diamond-ground renderer is now the live review surface for
+// Factory on this branch. The original grid and the other experimental
+// renderers still remain available in code for fallback and comparison,
+// but this review pass uses diamond ground as the default experience.
+const DEFAULT_FACTORY_VIEW_MODE: FactoryViewMode = 'diamond_ground'
 const FACTORY_VIEW_MODE: FactoryViewMode = DEFAULT_FACTORY_VIEW_MODE
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
