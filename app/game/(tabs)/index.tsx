@@ -52,6 +52,23 @@ import {
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src/hooks/useGameLoop'
+import FactoryMapView from '../../../src/components/FactoryMapView'
+import FactoryIsometricView from '../../../src/components/FactoryIsometricView'
+
+// Temporary feature flag for Factory map visual prototypes (see
+// CURRENT_TASK.md). Three options:
+//   'grid'      -- original BuildingGrid (card grid), untouched, default
+//   'map2_5d'   -- FactoryMapView, the first prototype (shallow 2.5D
+//                  offset: x = col*tileWidth + row*18, y = row*tileHeight*0.72)
+//   'isometric' -- FactoryIsometricView, the second prototype (true
+//                  isometric projection: x=(col-row)*w/2, y=(col+row)*h/2,
+//                  with a proper small ground-footprint diamond separate
+//                  from the taller building sprite drawn on top of it)
+// Defaults to 'grid' -- per the brief for the isometric prototype ("do
+// not replace the current Factory implementation yet"), neither
+// prototype should be the live experience until explicitly reviewed and
+// switched on here.
+const FACTORY_VIEW_MODE: 'grid' | 'map2_5d' | 'isometric' = 'isometric'
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const UPGRADEABLE: BuildingType[] = [
@@ -280,15 +297,37 @@ export default function RefineryScreen() {
             contentContainerStyle={[styles.gridScrollContent, { paddingTop: gridPaddingTop }]}
             showsVerticalScrollIndicator={false}
           >
-            <BuildingGrid
-              game={game}
-              derived={derived}
-              grid={game.grid}
-              gridLevels={game.gridLevels}
-              containerWidth={width - spacing.md * 2}
-              onCellPress={handleCellPress}
-              isActive={game.crudeOil > 0}
-            />
+            {FACTORY_VIEW_MODE === 'map2_5d' ? (
+              <FactoryMapView
+                game={game}
+                derived={derived}
+                grid={game.grid}
+                gridLevels={game.gridLevels}
+                containerWidth={width - spacing.md * 2}
+                onCellPress={handleCellPress}
+                isActive={game.crudeOil > 0}
+              />
+            ) : FACTORY_VIEW_MODE === 'isometric' ? (
+              <FactoryIsometricView
+                game={game}
+                derived={derived}
+                grid={game.grid}
+                gridLevels={game.gridLevels}
+                containerWidth={width - spacing.md * 2}
+                onCellPress={handleCellPress}
+                isActive={game.crudeOil > 0}
+              />
+            ) : (
+              <BuildingGrid
+                game={game}
+                derived={derived}
+                grid={game.grid}
+                gridLevels={game.gridLevels}
+                containerWidth={width - spacing.md * 2}
+                onCellPress={handleCellPress}
+                isActive={game.crudeOil > 0}
+              />
+            )}
             {gridEditMode ? (
               <Pressable onPress={() => setGridEditMode(null)}>
                 <Text style={styles.hintActive}>
