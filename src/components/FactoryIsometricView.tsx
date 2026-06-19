@@ -20,7 +20,7 @@ const PRODUCTION_BUILDING_TYPES = new Set<BuildingType>([
 // Visual canvas is always 4x4 (16 cells) regardless of game.grid.length.
 // Cells beyond game.grid.length show as locked pads (non-interactive,
 // dimmed 🔒). Save format unchanged -- game.grid stays the same.
-const CANVAS_COLS = 4
+const CANVAS_COLS = 9
 
 type FactoryIsometricViewProps = {
   game: GameState
