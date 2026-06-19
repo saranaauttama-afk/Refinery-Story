@@ -1,28 +1,54 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Svg, { Line } from 'react-native-svg'
+import Svg, { Line, Polygon } from 'react-native-svg'
 import {
   BUILDING_CATEGORY_ACCENT,
   BUILDING_CATEGORY_BY_TYPE,
-  BUILDING_CATEGORY_SURFACE,
-  BUILDING_TILE_ICONS,
   getTileStaffBadge,
   getTileStatusBadge,
 } from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
-import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
+import type { DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
-import BuildingSilhouette from './BuildingSilhouette'
 
-const PRODUCTION_BUILDING_TYPES = new Set<BuildingType>([
-  'crudeTank', 'distillationUnit', 'lubricantPlant', 'jetFuelPlant', 'petrochemicalPlant',
-])
+// Fixed tile dimensions -- not calculated from screen width so the map
+// always looks right regardless of device. Canvas is larger than the
+// screen; the player scrolls to explore. Tune these two constants to
+// adjust the overall map scale.
+const TILE_W = 112   // isometric tile width (ground diamond)
+const TILE_H = 56    // = TILE_W / 2  (standard 2:1 isometric ratio)
+const CANVAS_N = 9   // 9x9 = 81 cells total
 
-// Visual canvas is always 4x4 (16 cells) regardless of game.grid.length.
-// Cells beyond game.grid.length show as locked pads (non-interactive,
-// dimmed 🔒). Save format unchanged -- game.grid stays the same.
-const CANVAS_COLS = 9
+// Building placeholder height above the ground diamond.
+// Will be replaced with real art later -- for now just a flat-top
+// isometric box shape drawn in SVG.
+const BOX_H = 40
 
-type FactoryIsometricViewProps = {
+function isoX(row: number, col: number) {
+  return (col - row) * (TILE_W / 2) + CANVAS_N * (TILE_W / 2)
+}
+function isoY(row: number, col: number) {
+  return (col + row) * (TILE_H / 2) + BOX_H  // +BOX_H so the top tile's box fits
+}
+
+// Diamond (ground tile) polygon points, offset by (x, y)
+function diamondPoints(x: number, y: number) {
+  const hw = TILE_W / 2, hh = TILE_H / 2
+  return `${x + hw},${y}  ${x + TILE_W},${y + hh}  ${x + hw},${y + TILE_H}  ${x},${y + hh}`
+}
+
+// Isometric box: top face (diamond) + left face + right face
+function isoBoxPoints(x: number, y: number, h: number) {
+  const hw = TILE_W / 2, hh = TILE_H / 2
+  // Top face (diamond at y - h)
+  const top = `${x + hw},${y - h}  ${x + TILE_W},${y - h + hh}  ${x + hw},${y - h + TILE_H}  ${x},${y - h + hh}`
+  // Left face
+  const left = `${x},${y - h + hh}  ${x + hw},${y - h + TILE_H}  ${x + hw},${y + TILE_H}  ${x},${y + hh}`
+  // Right face
+  const right = `${x + hw},${y - h + TILE_H}  ${x + TILE_W},${y - h + hh}  ${x + TILE_W},${y + hh}  ${x + hw},${y + TILE_H}`
+  return { top, left, right }
+}
+
+type Props = {
   game: GameState
   derived: DerivedStats
   grid: GridCell[]
@@ -32,176 +58,115 @@ type FactoryIsometricViewProps = {
   isActive?: boolean
 }
 
-// Converts grid (row, col) to isometric screen position.
-// footprintWidth = tile width on ground; footprintHeight = footprintWidth/2 (2:1 ratio).
-// offsetX centers the diamond within the canvas.
-function isoXY(row: number, col: number, fw: number, fh: number, offsetX: number) {
-  const x = (col - row) * (fw / 2) + offsetX
-  const y = (col + row) * (fh / 2)
-  return { x, y }
-}
+export default function FactoryIsometricView({ game, derived, grid, gridLevels, onCellPress }: Props) {
+  const N = CANVAS_N
+  // paddingTop reserves room for the tallest building at row=0,col=0
+  // whose box extends BOX_H pixels above y=0
+  const paddingTop = BOX_H
+  const mapWidth  = N * TILE_W + TILE_W
+  const mapHeight = N * TILE_H + BOX_H + TILE_H + paddingTop
 
-function FactoryIsometricView({
-  game,
-  derived,
-  grid,
-  gridLevels,
-  containerWidth,
-  onCellPress,
-  isActive,
-}: FactoryIsometricViewProps) {
-  const N = CANVAS_COLS
-  // Size tiles so 3 fit across the visible screen -- canvas is larger
-  // than the screen; the player scrolls/pans to see the rest.
-  const VISIBLE_COLS = 3
-  const footprintWidth = containerWidth / (VISIBLE_COLS + VISIBLE_COLS / 2)
-  const footprintHeight = footprintWidth / 2
-  const spriteHeight = footprintWidth * 1.1
-
-  // Offset to shift the whole diamond so the leftmost tile (row=N, col=0)
-  // sits at x=0. The leftmost grid corner is isoXY(N,0) = (-N*fw/2+offsetX),
-  // so offsetX must be N*(fw/2).
-  const offsetX = N * (footprintWidth / 2)
-
-  // Canvas must be wide enough for the rightmost grid corner isoXY(0,N)
-  // plus one tile width, and tall enough for isoXY(N,N) plus sprite height.
-  const rightCornerX = (N - 0) * (footprintWidth / 2) + offsetX // isoXY(0,N).x
-  const mapWidth = rightCornerX + footprintWidth
-  const bottomCornerY = (N + N) * (footprintHeight / 2) // isoXY(N,N).y
-  const mapHeight = bottomCornerY + spriteHeight
-
-  // Build SVG grid lines -- draw the (N+1) columns and (N+1) rows of the
-  // isometric diamond grid as lines connecting tile corner points.
-  // Each "row line" goes from the leftmost tile edge of that row to the
-  // rightmost, and each "col line" goes top to bottom of its column.
-  const gridLines: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
-
-  // Row lines: for each row index r (0..N), draw a horizontal line in
-  // isometric space from (r, 0) to (r, N) corner points.
+  // Grid lines: (N+1) row-lines + (N+1) col-lines
+  const lines: { x1:number; y1:number; x2:number; y2:number }[] = []
   for (let r = 0; r <= N; r++) {
-    // Left end of this row line: corner at col=0, row=r
-    const left = isoXY(r, 0, footprintWidth, footprintHeight, offsetX)
-    // Right end: corner at col=N, row=r
-    const right = isoXY(r, N, footprintWidth, footprintHeight, offsetX)
-    gridLines.push({ x1: left.x, y1: left.y, x2: right.x, y2: right.y })
+    lines.push({ x1: isoX(r,0), y1: isoY(r,0), x2: isoX(r,N), y2: isoY(r,N) })
+  }
+  for (let c = 0; c <= N; c++) {
+    lines.push({ x1: isoX(0,c), y1: isoY(0,c), x2: isoX(N,c), y2: isoY(N,c) })
   }
 
-  // Col lines: for each col index c (0..N), from (0, c) to (N, c).
-  for (let c = 0; c <= N; c++) {
-    const top = isoXY(0, c, footprintWidth, footprintHeight, offsetX)
-    const bottom = isoXY(N, c, footprintWidth, footprintHeight, offsetX)
-    gridLines.push({ x1: top.x, y1: top.y, x2: bottom.x, y2: bottom.y })
-  }
+  // Render order: sort cells by depth (row+col) so closer ones draw on top
+  const cells = Array.from({ length: N * N }, (_, i) => {
+    const row = Math.floor(i / N)
+    const col = i % N
+    return { i, row, col, depth: row + col }
+  }).sort((a, b) => a.depth - b.depth)
 
   return (
     <View style={[styles.yard, { width: mapWidth, height: mapHeight }]}>
 
-      {/* SVG grid lines -- drawn first so buildings render on top */}
-      <Svg
-        width={mapWidth}
-        height={mapHeight}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      >
-        {gridLines.map((l, i) => (
-          <Line
-            key={i}
-            x1={l.x1}
-            y1={l.y1}
-            x2={l.x2}
-            y2={l.y2}
-            stroke="#8B7355"
-            strokeWidth={1}
-            opacity={0.4}
-          />
+      {/* Grid lines */}
+      <Svg width={mapWidth} height={mapHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
+        {lines.map((l, i) => (
+          <Line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+            stroke="#8B7355" strokeWidth={1} opacity={0.45} />
         ))}
       </Svg>
 
-      {/* Building tiles (N*N total, some locked) */}
-      {Array.from({ length: N * N }, (_, i) => {
-        const row = Math.floor(i / N)
-        const col = i % N
-        const depth = row + col
-        const { x: fx, y: fy } = isoXY(row, col, footprintWidth, footprintHeight, offsetX)
-
+      {/* Tiles */}
+      {cells.map(({ i, row, col, depth }) => {
+        const x = isoX(row, col)
+        const y = isoY(row, col)
         const isLocked = i >= grid.length
+        const cell: GridCell = grid[i] ?? null
 
         if (isLocked) {
           return (
-            <View
-              key={i}
-              pointerEvents="none"
-              style={[styles.footprintPad, { left: fx, top: fy, width: footprintWidth, height: footprintHeight, zIndex: depth }]}
-            >
-              <View style={[styles.lockedPad, { width: footprintWidth * 0.88, height: footprintHeight * 0.8 }]}>
-                <Text style={styles.lockedIcon}>🔒</Text>
-              </View>
+            <View key={i} style={[styles.tile, { left: x, top: y, zIndex: depth }]} pointerEvents="none">
+              <Svg width={TILE_W} height={TILE_H}>
+                <Polygon points={diamondPoints(0, 0)} fill="#C4B49A" opacity={0.35} />
+              </Svg>
+              <Text style={styles.lockIcon}>🔒</Text>
             </View>
           )
         }
 
-        const cell: GridCell = grid[i]
-
         if (!cell) {
           return (
-            <Pressable
-              key={i}
-              onPress={() => onCellPress?.(i)}
-              style={[styles.footprintPad, { left: fx, top: fy, width: footprintWidth, height: footprintHeight, zIndex: depth }]}
-            >
-              <View style={[styles.emptyPad, { width: footprintWidth * 0.8, height: footprintHeight * 0.72 }]}>
-                <Text style={styles.emptyPlus}>+</Text>
-              </View>
+            <Pressable key={i} onPress={() => onCellPress?.(i)}
+              style={[styles.tile, { left: x, top: y, zIndex: depth }]}>
+              <Svg width={TILE_W} height={TILE_H}>
+                <Polygon points={diamondPoints(0, 0)} fill={colors.cream} opacity={0.6} />
+              </Svg>
+              <Text style={styles.plusLabel}>+</Text>
             </Pressable>
           )
         }
 
         const category = BUILDING_CATEGORY_BY_TYPE[cell]
-        const accentColor = BUILDING_CATEGORY_ACCENT[category]
-        const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
-        const Icon = BUILDING_TILE_ICONS[cell]
+        const accent = BUILDING_CATEGORY_ACCENT[category]
         const config = BUILDINGS[cell]
-        const isProducing = Boolean(isActive && PRODUCTION_BUILDING_TYPES.has(cell))
         const staffBadge = getTileStaffBadge(game, i)
         const statusBadge = getTileStatusBadge(cell, i, game, derived)
+        const box = isoBoxPoints(0, TILE_H, BOX_H)
+        // Lighten/darken accent for faces
+        const topFill = accent
+        const leftFill = accent + 'BB'   // slightly dimmer
+        const rightFill = accent + '88'  // even dimmer = shadow side
 
         return (
-          <View
-            key={i}
-            style={[styles.footprintPad, { left: fx, top: fy, width: footprintWidth, height: footprintHeight, zIndex: depth }]}
-          >
-            <Pressable
-              onPress={() => onCellPress?.(i)}
-              style={[styles.spriteWrap, { width: footprintWidth, height: spriteHeight, bottom: 0 }]}
-            >
-              {isProducing && <View style={styles.producingGlow} pointerEvents="none" />}
-              <BuildingSilhouette
-                type={cell}
-                size={footprintWidth}
-                accentColor={accentColor}
-                surfaceColor={surfaceColor}
-                Icon={Icon}
-              />
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>L{gridLevels[i] ?? 1}</Text>
+          <Pressable key={i} onPress={() => onCellPress?.(i)}
+            style={[styles.tile, { left: x, top: y - BOX_H, zIndex: depth }]}>
+            <Svg width={TILE_W} height={TILE_H + BOX_H}>
+              {/* Right face (shadow) */}
+              <Polygon points={box.right} fill={rightFill} />
+              {/* Left face */}
+              <Polygon points={box.left} fill={leftFill} />
+              {/* Top face */}
+              <Polygon points={box.top} fill={topFill} />
+            </Svg>
+
+            {/* Labels/badges overlaid on the SVG */}
+            <Text style={styles.buildingLabel} numberOfLines={1}>
+              {config.shortName}
+            </Text>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>L{gridLevels[i] ?? 1}</Text>
+            </View>
+            {staffBadge && (
+              <View style={styles.staffBadge}>
+                <Text style={styles.staffBadgeText}>{staffBadge}</Text>
               </View>
-              {statusBadge ? (
-                <View style={[styles.statusBadge,
-                  statusBadge.tone === 'blocked' ? styles.statusBadgeBlocked
-                  : statusBadge.tone === 'idle' ? styles.statusBadgeIdle
-                  : styles.statusBadgeWarning]}
-                >
-                  <Text style={styles.statusBadgeText}>{statusBadge.label}</Text>
-                </View>
-              ) : null}
-              {staffBadge ? (
-                <View style={styles.staffBadge}>
-                  <Text style={styles.staffBadgeText}>{staffBadge}</Text>
-                </View>
-              ) : null}
-              <Text style={styles.objectLabel} numberOfLines={1}>{config.shortName}</Text>
-            </Pressable>
-          </View>
+            )}
+            {statusBadge && (
+              <View style={[styles.statusBadge,
+                statusBadge.tone === 'blocked' ? styles.statusBlocked
+                : statusBadge.tone === 'idle' ? styles.statusIdle
+                : styles.statusWarning]}>
+                <Text style={styles.statusText}>{statusBadge.label}</Text>
+              </View>
+            )}
+          </Pressable>
         )
       })}
     </View>
@@ -211,99 +176,71 @@ function FactoryIsometricView({
 const styles = StyleSheet.create({
   yard: {
     position: 'relative',
-    backgroundColor: colors.ground,
+    backgroundColor: '#D4C4A0',
   },
-  footprintPad: {
+  tile: {
     position: 'absolute',
-    alignItems: 'center',
+    width: TILE_W,
   },
-  emptyPad: {
-    backgroundColor: '#00000010',
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+  lockIcon: {
+    position: 'absolute',
+    left: TILE_W / 2 - 7,
+    top: TILE_H / 2 - 9,
+    fontSize: 10,
+    opacity: 0.4,
   },
-  emptyPlus: {
-    color: '#00000035',
+  plusLabel: {
+    position: 'absolute',
+    left: TILE_W / 2 - 5,
+    top: TILE_H / 2 - 9,
     fontSize: 14,
+    color: '#00000030',
     fontWeight: '600',
   },
-  lockedPad: {
-    backgroundColor: '#00000018',
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockedIcon: {
-    fontSize: 9,
-    opacity: 0.45,
-  },
-  groundShadow: {
+  buildingLabel: {
     position: 'absolute',
-    bottom: 2,
-    alignSelf: 'center',
-    backgroundColor: '#00000016',
-    borderRadius: radii.pill,
-  },
-  spriteWrap: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  producingGlow: {
-    position: 'absolute',
-    bottom: '15%',
-    width: '70%',
-    height: '40%',
-    borderRadius: radii.pill,
-    backgroundColor: colors.gold,
-    opacity: 0.18,
-  },
-  objectLabel: {
-    position: 'absolute',
-    bottom: 2,
-    color: colors.inkMuted,
-    fontWeight: '700',
-    fontSize: 7,
-    opacity: 0.7,
+    bottom: 4,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#fff',
+    opacity: 0.9,
   },
   levelBadge: {
     position: 'absolute',
     top: 2,
-    right: 2,
-    backgroundColor: colors.ink,
+    right: 4,
+    backgroundColor: '#000000AA',
     borderRadius: radii.pill,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
   },
-  levelText: { color: colors.white, fontSize: 9, fontWeight: '700' },
+  levelText: { color: '#fff', fontSize: 8, fontWeight: '700' },
   staffBadge: {
     position: 'absolute',
-    left: 2,
     top: 2,
-    minWidth: 18,
-    height: 18,
+    left: 4,
+    minWidth: 16,
+    height: 16,
     borderRadius: radii.pill,
     backgroundColor: colors.cream,
-    borderWidth: 1,
-    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: 2,
   },
-  staffBadgeText: { fontSize: 10 },
+  staffBadgeText: { fontSize: 9 },
   statusBadge: {
     position: 'absolute',
-    left: 2,
     bottom: 18,
+    left: 4,
     borderRadius: radii.pill,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
   },
-  statusBadgeWarning: { backgroundColor: colors.orangeDark },
-  statusBadgeBlocked: { backgroundColor: colors.red },
-  statusBadgeIdle: { backgroundColor: colors.steelMid },
-  statusBadgeText: { color: colors.white, fontSize: 8, fontWeight: '800' },
+  statusWarning: { backgroundColor: colors.orangeDark },
+  statusBlocked: { backgroundColor: colors.red },
+  statusIdle: { backgroundColor: colors.steelMid },
+  statusText: { color: '#fff', fontSize: 7, fontWeight: '800' },
 })
-
-export default FactoryIsometricView
