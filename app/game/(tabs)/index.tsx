@@ -186,6 +186,7 @@ export default function RefineryScreen() {
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
   const isDaytime          = derived.gameClock.isDaytime
+  const usesDiamondGroundLive = FACTORY_VIEW_MODE === 'diamond_ground'
 
   const secondaryStats = [
     { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
@@ -277,20 +278,24 @@ export default function RefineryScreen() {
           {/* Yard / factory ground */}
           <View style={styles.bgYard}>
             <View style={styles.bgDockEdge} />
-            <View style={styles.bgYardZoneStorage} />
-            <View style={styles.bgYardZoneProcess} />
-            <View style={styles.bgYardZoneLogistics} />
-            <View style={styles.bgYardRoad} />
-            <View style={styles.bgYardRoad2} />
-            <View style={styles.bgYardRoad3} />
-            <View style={styles.bgPipeRun} />
-            <View style={styles.bgPipeBranch} />
-            <View style={styles.bgLoadingStrip} />
-            <View style={styles.bgTankCluster}>
-              <View style={styles.bgTankLarge} />
-              <View style={styles.bgTankMedium} />
-              <View style={styles.bgTankSmall} />
-            </View>
+            {!usesDiamondGroundLive ? (
+              <>
+                <View style={styles.bgYardZoneStorage} />
+                <View style={styles.bgYardZoneProcess} />
+                <View style={styles.bgYardZoneLogistics} />
+                <View style={styles.bgYardRoad} />
+                <View style={styles.bgYardRoad2} />
+                <View style={styles.bgYardRoad3} />
+                <View style={styles.bgPipeRun} />
+                <View style={styles.bgPipeBranch} />
+                <View style={styles.bgLoadingStrip} />
+                <View style={styles.bgTankCluster}>
+                  <View style={styles.bgTankLarge} />
+                  <View style={styles.bgTankMedium} />
+                  <View style={styles.bgTankSmall} />
+                </View>
+              </>
+            ) : null}
           </View>
         </View>
 
@@ -313,6 +318,7 @@ export default function RefineryScreen() {
                 grid={game.grid}
                 gridLevels={game.gridLevels}
                 containerWidth={width - spacing.md * 2}
+                displayGridSize={11}
                 onCellPress={handleCellPress}
                 isActive={game.crudeOil > 0}
               />

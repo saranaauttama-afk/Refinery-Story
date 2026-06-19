@@ -2,7 +2,7 @@
 
 ## Task Name
 
-`Apply Diamond Ground Renderer To Live Factory For Review`
+`Live Factory 11x11 Diamond Shell Review`
 
 ## Branch
 
@@ -10,69 +10,58 @@
 
 ## What Changed
 
-- Switched the live Factory review renderer from `grid` to `diamond_ground`
-- Reused the existing cleaned `FactoryDiamondGroundView` instead of creating another renderer
-- Kept the live Factory wired to real game data:
-  - real grid
-  - real buildings
-  - real grid levels
-  - real build tap handler
-  - real inspect tap handler
-- Kept the rest of the Factory UI in place:
-  - HUD
-  - resource strip
-  - goal chip
-  - trade pill
-  - bottom navigation
-- Kept fixed tile size and allowed overflow for larger factory layouts
+- Kept the live Factory renderer on `diamond_ground`
+- Expanded the live visual ground to a `11x11` diamond shell
+- Kept only the real gameplay grid cells active
+- Mapped the active gameplay area into the center of the `11x11` shell
+- Rendered the remaining shell cells as disabled lots with a much lighter treatment
+- Cleaned leftover background linework from the old yard scene when diamond ground is active
 
-## Live Review Status
+## Why This Approach Was Chosen
 
-`diamond_ground` is now the live review renderer for Factory on this
-branch.
+The request has big gameplay implications if the real save data is changed
+to `11x11` immediately. This pass keeps gameplay and save shape stable by
+changing the live presentation only:
 
-The old `grid` renderer still remains available in code as a fallback and
-comparison path. This is a review pass only, not final art direction.
+- the real game still uses its real active grid
+- expansion still unlocks more real cells
+- the player now sees the larger planned footprint from the start
 
-## Why This Was Safe To Switch
-
-Only the buildable ground view changed. Gameplay logic, save format,
-balance, and tap handling stay on the same live Factory data flow that was
-already connected during the prototype pass.
+That gives us the review value of a larger refinery shell without breaking
+progression or old saves.
 
 ## Files Changed
 
 - `app/game/(tabs)/index.tsx`
+- `src/components/FactoryDiamondGroundView.tsx`
 - `CURRENT_TASK.md`
 
 ## What Was Intentionally Not Changed
 
-- No gameplay logic
 - No save format
 - No balance
-- No build/inspect behavior rewrite
-- No removal of the old grid renderer
-- No new renderer implementation
-- No panning, scrolling, or zoom
-- No final art pass
+- No expansion pricing
+- No new renderer
+- No panning or zoom
+- No forced gameplay conversion to a real `11x11` starting grid
 
 ## Manual Test Checklist
 
-- [ ] New game 3x3 shows diamond ground on live Factory
-- [ ] Existing save loads
-- [ ] Occupied tiles can inspect
-- [ ] Empty tiles can build
-- [ ] Expansion still works
-- [ ] Buy/sell still works
-- [ ] Production tab still works
-- [ ] HQ tab still works
+- [ ] Live Factory shows a `11x11` diamond shell
+- [ ] Only the current real gameplay cells are active
+- [ ] Remaining shell cells look disabled and lighter
+- [ ] Empty active cells can still build
+- [ ] Occupied active cells can still inspect
+- [ ] Existing saves still load
+- [ ] Expansion still unlocks additional real cells
+- [ ] Old background linework no longer clashes with the diamond shell
 - [ ] `npm run typecheck` passes
 
 ## Next Recommended Task
 
-`Live Factory Diamond Ground Navigation Review`
+`Diamond Shell Navigation Review`
 
 Most likely next step:
 
-- add panning/scrolling support for larger live layouts, or
-- begin mapping real isometric assets onto the same diamond ground positions
+- add panning/scrolling so the larger shell can be explored comfortably, or
+- decide on the final rule for how future unlocked cells spread across the `11x11` shell
