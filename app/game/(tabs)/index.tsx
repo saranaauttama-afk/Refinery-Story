@@ -319,7 +319,7 @@ export default function RefineryScreen() {
                 gridLevels={game.gridLevels}
                 containerWidth={width - spacing.md * 2}
                 displayGridSize={11}
-                anchorGridSize={EXPANSION_BALANCE[0].size}
+                maxGridSize={EXPANSION_BALANCE[EXPANSION_BALANCE.length - 1].size}
                 onCellPress={handleCellPress}
                 isActive={game.crudeOil > 0}
               />

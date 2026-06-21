@@ -55,7 +55,15 @@ type FactoryDiamondGroundViewProps = {
   gridLevels: number[]
   containerWidth: number
   displayGridSize?: number
-  anchorGridSize?: number
+  // The LARGEST possible active grid size (e.g. 6 for a max-tier 6x6
+  // expansion) -- NOT the player's current grid size. Used to compute a
+  // fixed top-row anchor so the factory's top edge never moves as the
+  // player expands: per explicit game design, expanding the grid only
+  // ever grows it left/right/down, never up. The old prop (anchorGridSize,
+  // meaning "anchor to a 3x3 box") computed the top offset from
+  // (displayRows - currentAnchorSize)/2, which shifts every time the
+  // anchor/active size changes -- the opposite of "the top never moves."
+  maxGridSize?: number
   onCellPress?: (index: number) => void
   isActive?: boolean
 }
@@ -88,18 +96,27 @@ function FactoryDiamondGroundView({
   gridLevels,
   containerWidth,
   displayGridSize,
-  anchorGridSize,
+  maxGridSize,
   onCellPress,
 }: FactoryDiamondGroundViewProps) {
   const activeCols = Math.round(Math.sqrt(grid.length))
   const activeRows = activeCols
   const displayCols = Math.max(displayGridSize ?? activeCols, activeCols)
   const displayRows = displayCols
-  const anchorCols = Math.min(anchorGridSize ?? activeCols, displayCols)
-  const anchorRows = anchorCols
-  const anchoredRowOffset = Math.floor((displayRows - anchorRows) / 2)
-  const activeRowOffset = Math.max(0, anchoredRowOffset - ACTIVE_ROW_BIAS)
-  const anchoredColOffset = Math.floor((displayCols - anchorCols) / 2)
+  // Fixed top-row anchor: computed from the LARGEST possible grid size
+  // (maxGridSize), not the current active size -- this is what makes
+  // the factory's top edge stay put as the player expands. Centering
+  // against the current active size (the old approach) would shift the
+  // top edge down every time the grid grows, since a smaller anchor box
+  // centers differently than a larger one.
+  const maxAnchorSize = Math.min(maxGridSize ?? activeCols, displayCols)
+  const fixedTopRowOffset = Math.floor((displayRows - maxAnchorSize) / 2)
+  const activeRowOffset = Math.max(0, fixedTopRowOffset - ACTIVE_ROW_BIAS)
+  // Horizontal stays centered against the CURRENT active size -- the
+  // game expands left/right symmetrically, so re-centering horizontally
+  // on every expansion is correct (unlike vertical, which only grows
+  // downward from the fixed top).
+  const anchoredColOffset = Math.floor((displayCols - activeCols) / 2)
   const activeColOffset = Math.max(0, anchoredColOffset - ACTIVE_COL_BIAS)
   const tileLayouts = Array.from({ length: displayCols * displayRows }, (_, displayIndex) => {
     const row = Math.floor(displayIndex / displayCols)
