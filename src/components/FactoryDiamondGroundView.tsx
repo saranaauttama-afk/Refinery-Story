@@ -29,7 +29,13 @@ const LEVEL_BADGE_PADDING_Y = 2 * TILE_SCALE
 const LEVEL_FONT_SIZE = 8 * TILE_SCALE
 const DEBUG_FONT_SIZE = 7 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
-const ACTIVE_ROW_BIAS = 0
+// Negative value pushes the fixed top anchor DOWN by this many rows --
+// gives clearance from the floating quest-banner overlay sitting near
+// the top of the screen (confirmed via screenshot: the topmost building
+// was rendering correctly per the coordinate math, but was hidden behind
+// the 'Small Supplier' banner because the fixed top row sat right at the
+// canvas edge with no buffer). 2 rows of clearance at the top.
+const ACTIVE_ROW_BIAS = -2
 const ACTIVE_COL_BIAS = 0
 const DISTILLATION_UNIT_IMAGE_ASPECT_RATIO = 448 / 357
 const DISTILLATION_UNIT_IMAGE = require('../../assets/plants/plant_du_lv1_448.png')
