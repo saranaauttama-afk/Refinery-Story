@@ -143,7 +143,10 @@ function FactoryDiamondGroundView({
         const activeIndex = tile.activeIndex
         const isDisabled = activeIndex === null
         const cell = activeIndex === null ? null : grid[activeIndex]
-        const debugLabel = `${tile.row + 1},${tile.col + 1}`
+        const debugLabel =
+          activeIndex === null
+            ? `${tile.row + 1},${tile.col + 1}`
+            : `${tile.row + 1},${tile.col + 1} [#${activeIndex}]`
         const x = tile.x + offsetX
         const y = tile.y + offsetY
         const zIndex = 10 + tile.row + tile.col
@@ -260,9 +263,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8 * TILE_SCALE,
     left: 10 * TILE_SCALE,
-    color: 'rgba(86, 71, 50, 0.72)',
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(180, 30, 30, 0.85)',
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 3,
     fontSize: DEBUG_FONT_SIZE,
     fontWeight: '700',
+    zIndex: 999,
   },
   debugLabelDisabled: {
     position: 'absolute',
