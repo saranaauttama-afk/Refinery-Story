@@ -1,9 +1,10 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { ImageSourcePropType } from 'react-native'
 import Svg, { Polygon } from 'react-native-svg'
 
 import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE } from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
-import type { DerivedStats, GameState, GridCell } from '../game/types'
+import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
 
 const TILE_SCALE = 1.5
@@ -31,10 +32,32 @@ const DEBUG_FONT_SIZE = 7 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
 const ACTIVE_ROW_BIAS = 0
 const ACTIVE_COL_BIAS = 0
-const PLANT_IMAGE_WIDTH = 82 * TILE_SCALE
-const PLANT_IMAGE_BOTTOM = -6 * TILE_SCALE
-const DISTILLATION_UNIT_IMAGE_ASPECT_RATIO = 448 / 357
-const DISTILLATION_UNIT_IMAGE = require('../../assets/plants/plant_du_lv1_448.png')
+const PLANT_IMAGE_WIDTH = TILE_WIDTH
+
+type PlantImageSpec = {
+  source: ImageSourcePropType
+  aspectRatio: number
+}
+
+const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, PlantImageSpec>>> = {
+  distillationUnit: {
+    1: { source: require('../../assets/plants/du_lv1.png'), aspectRatio: 381 / 455 },
+    2: { source: require('../../assets/plants/du_lv2.png'), aspectRatio: 476 / 630 },
+    3: { source: require('../../assets/plants/du_lv3.png'), aspectRatio: 540 / 753 },
+  },
+  crudeTank: {
+    1: { source: require('../../assets/plants/ct_lv1.png'), aspectRatio: 368 / 283 },
+    2: { source: require('../../assets/plants/ct_lv2.png'), aspectRatio: 521 / 408 },
+    3: { source: require('../../assets/plants/ct_lv3.png'), aspectRatio: 520 / 378 },
+  },
+}
+
+function getPlantImageSpec(cell: GridCell, level: number): PlantImageSpec | null {
+  if (!cell) return null
+  const imagesByLevel = PLANT_IMAGE_BY_BUILDING[cell]
+  if (!imagesByLevel) return null
+  return imagesByLevel[Math.max(1, Math.min(3, level))] ?? null
+}
 
 type FactoryDiamondGroundViewProps = {
   game: GameState
@@ -184,7 +207,9 @@ function FactoryDiamondGroundView({
         const accentColor = BUILDING_CATEGORY_ACCENT[category]
         const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
         const code = BUILDINGS[cell].shortName
-        const usesPlantImage = cell === 'distillationUnit'
+        const level = gridLevels[activeIndex] ?? 1
+        const plantImage = getPlantImageSpec(cell, level)
+        const plantImageHeight = plantImage ? PLANT_IMAGE_WIDTH / plantImage.aspectRatio : 0
 
         return (
           <Pressable
@@ -201,16 +226,14 @@ function FactoryDiamondGroundView({
                 strokeWidth={1.1}
               />
             </Svg>
-            {usesPlantImage ? (
-              <View style={styles.plantImageAnchor}>
-                <Image source={DISTILLATION_UNIT_IMAGE} style={styles.plantImage} resizeMode="contain" />
-              </View>
+            {plantImage ? (
+              <Image source={plantImage.source} style={[styles.plantImage, { height: plantImageHeight }]} resizeMode="contain" />
             ) : (
               <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
             )}
             <Text style={styles.debugLabel}>{debugLabel}</Text>
             <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>L{gridLevels[activeIndex] ?? 1}</Text>
+              <Text style={styles.levelText}>L{level}</Text>
             </View>
           </Pressable>
         )
@@ -258,16 +281,11 @@ const styles = StyleSheet.create({
     fontSize: DEBUG_FONT_SIZE,
     fontWeight: '700',
   },
-  plantImageAnchor: {
+  plantImage: {
     position: 'absolute',
     left: 0,
-    right: 0,
-    bottom: PLANT_IMAGE_BOTTOM,
-    alignItems: 'center',
-  },
-  plantImage: {
+    bottom: 0,
     width: PLANT_IMAGE_WIDTH,
-    aspectRatio: DISTILLATION_UNIT_IMAGE_ASPECT_RATIO,
   },
   levelBadge: {
     position: 'absolute',
