@@ -16,6 +16,7 @@ import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { EXPANSION_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
+import { getEsgTier, getSeasonLabel } from '../../../src/game/utils/gameCalculations'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -61,6 +62,8 @@ export default function HQScreen() {
   const totalMilestones = derived.activeMilestones.length
   const unlockedResearch = derived.activeResearchItems.filter((item) => item.isUnlocked).length
   const totalResearch = derived.activeResearchItems.length
+  const esgTier = getEsgTier(game.esgScore)
+  const seasonLabel = getSeasonLabel(game.tickCount, game.yearStartTick)
   const lastAward = game.awardHistory[0]
   const latestRanking =
     lastAward && lastAward.rivals.length > 0
@@ -92,6 +95,8 @@ export default function HQScreen() {
 
         <Section title="Awards & Era">
           <Stat label="Current era" value={derived.currentEra.name.en} />
+          <Stat label="ESG score" value={`${Math.round(game.esgScore)} / 100 · ${esgTier.en}`} />
+          <Stat label="Season" value={`${seasonLabel.en} (${Math.round(derived.seasonalGasolineMultiplier * 100)}%)`} />
           <Stat
             label="Next era"
             value={
@@ -158,6 +163,12 @@ export default function HQScreen() {
             onPress={() => manualSave()}
           />
           <ListRow
+            title="Store"
+            subtitle="Remove ads, boosts (demo)"
+            actionLabel="Open"
+            onPress={() => router.push('/store')}
+          />
+          <ListRow
             title="Settings"
             subtitle="Language, audio, and app-level controls"
             actionLabel="Open"
@@ -189,13 +200,13 @@ export default function HQScreen() {
           />
         </Section>
 
-        <Section title="Ownership Notes">
-          <Text style={styles.note}>
-            HQ now owns the visible access points for growth, company tools, milestones, and long-term progression.
-          </Text>
-          <Text style={styles.note}>
-            Research still lives in Business for now. The hidden Stats route remains in code as a legacy screen, not the primary player path.
-          </Text>
+        <Section title="Activity Log">
+          {game.activityLog.length === 0
+            ? <Text style={styles.note}>Nothing yet.</Text>
+            : game.activityLog.slice(0, 8).map((entry, i) => (
+                <Text key={i} style={styles.logEntry}>{entry}</Text>
+              ))
+          }
         </Section>
       </ScrollView>
     </SafeAreaView>
@@ -267,6 +278,13 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontSize: 12,
     marginTop: spacing.xs,
+  },
+  logEntry: {
+    fontSize: 11,
+    color: colors.inkMuted,
+    paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cream,
   },
   renameRow: {
     flexDirection: 'row',

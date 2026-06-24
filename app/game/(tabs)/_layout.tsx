@@ -78,18 +78,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="stats"
-        options={{
-          href: null,
-          title: 'Stats',
-          tabBarIcon: ({ focused, color, size }) => (
-            <TabIcon focused={focused}>
-              <BarChart3 color={color} size={size} />
-            </TabIcon>
-          ),
-        }}
-      />
+
     </Tabs>
   )
 }

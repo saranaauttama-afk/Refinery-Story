@@ -370,6 +370,7 @@ export default function ProductionScreen() {
     autoTrade,
     updateAutoTrade,
     adjustFeedstockPriority,
+    produceAsphalt,
   } = useGame()
 
   if (!loaded || !game || !derived) {
@@ -514,6 +515,30 @@ export default function ProductionScreen() {
             ))}
           </View>
         </Section>
+
+        {game.refineryLevel >= ASPHALT_BALANCE.unlockLevel && (
+          <Section title="Asphalt Production">
+            <View style={styles.card}>
+              <Text style={styles.inventorySubtitle}>
+                {`${game.productInventory.asphalt} / ${ASPHALT_BALANCE.maxStorage} in storage · uses 1 crude per unit · sold via contracts`}
+              </Text>
+              <View style={styles.asphaltButtons}>
+                <AnimatedPressable
+                  style={[styles.asphaltButton, game.crudeOil < ASPHALT_BALANCE.batchSize && styles.asphaltButtonDisabled]}
+                  onPress={() => produceAsphalt(ASPHALT_BALANCE.batchSize)}
+                >
+                  <Text style={styles.asphaltButtonLabel}>Produce {ASPHALT_BALANCE.batchSize}</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={[styles.asphaltButton, game.crudeOil < ASPHALT_BALANCE.largeBatchSize && styles.asphaltButtonDisabled]}
+                  onPress={() => produceAsphalt(ASPHALT_BALANCE.largeBatchSize)}
+                >
+                  <Text style={styles.asphaltButtonLabel}>Produce {ASPHALT_BALANCE.largeBatchSize}</Text>
+                </AnimatedPressable>
+              </View>
+            </View>
+          </Section>
+        )}
 
         <Section title="Automation">
           <View style={styles.card}>
@@ -780,6 +805,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: colors.ink,
+  },
+  asphaltButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  asphaltButton: {
+    flex: 1,
+    backgroundColor: colors.green,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  asphaltButtonDisabled: {
+    opacity: 0.4,
+  },
+  asphaltButtonLabel: {
+    fontWeight: '700',
+    color: colors.ink,
+    fontSize: 13,
   },
   inventorySubtitle: {
     fontSize: 12,
