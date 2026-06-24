@@ -137,6 +137,41 @@ Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-h
 
 ---
 
+## Phase 5 — Gameplay Feel (Proposed)
+
+### 5A: Crisis Events
+**Priority: สูง** — เพิ่ม active decision making ที่ขาดอยู่ใน mid-late game
+
+ตอนนี้ random events เป็น passive "เกิดขึ้น → รับผล" ไม่มี player agency
+
+- [ ] Event บางอย่างให้เวลา N วัน (game time) ก่อนถูก penalty
+- [ ] ตัวอย่าง: "equipment กำลังพัง — จ่าย $X ซ่อมตอนนี้ หรือรอเสี่ยง production หยุด"
+- [ ] Timer แสดงใน Factory screen (เหมือน choice event แต่มี countdown)
+- [ ] ระดับความเร่งด่วน: low / medium / high — ส่งผลต่อ penalty ถ้าปล่อยทิ้ง
+- [ ] Design: ไม่ควรมีพร้อมกันมากกว่า 1-2 crisis พร้อมกัน
+
+### 5B: Grid Combo Hints
+**Priority: กลาง** — ช่วย new player เรียนรู้ layout โดยไม่ spoil
+
+ตอนนี้ hidden combo มี 5 อัน แต่ผู้เล่นส่วนใหญ่ไม่รู้ว่ามีอยู่
+
+- [ ] เมื่อกด build mode บน tile ให้ highlight tiles ข้างๆ ที่จะ complete combo ถ้าวางถูก
+- [ ] แสดงเป็น subtle glow ไม่บอกชื่อ combo — แค่บอกว่า "placement นี้ดี"
+- [ ] ทำงานบน diamond ground renderer ปัจจุบัน
+- [ ] ไม่แสดงถ้า combo นั้น discover แล้ว
+
+### 5C: Milestone Narrative Headlines
+**Priority: กลาง** — ทำให้ progression มีน้ำหนักมากขึ้น
+
+ตอนนี้ milestone เป็นแค่ checklist reward ไม่มี sense of story
+
+- [ ] Milestone สำคัญ (level 5, 10, 15, era change) trigger "news headline" modal
+- [ ] Flavor text เปลี่ยนตาม `game.refineryName` — เช่น "Sunrise Refinery คว้าสถานะ Regional Supplier"
+- [ ] ใช้ pattern เดียวกับ EraBanner (auto-dismiss toast) ไม่ block gameplay
+- [ ] สร้าง headline template ต่อ milestone key ใน translations.ts
+
+---
+
 ## Deferred / Needs Design Discussion
 
 | หัวข้อ | เหตุผลที่ defer |
