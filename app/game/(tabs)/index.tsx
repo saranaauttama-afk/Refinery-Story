@@ -49,6 +49,7 @@ import {
   getUpgradeBlockers,
   getUpgradeReputationRequirement,
   getUpgradeResearchRequirement,
+  getRefineryTitle,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
@@ -100,10 +101,12 @@ function PRODUCT_MAX_STORAGE(
 // ── Scene geometry constants ──────────────────────────────────────────────────
 // Sky is atmosphere only — 12 % keeps it visible without eating play space.
 // Horizon strip is a thin separator.  Goal is a compact 28 px chip.
-const SKY_RATIO    = 0.12
-const HORIZON_H    = 14   // px — thin treeline separator
-const RESOURCE_H   = 38   // px — resource HUD strip height (unchanged)
-const GOAL_H       = 28   // px — compact goal chip height
+const SKY_RATIO    = 0.16   // taller sky for company block + resource dock
+const HORIZON_H    = 14    // px — thin treeline separator
+const RESOURCE_H   = 38    // px — resource dock height
+const GOAL_H       = 26    // px — slim goal banner
+const RESOURCE_DOCK_H = 52 // px — dark resource dock card
+const ACTION_DOCK_H   = 48 // px — bottom action dock
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -180,6 +183,7 @@ export default function RefineryScreen() {
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
   const isDaytime          = derived.gameClock.isDaytime
 
+  const refineryTitle = getRefineryTitle(game.refineryLevel).en
   const secondaryStats = [
     { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
     { label: 'ESG',         value: `${Math.round(game.esgScore)}` },
@@ -284,31 +288,28 @@ export default function RefineryScreen() {
           )}
         </View>
 
-        {/* ── Layer 2: HUD ──────────────────────────────────────────────── */}
+        {/* ── Layer 2 + 3: Company block + Resource Dock + Goal ─────────── */}
 
-        {/* Name + level — top left */}
-        <AnimatedPressable
-          style={styles.nameHud}
-          onPress={() => setUpgradeModalOpen(true)}
-        >
-          <Text style={styles.nameText}>{game.refineryName}</Text>
-          <View style={[styles.lvPill, canUpgrade && styles.lvPillReady]}>
-            <Text style={styles.lvText}>Lv{game.refineryLevel}{canUpgrade ? ' ↑' : ''}</Text>
-          </View>
-        </AnimatedPressable>
+        {/* Company block — top left: name + title */}
+        <View style={styles.companyBlock}>
+          <Text style={styles.companyName} numberOfLines={1}>{game.refineryName}</Text>
+          <Text style={styles.companyTitle}>{refineryTitle}</Text>
+        </View>
 
-        {/* Time + events — top right */}
+        {/* Top right: Lv badge (tappable upgrade) + time + events bell */}
         <View style={styles.topRightHud}>
+          <AnimatedPressable
+            style={[styles.lvBadge, canUpgrade && styles.lvBadgeReady]}
+            onPress={() => setUpgradeModalOpen(true)}
+          >
+            <Text style={styles.lvBadgeText}>Lv{game.refineryLevel}{canUpgrade ? ' ↑' : ''}</Text>
+          </AnimatedPressable>
           <View style={styles.timePill}>
-            <Clock3
-              size={11}
-              color={isDaytime ? colors.orangeDark : colors.blueDark}
-            />
+            <Clock3 size={11} color={isDaytime ? colors.orangeDark : colors.blueDark} />
             <Text style={styles.timePillText}>{timeLabel}</Text>
           </View>
           <Pressable style={styles.eventsBtn} onPress={() => setEventModalOpen(true)}>
             <Bell size={13} color={colors.white} />
-            <Text style={styles.eventsBtnLabel}>Events</Text>
             {claimableHiddenEvents.length > 0 && (
               <View style={styles.eventsBadge}>
                 <Text style={styles.eventsBadgeLabel}>{claimableHiddenEvents.length}</Text>
@@ -317,59 +318,53 @@ export default function RefineryScreen() {
           </Pressable>
         </View>
 
-        {/* ── Layer 3: Resource strip + goal ────────────────────────────── */}
-
-        {/* Resource strip — straddles sky / yard boundary */}
-        <View style={[styles.resourceStrip, { top: resourceTop }]}>
-          <View style={styles.resStats}>
-            <View style={styles.resChip}>
-              <Text style={styles.resLabel}>$</Text>
-              <Text style={styles.resVal}>{Math.floor(game.money).toLocaleString()}</Text>
-            </View>
-            <View style={styles.resSep} />
-            <View style={styles.resChip}>
-              <Text style={styles.resLabel}>Crude</Text>
-              <Text style={[styles.resVal, game.crudeOil === 0 && styles.resValWarn]}>
-                {game.crudeOil}/{derived.maxCrudeStorage}
-              </Text>
-            </View>
-            <View style={styles.resSep} />
-            <View style={styles.resChip}>
-              <Text style={styles.resLabel}>Gas</Text>
-              <Text style={[styles.resVal, styles.resValGas]}>
-                {game.gasoline}/{derived.maxGasolineStorage}
-              </Text>
-            </View>
+        {/* Resource dock — dark card straddling sky/yard boundary */}
+        <View style={[styles.resourceDock, { top: resourceTop }]}>
+          <View style={styles.dockStat}>
+            <Text style={styles.dockIcon}>💰</Text>
+            <Text style={styles.dockVal}>${(game.money >= 1000 ? `${(game.money/1000).toFixed(1)}k` : Math.floor(game.money).toString())}</Text>
+            <Text style={styles.dockLabel}>Money</Text>
           </View>
-          <Pressable style={styles.moreChip} onPress={() => setSecondaryOpen((v) => !v)}>
-            <Text style={styles.moreChipLabel}>···</Text>
+          <View style={styles.dockDivider} />
+          <View style={styles.dockStat}>
+            <Text style={styles.dockIcon}>🛢</Text>
+            <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
+            <Text style={styles.dockLabel}>Crude</Text>
+          </View>
+          <View style={styles.dockDivider} />
+          <View style={styles.dockStat}>
+            <Text style={styles.dockIcon}>⛽</Text>
+            <Text style={styles.dockVal}>{game.gasoline}</Text>
+            <Text style={styles.dockLabel}>Gas</Text>
+          </View>
+          <View style={styles.dockDivider} />
+          <View style={styles.dockStat}>
+            <Text style={styles.dockIcon}>🌿</Text>
+            <Text style={styles.dockVal}>{Math.round(game.esgScore)}</Text>
+            <Text style={styles.dockLabel}>ESG</Text>
+          </View>
+          <View style={styles.dockDivider} />
+          <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
+            <Text style={styles.dockIcon}>⭐</Text>
+            <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
+            <Text style={styles.dockLabel}>Rep</Text>
           </Pressable>
         </View>
 
-        {/* Goal chip — compact single line, floats just below resource strip */}
+        {/* Goal banner — slim, sits just inside yard */}
         {nextGoal && (
           <Pressable
-            style={[styles.goalChip, { top: goalTop }]}
+            style={[styles.goalBanner, { top: goalTop }]}
             onPress={() => router.push('/achievements')}
           >
-            <Text style={styles.goalChipIcon}>🎯</Text>
-            <Text style={styles.goalChipName} numberOfLines={1}>{nextGoal.name.en}</Text>
+            <Text style={styles.goalBannerText} numberOfLines={1}>
+              🎯 {nextGoal.name.en}
+            </Text>
             {nextGoal.progress ? (
-              <>
-                <View style={styles.goalChipTrack}>
-                  <View style={[styles.goalChipFill, {
-                    width: Math.min(56, Math.round(
-                      nextGoal.progress.current / nextGoal.progress.target * 56
-                    )),
-                  }]} />
-                </View>
-                <Text style={styles.goalChipNum}>
-                  {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.goalChipReq} numberOfLines={1}>{nextGoal.requirement.en}</Text>
-            )}
+              <Text style={styles.goalBannerProgress}>
+                {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
+              </Text>
+            ) : null}
           </Pressable>
         )}
 
@@ -397,14 +392,22 @@ export default function RefineryScreen() {
             its content positioned to visually sit right above the pill,
             so it still reads as "this panel belongs to that pill" rather
             than a disconnected modal. */}
-        <View style={styles.tradePanelWrap} pointerEvents="box-none">
-          <Pressable style={styles.tradePill} onPress={toggleTradePanel}>
-            <Text style={styles.tradePillIcon}>{autoTrade.enabled ? '🔄' : '💱'}</Text>
-            <Text style={styles.tradePillLabel}>
-              {autoTrade.enabled ? 'Auto: ON' : 'Trade'}
-            </Text>
-            <Text style={styles.tradePillChevron}>{tradePanelOpen ? '▾' : '▴'}</Text>
-          </Pressable>
+        {/* ── Action Dock — gasoline context + AUTO badge + trade toggle ── */}
+        <View style={styles.actionDock} pointerEvents="box-none">
+          <View style={styles.actionDockLeft}>
+            <Text style={styles.actionDockVal}>⛽ {game.gasoline}/{derived.maxGasolineStorage}</Text>
+            <Text style={styles.actionDockLabel}>Gasoline</Text>
+          </View>
+          <View style={styles.actionDockRight}>
+            {autoTrade.enabled && (
+              <View style={styles.autoBadge}>
+                <Text style={styles.autoBadgeText}>AUTO</Text>
+              </View>
+            )}
+            <Pressable style={styles.tradeDockBtn} onPress={toggleTradePanel}>
+              <Text style={styles.tradeDockBtnText}>Trade {tradePanelOpen ? '▾' : '▴'}</Text>
+            </Pressable>
+          </View>
         </View>
 
         <Modal visible={tradePanelOpen} transparent animationType="fade" onRequestClose={toggleTradePanel}>
@@ -948,37 +951,45 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // ── Layer 2: HUD ──────────────────────────────────────────────────────────
-  nameHud: {
+  // ── Layer 2: Company block + top-right HUD ───────────────────────────────
+  companyBlock: {
     position: 'absolute',
-    top: spacing.sm,
+    top: spacing.sm + 2,
     left: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
     zIndex: 20,
   },
-  nameText: {
-    fontSize: 16,
-    fontWeight: '800',
+  companyName: {
+    fontSize: 15,
+    fontWeight: '900',
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.50)',
+    textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
+    letterSpacing: 0.2,
   },
-  lvPill: {
-    backgroundColor: 'rgba(0,0,0,0.40)',
+  companyTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.65)',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginTop: 1,
+  },
+  // Lv badge — standalone tappable pill, now in top-right
+  lvBadge: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: radii.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  lvPillReady: {
-    backgroundColor: colors.gold,
+  lvBadgeReady: {
+    backgroundColor: colors.green,
   },
-  lvText: {
+  lvBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.3,
   },
   topRightHud: {
     position: 'absolute',
@@ -992,212 +1003,215 @@ const styles = StyleSheet.create({
   timePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.40)',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.38)',
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
   },
   timePillText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   eventsBtn: {
-    minWidth: 30,
-    height: 30,
-    borderRadius: radii.sm,
-    backgroundColor: 'rgba(0,0,0,0.40)',
-    paddingHorizontal: 8,
-    flexDirection: 'row',
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(0,0,0,0.38)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-  },
-  eventsBtnLabel: {
-    fontSize: 11,
-    color: colors.white,
-    fontWeight: '700',
   },
   eventsBadge: {
-    minWidth: 16,
-    height: 16,
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    minWidth: 14,
+    height: 14,
     borderRadius: radii.pill,
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
     backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
   },
   eventsBadgeLabel: {
     color: colors.white,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
   },
 
-  // ── Layer 3: Resource strip + goal ────────────────────────────────────────
-  // top is set dynamically (= resourceTop)
-  resourceStrip: {
+  // ── Layer 3: Resource Dock + Goal Banner ────────────────────────────────
+  // top set dynamically (= resourceTop)
+  resourceDock: {
     position: 'absolute',
     left: spacing.md,
     right: spacing.md,
-    height: RESOURCE_H,
+    height: RESOURCE_DOCK_H,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(28,38,52,0.92)',
-    borderRadius: radii.pill,
+    justifyContent: 'space-between',
+    backgroundColor: '#1C2634',
+    borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     zIndex: 20,
-    // subtle lift shadow
     shadowColor: '#000',
-    shadowOpacity: 0.20,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: '#2E3D50',
   },
-  resStats: {
-    flexDirection: 'row',
+  dockStat: {
+    flex: 1,
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 1,
   },
-  resChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  resLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.58)',
-    fontWeight: '700',
-  },
-  resVal: {
+  dockIcon: {
     fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '800',
   },
-  resValWarn: {
+  dockVal: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  dockValWarn: {
     color: colors.orange,
   },
-  resValGas: {
-    color: '#9EE09E',
+  dockLabel: {
+    fontSize: 7,
+    color: '#6B8099',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  resSep: {
+  dockDivider: {
     width: 1,
-    height: 14,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    marginHorizontal: 3,
+    height: 28,
+    backgroundColor: '#2E3D50',
   },
-  moreChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  moreChipLabel: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 2,
-    lineHeight: 14,
-  },
-
-  // Goal chip — compact single-line pill, top set dynamically (= goalTop)
-  goalChip: {
+  // Goal banner — slim dark strip inside yard
+  // top set dynamically (= goalTop)
+  goalBanner: {
     position: 'absolute',
     left: spacing.md,
     right: spacing.md,
     height: GOAL_H,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(28,38,52,0.72)',
+    borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.93)',
-    borderRadius: radii.pill,
     zIndex: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
   },
-  goalChipIcon: {
-    fontSize: 12,
-  },
-  goalChipName: {
+  goalBannerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.90)',
     flex: 1,
+  },
+  goalBannerProgress: {
     fontSize: 11,
     fontWeight: '800',
-    color: colors.ink,
-  },
-  goalChipTrack: {
-    width: 56,
-    height: 4,
-    backgroundColor: colors.creamBorder,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  goalChipFill: {
-    height: 4,
-    backgroundColor: colors.goldDark,
-    borderRadius: 2,
-  },
-  goalChipNum: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.inkMuted,
-    minWidth: 36,
-    textAlign: 'right',
-  },
-  goalChipReq: {
-    fontSize: 10,
-    color: colors.inkMuted,
-    flex: 1,
-    textAlign: 'right',
+    color: colors.gold,
+    marginLeft: spacing.xs,
   },
 
   // ── Layer 4: Floating action buttons ──────────────────────────────────────
   // ── Unified Trade panel (Buy/Sell + Auto-trade, collapsible) ───────────
+  // ── Action Dock (bottom, above tab bar) ──────────────────────────────────
+  actionDock: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: FLOATING_TAB_BAR_CLEARANCE - 4,
+    height: ACTION_DOCK_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(28,38,52,0.92)',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    zIndex: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 6,
+  },
+  actionDockLeft: {
+    gap: 1,
+  },
+  actionDockVal: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  actionDockLabel: {
+    fontSize: 9,
+    color: '#6B8099',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  actionDockRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  autoBadge: {
+    backgroundColor: colors.green,
+    borderRadius: radii.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  autoBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  tradeDockBtn: {
+    backgroundColor: colors.orange,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+  },
+  tradeDockBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  // Legacy tradePanelWrap kept for Modal anchor reference
   tradePanelWrap: {
     position: 'absolute',
-    bottom: FLOATING_TAB_BAR_CLEARANCE,
-    right: spacing.md,
-    alignItems: 'flex-end',
+    bottom: FLOATING_TAB_BAR_CLEARANCE + 4,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
     zIndex: 20,
+    pointerEvents: 'box-none',
   },
   tradePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.white,
+    gap: spacing.xs,
+    backgroundColor: 'rgba(28,38,52,0.92)',
     borderRadius: radii.pill,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
     paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    marginTop: spacing.sm,
-    elevation: 4,
+    paddingVertical: spacing.sm,
     shadowColor: '#000',
-    shadowOpacity: 0.14,
-    shadowRadius: 4,
+    shadowOpacity: 0.20,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
-  tradePillIcon: {
-    fontSize: 14,
-  },
-  tradePillLabel: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 13,
-  },
-  tradePillChevron: {
-    fontSize: 11,
-    color: colors.inkMuted,
-  },
-  // Backdrop fills the Modal -- transparent (not dimmed like Sheet's
-  // full-screen takeover, since this is meant to feel like a small
-  // popover attached to the pill, not a separate screen) but still
-  // tappable to dismiss, same as tapping outside any other popover.
-  tradeModalBackdrop: {
+  tradePillIcon: { fontSize: 14 },
+  tradePillLabel: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  tradePillChevron: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
+    tradeModalBackdrop: {
     flex: 1,
   },
   // Positions the panel to visually sit right above where the pill is
