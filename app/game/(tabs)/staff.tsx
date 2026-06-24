@@ -14,16 +14,31 @@ import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
-import { getCellAssignedToEmployee, getTrainingCost, getMaxHireCount, isNearRetirement, TICK_MS } from '../../../src/game/utils/gameCalculations'
-import type { BuildingType, RecruitmentTier, WorkerType } from '../../../src/game/types'
+import {
+  getCellAssignedToEmployee,
+  getTrainingCost,
+  getMaxHireCount,
+  isNearRetirement,
+  TICK_MS,
+} from '../../../src/game/utils/gameCalculations'
+import type { BuildingType, RecruitmentCandidate, RecruitmentTier, WorkerType } from '../../../src/game/types'
 
-const TIER_COLORS: Record<RecruitmentTier, { border: string; accent: string; badge: string; label: string }> = {
-  rookie:  { border: colors.creamBorder, accent: colors.creamBorder, badge: '#E8E0D0', label: 'Rookie' },
-  skilled: { border: colors.blue,        accent: colors.blue,        badge: colors.blue,  label: 'Skilled' },
-  expert:  { border: colors.orange,      accent: colors.orange,      badge: colors.orange, label: 'Expert' },
-  star:    { border: colors.gold,        accent: colors.gold,        badge: colors.gold,   label: '⭐ Star' },
+// ── Tier config ──────────────────────────────────────────────────────────────
+const TIER_CONFIG: Record<RecruitmentTier, {
+  label: string
+  bodyColor: string
+  legColor: string
+  headColor: string
+  borderColor: string
+  badgeEmoji: string
+}> = {
+  rookie:  { label: 'Rookie',    headColor: '#C8A882', bodyColor: '#8090A0', legColor: '#506070', borderColor: colors.creamBorder, badgeEmoji: '' },
+  skilled: { label: 'Skilled',   headColor: '#D4A070', bodyColor: '#4A7AAA', legColor: '#2A5A8A', borderColor: colors.blue,        badgeEmoji: '🔹' },
+  expert:  { label: 'Expert',    headColor: '#C09060', bodyColor: '#C06A20', legColor: '#903A10', borderColor: colors.orange,      badgeEmoji: '🔸' },
+  star:    { label: '⭐ Star',   headColor: '#D4A860', bodyColor: '#8060B0', legColor: '#604090', borderColor: colors.gold,        badgeEmoji: '⭐' },
 }
 
+// ── Specialist config ────────────────────────────────────────────────────────
 const SPECIALIST_TYPES: WorkerType[] = [
   ...PLANT_PRODUCTION.map((p) => p.specialistWorker).filter(
     (t): t is 'aviationSpecialist' | 'chemicalEngineer' => !!t,
@@ -38,30 +53,115 @@ const SPECIALIST_BUILDING: Partial<Record<WorkerType, BuildingType>> = {
   polymerEngineer: 'polymerPlant',
 }
 
-// XP progress bar component
+// ── XP bar ───────────────────────────────────────────────────────────────────
 function XpBar({ current, max, level }: { current: number; max: number; level: number }) {
-  const pct = max > 0 ? Math.min(1, current / max) : 1
   const maxed = level >= STAFF_LEVEL_BALANCE.maxLevel
+  const pct = maxed ? 1 : max > 0 ? Math.min(1, current / max) : 0
   return (
     <View style={xpStyles.wrap}>
       <View style={xpStyles.track}>
         <View style={[xpStyles.fill, { width: `${Math.round(pct * 100)}%` as any }, maxed && xpStyles.fillMax]} />
       </View>
-      <Text style={xpStyles.label}>
-        {maxed ? 'MAX' : `${current}/${max} XP`}
-      </Text>
+      <Text style={xpStyles.label}>{maxed ? 'MAX' : `${current}/${max} XP`}</Text>
     </View>
   )
 }
-
 const xpStyles = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  track: { flex: 1, height: 5, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: colors.blue, borderRadius: radii.pill },
+  wrap:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  track:   { flex: 1, height: 5, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden' },
+  fill:    { height: '100%', backgroundColor: colors.blue, borderRadius: radii.pill },
   fillMax: { backgroundColor: colors.gold },
-  label: { fontSize: 9, fontWeight: '700', color: colors.inkMuted, minWidth: 48 },
+  label:   { fontSize: 9, fontWeight: '700', color: colors.inkMuted, minWidth: 52 },
 })
 
+// ── Pixel character figure ───────────────────────────────────────────────────
+function CandidateFigure({
+  candidate,
+  selected,
+  onPress,
+}: {
+  candidate: RecruitmentCandidate
+  selected: boolean
+  onPress: () => void
+}) {
+  const tc = TIER_CONFIG[candidate.tier]
+  const worker = WORKERS.find((w) => w.key === candidate.type)
+  return (
+    <Pressable style={[figStyles.wrap, selected && figStyles.wrapSelected]} onPress={onPress}>
+      {/* Name bubble */}
+      <View style={figStyles.bubble}>
+        <Text style={figStyles.bubbleName} numberOfLines={1}>{candidate.name}</Text>
+        {candidate.isVeteran && <Text style={figStyles.bubbleVet}>⭐</Text>}
+      </View>
+      {/* Tier emoji badge */}
+      {tc.badgeEmoji ? <Text style={figStyles.tierEmoji}>{tc.badgeEmoji}</Text> : null}
+      {/* Pixel body */}
+      <View style={[figStyles.head, { backgroundColor: tc.headColor }]} />
+      <View style={[figStyles.body, { backgroundColor: tc.bodyColor }]} />
+      <View style={figStyles.legs}>
+        <View style={[figStyles.leg, { backgroundColor: tc.legColor }]} />
+        <View style={[figStyles.leg, { backgroundColor: tc.legColor }]} />
+      </View>
+      {/* Selected glow ring */}
+      {selected && <View style={figStyles.ring} />}
+      {/* Role label */}
+      <Text style={figStyles.roleLabel} numberOfLines={1}>{worker?.name.en ?? candidate.type}</Text>
+    </Pressable>
+  )
+}
+const figStyles = StyleSheet.create({
+  wrap: {
+    alignItems: 'center',
+    paddingBottom: 8,
+    paddingTop: 28,
+    paddingHorizontal: 4,
+    position: 'relative',
+  },
+  wrapSelected: { transform: [{ scale: 1.12 }, { translateY: -4 }] },
+  bubble: {
+    position: 'absolute',
+    top: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(28,38,52,0.88)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  bubbleName: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  bubbleVet:  { fontSize: 9 },
+  tierEmoji: {
+    position: 'absolute',
+    top: 28,
+    right: 2,
+    fontSize: 11,
+    zIndex: 3,
+  },
+  head: { width: 22, height: 22, borderRadius: 11, marginBottom: -2, zIndex: 2 },
+  body: { width: 20, height: 30, borderRadius: 4, zIndex: 2 },
+  legs: { flexDirection: 'row', gap: 3, marginTop: 1 },
+  leg:  { width: 8, height: 14, borderRadius: 3 },
+  ring: {
+    position: 'absolute',
+    bottom: 6,
+    width: 52,
+    height: 14,
+    borderRadius: 26,
+    backgroundColor: 'rgba(242,193,46,0.35)',
+  },
+  roleLabel: {
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '700',
+    marginTop: 4,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+})
+
+// ── Main screen ──────────────────────────────────────────────────────────────
 export default function StaffScreen() {
   const {
     game, loaded, derived,
@@ -70,6 +170,9 @@ export default function StaffScreen() {
   } = useGame()
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
+
+  const [tab, setTab] = useState<'recruit' | 'team'>('recruit')
+  const [selectedSlot, setSelectedSlot] = useState(0)
   const [pickerEmployeeId, setPickerEmployeeId] = useState<string | null>(null)
 
   if (!loaded || !game || !derived) {
@@ -80,403 +183,454 @@ export default function StaffScreen() {
     )
   }
 
+  const cap = getMaxHireCount(game.refineryLevel)
   const refreshCost = getManualRefreshCost(game.refineryLevel)
-  const canManualRefresh = game.money >= refreshCost
+  const canRefresh = game.money >= refreshCost
   const refreshSecondsLeft = Math.max(
     0,
     Math.round(((game.recruitmentRefreshAt - game.tickCount) * TICK_MS) / 1000),
   )
-  const cap = getMaxHireCount(game.refineryLevel)
+
+  const selectedCandidate = game.recruitmentPool[selectedSlot]
+  const worker = selectedCandidate ? WORKERS.find((w) => w.key === selectedCandidate.type) : null
+  const tc = selectedCandidate ? TIER_CONFIG[selectedCandidate.tier] : null
+  const atCap = selectedCandidate ? game.workerCounts[selectedCandidate.type] >= cap : false
+  const affordable = selectedCandidate ? game.money >= selectedCandidate.cost : false
+  const canHire = affordable && !atCap
+  const mentorBonus = selectedCandidate ? (game.mentorXpBonus?.[selectedCandidate.type] ?? 0) : 0
+
+  const retiringCount = game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length
 
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
 
-      {/* ── Header ── */}
+      {/* ── Dark header ── */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Staff</Text>
-          <Text style={styles.subtitle}>Year {game.businessYear} · {game.employees.length} hired · {cap} max per role</Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.title}>Staff</Text>
+            <Text style={styles.subtitle}>Yr.{game.businessYear} · {game.employees.length} hired · {cap} max/role</Text>
+          </View>
+          <View style={styles.headerStats}>
+            <View style={styles.hStat}>
+              <Text style={styles.hStatVal}>{game.employees.length}</Text>
+              <Text style={styles.hStatLabel}>Total</Text>
+            </View>
+            <View style={styles.hStatDiv} />
+            <View style={styles.hStat}>
+              <Text style={styles.hStatVal}>{cap}</Text>
+              <Text style={styles.hStatLabel}>Cap</Text>
+            </View>
+            {retiringCount > 0 && (
+              <>
+                <View style={styles.hStatDiv} />
+                <View style={styles.hStat}>
+                  <Text style={[styles.hStatVal, { color: colors.orange }]}>{retiringCount}</Text>
+                  <Text style={styles.hStatLabel}>Retiring</Text>
+                </View>
+              </>
+            )}
+          </View>
         </View>
-        {/* Quick stats row */}
-        <View style={styles.headerStats}>
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatVal}>{game.employees.length}</Text>
-            <Text style={styles.headerStatLabel}>Total</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatVal}>{cap}</Text>
-            <Text style={styles.headerStatLabel}>Cap</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatVal}>
-              {game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length}
+
+        {/* Tab toggle */}
+        <View style={styles.toggle}>
+          <Pressable
+            style={[styles.toggleBtn, tab === 'recruit' && styles.toggleBtnActive]}
+            onPress={() => setTab('recruit')}
+          >
+            <Text style={[styles.toggleLabel, tab === 'recruit' && styles.toggleLabelActive]}>
+              Recruitment
             </Text>
-            <Text style={[styles.headerStatLabel, { color: colors.orange }]}>Retiring</Text>
-          </View>
+          </Pressable>
+          <Pressable
+            style={[styles.toggleBtn, tab === 'team' && styles.toggleBtnActive]}
+            onPress={() => setTab('team')}
+          >
+            <Text style={[styles.toggleLabel, tab === 'team' && styles.toggleLabelActive]}>
+              Team {game.employees.length > 0 ? `(${game.employees.length})` : ''}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
+      {/* ══════════════════════════════════════════════════════
+          RECRUITMENT TAB
+      ══════════════════════════════════════════════════════ */}
+      {tab === 'recruit' && (
+        <>
+          {/* Scene — 3 candidates standing */}
+          <View style={styles.scene}>
+            {/* Background silhouettes */}
+            <View style={styles.sceneBuildingLarge} />
+            <View style={styles.sceneBuildingSmall} />
+            <View style={styles.sceneSign}>
+              <Text style={styles.sceneSignText}>Hiring Office</Text>
+            </View>
 
-        {/* ── Recruitment ── */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recruitment Pool</Text>
-          <AnimatedPressable
-            disabled={!canManualRefresh}
-            onPress={() => {
-              if (canManualRefresh) { spawnFloat(`-$${refreshCost.toLocaleString()}`, 'expense'); haptics.tap() }
-              refreshRecruitmentPool()
-            }}
-            style={[styles.refreshBtn, canManualRefresh ? styles.refreshBtnActive : styles.refreshBtnDisabled]}
-          >
-            <Text style={styles.refreshBtnLabel}>
-              🔄 ${refreshCost.toLocaleString()}
-            </Text>
-          </AnimatedPressable>
-        </View>
-        <Text style={styles.poolTimer}>
-          {refreshSecondsLeft > 0 ? `Auto-refresh in ${refreshSecondsLeft}s` : 'Refreshing...'}
-        </Text>
+            {/* Candidates */}
+            <View style={styles.candidatesStage}>
+              {HIDDEN_EVENTS.filter(
+                (e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked',
+              ).slice(0, 1).map((event) => (
+                <Pressable key={event.key} style={styles.mysteryFigure} onPress={() => claimHiddenEvent(event.key)}>
+                  <View style={styles.mysteryBubble}><Text style={styles.mysteryBubbleText}>???</Text></View>
+                  <View style={styles.mysteryBody} />
+                  <View style={figStyles.legs}>
+                    <View style={[figStyles.leg, { backgroundColor: '#444' }]} />
+                    <View style={[figStyles.leg, { backgroundColor: '#444' }]} />
+                  </View>
+                  <Text style={[figStyles.roleLabel, { color: colors.orange }]}>Mystery!</Text>
+                </Pressable>
+              ))}
+              {game.recruitmentPool.map((candidate, slotIndex) => (
+                <CandidateFigure
+                  key={candidate.id}
+                  candidate={candidate}
+                  selected={selectedSlot === slotIndex}
+                  onPress={() => setSelectedSlot(slotIndex)}
+                />
+              ))}
+            </View>
+          </View>
 
-        {HIDDEN_EVENTS.filter(
-          (e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked',
-        ).map((event) => (
-          <ListRow
-            key={event.key}
-            title="??? Mystery Applicant"
-            subtitle="Something unusual happened. Tap to find out what."
-            badge="???"
-            actionLabel="Reveal"
-            onPress={() => claimHiddenEvent(event.key)}
-          />
-        ))}
-
-        <View style={styles.candidateRow}>
-          {game.recruitmentPool.map((candidate, slotIndex) => {
-            const worker = WORKERS.find((w) => w.key === candidate.type)
-            const tc = TIER_COLORS[candidate.tier]
-            const affordable = game.money >= candidate.cost
-            const atCap = game.workerCounts[candidate.type] >= cap
-            const canHire = affordable && !atCap
-            const mentorBonus = game.mentorXpBonus?.[candidate.type] ?? 0
-            return (
-              <View key={candidate.id} style={[styles.candidateCard, { borderColor: tc.border }]}>
-                {/* Tier badge strip */}
-                <View style={[styles.tierStrip, { backgroundColor: tc.badge }]}>
-                  <Text style={[styles.tierLabel, candidate.tier === 'rookie' && styles.tierLabelDark]}>
-                    {tc.label}
+          {/* Info panel for selected candidate */}
+          {selectedCandidate && tc && (
+            <View style={[styles.infoPanel, { borderTopColor: tc.borderColor }]}>
+              <View style={styles.infoTop}>
+                <View>
+                  <Text style={styles.infoName}>{selectedCandidate.name}</Text>
+                  <Text style={styles.infoRole}>
+                    {worker?.name.en ?? selectedCandidate.type}
+                    {selectedCandidate.isVeteran ? ' · ⭐ Veteran +20%' : ''}
                   </Text>
-                  {candidate.isVeteran && <Text style={styles.veteranBadge}>🎖 Veteran</Text>}
                 </View>
-                <View style={styles.candidateBody}>
-                  <Text style={styles.candidateName} numberOfLines={1}>{candidate.name}</Text>
-                  <Text style={styles.candidateRole} numberOfLines={1}>{worker?.name.en ?? candidate.type}</Text>
-                  <Text style={styles.candidateStats}>
-                    Starts Lv{candidate.startingLevel} · {game.workerCounts[candidate.type]}/{cap} hired
-                  </Text>
-                  {mentorBonus > 0 && (
-                    <Text style={styles.mentorNote}>🎓 +{mentorBonus} XP bonus</Text>
-                  )}
-                  <AnimatedPressable
-                    disabled={!canHire}
-                    onPress={() => {
-                      if (canHire) { spawnFloat(`-$${candidate.cost.toLocaleString()}`, 'expense'); haptics.confirm() }
-                      hireCandidate(slotIndex)
-                    }}
-                    style={[styles.hireBtn, canHire ? styles.hireBtnActive : styles.hireBtnDisabled]}
-                  >
-                    <Text style={styles.hireBtnLabel}>
-                      {atCap ? `Full (${cap} max)` : `Hire $${candidate.cost.toLocaleString()}`}
-                    </Text>
-                  </AnimatedPressable>
-                </View>
-              </View>
-            )
-          })}
-        </View>
-
-        {/* ── Team ── */}
-        <View style={[styles.sectionHeader, { marginTop: spacing.md }]}>
-          <Text style={styles.sectionTitle}>Your Team</Text>
-        </View>
-        {game.employees.length === 0 && (
-          <Text style={styles.empty}>No employees yet — hire someone above.</Text>
-        )}
-        {game.employees.map((employee) => {
-          const worker = WORKERS.find((w) => w.key === employee.type)
-          const maxed = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
-          const xpNeeded = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
-          const cost = getTrainingCost(employee.level)
-          const canTrain = !maxed && game.money >= cost.money && game.researchPoints >= cost.rp
-          const isSpecialist = SPECIALIST_TYPES.includes(employee.type)
-          const assignedCellIndex = getCellAssignedToEmployee(game, employee.id)
-          const buildingKey = SPECIALIST_BUILDING[employee.type]
-          const eligibleCells = buildingKey
-            ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, cellIndex) => {
-                if (cell === buildingKey) acc.push({ cellIndex, label: `${BUILDINGS[buildingKey].name.en} #${acc.length + 1}` })
-                return acc
-              }, [])
-            : []
-          const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
-          const nearRetire = isNearRetirement(employee, game.businessYear)
-          const yearsLeft = employee.hiredOnYear !== undefined
-            ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear)
-            : null
-
-          return (
-            <View key={employee.id} style={[styles.employeeCard, nearRetire && styles.employeeCardRetiring]}>
-              {/* Top row: name + level badge */}
-              <View style={styles.employeeTopRow}>
-                <View style={styles.employeeNameBlock}>
-                  <Text style={styles.employeeName}>
-                    {employee.name}
-                    {employee.trait === 'veteran' ? ' ⭐' : ''}
-                    {nearRetire ? ' 🕰' : ''}
-                  </Text>
-                  <Text style={styles.employeeRole}>{worker?.name.en ?? employee.type}</Text>
-                </View>
-                <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
-                  <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
+                <View style={[styles.tierBadge, { backgroundColor: tc.borderColor }]}>
+                  <Text style={styles.tierBadgeText}>{tc.label}</Text>
                 </View>
               </View>
 
-              {/* XP bar */}
-              <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
-
-              {/* Retire warning */}
-              {nearRetire && yearsLeft !== null && (
-                <Text style={styles.retireWarning}>Retires in {yearsLeft} year{yearsLeft !== 1 ? 's' : ''}</Text>
-              )}
-
-              {/* Actions */}
-              <View style={styles.employeeActions}>
-                <AnimatedPressable
-                  disabled={!canTrain}
-                  onPress={() => {
-                    if (canTrain) { spawnFloat(`-$${cost.money.toLocaleString()}`, 'expense'); haptics.confirm() }
-                    trainEmployee(employee.id)
-                  }}
-                  style={[styles.actionBtn, canTrain ? styles.actionBtnTrain : styles.actionBtnDisabled]}
-                >
-                  <Text style={styles.actionBtnLabel}>
-                    {maxed ? 'Max Level' : `Train  $${cost.money.toLocaleString()} · ${cost.rp}RP`}
-                  </Text>
-                </AnimatedPressable>
-
-                {isSpecialist && (
-                  <Pressable
-                    disabled={eligibleCells.length === 0}
-                    onPress={() => {
-                      if (assignedCellIndex !== null) {
-                        unassignCell(assignedCellIndex)
-                        setPickerEmployeeId(null)
-                      } else {
-                        setPickerEmployeeId(pickerEmployeeId === employee.id ? null : employee.id)
-                      }
-                    }}
-                    style={[
-                      styles.actionBtn,
-                      assignedCellIndex !== null ? styles.actionBtnAssigned : styles.actionBtnDisabled,
-                    ]}
-                  >
-                    <Text style={styles.actionBtnLabel}>
-                      {assignedCellIndex !== null
-                        ? `📌 ${assignedLabel ?? 'Assigned'}`
-                        : eligibleCells.length === 0
-                          ? 'No plant built'
-                          : 'Assign →'}
-                    </Text>
-                  </Pressable>
+              <View style={styles.infoStats}>
+                <View style={styles.infoStat}>
+                  <Text style={styles.infoStatVal}>Lv{selectedCandidate.startingLevel}</Text>
+                  <Text style={styles.infoStatLabel}>Starts at</Text>
+                </View>
+                <View style={styles.infoStatDiv} />
+                <View style={styles.infoStat}>
+                  <Text style={styles.infoStatVal}>{game.workerCounts[selectedCandidate.type]}/{cap}</Text>
+                  <Text style={styles.infoStatLabel}>Hired</Text>
+                </View>
+                {mentorBonus > 0 && (
+                  <>
+                    <View style={styles.infoStatDiv} />
+                    <View style={styles.infoStat}>
+                      <Text style={[styles.infoStatVal, { color: colors.green }]}>+{mentorBonus}</Text>
+                      <Text style={styles.infoStatLabel}>Mentor XP</Text>
+                    </View>
+                  </>
                 )}
               </View>
 
-              {/* Cell picker */}
-              {pickerEmployeeId === employee.id && assignedCellIndex === null && (
-                <View style={styles.cellPicker}>
-                  <Text style={styles.cellPickerTitle}>Select plant to assign:</Text>
-                  {eligibleCells.map(({ cellIndex, label }) => {
-                    const occupant = game.employees.find(
-                      (e) => getCellAssignedToEmployee(game, e.id) === cellIndex,
-                    )
-                    return (
-                      <Pressable
-                        key={cellIndex}
-                        onPress={() => { assignEmployeeToCell(employee.id, cellIndex); setPickerEmployeeId(null); haptics.confirm() }}
-                        style={styles.cellPickerOption}
-                      >
-                        <Text style={styles.cellPickerLabel}>
-                          {label}{occupant ? ` · currently ${occupant.name}` : ''}
-                        </Text>
-                      </Pressable>
-                    )
-                  })}
-                </View>
-              )}
+              <AnimatedPressable
+                disabled={!canHire}
+                onPress={() => {
+                  if (canHire) {
+                    spawnFloat(`-$${selectedCandidate.cost.toLocaleString()}`, 'expense')
+                    haptics.confirm()
+                  }
+                  hireCandidate(selectedSlot)
+                  setSelectedSlot(0)
+                }}
+                style={[styles.hireBtn, canHire ? styles.hireBtnActive : styles.hireBtnDisabled]}
+              >
+                <Text style={styles.hireBtnLabel}>
+                  {atCap
+                    ? `Full — ${cap} max for this role`
+                    : !affordable
+                      ? `Need $${selectedCandidate.cost.toLocaleString()}`
+                      : `Hire ${selectedCandidate.name} — $${selectedCandidate.cost.toLocaleString()}`}
+                </Text>
+              </AnimatedPressable>
             </View>
-          )
-        })}
+          )}
 
-      </ScrollView>
+          {/* Refresh bar */}
+          <View style={styles.refreshBar}>
+            <Text style={styles.refreshTimer}>
+              {refreshSecondsLeft > 0
+                ? `New candidates in ${Math.ceil(refreshSecondsLeft / 60)}m`
+                : 'Candidates ready'}
+            </Text>
+            <AnimatedPressable
+              disabled={!canRefresh}
+              onPress={() => {
+                if (canRefresh) { spawnFloat(`-$${refreshCost.toLocaleString()}`, 'expense'); haptics.tap() }
+                refreshRecruitmentPool()
+                setSelectedSlot(0)
+              }}
+              style={[styles.refreshBtn, canRefresh ? styles.refreshBtnActive : styles.refreshBtnDisabled]}
+            >
+              <Text style={styles.refreshBtnLabel}>🔄 Refresh ${refreshCost.toLocaleString()}</Text>
+            </AnimatedPressable>
+          </View>
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          TEAM TAB
+      ══════════════════════════════════════════════════════ */}
+      {tab === 'team' && (
+        <ScrollView contentContainerStyle={styles.teamList}>
+          {game.employees.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>👥</Text>
+              <Text style={styles.emptyTitle}>No employees yet</Text>
+              <Text style={styles.emptyHint}>Go to Recruitment to hire your first staff.</Text>
+              <Pressable style={styles.emptyBtn} onPress={() => setTab('recruit')}>
+                <Text style={styles.emptyBtnLabel}>Go to Recruitment →</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {game.employees.map((employee) => {
+            const w = WORKERS.find((wk) => wk.key === employee.type)
+            const maxed = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
+            const xpNeeded = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
+            const cost = getTrainingCost(employee.level)
+            const canTrain = !maxed && game.money >= cost.money && game.researchPoints >= cost.rp
+            const isSpecialist = SPECIALIST_TYPES.includes(employee.type)
+            const assignedCellIndex = getCellAssignedToEmployee(game, employee.id)
+            const buildingKey = SPECIALIST_BUILDING[employee.type]
+            const eligibleCells = buildingKey
+              ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, ci) => {
+                  if (cell === buildingKey) acc.push({ cellIndex: ci, label: `${BUILDINGS[buildingKey].name.en} #${acc.length + 1}` })
+                  return acc
+                }, [])
+              : []
+            const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
+            const nearRetire = isNearRetirement(employee, game.businessYear)
+            const yearsLeft = employee.hiredOnYear !== undefined
+              ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear)
+              : null
+
+            return (
+              <View key={employee.id} style={[styles.empCard, nearRetire && styles.empCardRetiring]}>
+                <View style={styles.empTop}>
+                  <View style={styles.empNameBlock}>
+                    <Text style={styles.empName}>
+                      {employee.name}
+                      {employee.trait === 'veteran' ? ' ⭐' : ''}
+                      {nearRetire ? ' 🕰' : ''}
+                    </Text>
+                    <Text style={styles.empRole}>{w?.name.en ?? employee.type}</Text>
+                  </View>
+                  <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
+                    <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
+                  </View>
+                </View>
+
+                <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
+
+                {nearRetire && yearsLeft !== null && (
+                  <Text style={styles.retireWarn}>Retires in {yearsLeft} year{yearsLeft !== 1 ? 's' : ''}</Text>
+                )}
+
+                <View style={styles.empActions}>
+                  <AnimatedPressable
+                    disabled={!canTrain}
+                    onPress={() => {
+                      if (canTrain) { spawnFloat(`-$${cost.money.toLocaleString()}`, 'expense'); haptics.confirm() }
+                      trainEmployee(employee.id)
+                    }}
+                    style={[styles.actBtn, canTrain ? styles.actBtnTrain : styles.actBtnOff]}
+                  >
+                    <Text style={styles.actBtnLabel}>
+                      {maxed ? 'Max Level' : `Train $${cost.money.toLocaleString()} · ${cost.rp}RP`}
+                    </Text>
+                  </AnimatedPressable>
+
+                  {isSpecialist && (
+                    <Pressable
+                      disabled={eligibleCells.length === 0}
+                      onPress={() => {
+                        if (assignedCellIndex !== null) {
+                          unassignCell(assignedCellIndex)
+                          setPickerEmployeeId(null)
+                        } else {
+                          setPickerEmployeeId(pickerEmployeeId === employee.id ? null : employee.id)
+                        }
+                      }}
+                      style={[styles.actBtn, assignedCellIndex !== null ? styles.actBtnAssigned : styles.actBtnOff]}
+                    >
+                      <Text style={styles.actBtnLabel}>
+                        {assignedCellIndex !== null
+                          ? `📌 ${assignedLabel ?? 'Assigned'}`
+                          : eligibleCells.length === 0
+                            ? 'No plant built'
+                            : 'Assign →'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {pickerEmployeeId === employee.id && assignedCellIndex === null && (
+                  <View style={styles.picker}>
+                    <Text style={styles.pickerTitle}>Select plant:</Text>
+                    {eligibleCells.map(({ cellIndex, label }) => {
+                      const occ = game.employees.find((e) => getCellAssignedToEmployee(game, e.id) === cellIndex)
+                      return (
+                        <Pressable
+                          key={cellIndex}
+                          style={styles.pickerOption}
+                          onPress={() => { assignEmployeeToCell(employee.id, cellIndex); setPickerEmployeeId(null); haptics.confirm() }}
+                        >
+                          <Text style={styles.pickerOptionLabel}>{label}{occ ? ` · ${occ.name}` : ''}</Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                )}
+              </View>
+            )
+          })}
+        </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
 
+// ── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
+  screen: { flex: 1, backgroundColor: '#0D1520' },
   loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
 
-  // ── Header ──
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    backgroundColor: '#1C2634',
-    gap: spacing.sm,
-  },
-  title: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 },
-  subtitle: { fontSize: 11, color: '#6B8099', marginTop: 1 },
-  headerStats: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: radii.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-  },
-  headerStat: { flex: 1, alignItems: 'center' },
-  headerStatVal: { fontSize: 18, fontWeight: '900', color: '#FFFFFF' },
-  headerStatLabel: { fontSize: 9, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.5 },
-  headerStatDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' },
+  // Header
+  header: { backgroundColor: '#1C2634', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
+  title:    { fontSize: 22, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 },
+  subtitle: { fontSize: 10, color: '#6B8099', marginTop: 1 },
+  headerStats: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: radii.sm, paddingVertical: 6, paddingHorizontal: 10 },
+  hStat:    { alignItems: 'center', paddingHorizontal: 8 },
+  hStatVal: { fontSize: 16, fontWeight: '900', color: '#fff' },
+  hStatLabel: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase' },
+  hStatDiv: { width: 1, height: 22, backgroundColor: 'rgba(255,255,255,0.08)' },
 
-  // ── List ──
-  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_BAR_CLEARANCE },
+  // Toggle
+  toggle: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: radii.pill, padding: 3, marginBottom: spacing.xs },
+  toggleBtn: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: radii.pill },
+  toggleBtnActive: { backgroundColor: '#FFFFFF' },
+  toggleLabel: { fontSize: 12, fontWeight: '700', color: '#6B8099' },
+  toggleLabelActive: { color: '#1C2634' },
 
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: '900', color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.8 },
-  poolTimer: { fontSize: 11, color: colors.inkMuted, marginBottom: spacing.sm },
-
-  // ── Recruitment ──
-  refreshBtn: {
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderWidth: 1.5,
-    borderColor: colors.ink,
-  },
-  refreshBtnActive: { backgroundColor: colors.cream },
-  refreshBtnDisabled: { backgroundColor: colors.creamBorder, borderColor: colors.creamBorder },
-  refreshBtnLabel: { fontSize: 11, fontWeight: '700', color: colors.ink },
-
-  candidateRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-
-  candidateCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
-    borderWidth: 2,
+  // Scene
+  scene: {
+    height: 200,
+    backgroundColor: '#4A7A9A',
+    position: 'relative',
     overflow: 'hidden',
   },
-  tierStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+  sceneBuildingLarge: {
+    position: 'absolute', right: 16, bottom: 0,
+    width: 80, height: 110,
+    backgroundColor: '#7A8A70', borderRadius: 4, opacity: 0.5,
   },
-  tierLabel: { fontSize: 9, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1 },
-  tierLabelDark: { color: colors.inkMuted },
-  veteranBadge: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
-
-  candidateBody: { padding: spacing.sm, gap: 2 },
-  candidateName: { fontSize: 13, fontWeight: '800', color: colors.ink },
-  candidateRole: { fontSize: 10, color: colors.inkMuted },
-  candidateStats: { fontSize: 10, color: colors.inkMuted, marginTop: 2 },
-  mentorNote: { fontSize: 10, color: colors.greenDark, fontWeight: '700' },
-
-  hireBtn: {
-    marginTop: spacing.sm,
-    borderRadius: radii.sm,
-    paddingVertical: 7,
-    alignItems: 'center',
+  sceneBuildingSmall: {
+    position: 'absolute', right: 90, bottom: 0,
+    width: 50, height: 70,
+    backgroundColor: '#6A7A60', borderRadius: 4, opacity: 0.4,
   },
-  hireBtnActive: { backgroundColor: colors.green },
-  hireBtnDisabled: { backgroundColor: colors.creamBorder },
-  hireBtnLabel: { fontSize: 11, fontWeight: '800', color: colors.ink },
-
-  // ── Employee cards ──
-  employeeCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  employeeCardRetiring: {
-    borderColor: colors.orange,
-    backgroundColor: '#FFF8F0',
-  },
-
-  employeeTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  employeeNameBlock: { flex: 1, marginRight: spacing.sm },
-  employeeName: { fontSize: 14, fontWeight: '800', color: colors.ink },
-  employeeRole: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
-
-  lvBadge: {
-    backgroundColor: colors.blue,
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-  },
-  lvBadgeMax: { backgroundColor: colors.gold },
-  lvBadgeText: { fontSize: 11, fontWeight: '900', color: '#FFFFFF' },
-
-  retireWarning: {
-    fontSize: 11,
-    color: colors.orange,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-
-  employeeActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
-  actionBtn: {
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  actionBtnTrain: { backgroundColor: colors.blue, borderColor: colors.blueDark },
-  actionBtnAssigned: { backgroundColor: colors.green, borderColor: colors.greenDark },
-  actionBtnDisabled: { backgroundColor: colors.creamBorder, borderColor: colors.creamBorder },
-  actionBtnLabel: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
-
-  cellPicker: {
-    marginTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.creamBorder,
-    paddingTop: spacing.sm,
-    gap: 4,
-  },
-  cellPickerTitle: { fontSize: 11, color: colors.inkMuted, fontWeight: '700', marginBottom: 4 },
-  cellPickerOption: {
-    paddingVertical: 7,
-    paddingHorizontal: spacing.sm,
+  sceneSign: {
+    position: 'absolute', top: '45%', left: 14,
     backgroundColor: colors.cream,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.creamBorder,
+    borderRadius: 6, borderWidth: 2, borderColor: '#8A7A5A',
+    paddingHorizontal: 8, paddingVertical: 3,
   },
-  cellPickerLabel: { fontSize: 12, fontWeight: '700', color: colors.ink },
+  sceneSignText: { fontSize: 9, fontWeight: '800', color: colors.ink },
+  candidatesStage: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center',
+    alignItems: 'flex-end', gap: 20, paddingHorizontal: 20,
+  },
+  mysteryFigure: { alignItems: 'center', paddingBottom: 8, paddingTop: 28, position: 'relative' },
+  mysteryBubble: {
+    position: 'absolute', top: 4,
+    backgroundColor: 'rgba(232,131,58,0.9)', borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 3,
+  },
+  mysteryBubbleText: { fontSize: 10, fontWeight: '900', color: '#fff' },
+  mysteryBody: { width: 20, height: 50, backgroundColor: '#333', borderRadius: 4, opacity: 0.6 },
 
-  empty: { color: colors.inkMuted, fontSize: 13, fontStyle: 'italic', paddingVertical: spacing.sm },
+  // Info panel
+  infoPanel: {
+    backgroundColor: '#1C2634',
+    borderTopWidth: 2,
+    padding: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  infoTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
+  infoName: { fontSize: 17, fontWeight: '900', color: '#fff' },
+  infoRole: { fontSize: 11, color: '#6B8099', marginTop: 2 },
+  tierBadge: { borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  tierBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: radii.sm, padding: spacing.sm, marginBottom: spacing.sm },
+  infoStat:  { flex: 1, alignItems: 'center' },
+  infoStatVal:   { fontSize: 16, fontWeight: '900', color: '#fff' },
+  infoStatLabel: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoStatDiv: { width: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 4 },
+
+  hireBtn: { borderRadius: radii.md, paddingVertical: 11, alignItems: 'center' },
+  hireBtnActive:   { backgroundColor: colors.green },
+  hireBtnDisabled: { backgroundColor: '#2E3D50' },
+  hireBtnLabel: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: 0.2 },
+
+  // Refresh bar
+  refreshBar: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#141E2A',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderTopWidth: 1, borderTopColor: '#2E3D50',
+  },
+  refreshTimer: { fontSize: 11, color: '#4A5A6A' },
+  refreshBtn: { borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  refreshBtnActive:   { backgroundColor: '#2E3D50' },
+  refreshBtnDisabled: { backgroundColor: '#1A2530' },
+  refreshBtnLabel: { fontSize: 11, fontWeight: '700', color: '#8A9BB0' },
+
+  // Team list
+  teamList: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_BAR_CLEARANCE },
+  emptyState: { alignItems: 'center', paddingTop: 48, gap: 8 },
+  emptyIcon:  { fontSize: 40 },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.ink },
+  emptyHint:  { fontSize: 13, color: colors.inkMuted, textAlign: 'center' },
+  emptyBtn:   { backgroundColor: colors.green, borderRadius: radii.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.xs },
+  emptyBtnLabel: { fontSize: 13, fontWeight: '800', color: colors.ink },
+
+  // Employee cards
+  empCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md, borderWidth: 2, borderColor: colors.creamBorder,
+    padding: spacing.sm, marginBottom: spacing.xs,
+  },
+  empCardRetiring: { borderColor: colors.orange, backgroundColor: '#FFF8F0' },
+  empTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  empNameBlock: { flex: 1, marginRight: spacing.sm },
+  empName: { fontSize: 14, fontWeight: '800', color: colors.ink },
+  empRole: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
+  lvBadge:    { backgroundColor: colors.blue, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  lvBadgeMax: { backgroundColor: colors.gold },
+  lvBadgeText: { fontSize: 11, fontWeight: '900', color: '#fff' },
+  retireWarn: { fontSize: 11, color: colors.orange, fontWeight: '700', marginTop: 4 },
+
+  empActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
+  actBtn:       { borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: 6 },
+  actBtnTrain:  { backgroundColor: colors.blue },
+  actBtnAssigned: { backgroundColor: colors.green },
+  actBtnOff:    { backgroundColor: colors.creamBorder },
+  actBtnLabel:  { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+  picker: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.creamBorder, paddingTop: spacing.sm, gap: 4 },
+  pickerTitle: { fontSize: 11, color: colors.inkMuted, fontWeight: '700', marginBottom: 4 },
+  pickerOption: { paddingVertical: 7, paddingHorizontal: spacing.sm, backgroundColor: colors.cream, borderRadius: radii.sm, borderWidth: 1, borderColor: colors.creamBorder },
+  pickerOptionLabel: { fontSize: 12, fontWeight: '700', color: colors.ink },
 })

@@ -18,7 +18,7 @@ export type { RecruitmentCandidate, RecruitmentTier }
 export const RECRUITMENT_BALANCE = {
   poolSize: 3,
   // ~2 minutes at 200ms/tick.
-  refreshIntervalTicks: 600,
+  refreshIntervalTicks: 3600,
   manualRefreshBaseCost: 200,
   manualRefreshCostPerLevel: 20,
   tiers: {
