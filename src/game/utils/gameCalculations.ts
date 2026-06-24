@@ -168,6 +168,8 @@ export function createInitialGameState(): GameState {
         recruitmentPool: pool,
         recruitmentRefreshAt: RECRUITMENT_BALANCE.refreshIntervalTicks,
         mentorXpBonus: {},
+        activeCrisis: null,
+        lastCrisisTick: 0,
         recruitmentNameCounter: nextNameIndex,
       }
     })(),
@@ -1102,6 +1104,58 @@ export function getNewlyDiscoveredCombos(
   }
 
   return HIDDEN_COMBOS.filter((combo) => found.has(combo.key))
+}
+
+// Returns cell indices that would complete an undiscovered combo if the player
+// builds at `targetIndex`. Used to show a subtle glow hint on the build sheet.
+export function getComboHintCells(
+  grid: GridCell[],
+  discovered: string[],
+  targetIndex: number,
+  buildingType: BuildingType,
+): number[] {
+  const cols = Math.round(Math.sqrt(grid.length))
+  const hintCells = new Set<number>()
+
+  // Simulate placing buildingType at targetIndex
+  const simGrid = [...grid]
+  simGrid[targetIndex] = buildingType
+
+  function checkTripleForHints(idxA: number, idxB: number, idxC: number) {
+    const a = simGrid[idxA], b = simGrid[idxB], c = simGrid[idxC]
+    if (!a || !b || !c) return
+    const cellSet = new Set([a, b, c])
+    if (cellSet.size !== 3) return
+    for (const combo of HIDDEN_COMBOS) {
+      if (discovered.includes(combo.key)) continue
+      const comboSet = new Set(combo.buildings)
+      if (comboSet.size !== cellSet.size) continue
+      let matches = true
+      for (const type of cellSet) {
+        if (!comboSet.has(type)) { matches = false; break }
+      }
+      if (matches) {
+        // One of these is targetIndex — add the other two
+        ;[idxA, idxB, idxC].filter((i) => i !== targetIndex).forEach((i) => hintCells.add(i))
+      }
+    }
+  }
+
+  const row = Math.floor(targetIndex / cols)
+  const col = targetIndex % cols
+
+  // Check horizontal triples containing targetIndex
+  for (let startCol = Math.max(0, col - 2); startCol <= Math.min(cols - 3, col); startCol++) {
+    const base = row * cols + startCol
+    checkTripleForHints(base, base + 1, base + 2)
+  }
+  // Check vertical triples containing targetIndex
+  for (let startRow = Math.max(0, row - 2); startRow <= Math.min(cols - 3, row); startRow++) {
+    const base = startRow * cols + col
+    checkTripleForHints(base, base + cols, base + cols * 2)
+  }
+
+  return Array.from(hintCells)
 }
 
 // --- Hidden Event system ---

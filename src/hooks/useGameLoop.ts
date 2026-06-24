@@ -85,6 +85,8 @@ import {
   type ShipmentOption,
 } from '../game/data/balance'
 import { text } from '../game/translations'
+import { MILESTONE_HEADLINES } from '../components/MilestoneHeadline'
+import { shouldSpawnCrisis, spawnCrisis, applyCrisisPenalty } from '../game/data/crisisEvents'
 import { BUILDINGS } from '../game/data/buildings'
 import { SELLABLE_PRODUCTS, type SellableProductKey } from '../game/data/products'
 import { getRandomChoiceEvent } from '../game/data/choiceEvents'
@@ -677,6 +679,7 @@ export function useGameLoop() {
   const pendingChoiceEventRef = useRef<ChoiceEvent | null>(null)
   const [pendingAward, setPendingAward] = useState<AwardRecord | null>(null)
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
+  const [pendingMilestoneHeadline, setPendingMilestoneHeadline] = useState<{ icon: string; title: string; body: string } | null>(null)
   const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
   const [pendingComboDiscovery, setPendingComboDiscovery] = useState<HiddenComboConfig | null>(null)
   // Hidden Event banner: which difficulty just unlocked (for the toast's
@@ -735,6 +738,26 @@ export function useGameLoop() {
         if (era.index > next.highestEraIndex) {
           next = { ...next, highestEraIndex: era.index }
           setPendingEraBanner(era)
+        }
+
+        // Milestone headlines — fire when a key milestone is newly completed
+        const prevKeys = (game ?? next).completedMilestoneKeys
+        const newKeys = next.completedMilestoneKeys.filter((k) => !prevKeys.includes(k))
+        for (const key of newKeys) {
+          const headline = MILESTONE_HEADLINES[key]
+          if (headline) {
+            setPendingMilestoneHeadline(headline)
+            break  // show one at a time
+          }
+        }
+
+        // Crisis event system — spawn occasionally, apply penalty on expiry
+        if (shouldSpawnCrisis(next, next.tickCount)) {
+          const crisis = spawnCrisis(next, next.tickCount)
+          if (crisis) next = { ...next, activeCrisis: crisis, lastCrisisTick: next.tickCount }
+        }
+        if (next.activeCrisis && next.tickCount >= next.activeCrisis.expiresAtTick) {
+          next = applyCrisisPenalty(next)
         }
 
         // Hidden Event system: checked every tick (cheap -- short,
@@ -1541,6 +1564,7 @@ export function useGameLoop() {
     pendingChoiceEvent,
     pendingAward,
     pendingEraBanner,
+    pendingMilestoneHeadline,
     pendingWinCelebration,
     pendingComboDiscovery,
     pendingHiddenEventUnlock,
@@ -1628,6 +1652,19 @@ export function useGameLoop() {
     resetGame,
     dismissAward: () => setPendingAward(null),
     dismissEraBanner: () => setPendingEraBanner(null),
+    dismissMilestoneHeadline: () => setPendingMilestoneHeadline(null),
+    fixCrisis: () =>
+      update((current) => {
+        if (!current.activeCrisis) return current
+        const cost = current.activeCrisis.fixCost
+        if (current.money < cost) return current
+        return { ...current, money: current.money - cost, activeCrisis: null }
+      }),
+    ignoreCrisis: () =>
+      update((current) => {
+        if (!current.activeCrisis) return current
+        return applyCrisisPenalty(current)
+      }),
     dismissWinCelebration: () => setPendingWinCelebration(false),
     dismissComboDiscovery: () => setPendingComboDiscovery(null),
     dismissHiddenEventUnlock: () => setPendingHiddenEventUnlock(null),

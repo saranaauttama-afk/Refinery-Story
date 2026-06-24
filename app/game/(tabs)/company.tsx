@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Share,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -352,6 +353,21 @@ export default function CompanyScreen() {
 
           <Text style={styles.sectionLabel}>Save & Access</Text>
           <ListRow title="Manual save" subtitle="Autosave runs in the background." actionLabel="Save" onPress={() => manualSave()} />
+          <ListRow
+            title="Export save"
+            subtitle="Share your save data as a text file to back up or transfer"
+            actionLabel="Export"
+            onPress={async () => {
+              try {
+                const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default
+                const raw = await AsyncStorage.getItem('refinery_save')
+                if (!raw) { Alert.alert('No save found'); return }
+                await Share.share({ message: raw, title: 'Refinery Story Save' })
+              } catch (e) {
+                Alert.alert('Export failed', String(e))
+              }
+            }}
+          />
           <ListRow title="Settings" subtitle="Language, audio, and app-level controls" actionLabel="Open" onPress={() => router.push('/settings')} />
           <ListRow title="Store" subtitle="Remove ads, boosts (demo)" actionLabel="Open" onPress={() => router.push('/store')} />
           <ListRow title="Main Menu" subtitle="Return to front menu" actionLabel="Go" onPress={() => router.replace('/')} />

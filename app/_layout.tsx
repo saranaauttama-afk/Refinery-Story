@@ -7,6 +7,7 @@ import AwardModal from '../src/components/AwardModal'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
 import ComboDiscoveryBanner from '../src/components/ComboDiscoveryBanner'
 import EraBanner from '../src/components/EraBanner'
+import MilestoneHeadline from '../src/components/MilestoneHeadline'
 import HiddenEventBanner from '../src/components/HiddenEventBanner'
 import WinCelebrationModal from '../src/components/WinCelebrationModal'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
@@ -19,12 +20,14 @@ function GlobalOverlays() {
     pendingChoiceEvent,
     pendingAward,
     pendingEraBanner,
+    pendingMilestoneHeadline,
     pendingWinCelebration,
     pendingComboDiscovery,
     pendingHiddenEventUnlock,
     chooseEventOption,
     dismissAward,
     dismissEraBanner,
+    dismissMilestoneHeadline,
     dismissWinCelebration,
     dismissComboDiscovery,
     dismissHiddenEventUnlock,
@@ -63,6 +66,7 @@ function GlobalOverlays() {
   return (
     <>
       <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} />
+      <MilestoneHeadline headline={pendingMilestoneHeadline} onDismiss={dismissMilestoneHeadline} />
       <ComboDiscoveryBanner combo={pendingComboDiscovery} onDismiss={dismissComboDiscovery} />
       <HiddenEventBanner event={pendingHiddenEventUnlock} onDismiss={dismissHiddenEventUnlock} />
       <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />

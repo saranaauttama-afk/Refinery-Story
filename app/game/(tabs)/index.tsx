@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -14,6 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -24,6 +25,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FabNav, { type FabNavItem } from '../../../src/components/FabNav'
+import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
+import CrisisBanner from '../../../src/components/CrisisBanner'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import ProgressBar from '../../../src/components/ProgressBar'
@@ -43,6 +46,7 @@ import {
   getBuildingEffectLines,
   getCellAssignedToEmployee,
   getContractProgress,
+  getComboHintCells,
   getEmployeeAssignedToCell,
   getProductSellPrice,
   formatGameClockTime,
@@ -223,6 +227,7 @@ export default function RefineryScreen() {
     autoTrade, updateAutoTrade, activateBoost,
     adjustFeedstockPriority, assignEmployeeToCell, unassignCell,
   } = useGame()
+  const { fixCrisis, ignoreCrisis } = useGame()
 
   // All hooks before any early returns
   const { width, height } = useWindowDimensions()
@@ -231,6 +236,19 @@ export default function RefineryScreen() {
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
   const [fabOpen, setFabOpen] = useState(false)
+  const [hoveredBuildingKey, setHoveredBuildingKey] = useState<BuildingType | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_done').then((val) => {
+      if (!val) setShowOnboarding(true)
+    })
+  }, [])
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false)
+    AsyncStorage.setItem('onboarding_done', '1')
+  }
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
   // Drives the unified Trade panel's expand/collapse (Buy/Sell + Auto-
@@ -288,6 +306,11 @@ export default function RefineryScreen() {
   const isDaytime          = derived.gameClock.isDaytime
 
   const refineryTitle = getRefineryTitle(game.refineryLevel).en
+
+  // Combo hint cells — tiles that would complete an undiscovered combo
+  const comboHintCells = hoveredBuildingKey && pickerCell !== null
+    ? getComboHintCells(game.grid, game.discoveredCombos, pickerCell, hoveredBuildingKey)
+    : []
 
   // FAB badge counts
   const contractsReady = derived.activeContracts.filter((c) => {
@@ -767,10 +790,13 @@ export default function RefineryScreen() {
                         locked && styles.buildCardLocked,
                         canBuild && affordable && styles.buildCardAffordable,
                       ]}
+                      onPressIn={() => setHoveredBuildingKey(key)}
+                      onPressOut={() => setHoveredBuildingKey(null)}
                       onPress={() => {
                         if (locked || !affordable) return
                         if (pickerCell !== null) placeBuilding(pickerCell, key)
                         setPickerCell(null)
+                        setHoveredBuildingKey(null)
                       }}
                     >
                       {/* Thumbnail */}
@@ -1138,6 +1164,22 @@ export default function RefineryScreen() {
           )
         })()}
       </Sheet>
+
+      {/* ── Crisis Banner ──────────────────────────────────────────────── */}
+      {game && game.activeCrisis && (
+        <CrisisBanner
+          crisis={game.activeCrisis}
+          currentTick={game.tickCount}
+          money={game.money}
+          onFix={fixCrisis}
+          onIgnore={ignoreCrisis}
+        />
+      )}
+
+      {/* ── Onboarding ─────────────────────────────────────────────────── */}
+      {showOnboarding && (
+        <OnboardingOverlay onDismiss={handleDismissOnboarding} />
+      )}
 
       {/* ── FAB Navigation ────────────────────────────────────────────── */}
       <FabNav

@@ -107,6 +107,8 @@ export type GameState = {
   // triggered or fallback). Drives the fallback timer -- see
   // CHOICE_EVENT_FALLBACK_TICKS in useGameLoop.ts.
   lastChoiceEventTick: number
+  activeCrisis: ActiveCrisis | null
+  lastCrisisTick: number
   // Mobile-only: 🔥 Boost button state. While tickCount < boostActiveUntilTick,
   // gasoline production runs at BOOST_BALANCE.productionMultiplier speed.
   // boostAvailableAtTick is the tick at which the button is usable again
@@ -428,6 +430,23 @@ export type RandomEvent = {
   // (resource loss from leaks/equipment/contamination). Incident-event
   // selection chance scales with esgScore (see getIncidentChance).
   isIncident?: boolean
+}
+
+export type CrisisKey =
+  | 'equipmentFailure'
+  | 'pipeLeak'
+  | 'powerSurge'
+  | 'supplyShortfall'
+  | 'workerStrike'
+
+export type ActiveCrisis = {
+  key: CrisisKey
+  title: string
+  description: string
+  urgency: 'low' | 'medium' | 'high'
+  fixCost: number
+  penaltyDescription: string
+  expiresAtTick: number
 }
 
 export type ChoiceEventKey =

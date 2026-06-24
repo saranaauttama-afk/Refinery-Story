@@ -452,6 +452,8 @@ export function sanitizeLoadedGameState(value: unknown) {
     ),
     boostActiveUntilTick: getSafeNumber(value.boostActiveUntilTick, 0),
     boostAvailableAtTick: getSafeNumber(value.boostAvailableAtTick, 0),
+    activeCrisis: null,  // always reset crisis on load (don't persist mid-crisis timer)
+    lastCrisisTick: typeof value.lastCrisisTick === 'number' ? value.lastCrisisTick : 0,
     mentorXpBonus: (typeof value.mentorXpBonus === 'object' && value.mentorXpBonus !== null)
       ? Object.fromEntries(
           Object.entries(value.mentorXpBonus as Record<string, unknown>)

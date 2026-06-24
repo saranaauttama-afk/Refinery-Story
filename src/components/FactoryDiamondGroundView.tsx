@@ -155,6 +155,7 @@ type FactoryDiamondGroundViewProps = {
   anchorGridSize?: number
   onCellPress?: (index: number) => void
   isActive?: boolean
+  comboHintCells?: number[]
 }
 
 function diamondPoints(x: number, y: number, width: number, height: number) {
@@ -193,6 +194,7 @@ function FactoryDiamondGroundView({
   displayGridSize,
   anchorGridSize,
   onCellPress,
+  comboHintCells = [],
 }: FactoryDiamondGroundViewProps) {
   const activeCols = Math.round(Math.sqrt(grid.length))
   const activeRows = activeCols
@@ -322,22 +324,23 @@ function FactoryDiamondGroundView({
             }
 
             if (!cell) {
-              return (
+              const isComboHint = comboHintCells.includes(activeIndex)
+            return (
                 <Pressable
                   key={activeIndex}
                   onPress={() => onCellPress?.(activeIndex)}
                   style={[styles.cell, { left: x, top: y, zIndex }]}
                 >
                   <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
+                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
                     <Polygon
                       points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                      fill="#EEE5D3"
-                      stroke="rgba(148, 128, 95, 0.24)"
+                      fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'}
+                      stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'}
                       strokeWidth={1}
                     />
                   </Svg>
-                  <Text style={styles.plusLabel}>+</Text>
+                  <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
                   <Text style={styles.debugLabel}>{debugLabel}</Text>
                 </Pressable>
               )
