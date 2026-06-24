@@ -39,16 +39,93 @@ type PlantImageSpec = {
   aspectRatio: number
 }
 
+const SQUARE_PLANT_ASPECT_RATIO = 1
+
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, PlantImageSpec>>> = {
   distillationUnit: {
-    1: { source: require('../../assets/plants/du_lv1.png'), aspectRatio: 381 / 455 },
-    2: { source: require('../../assets/plants/du_lv2.png'), aspectRatio: 476 / 630 },
-    3: { source: require('../../assets/plants/du_lv3.png'), aspectRatio: 540 / 753 },
+    1: { source: require('../../assets/plants/distillation_unit_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/distillation_unit_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/distillation_unit_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   crudeTank: {
-    1: { source: require('../../assets/plants/ct_lv1.png'), aspectRatio: 368 / 283 },
-    2: { source: require('../../assets/plants/ct_lv2.png'), aspectRatio: 521 / 408 },
-    3: { source: require('../../assets/plants/ct_lv3.png'), aspectRatio: 520 / 378 },
+    1: { source: require('../../assets/plants/crude_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/crude_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/crude_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  productTank: {
+    1: { source: require('../../assets/plants/product_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/product_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/product_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  laboratory: {
+    1: { source: require('../../assets/plants/laboratory_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/laboratory_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/laboratory_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  maintenanceWorkshop: {
+    1: { source: require('../../assets/plants/maintenance_workshop_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/maintenance_workshop_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/maintenance_workshop_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  salesOffice: {
+    1: { source: require('../../assets/plants/sales_office_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/sales_office_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/sales_office_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  lubricantPlant: {
+    1: { source: require('../../assets/plants/lubricant_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/lubricant_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/lubricant_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  jetFuelPlant: {
+    1: { source: require('../../assets/plants/jet_fuel_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/jet_fuel_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/jet_fuel_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  petrochemicalPlant: {
+    1: { source: require('../../assets/plants/petrochemical_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/petrochemical_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/petrochemical_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  powerPlant: {
+    1: { source: require('../../assets/plants/power_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/power_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/power_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  wasteTreatmentPlant: {
+    1: { source: require('../../assets/plants/waste_treatment_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/waste_treatment_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/waste_treatment_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  polymerPlant: {
+    1: { source: require('../../assets/plants/polymer_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/polymer_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/polymer_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  lubricantTank: {
+    1: { source: require('../../assets/plants/lubricant_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/lubricant_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/lubricant_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  jetFuelTank: {
+    1: { source: require('../../assets/plants/jet_fuel_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/jet_fuel_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/jet_fuel_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  petrochemicalTank: {
+    1: { source: require('../../assets/plants/petrochemical_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/petrochemical_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/petrochemical_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  recyclingBunker: {
+    1: { source: require('../../assets/plants/recycling_bunker_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/recycling_bunker_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/recycling_bunker_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  pelletSilo: {
+    1: { source: require('../../assets/plants/pellet_silo_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/pellet_silo_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/pellet_silo_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
 }
 
@@ -217,24 +294,38 @@ function FactoryDiamondGroundView({
             onPress={() => onCellPress?.(activeIndex)}
             style={[styles.cell, { left: x, top: y, zIndex }]}
           >
-            <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
-              <Polygon
-                points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
-                fill={surfaceColor}
-                stroke={accentColor}
-                strokeWidth={1.1}
-              />
-            </Svg>
+            {plantImage ? (
+              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
+                <Polygon
+                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
+                  fill="rgba(238, 229, 211, 0.18)"
+                  stroke="rgba(148, 128, 95, 0.16)"
+                  strokeWidth={1}
+                />
+              </Svg>
+            ) : (
+              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
+                <Polygon
+                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
+                  fill={surfaceColor}
+                  stroke={accentColor}
+                  strokeWidth={1.1}
+                />
+              </Svg>
+            )}
             {plantImage ? (
               <Image source={plantImage.source} style={[styles.plantImage, { height: plantImageHeight }]} resizeMode="contain" />
             ) : (
               <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
             )}
-            <Text style={styles.debugLabel}>{debugLabel}</Text>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>L{level}</Text>
-            </View>
+            {!plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+            {!plantImage ? (
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelText}>L{level}</Text>
+              </View>
+            ) : null}
           </Pressable>
         )
       })}

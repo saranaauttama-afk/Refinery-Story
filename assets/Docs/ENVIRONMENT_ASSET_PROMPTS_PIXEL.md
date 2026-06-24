@@ -2,7 +2,14 @@
 
 Use this shared style direction:
 
-`isometric pixel art industrial environment asset for a tycoon game, 3/4 isometric view, medium detail, clean readable silhouette, modular scene prop or terrain piece, transparent background, centered object, readable on a mobile game grid, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no painterly texture, no text, no people`
+`isometric pixel art industrial environment asset for a tycoon game, 3/4 isometric view, medium detail, clean readable silhouette, modular scene prop or terrain piece, centered object, readable on a mobile game grid, true pixel art sprite, crisp pixel art, strict pixel grid, limited color palette, nearest-neighbor look, no anti-aliasing, no soft gradients, clean shading, sharp pixel edges, no blur, no painterly texture, no text, no people, no smoke, no steam, no fire, no flame, no soft studio background, no fake transparency checkerboard, real transparent alpha background only`
+
+## Pixel Rules
+
+1. Use `true pixel art sprite` and `strict pixel grid` in every generation
+2. Add `no anti-aliasing` and `nearest-neighbor look` if edges get blurry
+3. Add `real transparent alpha background only` if the tool tries to paint a fake checkerboard
+4. If transparency fails repeatedly, generate on a flat single-color background and remove it afterward
 
 ## 1. Backdrop And Terrain
 
@@ -139,16 +146,13 @@ Use this shared style direction:
 
 ## 11. Atmosphere And FX Layers
 
-1. `Steam puff` — `isometric pixel art industrial environment fx asset for a tycoon game, steam puff, soft refinery vapor effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-2. `Smoke puff` — `isometric pixel art industrial environment fx asset for a tycoon game, smoke puff, soft industrial exhaust effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-3. `Flare glow` — `isometric pixel art industrial environment fx asset for a tycoon game, flare glow, warm refinery flame light effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-4. `Night light glow patch` — `isometric pixel art industrial environment fx asset for a tycoon game, night light glow patch, warm industrial yard illumination, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-5. `Window glow patch` — `isometric pixel art industrial environment fx asset for a tycoon game, window glow patch, soft building light effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-6. `Water reflection streak` — `isometric pixel art industrial environment fx asset for a tycoon game, water reflection streak, harbor light reflection overlay, compact effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-7. `Heat shimmer patch` — `isometric pixel art industrial environment fx asset for a tycoon game, heat shimmer patch, subtle refinery hot air effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-8. `Dust / grit patch` — `isometric pixel art industrial environment fx asset for a tycoon game, dust grit patch, subtle yard dirt overlay, compact effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-9. `Wet ground patch` — `isometric pixel art industrial environment fx asset for a tycoon game, wet ground patch, reflective concrete overlay, compact terrain effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
-10. `Seasonal tint overlay` — `isometric pixel art industrial environment fx asset for a tycoon game, seasonal tint overlay, soft color grade layer for the yard, modular screen effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people`
+1. `Night light glow patch` — `isometric pixel art industrial environment fx asset for a tycoon game, night light glow patch, warm industrial yard illumination, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
+2. `Window glow patch` — `isometric pixel art industrial environment fx asset for a tycoon game, window glow patch, soft building light effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
+3. `Water reflection streak` — `isometric pixel art industrial environment fx asset for a tycoon game, water reflection streak, harbor light reflection overlay, compact effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
+4. `Heat shimmer patch` — `isometric pixel art industrial environment fx asset for a tycoon game, heat shimmer patch, subtle refinery hot air effect, compact overlay, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
+5. `Dust / grit patch` — `isometric pixel art industrial environment fx asset for a tycoon game, dust grit patch, subtle yard dirt overlay, compact effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
+6. `Wet ground patch` — `isometric pixel art industrial environment fx asset for a tycoon game, wet ground patch, reflective concrete overlay, compact terrain effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
+7. `Seasonal tint overlay` — `isometric pixel art industrial environment fx asset for a tycoon game, seasonal tint overlay, soft color grade layer for the yard, modular screen effect, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no text, no people, no smoke, no steam, no fire`
 
 ## 12. Optional Connector And Decoration Set
 

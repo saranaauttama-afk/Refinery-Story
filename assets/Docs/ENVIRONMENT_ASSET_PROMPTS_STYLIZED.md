@@ -2,7 +2,7 @@
 
 Use this shared style direction:
 
-`stylized isometric industrial environment asset, 3/4 isometric view, medium detail, clean readable silhouette, a few bold industrial elements, modular scene prop or terrain piece, transparent background, centered object, readable at small size, premium refinery game asset, no text, no people, no vehicles unless the asset is a vehicle itself`
+`stylized isometric industrial environment asset, 3/4 isometric view, medium detail, clean readable silhouette, a few bold industrial elements, modular scene prop or terrain piece, transparent background, centered object, readable at small size, premium refinery game asset, no text, no people, no vehicles unless the asset is a vehicle itself, no smoke, no steam, no fire, no flame`
 
 ## 1. Backdrop And Terrain
 
@@ -139,16 +139,13 @@ Use this shared style direction:
 
 ## 11. Atmosphere And FX Layers
 
-1. `Steam puff` — `stylized isometric industrial environment fx asset, steam puff, soft refinery vapor effect, compact overlay, premium refinery game asset, no text, no people`
-2. `Smoke puff` — `stylized isometric industrial environment fx asset, smoke puff, soft industrial exhaust effect, compact overlay, premium refinery game asset, no text, no people`
-3. `Flare glow` — `stylized isometric industrial environment fx asset, flare glow, warm refinery flame light effect, compact overlay, premium refinery game asset, no text, no people`
-4. `Night light glow patch` — `stylized isometric industrial environment fx asset, night light glow patch, warm industrial yard illumination, compact overlay, premium refinery game asset, no text, no people`
-5. `Window glow patch` — `stylized isometric industrial environment fx asset, window glow patch, soft building light effect, compact overlay, premium refinery game asset, no text, no people`
-6. `Water reflection streak` — `stylized isometric industrial environment fx asset, water reflection streak, harbor light reflection overlay, compact effect, premium refinery game asset, no text, no people`
-7. `Heat shimmer patch` — `stylized isometric industrial environment fx asset, heat shimmer patch, subtle refinery hot air effect, compact overlay, premium refinery game asset, no text, no people`
-8. `Dust / grit patch` — `stylized isometric industrial environment fx asset, dust grit patch, subtle yard dirt overlay, compact effect, premium refinery game asset, no text, no people`
-9. `Wet ground patch` — `stylized isometric industrial environment fx asset, wet ground patch, reflective concrete overlay, compact terrain effect, premium refinery game asset, no text, no people`
-10. `Seasonal tint overlay` — `stylized isometric industrial environment fx asset, seasonal tint overlay, soft color grade layer for the yard, modular screen effect, premium refinery game asset, no text, no people`
+1. `Night light glow patch` — `stylized isometric industrial environment fx asset, night light glow patch, warm industrial yard illumination, compact overlay, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
+2. `Window glow patch` — `stylized isometric industrial environment fx asset, window glow patch, soft building light effect, compact overlay, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
+3. `Water reflection streak` — `stylized isometric industrial environment fx asset, water reflection streak, harbor light reflection overlay, compact effect, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
+4. `Heat shimmer patch` — `stylized isometric industrial environment fx asset, heat shimmer patch, subtle refinery hot air effect, compact overlay, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
+5. `Dust / grit patch` — `stylized isometric industrial environment fx asset, dust grit patch, subtle yard dirt overlay, compact effect, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
+6. `Wet ground patch` — `stylized isometric industrial environment fx asset, wet ground patch, reflective concrete overlay, compact terrain effect, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
+7. `Seasonal tint overlay` — `stylized isometric industrial environment fx asset, seasonal tint overlay, soft color grade layer for the yard, modular screen effect, premium refinery game asset, no text, no people, no smoke, no steam, no fire`
 
 ## 12. Optional Connector And Decoration Set
 

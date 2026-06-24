@@ -137,16 +137,13 @@ This file lists non-building environment assets for the refinery scene.
 
 ## 11. Atmosphere And FX Layers
 
-1. Steam puff
-2. Smoke puff
-3. Flare glow
-4. Night light glow patch
-5. Window glow patch
-6. Water reflection streak
-7. Heat shimmer patch
-8. Dust / grit patch
-9. Wet ground patch
-10. Seasonal tint overlay
+1. Night light glow patch
+2. Window glow patch
+3. Water reflection streak
+4. Heat shimmer patch
+5. Dust / grit patch
+6. Wet ground patch
+7. Seasonal tint overlay
 
 ## 12. Optional Connector And Decoration Set
 
