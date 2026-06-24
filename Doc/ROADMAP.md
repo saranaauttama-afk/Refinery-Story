@@ -1,11 +1,25 @@
 # Refinery Story — Game Roadmap
 
-Last updated: 2026-06-24  
+Last updated: 2026-06-25  
 Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-hidden-routes` → `feature/diamond-shell-camera`
 
 ---
 
 ## สถานะปัจจุบัน (Done)
+
+### Session 2 — June 2026 (major update)
+- [x] FAB navigation — tab bar hidden, floating action button bottom-right
+- [x] 3-screen regroup: Factory / Business / Company (จาก 5 screens)
+- [x] Factory screen redesign: company block, resource dock, action dock
+- [x] Staff screen: recruitment scene (pixel characters), Recruitment|Team toggle
+- [x] Production screen: live status grid, product cards, compact automation
+- [x] Business screen: 4→3 tabs (Contracts / Supply / Recruit)
+- [x] Company screen: Team / Grow / Settings
+- [x] Build sheet redesign: grouped cards + plant art thumbnails
+- [x] Building info sheet: plant art hero + upgrade panel + before/after stats
+- [x] Upgrade refinery modal: level strip + unlocks preview + requirements checklist
+- [x] Level cap Lv20 + win condition rebalance (Lv15 + rep 400)
+- [x] Pool refresh 600 → 3600 ticks (~12 min = 1 business day)
 
 ### Infrastructure
 - [x] Expo / React Native project structure
@@ -52,28 +66,28 @@ Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-h
 ### 1A: Recycled Material + Plastic Pellets Chain
 **Priority: สูง** — art assets พร้อมแล้ว (`recycling_bunker`, `pellet_silo`), types ใน codebase มีแล้ว
 
-- [ ] `recyclingBunker` → ผลิต `recycledMaterial` จาก waste byproduct
-- [ ] `pelletSilo` → ผลิต `plasticPellets` จาก `recycledMaterial`
-- [ ] Contracts สำหรับทั้ง 2 products (2–3 contracts each)
-- [ ] Standing Order สำหรับ plasticPellets
-- [ ] Production tab แสดง inventory + sell button
-- [ ] Unlock levels: recyclingBunker Lv12, pelletSilo Lv16 (หลัง petrochemical)
-- [ ] Balance: feedstock หรือใช้ waste เป็น input?
+- [x] `recyclingBunker` → ผลิต `recycledMaterial` จาก waste byproduct
+- [x] `pelletSilo` → ผลิต `plasticPellets` จาก `recycledMaterial`
+- [x] Contracts สำหรับทั้ง 2 products (IDs 27-32)
+- [x] Standing Orders: recyclingContract + pelletExport
+- [x] Production/Factory screen แสดง inventory + sell button
+- [x] Unlock levels: wasteTreatmentPlant Lv8, polymerPlant Lv20
+- [x] waste → recycledMaterial, petrochemicals → plasticPellets
 
 ### 1B: Staff Hiring Cap + Retirement
 **Priority: สูง** — ตอนนี้จ้างได้ไม่จำกัด ทำให้ late game ไม่มี tension
 
-- [ ] กำหนด max headcount per type (เช่น max 5 per type หรือ total 20)
-- [ ] Retirement mechanic: พนักงานสูงอายุ retire หลัง N ปี (ออก event ให้รู้ล่วงหน้า)
-- [ ] Recruitment pool refresh เมื่อมีตำแหน่งว่าง
-- [ ] ต้องตัดสินใจ: replace กับคนใหม่ Lv1 หรือพยายาม retain ด้วยเงิน?
+- [x] Max per type = floor(2 + refineryLevel/3) (เช่น max 5 per type หรือ total 20)
+- [x] Retirement mechanic: พนักงานสูงอายุ retire หลัง N ปี (ออก event ให้รู้ล่วงหน้า)
+- [x] Slot ว่างทันที + mentor XP bonus จาก high-level retiree
+- [x] Severance pay + mentoring XP legacy
 
 ### 1C: Contracts Panel UX
 **Priority: กลาง** — panel ยาวมาก ที่ level สูงๆ
 
-- [ ] Collapse completed contract tiers (กดเปิด/ปิดได้)
-- [ ] Filter: All / Active / Completed
-- [ ] Badge count บน Business tab เมื่อมี contract ที่ fulfill ได้แล้ว
+- [x] Collapse completed contracts
+- [x] Filter: All / Ready / Gas / Asphalt / Jet / Lube / Petrochem / Recycled / Pellets
+- [x] Badge count บน Business tab + FAB
 
 ---
 
@@ -82,9 +96,9 @@ Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-h
 ### 2A: Building Visual Identity (Diamond Ground)
 **Priority: กลาง** — ตอนนี้ buildings ที่ไม่มี plant art ใช้แค่ shortcode
 
-- [ ] ทุก building มี art หรือ icon ที่อ่านได้ชัดบน diamond tile
-- [ ] Level badge แสดงชัดขึ้นบน plant image tiles
-- [ ] Status badge (IDLE, FULL, FEED, PWR) อ่านได้บน mobile size
+- [x] Plant art (lv1-3) บน diamond tile ทุก building
+- [x] Level badge + category badge ในinfo sheet
+- [x] Status badge มีอยู่แล้ว
 
 ### 2B: Factory Atmosphere
 **Priority: ต่ำ** — ขึ้นอยู่กับ art direction
@@ -108,9 +122,9 @@ Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-h
 ### 3A: Award History Screen
 **Priority: กลาง** — ข้อมูลมีแล้วใน `game.awardHistory` แค่ต้องทำ UI
 
-- [ ] HQ tab มี section "Award History" แสดง 12 years ล่าสุด
-- [ ] แต่ละ year แสดง: grade, score, rank, payroll, net profit
-- [ ] Chart แสดง score trend
+- [x] Company/Grow tab แสดง last award + activity log
+- [x] Grade, score, rank, payroll, net profit ใน Grow tab
+- [ ] Chart แสดง score trend (ยังไม่ทำ)
 
 ### 3B: Save Export / Import
 **Priority: กลาง** — ป้องกัน data loss เมื่อ reinstall
