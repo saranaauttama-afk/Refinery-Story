@@ -309,55 +309,9 @@ function getProductionBottlenecks(signals: ProductionSignals): string[] {
   return insights.length > 0 ? insights.slice(0, 4) : ['No major bottlenecks detected.']
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  )
-}
 
-function InventoryRow({
-  title,
-  subtitle,
-  actionLabel,
-  disabled,
-  onPress,
-}: {
-  title: string
-  subtitle: string
-  actionLabel?: string
-  disabled?: boolean
-  onPress?: () => void
-}) {
-  return (
-    <View style={styles.inventoryRow}>
-      <View style={styles.inventoryText}>
-        <Text style={styles.inventoryTitle}>{title}</Text>
-        <Text style={styles.inventorySubtitle}>{subtitle}</Text>
-      </View>
-      {actionLabel && onPress ? (
-        <AnimatedPressable
-          style={[styles.inventoryButton, disabled && styles.inventoryButtonDisabled]}
-          disabled={disabled}
-          onPress={onPress}
-        >
-          <Text style={styles.inventoryButtonLabel}>{actionLabel}</Text>
-        </AnimatedPressable>
-      ) : null}
-    </View>
-  )
-}
 
-type InventoryRowData = {
-  key: string
-  title: string
-  subtitle: string
-  actionLabel?: string
-  disabled?: boolean
-  onPress?: () => void
-}
+
 
 export default function ProductionScreen() {
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
@@ -414,497 +368,432 @@ export default function ProductionScreen() {
       })),
   ]
 
-  const inventoryRows: InventoryRowData[] = [
-    {
-      key: 'gasoline',
-      title: 'Gasoline',
-      subtitle: `${game.gasoline}/${derived.maxGasolineStorage} in storage · sold from Factory`,
-    },
-    {
-      key: 'asphalt',
-      title: 'Asphalt',
-      subtitle: `${game.productInventory.asphalt}/${ASPHALT_BALANCE.maxStorage} in storage · used for contracts and standing orders`,
-    },
-    ...products.map((product) => {
-      const stock = game.productInventory[product.key]
-      const max = getProductMaxStorage(derived, product.key)
-      const price = getProductSellPrice(
-        product.key,
-        derived.productSellMultiplier,
-        product.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1,
-      )
-      return {
-        key: product.key,
-        title: product.label,
-        subtitle: `${stock}/${max} in storage · sell @ $${price}`,
-        actionLabel: 'Sell All',
-        disabled: stock <= 0,
-        onPress: () => {
-          if (stock > 0) {
-            spawnFloat(`+$${(stock * price).toLocaleString()}`, 'income')
-            haptics.tap()
-          }
-          sellProduct(product.key, stock)
-        },
-      }
-    }),
-  ]
 
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
+
+      {/* ── Dark header ── */}
       <View style={styles.header}>
         <Text style={styles.title}>Production</Text>
-        <Text style={styles.subtitle}>Production management, inventory, and automation.</Text>
+        <View style={styles.headerStats}>
+          <View style={styles.hStat}>
+            <Text style={styles.hStatVal}>{game.crudeOil}</Text>
+            <Text style={styles.hStatLabel}>🛢 Crude</Text>
+          </View>
+          <View style={styles.hStatDiv} />
+          <View style={styles.hStat}>
+            <Text style={styles.hStatVal}>{game.feedstock}</Text>
+            <Text style={styles.hStatLabel}>⚗️ Feed</Text>
+          </View>
+          <View style={styles.hStatDiv} />
+          <View style={styles.hStat}>
+            <Text style={styles.hStatVal}>{game.gasoline}</Text>
+            <Text style={styles.hStatLabel}>⛽ Gas</Text>
+          </View>
+          {game.electricity > 0 && (
+            <>
+              <View style={styles.hStatDiv} />
+              <View style={styles.hStat}>
+                <Text style={styles.hStatVal}>{game.electricity}</Text>
+                <Text style={styles.hStatLabel}>⚡ Power</Text>
+              </View>
+            </>
+          )}
+          {bottlenecks.length > 0 && (
+            <>
+              <View style={styles.hStatDiv} />
+              <View style={styles.hStat}>
+                <Text style={[styles.hStatVal, { color: colors.orange }]}>{bottlenecks.length}</Text>
+                <Text style={styles.hStatLabel}>⚠ Issues</Text>
+              </View>
+            </>
+          )}
+        </View>
       </View>
+
       <ScrollView contentContainerStyle={styles.list}>
-        <Section title="Production Health">
-          <View style={styles.card}>
-            {healthRows.map((row, index) => {
-              const pct = row.target > 0 ? Math.min(100, Math.round((row.current / row.target) * 100)) : 0
-              return (
-                <View key={row.key} style={[styles.healthRow, index === healthRows.length - 1 && styles.lastRow]}>
-                  <View style={styles.healthRowTop}>
-                    <Text style={styles.healthLabel}>{row.label}</Text>
-                    <View style={[styles.healthBadge, { backgroundColor: getHealthColor(row.state) }]}>
-                      <Text style={styles.healthBadgeText}>{row.state}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.healthStatus}>{row.statusText}</Text>
-                  <View style={styles.healthMeterRow}>
-                    <ProgressBar current={row.current} target={row.target} color={getHealthColor(row.state)} />
-                    <Text style={styles.healthMeterPct}>{pct}%</Text>
+
+        {/* ── Live Status ── */}
+        <Text style={styles.sectionLabel}>Live Status</Text>
+        <View style={styles.statusGrid}>
+          {healthRows.map((row) => {
+            const pct = row.target > 0 ? Math.min(100, Math.round((row.current / row.target) * 100)) : 0
+            const color = getHealthColor(row.state)
+            return (
+              <View key={row.key} style={styles.statusCard}>
+                <View style={styles.statusCardTop}>
+                  <Text style={styles.statusCardLabel}>{row.label}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: color }]}>
+                    <Text style={styles.statusBadgeText}>{row.state}</Text>
                   </View>
                 </View>
-              )
-            })}
-          </View>
-        </Section>
+                <View style={styles.statusBar}>
+                  <View style={[styles.statusBarFill, { width: `${pct}%` as any, backgroundColor: color }]} />
+                </View>
+                <Text style={styles.statusNote} numberOfLines={2}>{row.statusText}</Text>
+              </View>
+            )
+          })}
+        </View>
 
-        <Section title="Bottlenecks">
-          <View style={styles.card}>
-            {bottlenecks.map((insight, index) => (
-              <View key={`${index}-${insight}`} style={[styles.insightRow, index === bottlenecks.length - 1 && styles.lastRow]}>
-                <View style={styles.insightDot} />
-                <Text style={styles.insightText}>{insight}</Text>
+        {/* Bottleneck alerts */}
+        {bottlenecks.length > 0 && (
+          <View style={styles.alertBox}>
+            {bottlenecks.map((b, i) => (
+              <View key={i} style={styles.alertRow}>
+                <Text style={styles.alertDot}>⚠</Text>
+                <Text style={styles.alertText}>{b}</Text>
               </View>
             ))}
           </View>
-        </Section>
-
-        <Section title="Production Overview">
-          <CollapsibleCard
-            title="Overview"
-            summary={`${productionRows.length} product${productionRows.length === 1 ? '' : 's'}`}
-          >
-            <ProductionOverview rows={productionRows} />
-          </CollapsibleCard>
-        </Section>
-
-        <Section title="Inventory">
-          <View style={styles.card}>
-            {inventoryRows.map((row) => (
-              <InventoryRow
-                key={row.key}
-                title={row.title}
-                subtitle={row.subtitle}
-                actionLabel={row.actionLabel}
-                disabled={row.disabled}
-                onPress={row.onPress}
-              />
-            ))}
-          </View>
-        </Section>
-
-        {game.refineryLevel >= ASPHALT_BALANCE.unlockLevel && (
-          <Section title="Asphalt Production">
-            <View style={styles.card}>
-              <Text style={styles.inventorySubtitle}>
-                {`${game.productInventory.asphalt} / ${ASPHALT_BALANCE.maxStorage} in storage · uses 1 crude per unit · sold via contracts`}
-              </Text>
-              <View style={styles.asphaltButtons}>
-                <AnimatedPressable
-                  style={[styles.asphaltButton, game.crudeOil < ASPHALT_BALANCE.batchSize && styles.asphaltButtonDisabled]}
-                  onPress={() => produceAsphalt(ASPHALT_BALANCE.batchSize)}
-                >
-                  <Text style={styles.asphaltButtonLabel}>Produce {ASPHALT_BALANCE.batchSize}</Text>
-                </AnimatedPressable>
-                <AnimatedPressable
-                  style={[styles.asphaltButton, game.crudeOil < ASPHALT_BALANCE.largeBatchSize && styles.asphaltButtonDisabled]}
-                  onPress={() => produceAsphalt(ASPHALT_BALANCE.largeBatchSize)}
-                >
-                  <Text style={styles.asphaltButtonLabel}>Produce {ASPHALT_BALANCE.largeBatchSize}</Text>
-                </AnimatedPressable>
-              </View>
-            </View>
-          </Section>
         )}
 
-        <Section title="Automation">
-          <View style={styles.card}>
-            <View style={styles.automationHeader}>
-              <Text style={styles.automationTitle}>Auto-trade</Text>
-              <Switch
-                value={autoTrade.enabled}
-                onValueChange={(value) => updateAutoTrade({ enabled: value })}
-                trackColor={{ false: colors.creamBorder, true: colors.green }}
-              />
-            </View>
-            {autoTrade.enabled && (
-              <>
-                <View style={styles.thresholdRow}>
-                  <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
-                  <View style={styles.stepper}>
-                    <Pressable
-                      style={styles.stepperButton}
-                      onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}
-                    >
-                      <Text style={styles.stepperLabel}>-</Text>
-                    </Pressable>
-                    <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
-                    <Pressable
-                      style={styles.stepperButton}
-                      onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}
-                    >
-                      <Text style={styles.stepperLabel}>+</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <View style={styles.thresholdRow}>
-                  <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
-                  <View style={styles.stepper}>
-                    <Pressable
-                      style={styles.stepperButton}
-                      onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}
-                    >
-                      <Text style={styles.stepperLabel}>-</Text>
-                    </Pressable>
-                    <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
-                    <Pressable
-                      style={styles.stepperButton}
-                      onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}
-                    >
-                      <Text style={styles.stepperLabel}>+</Text>
-                    </Pressable>
-                  </View>
-                </View>
+        {/* ── Products ── */}
+        <Text style={styles.sectionLabel}>Inventory</Text>
 
-                {/* One row per secondary product the player has a plant
-                    for -- building e.g. a Lubricant Plant adds a "Sell
-                    lubricants above X%" row, so Auto-trade covers it
-                    without a manual sell-chip tap every few minutes.
-                    Hidden for products with no plant built yet. */}
-                {products
-                  .filter((product) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[product.key]] > 0)
-                  .map((product) => {
-                    const threshold = autoTrade.productSellThresholds[product.key] ?? 80
-                    return (
-                      <View key={product.key} style={styles.thresholdRow}>
-                        <Text style={styles.thresholdLabel}>
-                          Sell {product.label.toLowerCase()} above {threshold}%
-                        </Text>
-                        <View style={styles.stepper}>
-                          <Pressable
-                            style={styles.stepperButton}
-                            onPress={() => adjustProductSellThreshold(product.key, -5)}
-                          >
-                            <Text style={styles.stepperLabel}>-</Text>
-                          </Pressable>
-                          <Text style={styles.stepperValue}>{threshold}%</Text>
-                          <Pressable
-                            style={styles.stepperButton}
-                            onPress={() => adjustProductSellThreshold(product.key, 5)}
-                          >
-                            <Text style={styles.stepperLabel}>+</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    )
-                  })}
-              </>
-            )}
+        {/* Gasoline */}
+        <View style={styles.productCard}>
+          <View style={styles.productCardTop}>
+            <View style={styles.productCardLeft}>
+              <Text style={styles.productName}>⛽ Gasoline</Text>
+              <Text style={styles.productSub}>{game.gasoline} / {derived.maxGasolineStorage} · sold from Factory</Text>
+            </View>
+            <Text style={[styles.productPct, { color: colors.green }]}>
+              {derived.maxGasolineStorage > 0 ? Math.round((game.gasoline / derived.maxGasolineStorage) * 100) : 0}%
+            </Text>
+          </View>
+          <View style={styles.productBar}>
+            <View style={[styles.productBarFill, {
+              width: `${derived.maxGasolineStorage > 0 ? Math.min(100, Math.round((game.gasoline / derived.maxGasolineStorage) * 100)) : 0}%` as any,
+              backgroundColor: colors.green,
+            }]} />
+          </View>
+        </View>
+
+        {/* Secondary products with plant built */}
+        {products
+          .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+          .map((product) => {
+            const stock = game.productInventory[product.key]
+            const max = getProductMaxStorage(derived, product.key)
+            const price = getProductSellPrice(
+              product.key,
+              derived.productSellMultiplier,
+              product.key === 'petrochemicals' ? game.petrochemicalsDemandMultiplier : 1,
+            )
+            const pct = max > 0 ? Math.min(100, Math.round((stock / max) * 100)) : 0
+            return (
+              <View key={product.key} style={styles.productCard}>
+                <View style={styles.productCardTop}>
+                  <View style={styles.productCardLeft}>
+                    <Text style={styles.productName}>{product.label}</Text>
+                    <Text style={styles.productSub}>{stock} / {max} · ${price}/unit</Text>
+                  </View>
+                  <AnimatedPressable
+                    style={[styles.sellBtn, stock <= 0 && styles.sellBtnDisabled]}
+                    onPress={() => {
+                      if (stock > 0) {
+                        spawnFloat(`+$${(stock * price).toLocaleString()}`, 'income')
+                        haptics.tap()
+                      }
+                      sellProduct(product.key, stock)
+                    }}
+                  >
+                    <Text style={styles.sellBtnLabel}>{stock <= 0 ? 'Empty' : 'Sell All'}</Text>
+                  </AnimatedPressable>
+                </View>
+                <View style={styles.productBar}>
+                  <View style={[styles.productBarFill, {
+                    width: `${pct}%` as any,
+                    backgroundColor: product.color,
+                  }]} />
+                </View>
+              </View>
+            )
+          })}
+
+        {/* Asphalt */}
+        {game.refineryLevel >= ASPHALT_BALANCE.unlockLevel && (
+          <View style={styles.productCard}>
+            <View style={styles.productCardTop}>
+              <View style={styles.productCardLeft}>
+                <Text style={styles.productName}>🛣 Asphalt</Text>
+                <Text style={styles.productSub}>{game.productInventory.asphalt} / {ASPHALT_BALANCE.maxStorage} · via contracts</Text>
+              </View>
+              <View style={styles.asphaltBtns}>
+                <AnimatedPressable
+                  style={[styles.asphaltBtn, game.crudeOil < ASPHALT_BALANCE.batchSize && styles.asphaltBtnOff]}
+                  onPress={() => produceAsphalt(ASPHALT_BALANCE.batchSize)}
+                >
+                  <Text style={styles.asphaltBtnLabel}>+{ASPHALT_BALANCE.batchSize}</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={[styles.asphaltBtn, game.crudeOil < ASPHALT_BALANCE.largeBatchSize && styles.asphaltBtnOff]}
+                  onPress={() => produceAsphalt(ASPHALT_BALANCE.largeBatchSize)}
+                >
+                  <Text style={styles.asphaltBtnLabel}>+{ASPHALT_BALANCE.largeBatchSize}</Text>
+                </AnimatedPressable>
+              </View>
+            </View>
+            <View style={styles.productBar}>
+              <View style={[styles.productBarFill, {
+                width: `${ASPHALT_BALANCE.maxStorage > 0 ? Math.min(100, Math.round((game.productInventory.asphalt / ASPHALT_BALANCE.maxStorage) * 100)) : 0}%` as any,
+                backgroundColor: '#8A7A5A',
+              }]} />
+            </View>
+          </View>
+        )}
+
+        {/* ── Automation ── */}
+        <Text style={styles.sectionLabel}>Automation</Text>
+        <View style={styles.autoCard}>
+          <View style={styles.autoRow}>
+            <View>
+              <Text style={styles.autoRowTitle}>Auto-trade</Text>
+              <Text style={styles.autoRowSub}>Buys crude and sells gas automatically</Text>
+            </View>
+            <Switch
+              value={autoTrade.enabled}
+              onValueChange={(v) => updateAutoTrade({ enabled: v })}
+              trackColor={{ false: colors.creamBorder, true: colors.green }}
+            />
           </View>
 
-          {(derived.buildingCounts.lubricantPlant > 0 ||
-            derived.buildingCounts.jetFuelPlant > 0 ||
-            derived.buildingCounts.petrochemicalPlant > 0) && (
-            <View style={styles.card}>
-              <Text style={styles.automationTitle}>Feedstock Priority</Text>
-              <Text style={styles.feedstockHint}>
-                0% = off, 100% = normal, 200% = highest priority when feedstock is short.
-              </Text>
-              {(
-                [
-                  { buildingKey: 'lubricantPlant', label: 'Lubricants' },
-                  { buildingKey: 'jetFuelPlant', label: 'Jet Fuel' },
-                  { buildingKey: 'petrochemicalPlant', label: 'Petrochemicals' },
-                ] as const
-              ).map(
-                ({ buildingKey, label }) =>
-                  derived.buildingCounts[buildingKey] > 0 && (
-                    <View key={buildingKey} style={styles.thresholdRow}>
-                      <Text style={styles.thresholdLabel}>{label}</Text>
+          {autoTrade.enabled && (
+            <>
+              <View style={styles.autoDivider} />
+              {/* Crude buy threshold */}
+              <View style={styles.thresholdRow}>
+                <Text style={styles.thresholdLabel}>Buy crude below</Text>
+                <View style={styles.stepper}>
+                  <Pressable style={styles.stepBtn} onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}>
+                    <Text style={styles.stepBtnLabel}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepVal}>{autoTrade.buyThreshold}%</Text>
+                  <Pressable style={styles.stepBtn} onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}>
+                    <Text style={styles.stepBtnLabel}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+              {/* Gas sell threshold */}
+              <View style={styles.thresholdRow}>
+                <Text style={styles.thresholdLabel}>Sell gasoline above</Text>
+                <View style={styles.stepper}>
+                  <Pressable style={styles.stepBtn} onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}>
+                    <Text style={styles.stepBtnLabel}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepVal}>{autoTrade.sellThreshold}%</Text>
+                  <Pressable style={styles.stepBtn} onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}>
+                    <Text style={styles.stepBtnLabel}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+              {/* Per-product auto-sell */}
+              {products
+                .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+                .map((product) => {
+                  const threshold = autoTrade.productSellThresholds[product.key] ?? 80
+                  return (
+                    <View key={product.key} style={styles.thresholdRow}>
+                      <Text style={styles.thresholdLabel}>Sell {product.label.toLowerCase()} above</Text>
                       <View style={styles.stepper}>
-                        <Pressable
-                          style={styles.stepperButton}
-                          onPress={() => adjustFeedstockPriority(buildingKey, -1)}
-                        >
-                          <Text style={styles.stepperLabel}>-</Text>
+                        <Pressable style={styles.stepBtn} onPress={() => adjustProductSellThreshold(product.key, -5)}>
+                          <Text style={styles.stepBtnLabel}>−</Text>
                         </Pressable>
-                        <Text style={styles.stepperValue}>
-                          {Math.round(game.feedstockPriority[buildingKey] * 100)}%
-                        </Text>
-                        <Pressable
-                          style={styles.stepperButton}
-                          onPress={() => adjustFeedstockPriority(buildingKey, 1)}
-                        >
-                          <Text style={styles.stepperLabel}>+</Text>
+                        <Text style={styles.stepVal}>{threshold}%</Text>
+                        <Pressable style={styles.stepBtn} onPress={() => adjustProductSellThreshold(product.key, 5)}>
+                          <Text style={styles.stepBtnLabel}>+</Text>
                         </Pressable>
                       </View>
                     </View>
-                  ),
-              )}
-            </View>
+                  )
+                })}
+            </>
           )}
-        </Section>
+        </View>
+
+        {/* Feedstock Priority */}
+        {(derived.buildingCounts.lubricantPlant > 0 ||
+          derived.buildingCounts.jetFuelPlant > 0 ||
+          derived.buildingCounts.petrochemicalPlant > 0) && (
+          <View style={[styles.autoCard, { marginTop: spacing.xs }]}>
+            <Text style={styles.autoRowTitle}>Feedstock Priority</Text>
+            <Text style={styles.autoRowSub}>0% = off · 100% = normal · 200% = priority</Text>
+            <View style={styles.autoDivider} />
+            {(
+              [
+                { buildingKey: 'lubricantPlant', label: 'Lubricants' },
+                { buildingKey: 'jetFuelPlant', label: 'Jet Fuel' },
+                { buildingKey: 'petrochemicalPlant', label: 'Petrochemicals' },
+              ] as const
+            ).map(
+              ({ buildingKey, label }) =>
+                derived.buildingCounts[buildingKey] > 0 && (
+                  <View key={buildingKey} style={styles.thresholdRow}>
+                    <Text style={styles.thresholdLabel}>{label}</Text>
+                    <View style={styles.stepper}>
+                      <Pressable style={styles.stepBtn} onPress={() => adjustFeedstockPriority(buildingKey, -1)}>
+                        <Text style={styles.stepBtnLabel}>−</Text>
+                      </Pressable>
+                      <Text style={styles.stepVal}>
+                        {Math.round(game.feedstockPriority[buildingKey] * 100)}%
+                      </Text>
+                      <Pressable style={styles.stepBtn} onPress={() => adjustFeedstockPriority(buildingKey, 1)}>
+                        <Text style={styles.stepBtnLabel}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ),
+            )}
+          </View>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen: { flex: 1, backgroundColor: colors.cream },
+  loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+
+  // Header
   header: {
+    backgroundColor: '#1C2634',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.inkMuted,
-    marginTop: 2,
-  },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: spacing.xs,
-  },
-  card: {
-    backgroundColor: colors.white,
+  title: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 },
+  headerStats: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  healthRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.creamBorder,
-  },
-  healthRowTop: {
-    flexDirection: 'row',
+    paddingHorizontal: spacing.xs,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
   },
-  healthLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  healthBadge: {
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  healthBadgeText: {
+  hStat: { flex: 1, alignItems: 'center' },
+  hStatVal: { fontSize: 16, fontWeight: '900', color: '#FFFFFF' },
+  hStatLabel: { fontSize: 8, color: '#6B8099', marginTop: 1 },
+  hStatDiv: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' },
+
+  // List
+  list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
+
+  sectionLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.white,
-  },
-  healthStatus: {
-    fontSize: 12,
+    fontWeight: '900',
     color: colors.inkMuted,
-    marginTop: spacing.xs,
-  },
-  healthMeterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  healthMeterPct: {
-    width: 40,
-    textAlign: 'right',
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.inkMuted,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.creamBorder,
-  },
-  insightDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.orange,
-    marginTop: 5,
-  },
-  insightText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.ink,
-  },
-  lastRow: {
-    borderBottomWidth: 0,
-  },
-  inventoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.creamBorder,
-  },
-  inventoryText: {
-    flex: 1,
-  },
-  inventoryTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.ink,
-  },
-  asphaltButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
     marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
-  asphaltButton: {
+
+  // Status grid (2 columns)
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  statusCard: {
     flex: 1,
-    backgroundColor: colors.green,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  asphaltButtonDisabled: {
-    opacity: 0.4,
-  },
-  asphaltButtonLabel: {
-    fontWeight: '700',
-    color: colors.ink,
-    fontSize: 13,
-  },
-  inventorySubtitle: {
-    fontSize: 12,
-    color: colors.inkMuted,
-    marginTop: 2,
-  },
-  inventoryButton: {
-    minWidth: 82,
-    borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    backgroundColor: colors.green,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  inventoryButtonDisabled: {
+    minWidth: '47%',
     backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
     borderColor: colors.creamBorder,
+    padding: spacing.sm,
   },
-  inventoryButtonLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
+  statusCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  statusCardLabel: { fontSize: 12, fontWeight: '800', color: colors.ink },
+  statusBadge: { borderRadius: radii.pill, paddingHorizontal: 6, paddingVertical: 2 },
+  statusBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  statusBar: { height: 4, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden', marginBottom: 4 },
+  statusBarFill: { height: '100%', borderRadius: radii.pill },
+  statusNote: { fontSize: 10, color: colors.inkMuted, lineHeight: 14 },
+
+  // Alert box
+  alertBox: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: colors.orange,
+    padding: spacing.sm,
+    gap: 4,
   },
-  automationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  alertRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
+  alertDot: { fontSize: 11, color: colors.orange },
+  alertText: { flex: 1, fontSize: 12, color: colors.ink, lineHeight: 16 },
+
+  // Product cards
+  productCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: colors.creamBorder,
+    padding: spacing.sm,
   },
-  automationTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.ink,
+  productCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  productCardLeft: { flex: 1, marginRight: spacing.sm },
+  productName: { fontSize: 13, fontWeight: '800', color: colors.ink },
+  productSub: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
+  productPct: { fontSize: 16, fontWeight: '900' },
+  productBar: { height: 6, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden' },
+  productBarFill: { height: '100%', borderRadius: radii.pill },
+
+  // Sell button
+  sellBtn: {
+    backgroundColor: colors.green,
+    borderRadius: radii.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  feedstockHint: {
-    color: colors.inkMuted,
-    fontSize: 11,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
+  sellBtnDisabled: { backgroundColor: colors.creamBorder },
+  sellBtnLabel: { fontSize: 11, fontWeight: '800', color: '#fff' },
+
+  // Asphalt produce buttons
+  asphaltBtns: { flexDirection: 'row', gap: spacing.xs },
+  asphaltBtn: {
+    backgroundColor: '#8A7A5A',
+    borderRadius: radii.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
+  asphaltBtnOff: { opacity: 0.35 },
+  asphaltBtnLabel: { fontSize: 11, fontWeight: '800', color: '#fff' },
+
+  // Automation card
+  autoCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: colors.creamBorder,
+    padding: spacing.md,
+  },
+  autoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  autoRowTitle: { fontSize: 13, fontWeight: '800', color: colors.ink },
+  autoRowSub: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
+  autoDivider: { height: 1, backgroundColor: colors.creamBorder, marginVertical: spacing.sm },
+
+  // Threshold stepper rows
   thresholdRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.sm,
-    gap: spacing.sm,
+    paddingVertical: 4,
   },
-  thresholdLabel: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.inkMuted,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  stepperButton: {
-    width: 28,
-    height: 28,
+  thresholdLabel: { flex: 1, fontSize: 12, color: colors.inkMuted, paddingRight: spacing.sm },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stepBtn: {
+    width: 28, height: 28,
     borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: colors.ink,
     backgroundColor: colors.cream,
+    borderWidth: 1.5,
+    borderColor: colors.creamBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperLabel: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 16,
-  },
-  stepperValue: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 13,
-    minWidth: 44,
-    textAlign: 'center',
-  },
+  stepBtnLabel: { fontSize: 16, fontWeight: '800', color: colors.ink },
+  stepVal: { fontSize: 12, fontWeight: '800', color: colors.ink, minWidth: 42, textAlign: 'center' },
 })
