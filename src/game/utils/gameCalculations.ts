@@ -227,6 +227,34 @@ export function getUpgradeProductionRequirement(level: number) {
   return ECONOMY_BALANCE.refineryUpgradeProductionPerLevel * level
 }
 
+// Reputation required to advance past `level`. 0 for early levels,
+// then scales at +15 rep per level above 4.
+export function getUpgradeReputationRequirement(level: number): number {
+  return Math.max(0, (level - 4) * 15)
+}
+
+// Research items required to advance past `level`. 0 for early levels,
+// then 1 additional item required per 2 levels above 6.
+export function getUpgradeResearchRequirement(level: number): number {
+  return Math.max(0, Math.floor((level - 6) / 2))
+}
+
+// Returns all unmet requirements as human-readable strings.
+// Empty array = can upgrade.
+export function getUpgradeBlockers(game: GameState): string[] {
+  const level = game.refineryLevel
+  const cost = getUpgradeCost(level)
+  const prodReq = getUpgradeProductionRequirement(level)
+  const repReq = getUpgradeReputationRequirement(level)
+  const researchReq = getUpgradeResearchRequirement(level)
+  const blockers: string[] = []
+  if (game.money < cost) blockers.push(`Need $${cost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`)
+  if (game.totalGasolineProduced < prodReq) blockers.push(`Need ${prodReq.toLocaleString()} lifetime gasoline (have ${game.totalGasolineProduced.toLocaleString()})`)
+  if (game.reputation < repReq) blockers.push(`Need ${repReq} reputation (have ${Math.floor(game.reputation)})`)
+  if (game.unlockedResearchIds.length < researchReq) blockers.push(`Need ${researchReq} research items (have ${game.unlockedResearchIds.length})`)
+  return blockers
+}
+
 export function addLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, CORE_BALANCE.maxLogItems)
 }

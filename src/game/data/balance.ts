@@ -148,15 +148,12 @@ export const ECONOMY_BALANCE = {
   // Fuel Plant it unlocks) and Lv15 (~$23,220, vs $15,000) now roughly
   // track the infrastructure each level gates, without exploding at very
   // high levels the way an exponential curve would.
-  refineryUpgradeBaseCost: 60,
-  refineryUpgradeLevelStep: 18,
+  refineryUpgradeBaseCost: 200,
+  refineryUpgradeLevelStep: 50,
   // Non-cash gate alongside the cost: cumulative lifetime gasoline output
-  // required to advance past a level. Mainly matters early (Lv1-5ish) --
-  // it forces "build a basic production line and run it for a bit" before
-  // the first few upgrades, rather than buying Lv2+ with zero buildings
-  // placed. At higher levels this is essentially always already satisfied
-  // by an active refinery, so cost becomes the dominant gate again.
-  refineryUpgradeProductionPerLevel: 50,
+  // required to advance past a level. Scales harder now to enforce
+  // "run your refinery for a while" before leveling..
+  refineryUpgradeProductionPerLevel: 200,
 } as const
 
 export const PRODUCTION_BALANCE = {

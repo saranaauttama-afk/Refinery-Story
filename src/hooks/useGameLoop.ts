@@ -48,6 +48,8 @@ import {
   getTrainingCost,
   getUpgradeCost,
   getUpgradeProductionRequirement,
+  getUpgradeReputationRequirement,
+  getUpgradeResearchRequirement,
   orderShipment as orderShipmentFn,
 } from '../game/utils/gameCalculations'
 import {
@@ -1184,8 +1186,12 @@ export function useGameLoop() {
       update((current) => {
         const cost = getUpgradeCost(current.refineryLevel)
         const requiredProduction = getUpgradeProductionRequirement(current.refineryLevel)
+        const requiredReputation = getUpgradeReputationRequirement(current.refineryLevel)
+        const requiredResearch = getUpgradeResearchRequirement(current.refineryLevel)
         if (current.money < cost) return current
         if (current.totalGasolineProduced < requiredProduction) return current
+        if (current.reputation < requiredReputation) return current
+        if (current.unlockedResearchIds.length < requiredResearch) return current
         return applyWinGoal({
           ...current,
           money: current.money - cost,

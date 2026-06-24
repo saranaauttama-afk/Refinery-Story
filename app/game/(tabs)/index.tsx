@@ -46,6 +46,9 @@ import {
   getSeasonLabel,
   getUpgradeCost,
   getUpgradeProductionRequirement,
+  getUpgradeBlockers,
+  getUpgradeReputationRequirement,
+  getUpgradeResearchRequirement,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
@@ -121,6 +124,7 @@ export default function RefineryScreen() {
 
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
   // Drives the unified Trade panel's expand/collapse (Buy/Sell + Auto-
   // trade combined into one floating panel above the tab bar -- replaces
@@ -199,7 +203,8 @@ export default function RefineryScreen() {
   const upgradeProductionRequired  = getUpgradeProductionRequirement(game.refineryLevel)
   const hasEnoughMoney             = game.money >= upgradeCost
   const hasEnoughProduction        = game.totalGasolineProduced >= upgradeProductionRequired
-  const canUpgrade                 = hasEnoughMoney && hasEnoughProduction
+  const upgradeBlockers            = getUpgradeBlockers(game)
+  const canUpgrade                 = upgradeBlockers.length === 0
   const nextGoal                   = derived.activeMilestones.find((m) => !m.isCompleted)
 
   const products: {
@@ -284,13 +289,7 @@ export default function RefineryScreen() {
         {/* Name + level — top left */}
         <AnimatedPressable
           style={styles.nameHud}
-          onPress={() => {
-            if (canUpgrade) {
-              spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
-              haptics.confirm()
-            }
-            upgradeRefinery()
-          }}
+          onPress={() => setUpgradeModalOpen(true)}
         >
           <Text style={styles.nameText}>{game.refineryName}</Text>
           <View style={[styles.lvPill, canUpgrade && styles.lvPillReady]}>
@@ -735,6 +734,63 @@ export default function RefineryScreen() {
           )
         })()}
       </Sheet>
+
+      {/* ── Upgrade Modal ──────────────────────────────────────────────── */}
+      <Sheet visible={upgradeModalOpen} onClose={() => setUpgradeModalOpen(false)} title="Upgrade Refinery">
+        <View style={styles.upgradeRow}>
+          <Text style={styles.upgradeLabel}>Current level</Text>
+          <Text style={styles.upgradeValue}>Lv{game.refineryLevel}</Text>
+        </View>
+        <View style={styles.upgradeRow}>
+          <Text style={styles.upgradeLabel}>Cost</Text>
+          <Text style={[styles.upgradeValue, !hasEnoughMoney && styles.upgradeBlocked]}>
+            ${upgradeCost.toLocaleString()}
+          </Text>
+        </View>
+        <View style={styles.upgradeRow}>
+          <Text style={styles.upgradeLabel}>Gasoline produced</Text>
+          <Text style={[styles.upgradeValue, !hasEnoughProduction && styles.upgradeBlocked]}>
+            {game.totalGasolineProduced.toLocaleString()} / {upgradeProductionRequired.toLocaleString()}
+          </Text>
+        </View>
+        {getUpgradeReputationRequirement(game.refineryLevel) > 0 && (
+          <View style={styles.upgradeRow}>
+            <Text style={styles.upgradeLabel}>Reputation</Text>
+            <Text style={[styles.upgradeValue, game.reputation < getUpgradeReputationRequirement(game.refineryLevel) && styles.upgradeBlocked]}>
+              {Math.floor(game.reputation)} / {getUpgradeReputationRequirement(game.refineryLevel)}
+            </Text>
+          </View>
+        )}
+        {getUpgradeResearchRequirement(game.refineryLevel) > 0 && (
+          <View style={styles.upgradeRow}>
+            <Text style={styles.upgradeLabel}>Research items</Text>
+            <Text style={[styles.upgradeValue, game.unlockedResearchIds.length < getUpgradeResearchRequirement(game.refineryLevel) && styles.upgradeBlocked]}>
+              {game.unlockedResearchIds.length} / {getUpgradeResearchRequirement(game.refineryLevel)}
+            </Text>
+          </View>
+        )}
+        {upgradeBlockers.length > 0 && (
+          <View>
+            {upgradeBlockers.map((b, i) => (
+              <Text key={i} style={styles.upgradeBlockerNote}>- {b}</Text>
+            ))}
+          </View>
+        )}
+        <AnimatedPressable
+          style={[styles.upgradeButton, !canUpgrade && styles.upgradeButtonDisabled]}
+          onPress={() => {
+            if (!canUpgrade) return
+            spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+            haptics.confirm()
+            upgradeRefinery()
+            setUpgradeModalOpen(false)
+          }}
+        >
+          <Text style={styles.upgradeButtonLabel}>
+            {canUpgrade ? `Upgrade to Lv${game.refineryLevel + 1}` : 'Requirements not met'}
+          </Text>
+        </AnimatedPressable>
+      </Sheet>
     </SafeAreaView>
   )
 }
@@ -841,6 +897,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  upgradeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.creamBorder,
+  },
+  upgradeLabel: {
+    fontSize: 14,
+    color: colors.inkMuted,
+  },
+  upgradeValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.ink,
+  },
+  upgradeBlocked: {
+    color: colors.red,
+  },
+  upgradeBlockerNote: {
+    fontSize: 12,
+    color: colors.red,
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  upgradeButton: {
+    marginTop: 16,
+    backgroundColor: colors.green,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: radii.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  upgradeButtonDisabled: {
+    backgroundColor: colors.creamBorder,
+    borderColor: colors.inkMuted,
+  },
+  upgradeButtonLabel: {
+    fontWeight: '800',
+    fontSize: 15,
+    color: colors.ink,
+  },
   hintActive: {
     textAlign: 'center',
     fontSize: 12,
