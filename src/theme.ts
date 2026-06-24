@@ -49,6 +49,6 @@ export const radii = {
 // position: 'absolute' with its own height + bottom margin, so React
 // Navigation's automatic content-inset doesn't apply -- every tab
 // screen's scrollable content needs at least this much bottom padding so
-// the last item isn't hidden underneath the bar. Tab bar height (64) +
+// the last item isn't hidden underneath the bar. Tab bar height (72) +
 // its bottom margin (spacing.md = 12) + a little breathing room.
-export const FLOATING_TAB_BAR_CLEARANCE = 64 + 12 + 16
+export const FLOATING_TAB_BAR_CLEARANCE = 72 + 12 + 16
