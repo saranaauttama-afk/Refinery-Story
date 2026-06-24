@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
+  Image,
   LayoutAnimation,
   Modal,
   Platform,
@@ -27,6 +28,7 @@ import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import ProgressBar from '../../../src/components/ProgressBar'
 import Sheet from '../../../src/components/Sheet'
+import { BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_SURFACE } from '../../../src/buildingIdentity'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
@@ -62,6 +64,48 @@ import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGrou
 // but this review pass uses diamond ground as the default experience.
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
+
+// Plant art thumbnails (lv1) used in build sheet
+const PLANT_THUMB: Partial<Record<BuildingType, ReturnType<typeof require>>> = {
+  crudeTank:           require('../../../assets/plants/crude_tank_lv1.png'),
+  distillationUnit:    require('../../../assets/plants/distillation_unit_lv1.png'),
+  productTank:         require('../../../assets/plants/product_tank_lv1.png'),
+  laboratory:          require('../../../assets/plants/laboratory_lv1.png'),
+  maintenanceWorkshop: require('../../../assets/plants/maintenance_workshop_lv1.png'),
+  salesOffice:         require('../../../assets/plants/sales_office_lv1.png'),
+  lubricantPlant:      require('../../../assets/plants/lubricant_plant_lv1.png'),
+  jetFuelPlant:        require('../../../assets/plants/jet_fuel_plant_lv1.png'),
+  petrochemicalPlant:  require('../../../assets/plants/petrochemical_plant_lv1.png'),
+  powerPlant:          require('../../../assets/plants/power_plant_lv1.png'),
+  wasteTreatmentPlant: require('../../../assets/plants/waste_treatment_plant_lv1.png'),
+  polymerPlant:        require('../../../assets/plants/polymer_plant_lv1.png'),
+  lubricantTank:       require('../../../assets/plants/lubricant_tank_lv1.png'),
+  jetFuelTank:         require('../../../assets/plants/jet_fuel_tank_lv1.png'),
+  petrochemicalTank:   require('../../../assets/plants/petrochemical_tank_lv1.png'),
+  recyclingBunker:     require('../../../assets/plants/recycling_bunker_lv1.png'),
+  pelletSilo:          require('../../../assets/plants/pellet_silo_lv1.png'),
+}
+
+// Category display config
+const CATEGORY_LABEL: Record<string, string> = {
+  storage: 'Storage', production: 'Production', research: 'Research',
+  support: 'Support', power: 'Power', waste: 'Recycling',
+}
+
+// Extra build requirements (beyond level and cost)
+const BUILD_REQUIRES: Partial<Record<BuildingType, string>> = {
+  lubricantPlant:      'Needs feedstock from Distillation Unit',
+  jetFuelPlant:        'Needs feedstock + electricity',
+  petrochemicalPlant:  'Needs feedstock + electricity',
+  powerPlant:          'Consumes crude oil',
+  wasteTreatmentPlant: 'Converts waste → recycled material',
+  polymerPlant:        'Needs petrochemicals + electricity',
+  lubricantTank:       'Stores lubricants overflow',
+  jetFuelTank:         'Stores jet fuel overflow',
+  petrochemicalTank:   'Stores petrochemicals overflow',
+  recyclingBunker:     'Stores recycled material overflow',
+  pelletSilo:          'Stores plastic pellets overflow',
+}
 const UPGRADEABLE: BuildingType[] = [
   'crudeTank',
   'distillationUnit',
@@ -614,6 +658,7 @@ export default function RefineryScreen() {
 
       {/* ── Build picker ─────────────────────────────────────────────────── */}
       <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
+        {/* Mystery building events */}
         {HIDDEN_EVENTS.filter(
           (e) => e.reward.kind === 'building' && game.hiddenEventStatus[e.key] === 'unlocked',
         ).map((event) => (
@@ -626,30 +671,96 @@ export default function RefineryScreen() {
             onPress={() => claimHiddenEvent(event.key)}
           />
         ))}
-        {BUILDING_KEYS.map((key) => {
-          const b = BUILDINGS[key]
-          const unlockLevel  = b.unlockLevel ?? 1
-          const hiddenUses   = game.hiddenBuildingUsesRemaining[key] ?? 0
-          const hasHiddenGrant = hiddenUses > 0
-          const locked       = !hasHiddenGrant && game.refineryLevel < unlockLevel
-          const affordable   = hasHiddenGrant || game.money >= b.cost
+
+        {/* Group buildings by category */}
+        {(['storage', 'production', 'power', 'waste', 'research', 'support'] as const).map((category) => {
+          const categoryBuildings = BUILDING_KEYS.filter(
+            (key) => BUILDING_CATEGORY_BY_TYPE[key] === category,
+          )
+          if (categoryBuildings.length === 0) return null
+          const accentColor = BUILDING_CATEGORY_ACCENT[category]
           return (
-            <ListRow
-              key={key}
-              title={b.name.en}
-              subtitle={
-                hasHiddenGrant
-                  ? `FREE (Hidden Event reward · ${hiddenUses} left)`
-                  : locked ? `Requires refinery Lv${unlockLevel}` : `$${b.cost.toLocaleString()}`
-              }
-              badge={hasHiddenGrant ? '✨' : undefined}
-              actionLabel="Build"
-              disabled={locked || !affordable}
-              onPress={() => {
-                if (pickerCell !== null) placeBuilding(pickerCell, key)
-                setPickerCell(null)
-              }}
-            />
+            <View key={category} style={styles.buildCategory}>
+              <Text style={[styles.buildCategoryLabel, { color: accentColor }]}>
+                {CATEGORY_LABEL[category]}
+              </Text>
+              <View style={styles.buildGrid}>
+                {categoryBuildings.map((key) => {
+                  const b = BUILDINGS[key]
+                  const unlockLevel    = b.unlockLevel ?? 1
+                  const hiddenUses     = game.hiddenBuildingUsesRemaining[key] ?? 0
+                  const hasHiddenGrant = hiddenUses > 0
+                  const locked         = !hasHiddenGrant && game.refineryLevel < unlockLevel
+                  const affordable     = hasHiddenGrant || game.money >= b.cost
+                  const canBuild       = !locked && affordable
+                  const thumb          = PLANT_THUMB[key]
+                  const extraReq       = BUILD_REQUIRES[key]
+                  const surfaceColor   = BUILDING_CATEGORY_SURFACE[category]
+
+                  return (
+                    <Pressable
+                      key={key}
+                      style={[
+                        styles.buildCard,
+                        { borderColor: canBuild ? accentColor : locked ? '#D0C8BC' : '#C5D5B0' },
+                        locked && styles.buildCardLocked,
+                        canBuild && affordable && styles.buildCardAffordable,
+                      ]}
+                      onPress={() => {
+                        if (locked || !affordable) return
+                        if (pickerCell !== null) placeBuilding(pickerCell, key)
+                        setPickerCell(null)
+                      }}
+                    >
+                      {/* Thumbnail */}
+                      <View style={[styles.buildThumbWrap, { backgroundColor: locked ? '#EDE8E0' : surfaceColor }]}>
+                        {thumb ? (
+                          <Image source={thumb} style={styles.buildThumb} resizeMode="contain" />
+                        ) : (
+                          <Text style={[styles.buildThumbCode, { color: accentColor }]}>{b.shortName}</Text>
+                        )}
+                        {locked && (
+                          <View style={styles.buildLockOverlay}>
+                            <Text style={styles.buildLockIcon}>🔒</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Info */}
+                      <View style={styles.buildCardBody}>
+                        <Text style={[styles.buildCardName, locked && styles.buildCardNameLocked]} numberOfLines={2}>
+                          {b.name.en}
+                        </Text>
+
+                        {/* Status tag */}
+                        {hasHiddenGrant ? (
+                          <View style={[styles.buildTag, { backgroundColor: colors.gold }]}>
+                            <Text style={styles.buildTagText}>✨ FREE × {hiddenUses}</Text>
+                          </View>
+                        ) : locked ? (
+                          <View style={[styles.buildTag, { backgroundColor: '#C8BEB0' }]}>
+                            <Text style={styles.buildTagText}>Lv{unlockLevel} required</Text>
+                          </View>
+                        ) : !affordable ? (
+                          <View style={[styles.buildTag, { backgroundColor: colors.orange }]}>
+                            <Text style={styles.buildTagText}>Need ${b.cost.toLocaleString()}</Text>
+                          </View>
+                        ) : (
+                          <View style={[styles.buildTag, { backgroundColor: colors.green }]}>
+                            <Text style={styles.buildTagText}>${b.cost.toLocaleString()}</Text>
+                          </View>
+                        )}
+
+                        {/* Extra requirement hint */}
+                        {extraReq && !locked && (
+                          <Text style={styles.buildReqHint} numberOfLines={2}>{extraReq}</Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  )
+                })}
+              </View>
+            </View>
           )
         })}
       </Sheet>
@@ -935,6 +1046,95 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+
+  // ── Build Sheet ─────────────────────────────────────────────────────────────
+  buildCategory: {
+    marginBottom: spacing.md,
+  },
+  buildCategoryLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: spacing.xs,
+    paddingHorizontal: 2,
+  },
+  buildGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  buildCard: {
+    width: '47%',
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  buildCardLocked: {
+    backgroundColor: '#F5F0E8',
+    opacity: 0.6,
+  },
+  buildCardAffordable: {
+    shadowColor: colors.green,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  buildThumbWrap: {
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  buildThumb: {
+    width: 64,
+    height: 64,
+  },
+  buildThumbCode: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  buildLockOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(200,190,175,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buildLockIcon: {
+    fontSize: 22,
+  },
+  buildCardBody: {
+    padding: spacing.sm,
+    gap: 4,
+  },
+  buildCardName: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.ink,
+    lineHeight: 16,
+  },
+  buildCardNameLocked: {
+    color: colors.inkMuted,
+  },
+  buildTag: {
+    borderRadius: radii.pill,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  buildTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.white,
+  },
+  buildReqHint: {
+    fontSize: 9,
+    color: colors.inkMuted,
+    lineHeight: 13,
   },
 
   upgradeRow: {
