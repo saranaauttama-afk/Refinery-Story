@@ -65,6 +65,27 @@ import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGrou
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 
+// Plant art thumbnails used in build + info sheets
+const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ReturnType<typeof require>>>> = {
+  crudeTank:           { 1: require('../../../assets/plants/crude_tank_lv1.png'), 2: require('../../../assets/plants/crude_tank_lv2.png'), 3: require('../../../assets/plants/crude_tank_lv3.png') },
+  distillationUnit:    { 1: require('../../../assets/plants/distillation_unit_lv1.png'), 2: require('../../../assets/plants/distillation_unit_lv2.png'), 3: require('../../../assets/plants/distillation_unit_lv3.png') },
+  productTank:         { 1: require('../../../assets/plants/product_tank_lv1.png'), 2: require('../../../assets/plants/product_tank_lv2.png'), 3: require('../../../assets/plants/product_tank_lv3.png') },
+  laboratory:          { 1: require('../../../assets/plants/laboratory_lv1.png'), 2: require('../../../assets/plants/laboratory_lv2.png'), 3: require('../../../assets/plants/laboratory_lv3.png') },
+  maintenanceWorkshop: { 1: require('../../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../../assets/plants/maintenance_workshop_lv3.png') },
+  salesOffice:         { 1: require('../../../assets/plants/sales_office_lv1.png'), 2: require('../../../assets/plants/sales_office_lv2.png'), 3: require('../../../assets/plants/sales_office_lv3.png') },
+  lubricantPlant:      { 1: require('../../../assets/plants/lubricant_plant_lv1.png'), 2: require('../../../assets/plants/lubricant_plant_lv2.png'), 3: require('../../../assets/plants/lubricant_plant_lv3.png') },
+  jetFuelPlant:        { 1: require('../../../assets/plants/jet_fuel_plant_lv1.png'), 2: require('../../../assets/plants/jet_fuel_plant_lv2.png'), 3: require('../../../assets/plants/jet_fuel_plant_lv3.png') },
+  petrochemicalPlant:  { 1: require('../../../assets/plants/petrochemical_plant_lv1.png'), 2: require('../../../assets/plants/petrochemical_plant_lv2.png'), 3: require('../../../assets/plants/petrochemical_plant_lv3.png') },
+  powerPlant:          { 1: require('../../../assets/plants/power_plant_lv1.png'), 2: require('../../../assets/plants/power_plant_lv2.png'), 3: require('../../../assets/plants/power_plant_lv3.png') },
+  wasteTreatmentPlant: { 1: require('../../../assets/plants/waste_treatment_plant_lv1.png'), 2: require('../../../assets/plants/waste_treatment_plant_lv2.png'), 3: require('../../../assets/plants/waste_treatment_plant_lv3.png') },
+  polymerPlant:        { 1: require('../../../assets/plants/polymer_plant_lv1.png'), 2: require('../../../assets/plants/polymer_plant_lv2.png'), 3: require('../../../assets/plants/polymer_plant_lv3.png') },
+  lubricantTank:       { 1: require('../../../assets/plants/lubricant_tank_lv1.png'), 2: require('../../../assets/plants/lubricant_tank_lv2.png'), 3: require('../../../assets/plants/lubricant_tank_lv3.png') },
+  jetFuelTank:         { 1: require('../../../assets/plants/jet_fuel_tank_lv1.png'), 2: require('../../../assets/plants/jet_fuel_tank_lv2.png'), 3: require('../../../assets/plants/jet_fuel_tank_lv3.png') },
+  petrochemicalTank:   { 1: require('../../../assets/plants/petrochemical_tank_lv1.png'), 2: require('../../../assets/plants/petrochemical_tank_lv2.png'), 3: require('../../../assets/plants/petrochemical_tank_lv3.png') },
+  recyclingBunker:     { 1: require('../../../assets/plants/recycling_bunker_lv1.png'), 2: require('../../../assets/plants/recycling_bunker_lv2.png'), 3: require('../../../assets/plants/recycling_bunker_lv3.png') },
+  pelletSilo:          { 1: require('../../../assets/plants/pellet_silo_lv1.png'), 2: require('../../../assets/plants/pellet_silo_lv2.png'), 3: require('../../../assets/plants/pellet_silo_lv3.png') },
+}
+
 // Plant art thumbnails (lv1) used in build sheet
 const PLANT_THUMB: Partial<Record<BuildingType, ReturnType<typeof require>>> = {
   crudeTank:           require('../../../assets/plants/crude_tank_lv1.png'),
@@ -775,49 +796,130 @@ export default function RefineryScreen() {
           if (infoCell === null) return null
           const cell = game.grid[infoCell]
           if (!cell) return null
-          const level      = game.gridLevels[infoCell] ?? 1
-          const config     = BUILDINGS[cell]
+          const level       = game.gridLevels[infoCell] ?? 1
+          const config      = BUILDINGS[cell]
           const effectLines = getBuildingEffectLines(cell, level, game, derived, infoCell)
+          const nextEffectLines = getBuildingEffectLines(cell, level + 1, game, derived, infoCell)
           const isUpgradeable = UPGRADEABLE.includes(cell)
-          const maxed      = level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
-          const upgradeCost =
-            level === 1 ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
-                        : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
-          const plant          = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
-          const specialistType = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker
-          const specialistName = specialistType
-            ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType : null
+          const maxed       = level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
+          const upgradeCost = level === 1 ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
+          const canAffordUpgrade = game.money >= upgradeCost
+          const plant           = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
+          const specialistType  = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker
+          const specialistName  = specialistType ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType : null
           const assignedEmployee  = specialistType ? getEmployeeAssignedToCell(game, infoCell) : null
-          const eligibleEmployees = specialistType
-            ? game.employees.filter(
-                (e) => e.type === specialistType && getCellAssignedToEmployee(game, e.id) === null,
-              )
-            : []
+          const eligibleEmployees = specialistType ? game.employees.filter((e) => e.type === specialistType && getCellAssignedToEmployee(game, e.id) === null) : []
+          const category   = BUILDING_CATEGORY_BY_TYPE[cell]
+          const accent     = BUILDING_CATEGORY_ACCENT[category]
+          const surface    = BUILDING_CATEGORY_SURFACE[category]
+          const thumbNow   = PLANT_THUMB_BY_LEVEL[cell]?.[level]
+          const thumbNext  = PLANT_THUMB_BY_LEVEL[cell]?.[level + 1]
+          const maxLevel   = BUILDING_UPGRADE_BALANCE.maxBuildingLevel
+
           return (
             <>
-              {isUpgradeable && <Text style={styles.infoLevel}>Level {level}</Text>}
+              {/* ── Plant hero header ── */}
+              <View style={[styles.infoHero, { backgroundColor: surface }]}>
+                {/* Current level art */}
+                <View style={styles.infoHeroArt}>
+                  {thumbNow
+                    ? <Image source={thumbNow} style={styles.infoHeroImage} resizeMode="contain" />
+                    : <Text style={[styles.infoHeroCode, { color: accent }]}>{config.shortName}</Text>
+                  }
+                  <View style={[styles.infoHeroLvBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.infoHeroLvText}>Lv{level}</Text>
+                  </View>
+                </View>
+
+                {/* Level dots + upgrade preview */}
+                <View style={styles.infoHeroRight}>
+                  {/* Category badge */}
+                  <View style={[styles.infoCatBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.infoCatText}>{CATEGORY_LABEL[category]}</Text>
+                  </View>
+
+                  {/* Level progress dots */}
+                  {isUpgradeable && (
+                    <View style={styles.infoLevelDots}>
+                      {Array.from({ length: maxLevel }).map((_, i) => (
+                        <View key={i} style={[styles.infoDot, i < level ? { backgroundColor: accent } : styles.infoDotEmpty]} />
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Next level art preview (if not maxed) */}
+                  {isUpgradeable && !maxed && thumbNext && (
+                    <View style={styles.infoNextPreview}>
+                      <Text style={styles.infoNextArrow}>→</Text>
+                      <View style={styles.infoNextArtWrap}>
+                        <Image source={thumbNext} style={styles.infoNextImage} resizeMode="contain" />
+                        <View style={[styles.infoNextLvBadge, { backgroundColor: accent }]}>
+                          <Text style={styles.infoHeroLvText}>Lv{level + 1}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Description */}
               <Text style={styles.infoDescription}>{config.description.en}</Text>
+
+              {/* ── Current stats ── */}
+              <Text style={styles.infoSectionTitle}>Current stats</Text>
               {effectLines.map((line, i) => (
                 <View key={i}>
                   <View style={styles.infoEffectRow}>
                     <Text style={styles.infoEffectLabel}>{line.label}</Text>
-                    <Text style={styles.infoEffectValue}>
-                      {line.value}
+                    <View style={styles.infoEffectRight}>
+                      <Text style={styles.infoEffectValue}>{line.value}</Text>
+                      {/* Show next level value if different */}
+                      {!maxed && nextEffectLines[i] && nextEffectLines[i].value !== line.value && (
+                        <Text style={[styles.infoEffectNext, { color: accent }]}>
+                          {' '}→ {nextEffectLines[i].value}
+                        </Text>
+                      )}
                       {line.bonus && <Text style={styles.infoEffectBonus}> {line.bonus}</Text>}
-                    </Text>
+                    </View>
                   </View>
                   {line.warning && <Text style={styles.infoWarning}>⚠️ {line.warning}</Text>}
                 </View>
               ))}
+
+              {/* ── Upgrade panel ── */}
               {isUpgradeable && (
-                <ListRow
-                  title={`Upgrade to Lv${level + 1}`}
-                  subtitle={maxed ? 'Max level' : `$${upgradeCost.toLocaleString()}`}
-                  actionLabel="Upgrade"
-                  disabled={maxed || game.money < upgradeCost}
-                  done={maxed}
-                  onPress={() => upgradeBuilding(infoCell)}
-                />
+                <View style={[styles.upgradePanel, maxed ? styles.upgradePanelMaxed : canAffordUpgrade ? styles.upgradePanelReady : styles.upgradePanelLocked]}>
+                  {maxed ? (
+                    <View style={styles.upgradePanelContent}>
+                      <Text style={styles.upgradePanelEmoji}>🏆</Text>
+                      <View>
+                        <Text style={styles.upgradePanelTitle}>Maximum level reached</Text>
+                        <Text style={styles.upgradePanelSub}>This building is fully upgraded.</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <>
+                      <View style={styles.upgradePanelContent}>
+                        <Text style={styles.upgradePanelEmoji}>{canAffordUpgrade ? '⬆️' : '💸'}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.upgradePanelTitle}>Upgrade to Lv{level + 1}</Text>
+                          <Text style={[styles.upgradePanelSub, !canAffordUpgrade && { color: colors.orange }]}>
+                            ${upgradeCost.toLocaleString()} · {canAffordUpgrade ? `have $${Math.floor(game.money).toLocaleString()}` : `need $${(upgradeCost - game.money).toLocaleString()} more`}
+                          </Text>
+                        </View>
+                      </View>
+                      <Pressable
+                        style={[styles.upgradeActionBtn, !canAffordUpgrade && styles.upgradeActionBtnOff]}
+                        disabled={!canAffordUpgrade}
+                        onPress={() => upgradeBuilding(infoCell)}
+                      >
+                        <Text style={styles.upgradeActionBtnLabel}>
+                          {canAffordUpgrade ? 'Upgrade' : 'Not enough'}
+                        </Text>
+                      </Pressable>
+                    </>
+                  )}
+                </View>
               )}
               {specialistType && (
                 <>
@@ -1047,6 +1149,70 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
+
+  // ── Building Info Sheet ─────────────────────────────────────────────────────
+  infoHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  infoHeroArt: {
+    width: 80, height: 80,
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+  },
+  infoHeroImage: { width: 76, height: 76 },
+  infoHeroCode: { fontSize: 28, fontWeight: '900' },
+  infoHeroLvBadge: {
+    position: 'absolute', bottom: -4, right: -4,
+    borderRadius: radii.pill, paddingHorizontal: 7, paddingVertical: 3,
+  },
+  infoHeroLvText: { fontSize: 10, fontWeight: '900', color: '#fff' },
+  infoHeroRight: { flex: 1, gap: spacing.sm, alignItems: 'flex-start' },
+  infoCatBadge: {
+    borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  infoCatText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoLevelDots: { flexDirection: 'row', gap: 5 },
+  infoDot: { width: 10, height: 10, borderRadius: 5 },
+  infoDotEmpty: { backgroundColor: colors.creamBorder, borderWidth: 1.5, borderColor: colors.inkMuted },
+  infoNextPreview: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoNextArrow: { fontSize: 16, color: colors.inkMuted, fontWeight: '700' },
+  infoNextArtWrap: { width: 52, height: 52, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  infoNextImage: { width: 48, height: 48, opacity: 0.7 },
+  infoNextLvBadge: {
+    position: 'absolute', bottom: -3, right: -3,
+    borderRadius: radii.pill, paddingHorizontal: 5, paddingVertical: 2,
+  },
+  infoEffectRight: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+  infoEffectNext: { fontSize: 12, fontWeight: '700' },
+
+  // Upgrade panel
+  upgradePanel: {
+    borderRadius: radii.md,
+    borderWidth: 2,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  upgradePanelMaxed:  { backgroundColor: '#F5F9F0', borderColor: colors.green },
+  upgradePanelReady:  { backgroundColor: '#F0F7FF', borderColor: colors.blue },
+  upgradePanelLocked: { backgroundColor: '#FFF8F0', borderColor: colors.creamBorder },
+  upgradePanelContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  upgradePanelEmoji: { fontSize: 24 },
+  upgradePanelTitle: { fontSize: 14, fontWeight: '800', color: colors.ink },
+  upgradePanelSub:   { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
+  upgradeActionBtn: {
+    backgroundColor: colors.blue,
+    borderRadius: radii.md,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  upgradeActionBtnOff: { backgroundColor: colors.creamBorder },
+  upgradeActionBtnLabel: { fontSize: 14, fontWeight: '900', color: '#fff' },
 
   // ── Build Sheet ─────────────────────────────────────────────────────────────
   buildCategory: {
