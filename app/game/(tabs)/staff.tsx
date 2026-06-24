@@ -17,24 +17,13 @@ import { getManualRefreshCost } from '../../../src/game/data/recruitment'
 import { getCellAssignedToEmployee, getTrainingCost, getMaxHireCount, isNearRetirement, TICK_MS } from '../../../src/game/utils/gameCalculations'
 import type { BuildingType, RecruitmentTier, WorkerType } from '../../../src/game/types'
 
-const TIER_BADGES: Record<RecruitmentTier, string> = {
-  rookie: '',
-  skilled: '🔹 Skilled',
-  expert: '🔸 Expert',
-  star: '⭐ Star',
+const TIER_COLORS: Record<RecruitmentTier, { border: string; accent: string; badge: string; label: string }> = {
+  rookie:  { border: colors.creamBorder, accent: colors.creamBorder, badge: '#E8E0D0', label: 'Rookie' },
+  skilled: { border: colors.blue,        accent: colors.blue,        badge: colors.blue,  label: 'Skilled' },
+  expert:  { border: colors.orange,      accent: colors.orange,      badge: colors.orange, label: 'Expert' },
+  star:    { border: colors.gold,        accent: colors.gold,        badge: colors.gold,   label: '⭐ Star' },
 }
 
-const TIER_BORDER_COLORS: Record<RecruitmentTier, string> = {
-  rookie: colors.creamBorder,
-  skilled: colors.blue,
-  expert: colors.orange,
-  star: colors.gold,
-}
-
-// Worker types that can be assigned to a specific plant for a specialist
-// output bonus (see PLANT_PRODUCTION.specialistWorker). polymerEngineer
-// is added manually since Polymer Plant is a standalone production block,
-// not part of PLANT_PRODUCTION (see useGameLoop.ts).
 const SPECIALIST_TYPES: WorkerType[] = [
   ...PLANT_PRODUCTION.map((p) => p.specialistWorker).filter(
     (t): t is 'aviationSpecialist' | 'chemicalEngineer' => !!t,
@@ -42,9 +31,6 @@ const SPECIALIST_TYPES: WorkerType[] = [
   'polymerEngineer',
 ]
 
-// Worker type -> the building it can be assigned to. e.g.
-// { aviationSpecialist: 'jetFuelPlant', chemicalEngineer: 'petrochemicalPlant',
-//   polymerEngineer: 'polymerPlant' }
 const SPECIALIST_BUILDING: Partial<Record<WorkerType, BuildingType>> = {
   ...Object.fromEntries(
     PLANT_PRODUCTION.filter((p) => p.specialistWorker).map((p) => [p.specialistWorker as WorkerType, p.buildingKey]),
@@ -52,33 +38,38 @@ const SPECIALIST_BUILDING: Partial<Record<WorkerType, BuildingType>> = {
   polymerEngineer: 'polymerPlant',
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// XP progress bar component
+function XpBar({ current, max, level }: { current: number; max: number; level: number }) {
+  const pct = max > 0 ? Math.min(1, current / max) : 1
+  const maxed = level >= STAFF_LEVEL_BALANCE.maxLevel
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
+    <View style={xpStyles.wrap}>
+      <View style={xpStyles.track}>
+        <View style={[xpStyles.fill, { width: `${Math.round(pct * 100)}%` as any }, maxed && xpStyles.fillMax]} />
+      </View>
+      <Text style={xpStyles.label}>
+        {maxed ? 'MAX' : `${current}/${max} XP`}
+      </Text>
     </View>
   )
 }
 
+const xpStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  track: { flex: 1, height: 5, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden' },
+  fill: { height: '100%', backgroundColor: colors.blue, borderRadius: radii.pill },
+  fillMax: { backgroundColor: colors.gold },
+  label: { fontSize: 9, fontWeight: '700', color: colors.inkMuted, minWidth: 48 },
+})
+
 export default function StaffScreen() {
   const {
-    game,
-    loaded,
-    derived,
-    hireCandidate,
-    refreshRecruitmentPool,
-    trainEmployee,
-    assignEmployeeToCell,
-    unassignCell,
-    claimHiddenEvent,
+    game, loaded, derived,
+    hireCandidate, refreshRecruitmentPool,
+    trainEmployee, assignEmployeeToCell, unassignCell, claimHiddenEvent,
   } = useGame()
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
-  // Per-Plant Staff Assignment: which employee's cell-picker is currently
-  // open (tapping "Assign" reveals a list of that worker type's plant
-  // instances to choose from, since assignment is now per-cell, not a
-  // pool toggle). null = no picker open.
   const [pickerEmployeeId, setPickerEmployeeId] = useState<string | null>(null)
 
   if (!loaded || !game || !derived) {
@@ -95,296 +86,332 @@ export default function StaffScreen() {
     0,
     Math.round(((game.recruitmentRefreshAt - game.tickCount) * TICK_MS) / 1000),
   )
+  const cap = getMaxHireCount(game.refineryLevel)
 
   return (
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
+
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.title}>Staff</Text>
-        <Text style={styles.subtitle}>{game.employees.length} employees hired</Text>
-      </View>
-      <ScrollView contentContainerStyle={styles.list}>
-        <Section title="Recruitment">
-          {HIDDEN_EVENTS.filter(
-            (e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked',
-          ).map((event) => (
-            <ListRow
-              key={event.key}
-              title="??? Mystery Applicant"
-              subtitle="Something unusual happened. Tap to find out what."
-              badge="???"
-              actionLabel="Reveal"
-              onPress={() => claimHiddenEvent(event.key)}
-            />
-          ))}
-          <View style={styles.recruitmentHeader}>
-            <Text style={styles.recruitmentHint}>
-              {refreshSecondsLeft > 0
-                ? `Pool refreshes in ${refreshSecondsLeft}s`
-                : 'Pool refreshing...'}
-            </Text>
-            <AnimatedPressable
-              disabled={!canManualRefresh}
-              onPress={() => {
-                if (canManualRefresh) {
-                  spawnFloat(`-$${refreshCost.toLocaleString()}`, 'expense')
-                  haptics.tap()
-                }
-                refreshRecruitmentPool()
-              }}
-              style={[styles.refreshButton, canManualRefresh ? styles.smallButtonActive : styles.smallButtonDisabled]}
-            >
-              <Text style={styles.smallButtonLabel}>🔄 Refresh (${refreshCost.toLocaleString()})</Text>
-            </AnimatedPressable>
+        <View>
+          <Text style={styles.title}>Staff</Text>
+          <Text style={styles.subtitle}>Year {game.businessYear} · {game.employees.length} hired · {cap} max per role</Text>
+        </View>
+        {/* Quick stats row */}
+        <View style={styles.headerStats}>
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatVal}>{game.employees.length}</Text>
+            <Text style={styles.headerStatLabel}>Total</Text>
           </View>
+          <View style={styles.headerStatDivider} />
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatVal}>{cap}</Text>
+            <Text style={styles.headerStatLabel}>Cap</Text>
+          </View>
+          <View style={styles.headerStatDivider} />
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatVal}>
+              {game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length}
+            </Text>
+            <Text style={[styles.headerStatLabel, { color: colors.orange }]}>Retiring</Text>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.list}>
+
+        {/* ── Recruitment ── */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recruitment Pool</Text>
+          <AnimatedPressable
+            disabled={!canManualRefresh}
+            onPress={() => {
+              if (canManualRefresh) { spawnFloat(`-$${refreshCost.toLocaleString()}`, 'expense'); haptics.tap() }
+              refreshRecruitmentPool()
+            }}
+            style={[styles.refreshBtn, canManualRefresh ? styles.refreshBtnActive : styles.refreshBtnDisabled]}
+          >
+            <Text style={styles.refreshBtnLabel}>
+              🔄 ${refreshCost.toLocaleString()}
+            </Text>
+          </AnimatedPressable>
+        </View>
+        <Text style={styles.poolTimer}>
+          {refreshSecondsLeft > 0 ? `Auto-refresh in ${refreshSecondsLeft}s` : 'Refreshing...'}
+        </Text>
+
+        {HIDDEN_EVENTS.filter(
+          (e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked',
+        ).map((event) => (
+          <ListRow
+            key={event.key}
+            title="??? Mystery Applicant"
+            subtitle="Something unusual happened. Tap to find out what."
+            badge="???"
+            actionLabel="Reveal"
+            onPress={() => claimHiddenEvent(event.key)}
+          />
+        ))}
+
+        <View style={styles.candidateRow}>
           {game.recruitmentPool.map((candidate, slotIndex) => {
             const worker = WORKERS.find((w) => w.key === candidate.type)
+            const tc = TIER_COLORS[candidate.tier]
             const affordable = game.money >= candidate.cost
-            const badge = TIER_BADGES[candidate.tier]
-            const cap = getMaxHireCount(game.refineryLevel)
             const atCap = game.workerCounts[candidate.type] >= cap
             const canHire = affordable && !atCap
+            const mentorBonus = game.mentorXpBonus?.[candidate.type] ?? 0
             return (
-              <View
-                key={candidate.id}
-                style={[styles.candidateCard, { borderColor: TIER_BORDER_COLORS[candidate.tier] }]}
-              >
-                <View style={styles.employeeHeader}>
-                  <Text style={styles.employeeName}>
-                    {candidate.name} {candidate.isVeteran ? '🎖' : ''}
+              <View key={candidate.id} style={[styles.candidateCard, { borderColor: tc.border }]}>
+                {/* Tier badge strip */}
+                <View style={[styles.tierStrip, { backgroundColor: tc.badge }]}>
+                  <Text style={[styles.tierLabel, candidate.tier === 'rookie' && styles.tierLabelDark]}>
+                    {tc.label}
                   </Text>
-                  <Text style={styles.employeeType}>{worker?.name.en ?? candidate.type}</Text>
+                  {candidate.isVeteran && <Text style={styles.veteranBadge}>🎖 Veteran</Text>}
                 </View>
-                <Text style={styles.employeeStats}>
-                  {badge ? `${badge} · ` : ''}Starts at Lv{candidate.startingLevel}
-                  {candidate.isVeteran ? ' · Veteran (+20%)' : ''}
-                  {atCap ? ` · Full (${game.workerCounts[candidate.type]}/${cap})` : ` · ${game.workerCounts[candidate.type]}/${cap} hired`}
-                </Text>
-                {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
-                {(game.mentorXpBonus?.[candidate.type] ?? 0) > 0 && (
-                  <Text style={styles.mentorBonusNote}>
-                    🎓 Mentor bonus: +{game.mentorXpBonus![candidate.type]} XP on hire
+                <View style={styles.candidateBody}>
+                  <Text style={styles.candidateName} numberOfLines={1}>{candidate.name}</Text>
+                  <Text style={styles.candidateRole} numberOfLines={1}>{worker?.name.en ?? candidate.type}</Text>
+                  <Text style={styles.candidateStats}>
+                    Starts Lv{candidate.startingLevel} · {game.workerCounts[candidate.type]}/{cap} hired
                   </Text>
-                )}
-                <AnimatedPressable
-                  disabled={!canHire}
-                  onPress={() => {
-                    if (canHire) {
-                      spawnFloat(`-$${candidate.cost.toLocaleString()}`, 'expense')
-                      haptics.confirm()
-                    }
-                    hireCandidate(slotIndex)
-                  }}
-                  style={[
-                    styles.hireButton,
-                    canHire ? styles.smallButtonActive : styles.smallButtonDisabled,
-                  ]}
-                >
-                  <Text style={styles.smallButtonLabel}>
-                    {atCap ? `Full (${cap} max)` : `Hire · $${candidate.cost.toLocaleString()}`}
-                  </Text>
-                </AnimatedPressable>
-              </View>
-            )
-          })}
-        </Section>
-
-        <Section title="Your team">
-          {game.employees.length === 0 && <Text style={styles.empty}>No employees yet -- hire some above.</Text>}
-          {game.employees.map((employee) => {
-            const worker = WORKERS.find((w) => w.key === employee.type)
-            const maxed = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
-            const xpNeeded = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
-            const cost = getTrainingCost(employee.level)
-            const canTrain = !maxed && game.money >= cost.money && game.researchPoints >= cost.rp
-            const isSpecialist = SPECIALIST_TYPES.includes(employee.type)
-            const assignedCellIndex = getCellAssignedToEmployee(game, employee.id)
-            const buildingKey = SPECIALIST_BUILDING[employee.type]
-            // All grid cells matching this worker's plant type, in grid
-            // order, numbered #1/#2/... for display -- this is the list
-            // the picker shows when "Assign" is tapped.
-            const eligibleCells = buildingKey
-              ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, cellIndex) => {
-                  if (cell === buildingKey) acc.push({ cellIndex, label: `${BUILDINGS[buildingKey].name.en} #${acc.length + 1}` })
-                  return acc
-                }, [])
-              : []
-            const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
-
-            const nearRetire = isNearRetirement(employee, game.businessYear)
-            const yearsLeft = employee.hiredOnYear !== undefined
-              ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear)
-              : null
-
-            return (
-              <View key={employee.id} style={[styles.employeeCard, nearRetire && styles.employeeCardRetiring]}>
-                <View style={styles.employeeHeader}>
-                  <Text style={styles.employeeName}>
-                    {employee.name} {employee.trait === 'veteran' ? '⭐' : ''}{nearRetire ? ' 🕰' : ''}
-                  </Text>
-                  <Text style={styles.employeeType}>{worker?.name.en ?? employee.type}</Text>
-                </View>
-                <Text style={styles.employeeStats}>
-                  Lv{employee.level}
-                  {maxed ? ' (max)' : ` · ${employee.xp}/${xpNeeded} XP`}
-                  {nearRetire && yearsLeft !== null ? ` · Retires in ${yearsLeft}y` : ''}
-                </Text>
-                {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
-                <View style={styles.employeeActions}>
+                  {mentorBonus > 0 && (
+                    <Text style={styles.mentorNote}>🎓 +{mentorBonus} XP bonus</Text>
+                  )}
                   <AnimatedPressable
-                    disabled={!canTrain}
+                    disabled={!canHire}
                     onPress={() => {
-                      if (canTrain) {
-                        spawnFloat(`-$${cost.money.toLocaleString()}`, 'expense')
-                        haptics.confirm()
-                      }
-                      trainEmployee(employee.id)
+                      if (canHire) { spawnFloat(`-$${candidate.cost.toLocaleString()}`, 'expense'); haptics.confirm() }
+                      hireCandidate(slotIndex)
                     }}
-                    style={[styles.smallButton, canTrain ? styles.smallButtonActive : styles.smallButtonDisabled]}
+                    style={[styles.hireBtn, canHire ? styles.hireBtnActive : styles.hireBtnDisabled]}
                   >
-                    <Text style={styles.smallButtonLabel}>
-                      {maxed ? 'Max' : `Train $${cost.money.toLocaleString()}+${cost.rp}RP`}
+                    <Text style={styles.hireBtnLabel}>
+                      {atCap ? `Full (${cap} max)` : `Hire $${candidate.cost.toLocaleString()}`}
                     </Text>
                   </AnimatedPressable>
-                  {isSpecialist && (
-                    <Pressable
-                      disabled={eligibleCells.length === 0}
-                      onPress={() => {
-                        if (assignedCellIndex !== null) {
-                          unassignCell(assignedCellIndex)
-                          setPickerEmployeeId(null)
-                        } else {
-                          setPickerEmployeeId(pickerEmployeeId === employee.id ? null : employee.id)
-                        }
-                      }}
-                      style={[
-                        styles.smallButton,
-                        assignedCellIndex !== null ? styles.smallButtonActive : styles.smallButtonDisabled,
-                      ]}
-                    >
-                      <Text style={styles.smallButtonLabel}>
-                        {assignedCellIndex !== null
-                          ? `Assigned · ${assignedLabel ?? ''} (tap to unassign)`
-                          : eligibleCells.length === 0
-                            ? `No ${BUILDINGS[buildingKey!]?.name.en ?? ''} built yet`
-                            : 'Assign to a plant...'}
-                      </Text>
-                    </Pressable>
-                  )}
                 </View>
-                {pickerEmployeeId === employee.id && assignedCellIndex === null && (
-                  <View style={styles.cellPicker}>
-                    {eligibleCells.map(({ cellIndex, label }) => {
-                      const occupant = game.employees.find(
-                        (e) => getCellAssignedToEmployee(game, e.id) === cellIndex,
-                      )
-                      return (
-                        <Pressable
-                          key={cellIndex}
-                          onPress={() => {
-                            assignEmployeeToCell(employee.id, cellIndex)
-                            setPickerEmployeeId(null)
-                            haptics.confirm()
-                          }}
-                          style={styles.cellPickerOption}
-                        >
-                          <Text style={styles.cellPickerOptionLabel}>
-                            {label}
-                            {occupant ? ` (currently: ${occupant.name})` : ''}
-                          </Text>
-                        </Pressable>
-                      )
-                    })}
-                  </View>
-                )}
               </View>
             )
           })}
-        </Section>
+        </View>
+
+        {/* ── Team ── */}
+        <View style={[styles.sectionHeader, { marginTop: spacing.md }]}>
+          <Text style={styles.sectionTitle}>Your Team</Text>
+        </View>
+        {game.employees.length === 0 && (
+          <Text style={styles.empty}>No employees yet — hire someone above.</Text>
+        )}
+        {game.employees.map((employee) => {
+          const worker = WORKERS.find((w) => w.key === employee.type)
+          const maxed = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
+          const xpNeeded = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
+          const cost = getTrainingCost(employee.level)
+          const canTrain = !maxed && game.money >= cost.money && game.researchPoints >= cost.rp
+          const isSpecialist = SPECIALIST_TYPES.includes(employee.type)
+          const assignedCellIndex = getCellAssignedToEmployee(game, employee.id)
+          const buildingKey = SPECIALIST_BUILDING[employee.type]
+          const eligibleCells = buildingKey
+            ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, cellIndex) => {
+                if (cell === buildingKey) acc.push({ cellIndex, label: `${BUILDINGS[buildingKey].name.en} #${acc.length + 1}` })
+                return acc
+              }, [])
+            : []
+          const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
+          const nearRetire = isNearRetirement(employee, game.businessYear)
+          const yearsLeft = employee.hiredOnYear !== undefined
+            ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear)
+            : null
+
+          return (
+            <View key={employee.id} style={[styles.employeeCard, nearRetire && styles.employeeCardRetiring]}>
+              {/* Top row: name + level badge */}
+              <View style={styles.employeeTopRow}>
+                <View style={styles.employeeNameBlock}>
+                  <Text style={styles.employeeName}>
+                    {employee.name}
+                    {employee.trait === 'veteran' ? ' ⭐' : ''}
+                    {nearRetire ? ' 🕰' : ''}
+                  </Text>
+                  <Text style={styles.employeeRole}>{worker?.name.en ?? employee.type}</Text>
+                </View>
+                <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
+                  <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
+                </View>
+              </View>
+
+              {/* XP bar */}
+              <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
+
+              {/* Retire warning */}
+              {nearRetire && yearsLeft !== null && (
+                <Text style={styles.retireWarning}>Retires in {yearsLeft} year{yearsLeft !== 1 ? 's' : ''}</Text>
+              )}
+
+              {/* Actions */}
+              <View style={styles.employeeActions}>
+                <AnimatedPressable
+                  disabled={!canTrain}
+                  onPress={() => {
+                    if (canTrain) { spawnFloat(`-$${cost.money.toLocaleString()}`, 'expense'); haptics.confirm() }
+                    trainEmployee(employee.id)
+                  }}
+                  style={[styles.actionBtn, canTrain ? styles.actionBtnTrain : styles.actionBtnDisabled]}
+                >
+                  <Text style={styles.actionBtnLabel}>
+                    {maxed ? 'Max Level' : `Train  $${cost.money.toLocaleString()} · ${cost.rp}RP`}
+                  </Text>
+                </AnimatedPressable>
+
+                {isSpecialist && (
+                  <Pressable
+                    disabled={eligibleCells.length === 0}
+                    onPress={() => {
+                      if (assignedCellIndex !== null) {
+                        unassignCell(assignedCellIndex)
+                        setPickerEmployeeId(null)
+                      } else {
+                        setPickerEmployeeId(pickerEmployeeId === employee.id ? null : employee.id)
+                      }
+                    }}
+                    style={[
+                      styles.actionBtn,
+                      assignedCellIndex !== null ? styles.actionBtnAssigned : styles.actionBtnDisabled,
+                    ]}
+                  >
+                    <Text style={styles.actionBtnLabel}>
+                      {assignedCellIndex !== null
+                        ? `📌 ${assignedLabel ?? 'Assigned'}`
+                        : eligibleCells.length === 0
+                          ? 'No plant built'
+                          : 'Assign →'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {/* Cell picker */}
+              {pickerEmployeeId === employee.id && assignedCellIndex === null && (
+                <View style={styles.cellPicker}>
+                  <Text style={styles.cellPickerTitle}>Select plant to assign:</Text>
+                  {eligibleCells.map(({ cellIndex, label }) => {
+                    const occupant = game.employees.find(
+                      (e) => getCellAssignedToEmployee(game, e.id) === cellIndex,
+                    )
+                    return (
+                      <Pressable
+                        key={cellIndex}
+                        onPress={() => { assignEmployeeToCell(employee.id, cellIndex); setPickerEmployeeId(null); haptics.confirm() }}
+                        style={styles.cellPickerOption}
+                      >
+                        <Text style={styles.cellPickerLabel}>
+                          {label}{occupant ? ` · currently ${occupant.name}` : ''}
+                        </Text>
+                      </Pressable>
+                    )
+                  })}
+                </View>
+              )}
+            </View>
+          )
+        })}
+
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen: { flex: 1, backgroundColor: colors.cream },
+  loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+
+  // ── Header ──
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: '#1C2634',
+    gap: spacing.sm,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.ink,
+  title: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 },
+  subtitle: { fontSize: 11, color: '#6B8099', marginTop: 1 },
+  headerStats: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
   },
-  subtitle: {
-    fontSize: 13,
-    color: colors.inkMuted,
-    marginTop: 2,
-  },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
-    marginBottom: spacing.xs,
-  },
-  empty: {
-    color: colors.inkMuted,
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
-  recruitmentHeader: {
+  headerStat: { flex: 1, alignItems: 'center' },
+  headerStatVal: { fontSize: 18, fontWeight: '900', color: '#FFFFFF' },
+  headerStatLabel: { fontSize: 9, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.5 },
+  headerStatDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' },
+
+  // ── List ──
+  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_BAR_CLEARANCE },
+
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  recruitmentHint: {
-    fontSize: 12,
-    color: colors.inkMuted,
-    flex: 1,
-    paddingRight: spacing.sm,
+  sectionTitle: { fontSize: 14, fontWeight: '900', color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.8 },
+  poolTimer: { fontSize: 11, color: colors.inkMuted, marginBottom: spacing.sm },
+
+  // ── Recruitment ──
+  refreshBtn: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
   },
+  refreshBtnActive: { backgroundColor: colors.cream },
+  refreshBtnDisabled: { backgroundColor: colors.creamBorder, borderColor: colors.creamBorder },
+  refreshBtnLabel: { fontSize: 11, fontWeight: '700', color: colors.ink },
+
+  candidateRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+
   candidateCard: {
+    flex: 1,
     backgroundColor: colors.white,
     borderRadius: radii.md,
     borderWidth: 2,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
+    overflow: 'hidden',
   },
-  refreshButton: {
-    borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  hireButton: {
-    alignSelf: 'flex-start',
-    borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: colors.ink,
+  tierStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    marginTop: spacing.xs,
   },
+  tierLabel: { fontSize: 9, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1 },
+  tierLabelDark: { color: colors.inkMuted },
+  veteranBadge: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
+
+  candidateBody: { padding: spacing.sm, gap: 2 },
+  candidateName: { fontSize: 13, fontWeight: '800', color: colors.ink },
+  candidateRole: { fontSize: 10, color: colors.inkMuted },
+  candidateStats: { fontSize: 10, color: colors.inkMuted, marginTop: 2 },
+  mentorNote: { fontSize: 10, color: colors.greenDark, fontWeight: '700' },
+
+  hireBtn: {
+    marginTop: spacing.sm,
+    borderRadius: radii.sm,
+    paddingVertical: 7,
+    alignItems: 'center',
+  },
+  hireBtnActive: { backgroundColor: colors.green },
+  hireBtnDisabled: { backgroundColor: colors.creamBorder },
+  hireBtnLabel: { fontSize: 11, fontWeight: '800', color: colors.ink },
+
+  // ── Employee cards ──
   employeeCard: {
     backgroundColor: colors.white,
     borderRadius: radii.md,
@@ -397,79 +424,59 @@ const styles = StyleSheet.create({
     borderColor: colors.orange,
     backgroundColor: '#FFF8F0',
   },
-  mentorBonusNote: {
+
+  employeeTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  employeeNameBlock: { flex: 1, marginRight: spacing.sm },
+  employeeName: { fontSize: 14, fontWeight: '800', color: colors.ink },
+  employeeRole: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
+
+  lvBadge: {
+    backgroundColor: colors.blue,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  lvBadgeMax: { backgroundColor: colors.gold },
+  lvBadgeText: { fontSize: 11, fontWeight: '900', color: '#FFFFFF' },
+
+  retireWarning: {
     fontSize: 11,
-    color: colors.greenDark,
+    color: colors.orange,
     fontWeight: '700',
-    marginTop: 2,
-    marginBottom: 2,
+    marginTop: 4,
   },
-  employeeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+
+  employeeActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
+  actionBtn: {
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  employeeName: {
-    fontWeight: '800',
-    color: colors.ink,
-    fontSize: 14,
-  },
-  employeeType: {
-    color: colors.inkMuted,
-    fontSize: 12,
-  },
-  employeeStats: {
-    color: colors.inkMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  workerDescription: {
-    color: colors.greenDark,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  employeeActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
+  actionBtnTrain: { backgroundColor: colors.blue, borderColor: colors.blueDark },
+  actionBtnAssigned: { backgroundColor: colors.green, borderColor: colors.greenDark },
+  actionBtnDisabled: { backgroundColor: colors.creamBorder, borderColor: colors.creamBorder },
+  actionBtnLabel: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
+
   cellPicker: {
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.creamBorder,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
     gap: 4,
   },
+  cellPickerTitle: { fontSize: 11, color: colors.inkMuted, fontWeight: '700', marginBottom: 4 },
   cellPickerOption: {
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: spacing.sm,
     backgroundColor: colors.cream,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.creamBorder,
   },
-  cellPickerOptionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  smallButton: {
-    borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  smallButtonActive: {
-    backgroundColor: colors.green,
-  },
-  smallButtonDisabled: {
-    backgroundColor: colors.cream,
-    borderColor: colors.creamBorder,
-  },
-  smallButtonLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.ink,
-  },
+  cellPickerLabel: { fontSize: 12, fontWeight: '700', color: colors.ink },
+
+  empty: { color: colors.inkMuted, fontSize: 13, fontStyle: 'italic', paddingVertical: spacing.sm },
 })
