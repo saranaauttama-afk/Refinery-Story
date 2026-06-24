@@ -34,7 +34,7 @@ import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
 import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -198,12 +198,19 @@ export default function RefineryScreen() {
     (i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost
   ).length
 
+  const standaloneReady = STANDING_ORDER_BALANCE.filter((order) => {
+    if (game.refineryLevel < order.unlockLevel) return false
+    const key = order.key as keyof typeof game.standingOrderCooldowns
+    const pKey = order.productKey as keyof typeof game.productInventory
+    const cooldownAt = game.standingOrderCooldowns[key]
+    return !(cooldownAt !== undefined && cooldownAt > game.tickCount) &&
+      (game.productInventory[pKey] as number) >= order.required
+  }).length
+
   const FAB_ITEMS: FabNavItem[] = [
     { route: '/game',            icon: '🏭', label: 'Factory' },
-    { route: '/game/production', icon: '⚗️',  label: 'Production' },
-    { route: '/game/staff',      icon: '👥', label: 'Staff', badge: staffReady || undefined },
-    { route: '/game/business',   icon: '💼', label: 'Business', badge: (contractsReady + researchReady) || undefined },
-    { route: '/game/hq',         icon: '🏢', label: 'HQ' },
+    { route: '/game/business',   icon: '💼', label: 'Business', badge: (contractsReady + standaloneReady) || undefined },
+    { route: '/game/company',    icon: '🏢', label: 'Company',  badge: (staffReady + researchReady) || undefined },
   ]
   const secondaryStats = [
     { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
