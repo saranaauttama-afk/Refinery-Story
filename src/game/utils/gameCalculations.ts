@@ -1,6 +1,7 @@
 import {
   AWARDS_BALANCE,
   HIRING_BALANCE,
+  MAX_REFINERY_LEVEL,
   CALENDAR_BALANCE,
   BONUS_BALANCE,
   BUILDING_UPGRADE_BALANCE,
@@ -243,6 +244,7 @@ export function getUpgradeResearchRequirement(level: number): number {
 // Empty array = can upgrade.
 export function getUpgradeBlockers(game: GameState): string[] {
   const level = game.refineryLevel
+  if (level >= MAX_REFINERY_LEVEL) return []   // maxed — no blockers, button hidden
   const cost = getUpgradeCost(level)
   const prodReq = getUpgradeProductionRequirement(level)
   const repReq = getUpgradeReputationRequirement(level)
@@ -1577,8 +1579,8 @@ export function applyWinGoal(game: GameState): GameState {
   if (game.prototypeCompleted) return game
 
   const allGoalsDone =
-    game.refineryLevel >= 10 &&
-    game.reputation >= 250 &&
+    game.refineryLevel >= 15 &&
+    game.reputation >= 400 &&
     game.completedContractIds.includes(7) &&
     game.gridExpansionLevel >= 2
 

@@ -80,6 +80,7 @@ import {
   BONUS_BALANCE,
   STAFF_LEVEL_BALANCE,
   STANDING_ORDER_BALANCE,
+  MAX_REFINERY_LEVEL,
   type PaidExpansionEntry,
   type ShipmentOption,
 } from '../game/data/balance'
@@ -1184,6 +1185,7 @@ export function useGameLoop() {
   const upgradeRefinery = useCallback(
     () =>
       update((current) => {
+        if (current.refineryLevel >= MAX_REFINERY_LEVEL) return current
         const cost = getUpgradeCost(current.refineryLevel)
         const requiredProduction = getUpgradeProductionRequirement(current.refineryLevel)
         const requiredReputation = getUpgradeReputationRequirement(current.refineryLevel)

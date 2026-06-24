@@ -905,6 +905,11 @@ export const AWARDS_BALANCE = {
 // At Lv1=2, Lv3=3, Lv6=4, Lv9=5, Lv12=6, Lv15=7 -- never truly infinite.
 // retirementAfterYears: employee retires this many business years after hire.
 // retirementWarningYears: show a warning badge this many years before retirement.
+// Maximum refinery level. Beyond this, upgradeRefinery() is a no-op.
+// All content (buildings, eras, contracts, standing orders) is available
+// by Lv20. The cap exists to give the game a clear ceiling.
+export const MAX_REFINERY_LEVEL = 20
+
 export const HIRING_BALANCE = {
   capBase: 2,
   capStep: 3,

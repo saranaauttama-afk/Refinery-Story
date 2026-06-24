@@ -36,7 +36,7 @@ import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, STANDING_ORDER_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
 import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -338,7 +338,8 @@ export default function RefineryScreen() {
   const hasEnoughMoney             = game.money >= upgradeCost
   const hasEnoughProduction        = game.totalGasolineProduced >= upgradeProductionRequired
   const upgradeBlockers            = getUpgradeBlockers(game)
-  const canUpgrade                 = upgradeBlockers.length === 0
+  const isMaxLevel                 = game.refineryLevel >= MAX_REFINERY_LEVEL
+  const canUpgrade                 = !isMaxLevel && upgradeBlockers.length === 0
   const nextGoal                   = derived.activeMilestones.find((m) => !m.isCompleted)
 
   const products: {
@@ -429,10 +430,12 @@ export default function RefineryScreen() {
         {/* Top right: Lv badge (tappable upgrade) + time + events bell */}
         <View style={styles.topRightHud}>
           <AnimatedPressable
-            style={[styles.lvBadge, canUpgrade && styles.lvBadgeReady]}
+            style={[styles.lvBadge, canUpgrade && styles.lvBadgeReady, isMaxLevel && styles.lvBadgeMaxed]}
             onPress={() => setUpgradeModalOpen(true)}
           >
-            <Text style={styles.lvBadgeText}>Lv{game.refineryLevel}{canUpgrade ? ' ↑' : ''}</Text>
+            <Text style={styles.lvBadgeText}>
+              {isMaxLevel ? '🏆 Lv20' : `Lv${game.refineryLevel}${canUpgrade ? ' ↑' : ''}`}
+            </Text>
           </AnimatedPressable>
           <View style={styles.timePill}>
             <Clock3 size={11} color={isDaytime ? colors.orangeDark : colors.blueDark} />
@@ -1054,8 +1057,19 @@ export default function RefineryScreen() {
 
           return (
             <>
+              {/* Max level state */}
+              {isMaxLevel && (
+                <View style={styles.upgMaxBox}>
+                  <Text style={styles.upgMaxIcon}>🏆</Text>
+                  <View>
+                    <Text style={styles.upgMaxTitle}>Maximum Level Reached</Text>
+                    <Text style={styles.upgMaxSub}>Lv20 — All buildings and eras unlocked.</Text>
+                  </View>
+                </View>
+              )}
+
               {/* Level progression strip */}
-              <View style={styles.upgLevelStrip}>
+              {!isMaxLevel && <View style={styles.upgLevelStrip}>
                 <View style={styles.upgLevelBox}>
                   <Text style={styles.upgLevelNum}>Lv{game.refineryLevel}</Text>
                   <Text style={styles.upgLevelLabel}>Current</Text>
@@ -1068,10 +1082,10 @@ export default function RefineryScreen() {
                   <Text style={[styles.upgLevelNum, { color: canUpgrade ? colors.green : colors.inkMuted }]}>Lv{nextLevel}</Text>
                   <Text style={styles.upgLevelLabel}>Next</Text>
                 </View>
-              </View>
+              </View>}
 
               {/* What unlocks */}
-              {nextUnlocks.length > 0 && (
+              {!isMaxLevel && nextUnlocks.length > 0 && (
                 <View style={styles.upgUnlockBox}>
                   <Text style={styles.upgUnlockTitle}>Unlocks at Lv{nextLevel}</Text>
                   {nextUnlocks.map((u, i) => (
@@ -1081,7 +1095,8 @@ export default function RefineryScreen() {
               )}
 
               {/* Requirements checklist */}
-              <Text style={styles.upgSectionLabel}>Requirements</Text>
+              {!isMaxLevel && (
+              <><Text style={styles.upgSectionLabel}>Requirements</Text>
               {requirements.map((req, i) => (
                 <View key={i} style={styles.upgReqRow}>
                   <Text style={[styles.upgReqCheck, req.met ? styles.upgReqCheckMet : styles.upgReqCheckUnmet]}>
@@ -1101,21 +1116,24 @@ export default function RefineryScreen() {
                 </View>
               ))}
 
-              {/* Upgrade button */}
-              <AnimatedPressable
-                style={[styles.upgButton, !canUpgrade && styles.upgButtonOff]}
-                onPress={() => {
-                  if (!canUpgrade) return
-                  spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
-                  haptics.confirm()
-                  upgradeRefinery()
-                  setUpgradeModalOpen(false)
-                }}
-              >
-                <Text style={styles.upgButtonLabel}>
-                  {canUpgrade ? `⬆ Upgrade to Lv${nextLevel}` : 'Requirements not met'}
-                </Text>
-              </AnimatedPressable>
+              </>)}
+              {/* Upgrade button — hidden at max level */}
+              {!isMaxLevel && (
+                <AnimatedPressable
+                  style={[styles.upgButton, !canUpgrade && styles.upgButtonOff]}
+                  onPress={() => {
+                    if (!canUpgrade) return
+                    spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+                    haptics.confirm()
+                    upgradeRefinery()
+                    setUpgradeModalOpen(false)
+                  }}
+                >
+                  <Text style={styles.upgButtonLabel}>
+                    {canUpgrade ? `⬆ Upgrade to Lv${nextLevel}` : 'Requirements not met'}
+                  </Text>
+                </AnimatedPressable>
+              )}
             </>
           )
         })()}
@@ -1389,6 +1407,20 @@ const styles = StyleSheet.create({
   },
 
   // Upgrade refinery modal
+  upgMaxBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: '#FFF8E6',
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.gold,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  upgMaxIcon: { fontSize: 32 },
+  upgMaxTitle: { fontSize: 15, fontWeight: '900', color: colors.ink },
+  upgMaxSub: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
   upgLevelStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md, gap: 0 },
   upgLevelBox: { alignItems: 'center', backgroundColor: colors.cream, borderRadius: radii.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1.5, borderColor: colors.creamBorder },
   upgLevelBoxNext: { borderColor: colors.green },
@@ -1458,6 +1490,9 @@ const styles = StyleSheet.create({
   },
   lvBadgeReady: {
     backgroundColor: colors.green,
+  },
+  lvBadgeMaxed: {
+    backgroundColor: colors.gold,
   },
   lvBadgeText: {
     color: '#FFFFFF',
