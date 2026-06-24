@@ -11,7 +11,7 @@ import type { Employee, RecruitmentCandidate, RecruitmentTier, WorkerType } from
 import { STAFF_LEVEL_BALANCE } from './balance'
 import { WORKERS } from './workers'
 import { getStaffName } from './staffNames'
-import { getEmployeesByType } from '../utils/gameCalculations'
+import { getEmployeesByType } from '../utils/employeeUtils'
 
 export type { RecruitmentCandidate, RecruitmentTier }
 

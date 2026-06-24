@@ -22,11 +22,8 @@ import { Bell, Clock3 } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
-import BuildingGrid from '../../../src/components/BuildingGrid'
-import CollapsibleCard from '../../../src/components/CollapsibleCard'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
-import ProductionOverview, { type ProductionOverviewRow } from '../../../src/components/ProductionOverview'
 import ProgressBar from '../../../src/components/ProgressBar'
 import Sheet from '../../../src/components/Sheet'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
@@ -36,7 +33,7 @@ import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, BOOST_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE } from '../../../src/game/data/balance'
 import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -51,19 +48,13 @@ import {
   getUpgradeProductionRequirement,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
-import { canActivateBoost, isBoostActive, isBoostOnCooldown } from '../../../src/hooks/useGameLoop'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
-import FactoryMapView from '../../../src/components/FactoryMapView'
-import FactoryIsometricView from '../../../src/components/FactoryIsometricView'
 
-type FactoryViewMode = 'grid' | 'diamond_ground' | 'map2_5d' | 'isometric'
 
 // The cleaned diamond-ground renderer is now the live review surface for
 // Factory on this branch. The original grid and the other experimental
 // renderers still remain available in code for fallback and comparison,
 // but this review pass uses diamond ground as the default experience.
-const DEFAULT_FACTORY_VIEW_MODE: FactoryViewMode = 'diamond_ground'
-const FACTORY_VIEW_MODE: FactoryViewMode = DEFAULT_FACTORY_VIEW_MODE
 
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const UPGRADEABLE: BuildingType[] = [
@@ -186,7 +177,6 @@ export default function RefineryScreen() {
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
   const isDaytime          = derived.gameClock.isDaytime
-  const usesDiamondGroundLive = FACTORY_VIEW_MODE === 'diamond_ground'
 
   const secondaryStats = [
     { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
@@ -214,15 +204,6 @@ export default function RefineryScreen() {
   const canUpgrade                 = hasEnoughMoney && hasEnoughProduction
   const nextGoal                   = derived.activeMilestones.find((m) => !m.isCompleted)
 
-  const boostActive            = isBoostActive(game)
-  const boostOnCooldown        = isBoostOnCooldown(game)
-  const boostReady             = canActivateBoost(game)
-  const boostActiveSecondsLeft = Math.max(0, Math.ceil(((game.boostActiveUntilTick - game.tickCount) * TICK_MS) / 1000))
-  const boostCooldownSecondsLeft = Math.max(0, Math.ceil(((game.boostAvailableAtTick - game.tickCount) * TICK_MS) / 1000))
-  const boostElapsed = boostActive
-    ? BOOST_BALANCE.durationTicks - (game.boostActiveUntilTick - game.tickCount)
-    : BOOST_BALANCE.cooldownTicks - (game.boostAvailableAtTick - game.tickCount)
-
   const products: {
     key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
     label: string; color: string
@@ -234,21 +215,8 @@ export default function RefineryScreen() {
     { key: 'plasticPellets',   label: 'Pellets',     color: colors.teal },
   ]
 
-  const productionRows: ProductionOverviewRow[] = [
-    { key: 'gasoline', label: 'Gasoline', current: game.gasoline, max: derived.maxGasolineStorage, color: colors.green },
-    ...products
-      .filter((p) => game.productInventory[p.key] > 0 || derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
-      .map((p) => ({
-        key: p.key, label: p.label,
-        current: game.productInventory[p.key],
-        max: PRODUCT_MAX_STORAGE(derived, p.key),
-        color: p.color,
-      })),
-  ]
-
   const safeGame    = game
   const safeDerived = derived
-  const currentContract = derived.activeContracts.find((c) => c.isUnlocked && !c.isCompleted)!
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER — Layered scene composition
@@ -278,24 +246,7 @@ export default function RefineryScreen() {
           {/* Yard / factory ground */}
           <View style={styles.bgYard}>
             <View style={styles.bgDockEdge} />
-            {!usesDiamondGroundLive ? (
-              <>
-                <View style={styles.bgYardZoneStorage} />
-                <View style={styles.bgYardZoneProcess} />
-                <View style={styles.bgYardZoneLogistics} />
-                <View style={styles.bgYardRoad} />
-                <View style={styles.bgYardRoad2} />
-                <View style={styles.bgYardRoad3} />
-                <View style={styles.bgPipeRun} />
-                <View style={styles.bgPipeBranch} />
-                <View style={styles.bgLoadingStrip} />
-                <View style={styles.bgTankCluster}>
-                  <View style={styles.bgTankLarge} />
-                  <View style={styles.bgTankMedium} />
-                  <View style={styles.bgTankSmall} />
-                </View>
-              </>
-            ) : null}
+
           </View>
         </View>
 
@@ -311,49 +262,17 @@ export default function RefineryScreen() {
             contentContainerStyle={[styles.gridScrollContent, { paddingTop: gridPaddingTop }]}
             showsVerticalScrollIndicator={false}
           >
-            {FACTORY_VIEW_MODE === 'diamond_ground' ? (
-              <FactoryDiamondGroundView
-                game={game}
-                derived={derived}
-                grid={game.grid}
-                gridLevels={game.gridLevels}
-                containerWidth={width - spacing.md * 2}
-                displayGridSize={11}
-                anchorGridSize={EXPANSION_BALANCE[0].size}
-                onCellPress={handleCellPress}
-                isActive={game.crudeOil > 0}
-              />
-            ) : FACTORY_VIEW_MODE === 'map2_5d' ? (
-              <FactoryMapView
-                game={game}
-                derived={derived}
-                grid={game.grid}
-                gridLevels={game.gridLevels}
-                containerWidth={width - spacing.md * 2}
-                onCellPress={handleCellPress}
-                isActive={game.crudeOil > 0}
-              />
-            ) : FACTORY_VIEW_MODE === 'isometric' ? (
-              <FactoryIsometricView
-                game={game}
-                derived={derived}
-                grid={game.grid}
-                gridLevels={game.gridLevels}
-                containerWidth={width}
-                onCellPress={handleCellPress}
-                isActive={game.crudeOil > 0}
-              />
-            ) : (
-              <BuildingGrid
-                game={game}
-                derived={derived}
-                grid={game.grid}
-                gridLevels={game.gridLevels}
-                containerWidth={width - spacing.md * 2}
-                onCellPress={handleCellPress}
-                isActive={game.crudeOil > 0}
-              />
-            )}
+            <FactoryDiamondGroundView
+              game={game}
+              derived={derived}
+              grid={game.grid}
+              gridLevels={game.gridLevels}
+              containerWidth={width - spacing.md * 2}
+              displayGridSize={11}
+              anchorGridSize={EXPANSION_BALANCE[0].size}
+              onCellPress={handleCellPress}
+              isActive={game.crudeOil > 0}
+            />
             {gridEditMode ? (
               <Pressable onPress={() => setGridEditMode(null)}>
                 <Text style={styles.hintActive}>
@@ -834,7 +753,6 @@ const SKY_DAY      = '#6FA8C8'
 const SKY_NIGHT    = '#0D1B2E'
 const HORIZON_COL  = '#6A7A5A'
 const YARD_GROUND  = '#B8A882'
-const ROAD_COLOR   = 'rgba(100,88,68,0.18)'
 
 const styles = StyleSheet.create({
   // ── Root ─────────────────────────────────────────────────────────────────
@@ -915,130 +833,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderBottomColor: 'rgba(207,189,151,0.92)',
   },
-  bgYardZoneStorage: {
-    position: 'absolute',
-    top: 30,
-    left: 12,
-    width: '35%',
-    height: 90,
-    borderRadius: 24,
-    backgroundColor: 'rgba(224,214,191,0.28)',
-    borderWidth: 1,
-    borderColor: 'rgba(112,95,71,0.14)',
-  },
-  bgYardZoneProcess: {
-    position: 'absolute',
-    top: 70,
-    right: 16,
-    width: '42%',
-    height: 108,
-    borderRadius: 28,
-    backgroundColor: 'rgba(156,138,104,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(94,79,58,0.14)',
-  },
-  bgYardZoneLogistics: {
-    position: 'absolute',
-    right: 18,
-    bottom: 88,
-    left: '18%',
-    height: 84,
-    borderRadius: 24,
-    backgroundColor: 'rgba(135,118,88,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(96,82,60,0.16)',
-  },
-  // Decorative road/path strips inside yard
-  bgYardRoad: {
-    position: 'absolute',
-    top: 54, left: 0, right: 0,
-    height: 8,
-    backgroundColor: ROAD_COLOR,
-  },
-  bgYardRoad2: {
-    position: 'absolute',
-    top: 82, left: 0, right: 0,
-    height: 4,
-    backgroundColor: ROAD_COLOR,
-  },
-  bgYardRoad3: {
-    position: 'absolute',
-    bottom: 118,
-    left: 18,
-    right: 18,
-    height: 10,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(96,84,64,0.16)',
-  },
-  bgPipeRun: {
-    position: 'absolute',
-    top: 110,
-    left: '32%',
-    width: 6,
-    height: 138,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(96,110,118,0.34)',
-  },
-  bgPipeBranch: {
-    position: 'absolute',
-    top: 142,
-    left: '32%',
-    right: '20%',
-    height: 6,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(96,110,118,0.26)',
-  },
-  bgLoadingStrip: {
-    position: 'absolute',
-    right: 28,
-    bottom: 128,
-    width: '28%',
-    height: 20,
-    borderRadius: 6,
-    backgroundColor: 'rgba(118,104,82,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(96,84,64,0.18)',
-  },
-  bgTankCluster: {
-    position: 'absolute',
-    top: 44,
-    left: 24,
-    width: 104,
-    height: 72,
-  },
-  bgTankLarge: {
-    position: 'absolute',
-    left: 0,
-    bottom: 8,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(232,224,205,0.42)',
-    borderWidth: 1,
-    borderColor: 'rgba(126,108,80,0.18)',
-  },
-  bgTankMedium: {
-    position: 'absolute',
-    left: 28,
-    top: 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(232,224,205,0.34)',
-    borderWidth: 1,
-    borderColor: 'rgba(126,108,80,0.16)',
-  },
-  bgTankSmall: {
-    position: 'absolute',
-    left: 56,
-    bottom: 12,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(232,224,205,0.30)',
-    borderWidth: 1,
-    borderColor: 'rgba(126,108,80,0.15)',
-  },
+
 
   // ── Layer 1: Grid ─────────────────────────────────────────────────────────
   // top is set dynamically (= yardTop)

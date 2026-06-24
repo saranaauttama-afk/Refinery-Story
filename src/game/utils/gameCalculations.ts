@@ -283,9 +283,12 @@ export function getEmptyWorkerCounts(): WorkerCounts {
 
 // --- Individual Staff (Phase 1) helpers ---
 
-export function getEmployeesByType(employees: Employee[], type: WorkerType): Employee[] {
-  return employees.filter((employee) => employee.type === type)
-}
+import { getEmployeesByType as _getEmployeesByType } from './employeeUtils'
+// Re-exported from employeeUtils to break the circular dependency:
+//   gameCalculations → recruitment → gameCalculations
+// The implementation lives in employeeUtils.ts; callers that already import
+// from gameCalculations continue to work unchanged.
+export { getEmployeesByType } from './employeeUtils'
 
 // "Concentrated training" target: the lowest-level employee of a type (ties
 // broken by lowest XP, then hire order). Returns null if the type has no
@@ -325,7 +328,7 @@ export function getEmployeeMultiplier(employee: Employee): number {
 // the old `count * multiplier(sharedLevel)`. At uniform level (no veterans)
 // this equals that; as individuals level up (or roll veteran), it rises.
 export function getEffectiveWorkerSum(employees: Employee[], type: WorkerType): number {
-  return getEmployeesByType(employees, type).reduce(
+  return _getEmployeesByType(employees, type).reduce(
     (sum, employee) => sum + getEmployeeMultiplier(employee),
     0,
   )
@@ -347,7 +350,7 @@ export function createNewEmployee(employees: Employee[], type: WorkerType): Empl
   // same name ("Mara"). Use a global hire-order index instead: each new
   // employee, of any type, gets the next name in STAFF_NAME_POOL. `id`
   // stays unique either way since it's never parsed, just compared.
-  const typeIndex = getEmployeesByType(employees, type).length
+  const typeIndex = _getEmployeesByType(employees, type).length
   const globalIndex = employees.length
   const trait = rollVeteranTrait()
   return {
