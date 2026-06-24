@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
-import { colors, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { PERKS } from '../../../src/game/data/perks'
 import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
@@ -33,6 +33,7 @@ export default function BusinessScreen() {
     claimHiddenEvent,
   } = useGame()
   const [showCompletedContracts, setShowCompletedContracts] = useState(false)
+  const [contractFilter, setContractFilter] = useState<'all' | 'ready' | 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'>('all')
 
   if (!loaded || !game || !derived) {
     return (
@@ -45,10 +46,38 @@ export default function BusinessScreen() {
   const unlockedContracts = derived.activeContracts.filter((c) => c.isUnlocked)
   // Newest-unlocked tier first, so contracts you just gained access to float
   // to the top instead of getting buried in a long static list.
-  const incompleteContracts = unlockedContracts
+  const allIncomplete = unlockedContracts
     .filter((c) => !c.isCompleted)
     .sort((a, b) => b.unlockLevel - a.unlockLevel || b.id - a.id)
+
   const completedContracts = unlockedContracts.filter((c) => c.isCompleted)
+
+  // Count ready contracts for the badge
+  const readyCount = allIncomplete.filter((c) => {
+    const { have, need } = getContractProgress(c, game)
+    return have >= need
+  }).length
+
+  const incompleteContracts = useMemo(() => {
+    const filtered = contractFilter === 'all' ? allIncomplete
+      : contractFilter === 'ready' ? allIncomplete.filter((c) => {
+          const { have, need } = getContractProgress(c, game)
+          return have >= need
+        })
+      : contractFilter === 'gasoline' ? allIncomplete.filter((c) => (c.gasolineRequired ?? 0) > 0)
+      : contractFilter === 'asphalt' ? allIncomplete.filter((c) => (c.asphaltRequired ?? 0) > 0)
+      : contractFilter === 'jetFuel' ? allIncomplete.filter((c) => (c.jetFuelRequired ?? 0) > 0)
+      : contractFilter === 'lubricants' ? allIncomplete.filter((c) => (c.lubricantsRequired ?? 0) > 0)
+      : contractFilter === 'petrochemicals' ? allIncomplete.filter((c) => (c.petrochemicalsRequired ?? 0) > 0)
+      : contractFilter === 'recycledMaterial' ? allIncomplete.filter((c) => (c.recycledMaterialRequired ?? 0) > 0)
+      : allIncomplete.filter((c) => (c.plasticPelletsRequired ?? 0) > 0)
+    // Ready contracts always float to the top within the filtered set
+    return [...filtered].sort((a, b) => {
+      const aReady = getContractProgress(a, game).have >= getContractProgress(a, game).need ? 0 : 1
+      const bReady = getContractProgress(b, game).have >= getContractProgress(b, game).need ? 0 : 1
+      return aReady - bReady || b.unlockLevel - a.unlockLevel || b.id - a.id
+    })
+  }, [allIncomplete, contractFilter, game])
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -59,7 +88,32 @@ export default function BusinessScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={styles.list}>
-        <Section title="Contracts">
+        <Section title={readyCount > 0 ? `Contracts · ${readyCount} ready` : 'Contracts'}>
+          {/* Filter bar */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
+            {([
+              { key: 'all', label: 'All' },
+              { key: 'ready', label: `✓ Ready${readyCount > 0 ? ` (${readyCount})` : ''}` },
+              { key: 'gasoline', label: '⛽ Gas' },
+              { key: 'asphalt', label: '🛣 Asphalt' },
+              { key: 'jetFuel', label: '✈️ Jet' },
+              { key: 'lubricants', label: '🔧 Lube' },
+              { key: 'petrochemicals', label: '🧪 Petrochem' },
+              { key: 'recycledMaterial', label: '♻️ Recycled' },
+              { key: 'plasticPellets', label: '🔩 Pellets' },
+            ] as const).map((f) => (
+              <Pressable
+                key={f.key}
+                style={[styles.filterChip, contractFilter === f.key && styles.filterChipActive]}
+                onPress={() => setContractFilter(f.key)}
+              >
+                <Text style={[styles.filterChipLabel, contractFilter === f.key && styles.filterChipLabelActive]}>
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
           {HIDDEN_EVENTS.filter(
             (e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked',
           ).map((event) => (
@@ -72,12 +126,10 @@ export default function BusinessScreen() {
               onPress={() => claimHiddenEvent(event.key)}
             />
           ))}
+
           {incompleteContracts.map((contract) => {
             const { have, need, unit } = getContractProgress(contract, game)
             const ready = have >= need
-            // "NEW" = this contract just became available at your current
-            // refinery level. Disappears once you complete it, or once you
-            // level up past its tier (it's no longer the "newest" one).
             const isNew = contract.unlockLevel === game.refineryLevel
             return (
               <ListRow
@@ -86,13 +138,15 @@ export default function BusinessScreen() {
                 subtitle={`${have}/${need} ${unit} · +$${contract.currentReward.toLocaleString()}, +${contract.currentRpReward} RP, +${contract.currentReputationReward} rep`}
                 actionLabel="Complete"
                 disabled={!ready}
-                badge={isNew ? 'NEW' : undefined}
+                badge={isNew ? 'NEW' : ready ? '✓' : undefined}
                 onPress={() => completeContract(contract)}
               />
             )
           })}
           {incompleteContracts.length === 0 && (
-            <Text style={styles.tagline}>No open contracts right now -- keep producing!</Text>
+            <Text style={styles.tagline}>
+              {contractFilter === 'all' ? 'No open contracts -- keep producing!' : 'No contracts match this filter.'}
+            </Text>
           )}
 
           {completedContracts.length > 0 && (
@@ -112,7 +166,7 @@ export default function BusinessScreen() {
                 <ListRow
                   key={contract.id}
                   title={contract.name.en}
-                  subtitle={`${have}/${need} ${unit} · +$${contract.currentReward.toLocaleString()}, +${contract.currentRpReward} RP, +${contract.currentReputationReward} rep`}
+                  subtitle={`${have}/${need} ${unit}`}
                   actionLabel="Complete"
                   done
                   onPress={() => completeContract(contract)}
@@ -272,5 +326,30 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontWeight: '700',
     fontSize: 13,
+  },
+  filterBar: {
+    marginBottom: spacing.sm,
+    marginTop: 2,
+  },
+  filterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: colors.creamBorder,
+    backgroundColor: colors.white,
+    marginRight: 6,
+  },
+  filterChipActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  filterChipLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.inkMuted,
+  },
+  filterChipLabelActive: {
+    color: colors.white,
   },
 })
