@@ -732,6 +732,20 @@ export const text = {
           'สัญญาส่งออกประจำสำหรับผลิตภัณฑ์ปิโตรเคมี',
         ),
       },
+      recyclingContract: {
+        name: bilingual('Municipal Recycling Bureau', 'สำนักงานรีไซเคิลเทศบาล'),
+        flavor: bilingual(
+          'Ongoing contract to supply recycled material to the city recycling program.',
+          'สัญญาส่งมอบวัสดุรีไซเคิลให้กับโครงการรีไซเคิลของเมือง',
+        ),
+      },
+      pelletExport: {
+        name: bilingual('Polymer Products Exporter', 'ผู้ส่งออกผลิตภัณฑ์พอลิเมอร์'),
+        flavor: bilingual(
+          'Premium standing order for plastic pellets from the manufacturing sector.',
+          'คำสั่งซื้อประจำพรีเมียมสำหรับเม็ดพลาสติกจากภาคการผลิต',
+        ),
+      },
     },
   },
   contracts: {
@@ -1229,6 +1243,26 @@ export const text = {
       },
       26: {
         name: bilingual('Industrial Materials Consortium', 'สมาคมวัสดุอุตสาหกรรม'),
+      },
+      // Phase F: Recycled Material contracts (Waste Treatment Plant, Lv8+)
+      27: {
+        name: bilingual('Municipal Recycling Program', 'โครงการรีไซเคิลเทศบาล'),
+      },
+      28: {
+        name: bilingual('Green Industry Alliance', 'กลุ่มอุตสาหกรรมสีเขียว'),
+      },
+      29: {
+        name: bilingual('National Recycling Initiative', 'โครงการรีไซเคิลแห่งชาติ'),
+      },
+      // Phase G: Plastic Pellets contracts (Polymer Plant, Lv20+)
+      30: {
+        name: bilingual('Polymer Packaging Co.', 'บริษัทบรรจุภัณฑ์พอลิเมอร์'),
+      },
+      31: {
+        name: bilingual('Advanced Materials Export', 'ส่งออกวัสดุขั้นสูง'),
+      },
+      32: {
+        name: bilingual('Global Plastics Consortium', 'สมาคมพลาสติกโลก'),
       },
     } satisfies Record<number, { name: BilingualTextValue }>,
     milestones: {

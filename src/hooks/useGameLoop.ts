@@ -1544,11 +1544,15 @@ export function useGameLoop() {
         const isLube = !isPetro && (contract.lubricantsRequired ?? 0) > 0
         const isJet = !isPetro && !isLube && (contract.jetFuelRequired ?? 0) > 0
         const isAsphalt = !isPetro && !isLube && !isJet && (contract.asphaltRequired ?? 0) > 0
+        const isRecycled = !isPetro && !isLube && !isJet && !isAsphalt && (contract.recycledMaterialRequired ?? 0) > 0
+        const isPellets = !isPetro && !isLube && !isJet && !isAsphalt && !isRecycled && (contract.plasticPelletsRequired ?? 0) > 0
 
         if (isPetro && current.productInventory.petrochemicals < (contract.petrochemicalsRequired ?? 0)) return current
         if (isLube && current.productInventory.lubricants < (contract.lubricantsRequired ?? 0)) return current
         if (isJet && current.productInventory.jetFuel < (contract.jetFuelRequired ?? 0)) return current
         if (isAsphalt && current.productInventory.asphalt < (contract.asphaltRequired ?? 0)) return current
+        if (isRecycled && current.productInventory.recycledMaterial < (contract.recycledMaterialRequired ?? 0)) return current
+        if (isPellets && current.productInventory.plasticPellets < (contract.plasticPelletsRequired ?? 0)) return current
         if (!isPetro && !isLube && !isJet && !isAsphalt && current.gasoline < contract.gasolineRequired) return current
 
         const stats = calculateDerivedStats(current)
@@ -1563,11 +1567,15 @@ export function useGameLoop() {
               ? { ...current.productInventory, jetFuel: current.productInventory.jetFuel - (contract.jetFuelRequired ?? 0) }
               : isAsphalt
                 ? { ...current.productInventory, asphalt: current.productInventory.asphalt - (contract.asphaltRequired ?? 0) }
-                : current.productInventory
+                : isRecycled
+                  ? { ...current.productInventory, recycledMaterial: current.productInventory.recycledMaterial - (contract.recycledMaterialRequired ?? 0) }
+                  : isPellets
+                    ? { ...current.productInventory, plasticPellets: current.productInventory.plasticPellets - (contract.plasticPelletsRequired ?? 0) }
+                    : current.productInventory
 
         return applyWinGoal(applyMilestones({
           ...current,
-          gasoline: isPetro || isLube || isJet || isAsphalt ? current.gasoline : current.gasoline - contract.gasolineRequired,
+          gasoline: isPetro || isLube || isJet || isAsphalt || isRecycled || isPellets ? current.gasoline : current.gasoline - contract.gasolineRequired,
           productInventory,
           money: current.money + reward,
           researchPoints: current.researchPoints + rpReward,

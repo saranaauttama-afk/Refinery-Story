@@ -212,6 +212,10 @@ export type Contract = {
   lubricantsRequired?: number
   // Phase E: petrochemical contracts
   petrochemicalsRequired?: number
+  // Phase F: recycled material contracts (from Waste Treatment Plant)
+  recycledMaterialRequired?: number
+  // Phase G: plastic pellets contracts (from Polymer Plant)
+  plasticPelletsRequired?: number
   reward: number
   rpReward: number
   reputationReward: number
@@ -459,6 +463,8 @@ export type StandingOrderKey =
   | 'jetFuelCharter'
   | 'lubricantSupply'
   | 'petrochemExport'
+  | 'recyclingContract'
+  | 'pelletExport'
 
 export type MilestoneKey =
   | 'firstFuel'

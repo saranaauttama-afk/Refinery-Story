@@ -533,6 +533,76 @@ export const CONTRACT_BALANCE = [
     rpReward: 160,
     reputationReward: 180,
   },
+
+  // --- Phase F: Recycled Material contracts (Waste Treatment Plant, Lv8+) ---
+  // Waste Treatment Plant converts waste → recycledMaterial at $25/unit.
+  // Direct sell of 30 units = $750 base. These contracts pay a premium + RP/rep
+  // as an incentive to manage waste actively rather than just auto-selling.
+  {
+    id: 27,
+    tier: 2,
+    unlockLevel: 8,
+    gasolineRequired: 0,
+    recycledMaterialRequired: 30,
+    reward: 1200,
+    rpReward: 10,
+    reputationReward: 8,
+  },
+  {
+    id: 28,
+    tier: 2,
+    unlockLevel: 9,
+    gasolineRequired: 0,
+    recycledMaterialRequired: 60,
+    reward: 2800,
+    rpReward: 20,
+    reputationReward: 15,
+  },
+  {
+    id: 29,
+    tier: 3,
+    unlockLevel: 11,
+    gasolineRequired: 0,
+    recycledMaterialRequired: 120,
+    reward: 6500,
+    rpReward: 40,
+    reputationReward: 30,
+  },
+
+  // --- Phase G: Plastic Pellets contracts (Polymer Plant, Lv20+) ---
+  // Polymer Plant converts petrochemicals → plasticPellets at $300/unit.
+  // Direct sell of 20 units = $6,000 base. These contracts pay a premium —
+  // a true endgame product with high value and limited throughput.
+  {
+    id: 30,
+    tier: 3,
+    unlockLevel: 20,
+    gasolineRequired: 0,
+    plasticPelletsRequired: 20,
+    reward: 9000,
+    rpReward: 50,
+    reputationReward: 45,
+  },
+  {
+    id: 31,
+    tier: 3,
+    unlockLevel: 21,
+    gasolineRequired: 0,
+    plasticPelletsRequired: 40,
+    reward: 20000,
+    rpReward: 90,
+    reputationReward: 80,
+  },
+  {
+    id: 32,
+    tier: 3,
+    unlockLevel: 22,
+    gasolineRequired: 0,
+    plasticPelletsRequired: 80,
+    reward: 45000,
+    rpReward: 150,
+    reputationReward: 140,
+  },
 ] as const
 
 export const BUILDING_UPGRADE_BALANCE = {
@@ -715,6 +785,30 @@ export const STANDING_ORDER_BALANCE = [
     reputationReward: 30,
     cooldownTicks: 1500,
     unlockLevel: 15,
+  },
+  {
+    // Direct sell of 40 recycledMaterial is $1,000 base — premium for consistent
+    // waste management. Unlocks with Waste Treatment Plant (Lv8).
+    key: 'recyclingContract' as const,
+    productKey: 'recycledMaterial' as const,
+    required: 40,
+    reward: 1600,
+    rpReward: 8,
+    reputationReward: 10,
+    cooldownTicks: 900,
+    unlockLevel: 8,
+  },
+  {
+    // Direct sell of 20 plasticPellets is $6,000 base — premium for high-tier
+    // manufacturing output. Unlocks with Polymer Plant (Lv20).
+    key: 'pelletExport' as const,
+    productKey: 'plasticPellets' as const,
+    required: 20,
+    reward: 8000,
+    rpReward: 40,
+    reputationReward: 35,
+    cooldownTicks: 1800,
+    unlockLevel: 20,
   },
 ] as const
 

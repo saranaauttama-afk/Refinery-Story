@@ -802,6 +802,12 @@ export function getContractProgress(
   if ((contract.asphaltRequired ?? 0) > 0) {
     return { have: game.productInventory.asphalt, need: contract.asphaltRequired ?? 0, unit: 'asphalt' }
   }
+  if ((contract.recycledMaterialRequired ?? 0) > 0) {
+    return { have: game.productInventory.recycledMaterial, need: contract.recycledMaterialRequired ?? 0, unit: 'recycled' }
+  }
+  if ((contract.plasticPelletsRequired ?? 0) > 0) {
+    return { have: game.productInventory.plasticPellets, need: contract.plasticPelletsRequired ?? 0, unit: 'pellets' }
+  }
   return { have: game.gasoline, need: contract.gasolineRequired, unit: 'gasoline' }
 }
 
