@@ -14,7 +14,7 @@ import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { STAFF_LEVEL_BALANCE, PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
-import { getCellAssignedToEmployee, getTrainingCost, TICK_MS } from '../../../src/game/utils/gameCalculations'
+import { getCellAssignedToEmployee, getTrainingCost, getMaxHireCount, isNearRetirement, TICK_MS } from '../../../src/game/utils/gameCalculations'
 import type { BuildingType, RecruitmentTier, WorkerType } from '../../../src/game/types'
 
 const TIER_BADGES: Record<RecruitmentTier, string> = {
@@ -141,6 +141,9 @@ export default function StaffScreen() {
             const worker = WORKERS.find((w) => w.key === candidate.type)
             const affordable = game.money >= candidate.cost
             const badge = TIER_BADGES[candidate.tier]
+            const cap = getMaxHireCount(game.refineryLevel)
+            const atCap = game.workerCounts[candidate.type] >= cap
+            const canHire = affordable && !atCap
             return (
               <View
                 key={candidate.id}
@@ -155,12 +158,13 @@ export default function StaffScreen() {
                 <Text style={styles.employeeStats}>
                   {badge ? `${badge} · ` : ''}Starts at Lv{candidate.startingLevel}
                   {candidate.isVeteran ? ' · Veteran (+20%)' : ''}
+                  {atCap ? ` · Full (${game.workerCounts[candidate.type]}/${cap})` : ` · ${game.workerCounts[candidate.type]}/${cap} hired`}
                 </Text>
                 {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
                 <AnimatedPressable
-                  disabled={!affordable}
+                  disabled={!canHire}
                   onPress={() => {
-                    if (affordable) {
+                    if (canHire) {
                       spawnFloat(`-$${candidate.cost.toLocaleString()}`, 'expense')
                       haptics.confirm()
                     }
@@ -168,10 +172,12 @@ export default function StaffScreen() {
                   }}
                   style={[
                     styles.hireButton,
-                    affordable ? styles.smallButtonActive : styles.smallButtonDisabled,
+                    canHire ? styles.smallButtonActive : styles.smallButtonDisabled,
                   ]}
                 >
-                  <Text style={styles.smallButtonLabel}>Hire · ${candidate.cost.toLocaleString()}</Text>
+                  <Text style={styles.smallButtonLabel}>
+                    {atCap ? `Full (${cap} max)` : `Hire · $${candidate.cost.toLocaleString()}`}
+                  </Text>
                 </AnimatedPressable>
               </View>
             )
@@ -200,17 +206,23 @@ export default function StaffScreen() {
               : []
             const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
 
+            const nearRetire = isNearRetirement(employee, game.businessYear)
+            const yearsLeft = employee.hiredOnYear !== undefined
+              ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear)
+              : null
+
             return (
-              <View key={employee.id} style={styles.employeeCard}>
+              <View key={employee.id} style={[styles.employeeCard, nearRetire && styles.employeeCardRetiring]}>
                 <View style={styles.employeeHeader}>
                   <Text style={styles.employeeName}>
-                    {employee.name} {employee.trait === 'veteran' ? '⭐' : ''}
+                    {employee.name} {employee.trait === 'veteran' ? '⭐' : ''}{nearRetire ? ' 🕰' : ''}
                   </Text>
                   <Text style={styles.employeeType}>{worker?.name.en ?? employee.type}</Text>
                 </View>
                 <Text style={styles.employeeStats}>
                   Lv{employee.level}
                   {maxed ? ' (max)' : ` · ${employee.xp}/${xpNeeded} XP`}
+                  {nearRetire && yearsLeft !== null ? ` · Retires in ${yearsLeft}y` : ''}
                 </Text>
                 {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
                 <View style={styles.employeeActions}>
@@ -375,6 +387,10 @@ const styles = StyleSheet.create({
     borderColor: colors.creamBorder,
     padding: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  employeeCardRetiring: {
+    borderColor: colors.orange,
+    backgroundColor: '#FFF8F0',
   },
   employeeHeader: {
     flexDirection: 'row',

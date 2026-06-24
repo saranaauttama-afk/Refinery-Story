@@ -1,5 +1,6 @@
 import {
   AWARDS_BALANCE,
+  HIRING_BALANCE,
   CALENDAR_BALANCE,
   BONUS_BALANCE,
   BUILDING_UPGRADE_BALANCE,
@@ -809,6 +810,21 @@ export function getContractProgress(
     return { have: game.productInventory.plasticPellets, need: contract.plasticPelletsRequired ?? 0, unit: 'pellets' }
   }
   return { have: game.gasoline, need: contract.gasolineRequired, unit: 'gasoline' }
+}
+
+export function getMaxHireCount(refineryLevel: number): number {
+  return Math.floor(HIRING_BALANCE.capBase + refineryLevel / HIRING_BALANCE.capStep)
+}
+
+export function isNearRetirement(employee: { hiredOnYear?: number }, businessYear: number): boolean {
+  if (employee.hiredOnYear === undefined) return false
+  const yearsOfService = businessYear - employee.hiredOnYear
+  return yearsOfService >= HIRING_BALANCE.retirementAfterYears - HIRING_BALANCE.retirementWarningYears
+}
+
+export function shouldRetire(employee: { hiredOnYear?: number }, businessYear: number): boolean {
+  if (employee.hiredOnYear === undefined) return false
+  return businessYear - employee.hiredOnYear >= HIRING_BALANCE.retirementAfterYears
 }
 
 export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {
@@ -1991,16 +2007,47 @@ export function closeBusinessYear(game: GameState): {
     text.logs.annualAward(game.businessYear, grade, cashReward),
   )
 
+  // Retirement pass: employees who've served retirementAfterYears retire at
+  // year-end. Their workerCounts are decremented and they leave the roster.
+  // Assignments are cleaned up automatically since they reference employee IDs.
+  const nextBusinessYear = game.businessYear + 1
+  const retirees = game.employees.filter((e) => shouldRetire(e, nextBusinessYear))
+  const survivingEmployees = game.employees.filter((e) => !shouldRetire(e, nextBusinessYear))
+
+  // Rebuild workerCounts from surviving employees
+  const nextWorkerCounts = { ...game.workerCounts }
+  for (const retiree of retirees) {
+    nextWorkerCounts[retiree.type] = Math.max(0, (nextWorkerCounts[retiree.type] ?? 0) - 1)
+  }
+
+  // Clean up assignments for retired employee IDs.
+  // assignments is Record<number, string> (cellIndex -> employeeId).
+  // Remove any cell assignment pointing to a retired employee.
+  const retiredIds = new Set(retirees.map((e) => e.id))
+  const nextAssignments: typeof game.assignments = {}
+  for (const [cellIndex, employeeId] of Object.entries(game.assignments ?? {})) {
+    if (!retiredIds.has(employeeId)) {
+      nextAssignments[Number(cellIndex)] = employeeId
+    }
+  }
+
+  const retirementLog = retirees.length > 0
+    ? addLog(game.activityLog, `${retirees.map((e) => e.name).join(', ')} retired after ${HIRING_BALANCE.retirementAfterYears} years of service.`)
+    : game.activityLog
+
   return {
     game: {
       ...game,
       money: moneyAfterWages + cashReward,
       reputation: Math.max(0, reputationAfter),
-      businessYear: game.businessYear + 1,
+      businessYear: nextBusinessYear,
       yearStartTick: game.tickCount,
       yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },
       awardHistory: [record, ...game.awardHistory].slice(0, 12),
-      activityLog: addLog(game.activityLog, message),
+      activityLog: addLog(retirementLog, message),
+      employees: survivingEmployees,
+      workerCounts: nextWorkerCounts,
+      assignments: nextAssignments,
     },
     record,
   }

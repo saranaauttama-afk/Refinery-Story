@@ -25,6 +25,7 @@ import {
   applyWinGoal,
   calculateDerivedStats,
   closeBusinessYear,
+  getMaxHireCount,
   CRUDE_COST,
   TICK_MS,
   RANDOM_EVENT_INTERVAL_TICKS,
@@ -1255,7 +1256,12 @@ export function useGameLoop() {
       update((current) => {
         if (current.money < worker.cost) return current
         if (worker.unlockLevel && current.refineryLevel < worker.unlockLevel) return current
-        const newEmployee = createNewEmployee(current.employees, worker.key)
+        const cap = getMaxHireCount(current.refineryLevel)
+        if (current.workerCounts[worker.key] >= cap) return current
+        const newEmployee = {
+          ...createNewEmployee(current.employees, worker.key),
+          hiredOnYear: current.businessYear,
+        }
         return applyMilestones({
           ...current,
           money: current.money - worker.cost,
@@ -1280,7 +1286,13 @@ export function useGameLoop() {
         if (!candidate) return current
         if (current.money < candidate.cost) return current
 
-        const newEmployee = hireCandidateEmployee(current.employees, candidate)
+        const cap = getMaxHireCount(current.refineryLevel)
+        if (current.workerCounts[candidate.type] >= cap) return current
+
+        const newEmployee = {
+          ...hireCandidateEmployee(current.employees, candidate),
+          hiredOnYear: current.businessYear,
+        }
         const replacement = generateRecruitmentPool(current.refineryLevel, current.recruitmentNameCounter)
         const recruitmentPool = [...current.recruitmentPool]
         recruitmentPool[slotIndex] = replacement.pool[0]

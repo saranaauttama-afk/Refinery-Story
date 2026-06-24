@@ -293,6 +293,9 @@ export type Employee = {
   // bonus to this employee's effectiveness multiplier (see
   // getEmployeeMultiplier). Extensible for future traits.
   trait?: 'veteran'
+  // Phase 5: business year this employee was hired. Used to determine
+  // retirement eligibility (see HIRING_BALANCE.retirementAfterYears).
+  hiredOnYear?: number
 }
 
 // --- System 2: Refinery Upgrade Perk Tree ---

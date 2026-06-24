@@ -902,6 +902,19 @@ export const AWARDS_BALANCE = {
 // closeBusinessYear). Roughly 15% of hire cost, so a worker "pays rent" but
 // still earns out over several years. Leveled crews cost more (see levelWageRate),
 // tying the leveling system to ongoing upkeep — the missing hiring tension.
+// Hiring cap + retirement (Phase 5 of Individual Staff system).
+// Per-type cap scales with refinery level so early game stays small and
+// late game allows a full bench. Formula: floor(BASE + refineryLevel / STEP).
+// At Lv1=2, Lv3=3, Lv6=4, Lv9=5, Lv12=6, Lv15=7 -- never truly infinite.
+// retirementAfterYears: employee retires this many business years after hire.
+// retirementWarningYears: show a warning badge this many years before retirement.
+export const HIRING_BALANCE = {
+  capBase: 2,
+  capStep: 3,
+  retirementAfterYears: 5,
+  retirementWarningYears: 1,
+} as const
+
 export const WAGE_BALANCE = {
   perWorker: {
     operator: 80,
