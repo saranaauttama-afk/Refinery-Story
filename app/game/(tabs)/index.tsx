@@ -22,6 +22,7 @@ import { Bell, Clock3 } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
+import FabNav, { type FabNavItem } from '../../../src/components/FabNav'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import ProgressBar from '../../../src/components/ProgressBar'
@@ -127,6 +128,7 @@ export default function RefineryScreen() {
 
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
+  const [fabOpen, setFabOpen] = useState(false)
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
   // Drives the unified Trade panel's expand/collapse (Buy/Sell + Auto-
@@ -184,6 +186,25 @@ export default function RefineryScreen() {
   const isDaytime          = derived.gameClock.isDaytime
 
   const refineryTitle = getRefineryTitle(game.refineryLevel).en
+
+  // FAB badge counts
+  const contractsReady = derived.activeContracts.filter((c) => {
+    if (!c.isUnlocked || c.isCompleted) return false
+    const { have, need } = getContractProgress(c, game)
+    return have >= need
+  }).length
+  const staffReady = game.recruitmentPool.length > 0 ? 1 : 0
+  const researchReady = derived.activeResearchItems.filter(
+    (i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost
+  ).length
+
+  const FAB_ITEMS: FabNavItem[] = [
+    { route: '/game',            icon: '🏭', label: 'Factory' },
+    { route: '/game/production', icon: '⚗️',  label: 'Production' },
+    { route: '/game/staff',      icon: '👥', label: 'Staff', badge: staffReady || undefined },
+    { route: '/game/business',   icon: '💼', label: 'Business', badge: (contractsReady + researchReady) || undefined },
+    { route: '/game/hq',         icon: '🏢', label: 'HQ' },
+  ]
   const secondaryStats = [
     { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
     { label: 'ESG',         value: `${Math.round(game.esgScore)}` },
@@ -794,6 +815,15 @@ export default function RefineryScreen() {
           </Text>
         </AnimatedPressable>
       </Sheet>
+
+      {/* ── FAB Navigation ────────────────────────────────────────────── */}
+      <FabNav
+        open={fabOpen}
+        onToggle={() => setFabOpen((v) => !v)}
+        onClose={() => setFabOpen(false)}
+        items={FAB_ITEMS}
+      />
+
     </SafeAreaView>
   )
 }
