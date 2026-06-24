@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { ImageSourcePropType } from 'react-native'
 import Svg, { Polygon } from 'react-native-svg'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 
 import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE } from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
@@ -33,6 +35,12 @@ const TOP_CUT_DIAGONALS = 4
 const ACTIVE_ROW_BIAS = 0
 const ACTIVE_COL_BIAS = 0
 const PLANT_IMAGE_WIDTH = TILE_WIDTH
+
+// Spring config for snap-back at bounds
+const SPRING_CONFIG = { damping: 18, stiffness: 180 }
+
+// How many px of overscroll are allowed before snapping back
+const OVERSCROLL_LIMIT = 60
 
 type PlantImageSpec = {
   source: ImageSourcePropType
@@ -142,6 +150,7 @@ type FactoryDiamondGroundViewProps = {
   grid: GridCell[]
   gridLevels: number[]
   containerWidth: number
+  viewportHeight?: number
   displayGridSize?: number
   anchorGridSize?: number
   onCellPress?: (index: number) => void
@@ -171,10 +180,16 @@ function isoY(row: number, col: number) {
   return (row + col) * (TILE_HEIGHT / 2) + TOP_PADDING
 }
 
+function clamp(value: number, min: number, max: number) {
+  'worklet'
+  return Math.min(max, Math.max(min, value))
+}
+
 function FactoryDiamondGroundView({
   grid,
   gridLevels,
   containerWidth,
+  viewportHeight,
   displayGridSize,
   anchorGridSize,
   onCellPress,
@@ -189,6 +204,7 @@ function FactoryDiamondGroundView({
   const activeRowOffset = Math.max(0, anchoredRowOffset - ACTIVE_ROW_BIAS)
   const anchoredColOffset = Math.floor((displayCols - anchorCols) / 2)
   const activeColOffset = Math.max(0, anchoredColOffset - ACTIVE_COL_BIAS)
+
   const tileLayouts = Array.from({ length: displayCols * displayRows }, (_, displayIndex) => {
     const row = Math.floor(displayIndex / displayCols)
     const col = displayIndex % displayCols
@@ -213,6 +229,7 @@ function FactoryDiamondGroundView({
       activeIndex,
     }
   })
+
   const visibleTiles = tileLayouts.filter((tile) => tile.diagonal >= TOP_CUT_DIAGONALS)
   const minX = Math.min(...visibleTiles.map((tile) => tile.x))
   const maxX = Math.max(...visibleTiles.map((tile) => tile.right))
@@ -225,115 +242,166 @@ function FactoryDiamondGroundView({
   const offsetX = (mapWidth - worldWidth) / 2 - minX
   const offsetY = (mapHeight - worldHeight) / 2 - minY
 
+  // Viewport: container clips the world. If viewportHeight not given, show full world.
+  const vpWidth = containerWidth
+  const vpHeight = viewportHeight ?? mapHeight
+
+  // Pan bounds: how far world can move (negative = world moved left/up)
+  const minPanX = Math.min(0, vpWidth - mapWidth)
+  const maxPanX = 0
+  const minPanY = Math.min(0, vpHeight - mapHeight)
+  const maxPanY = 0
+
+  // Shared values for pan offset
+  const translateX = useSharedValue((minPanX + maxPanX) / 2)
+  const translateY = useSharedValue((minPanY + maxPanY) / 2)
+  const savedX = useSharedValue(translateX.value)
+  const savedY = useSharedValue(translateY.value)
+
+  const pan = Gesture.Pan()
+    .onStart(() => {
+      'worklet'
+      savedX.value = translateX.value
+      savedY.value = translateY.value
+    })
+    .onUpdate((e) => {
+      'worklet'
+      const rawX = savedX.value + e.translationX
+      const rawY = savedY.value + e.translationY
+      // Allow slight overscroll, rubber-band style
+      translateX.value = clamp(rawX, minPanX - OVERSCROLL_LIMIT, maxPanX + OVERSCROLL_LIMIT)
+      translateY.value = clamp(rawY, minPanY - OVERSCROLL_LIMIT, maxPanY + OVERSCROLL_LIMIT)
+    })
+    .onEnd(() => {
+      'worklet'
+      // Snap back into bounds with spring
+      translateX.value = withSpring(clamp(translateX.value, minPanX, maxPanX), SPRING_CONFIG)
+      translateY.value = withSpring(clamp(translateY.value, minPanY, maxPanY), SPRING_CONFIG)
+    })
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }))
+
   return (
-    <View style={[styles.map, { width: mapWidth, height: mapHeight }]}>
-      {visibleTiles.map((tile) => {
-        const activeIndex = tile.activeIndex
-        const isDisabled = activeIndex === null
-        const cell = activeIndex === null ? null : grid[activeIndex]
-        const debugLabel = `${tile.row + 1},${tile.col + 1}`
-        const x = tile.x + offsetX
-        const y = tile.y + offsetY
-        const zIndex = 10 + tile.row + tile.col
+    <View style={[styles.viewport, { width: vpWidth, height: vpHeight }]}>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.map, { width: mapWidth, height: mapHeight }, animatedStyle]}>
+          {visibleTiles.map((tile) => {
+            const activeIndex = tile.activeIndex
+            const isDisabled = activeIndex === null
+            const cell = activeIndex === null ? null : grid[activeIndex]
+            const debugLabel = `${tile.row + 1},${tile.col + 1}`
+            const x = tile.x + offsetX
+            const y = tile.y + offsetY
+            const zIndex = 10 + tile.row + tile.col
 
-        if (isDisabled) {
-          return (
-            <View key={`disabled-${tile.displayIndex}`} style={[styles.cell, { left: x, top: y, zIndex }]}>
-              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                <Polygon
-                  points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)}
-                  fill="rgba(225, 215, 192, 0.36)"
-                  stroke="rgba(145, 126, 93, 0.18)"
-                  strokeWidth={1}
-                />
-                <Polygon
-                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, DISABLED_INSET_X, DISABLED_INSET_Y)}
-                  fill="rgba(245, 239, 227, 0.22)"
-                  stroke="rgba(148, 128, 95, 0.12)"
-                  strokeWidth={0.8}
-                />
-              </Svg>
-              <Text style={styles.debugLabelDisabled}>{debugLabel}</Text>
-            </View>
-          )
-        }
+            if (isDisabled) {
+              return (
+                <View key={`disabled-${tile.displayIndex}`} style={[styles.cell, { left: x, top: y, zIndex }]}>
+                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                    <Polygon
+                      points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)}
+                      fill="rgba(225, 215, 192, 0.36)"
+                      stroke="rgba(145, 126, 93, 0.18)"
+                      strokeWidth={1}
+                    />
+                    <Polygon
+                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, DISABLED_INSET_X, DISABLED_INSET_Y)}
+                      fill="rgba(245, 239, 227, 0.22)"
+                      stroke="rgba(148, 128, 95, 0.12)"
+                      strokeWidth={0.8}
+                    />
+                  </Svg>
+                  <Text style={styles.debugLabelDisabled}>{debugLabel}</Text>
+                </View>
+              )
+            }
 
-        if (!cell) {
-          return (
-            <Pressable
-              key={activeIndex}
-              onPress={() => onCellPress?.(activeIndex)}
-              style={[styles.cell, { left: x, top: y, zIndex }]}
-            >
-              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
-                <Polygon
-                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                  fill="#EEE5D3"
-                  stroke="rgba(148, 128, 95, 0.24)"
-                  strokeWidth={1}
-                />
-              </Svg>
-              <Text style={styles.plusLabel}>+</Text>
-              <Text style={styles.debugLabel}>{debugLabel}</Text>
-            </Pressable>
-          )
-        }
+            if (!cell) {
+              return (
+                <Pressable
+                  key={activeIndex}
+                  onPress={() => onCellPress?.(activeIndex)}
+                  style={[styles.cell, { left: x, top: y, zIndex }]}
+                >
+                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
+                    <Polygon
+                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
+                      fill="#EEE5D3"
+                      stroke="rgba(148, 128, 95, 0.24)"
+                      strokeWidth={1}
+                    />
+                  </Svg>
+                  <Text style={styles.plusLabel}>+</Text>
+                  <Text style={styles.debugLabel}>{debugLabel}</Text>
+                </Pressable>
+              )
+            }
 
-        const category = BUILDING_CATEGORY_BY_TYPE[cell]
-        const accentColor = BUILDING_CATEGORY_ACCENT[category]
-        const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
-        const code = BUILDINGS[cell].shortName
-        const level = gridLevels[activeIndex] ?? 1
-        const plantImage = getPlantImageSpec(cell, level)
-        const plantImageHeight = plantImage ? PLANT_IMAGE_WIDTH / plantImage.aspectRatio : 0
+            const category = BUILDING_CATEGORY_BY_TYPE[cell]
+            const accentColor = BUILDING_CATEGORY_ACCENT[category]
+            const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
+            const code = BUILDINGS[cell].shortName
+            const level = gridLevels[activeIndex] ?? 1
+            const plantImage = getPlantImageSpec(cell, level)
+            const plantImageHeight = plantImage ? PLANT_IMAGE_WIDTH / plantImage.aspectRatio : 0
 
-        return (
-          <Pressable
-            key={activeIndex}
-            onPress={() => onCellPress?.(activeIndex)}
-            style={[styles.cell, { left: x, top: y, zIndex }]}
-          >
-            {plantImage ? (
-              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
-                <Polygon
-                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                  fill="rgba(238, 229, 211, 0.18)"
-                  stroke="rgba(148, 128, 95, 0.16)"
-                  strokeWidth={1}
-                />
-              </Svg>
-            ) : (
-              <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
-                <Polygon
-                  points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
-                  fill={surfaceColor}
-                  stroke={accentColor}
-                  strokeWidth={1.1}
-                />
-              </Svg>
-            )}
-            {plantImage ? (
-              <Image source={plantImage.source} style={[styles.plantImage, { height: plantImageHeight }]} resizeMode="contain" />
-            ) : (
-              <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
-            )}
-            {!plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
-            {!plantImage ? (
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>L{level}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        )
-      })}
+            return (
+              <Pressable
+                key={activeIndex}
+                onPress={() => onCellPress?.(activeIndex)}
+                style={[styles.cell, { left: x, top: y, zIndex }]}
+              >
+                {plantImage ? (
+                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
+                    <Polygon
+                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
+                      fill="rgba(238, 229, 211, 0.18)"
+                      stroke="rgba(148, 128, 95, 0.16)"
+                      strokeWidth={1}
+                    />
+                  </Svg>
+                ) : (
+                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
+                    <Polygon
+                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
+                      fill={surfaceColor}
+                      stroke={accentColor}
+                      strokeWidth={1.1}
+                    />
+                  </Svg>
+                )}
+                {plantImage ? (
+                  <Image source={plantImage.source} style={[styles.plantImage, { height: plantImageHeight }]} resizeMode="contain" />
+                ) : (
+                  <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
+                )}
+                {!plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+                {!plantImage ? (
+                  <View style={styles.levelBadge}>
+                    <Text style={styles.levelText}>L{level}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            )
+          })}
+        </Animated.View>
+      </GestureDetector>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  viewport: {
+    overflow: 'hidden',
+  },
   map: {
     position: 'relative',
   },

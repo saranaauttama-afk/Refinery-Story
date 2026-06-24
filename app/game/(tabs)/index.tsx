@@ -167,8 +167,6 @@ export default function RefineryScreen() {
   const resourceTop = yardTop - Math.floor(RESOURCE_H / 2)
   // Goal panel sits just below the resource strip, inside the yard
   const goalTop     = resourceTop + RESOURCE_H + 8
-  // Grid scroll content needs enough top padding to clear both overlays
-  const gridPaddingTop = goalTop - yardTop + GOAL_H + 12
 
   // ── Derived game values ───────────────────────────────────────────────────
   const seasonLabel        = getSeasonLabel(game.tickCount, game.yearStartTick)
@@ -257,35 +255,28 @@ export default function RefineryScreen() {
 
         {/* ── Layer 1: Grid (absolute, starts at yardTop) ───────────────── */}
         <View style={[styles.gridLayer, { top: yardTop }]}>
-          <ScrollView
-            style={styles.gridScroll}
-            contentContainerStyle={[styles.gridScrollContent, { paddingTop: gridPaddingTop }]}
-            showsVerticalScrollIndicator={false}
-          >
-            <FactoryDiamondGroundView
-              game={game}
-              derived={derived}
-              grid={game.grid}
-              gridLevels={game.gridLevels}
-              containerWidth={width - spacing.md * 2}
-              displayGridSize={11}
-              anchorGridSize={EXPANSION_BALANCE[0].size}
-              onCellPress={handleCellPress}
-              isActive={game.crudeOil > 0}
-            />
-            {gridEditMode ? (
-              <Pressable onPress={() => setGridEditMode(null)}>
-                <Text style={styles.hintActive}>
-                  {gridEditMode.type === 'move'
-                    ? 'Tap empty tile to move there'
-                    : 'Tap a building to swap with'}
-                  {' · tap here to cancel'}
-                </Text>
-              </Pressable>
-            ) : (
-              <Text style={styles.hint}>Tap empty to build · tap built for info</Text>
-            )}
-          </ScrollView>
+          <FactoryDiamondGroundView
+            game={game}
+            derived={derived}
+            grid={game.grid}
+            gridLevels={game.gridLevels}
+            containerWidth={width}
+            viewportHeight={sceneHeight - yardTop}
+            displayGridSize={11}
+            anchorGridSize={EXPANSION_BALANCE[0].size}
+            onCellPress={handleCellPress}
+            isActive={game.crudeOil > 0}
+          />
+          {gridEditMode && (
+            <Pressable style={styles.hintOverlay} onPress={() => setGridEditMode(null)}>
+              <Text style={styles.hintActive}>
+                {gridEditMode.type === 'move'
+                  ? 'Tap empty tile to move there'
+                  : 'Tap a building to swap with'}
+                {' · tap here to cancel'}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* ── Layer 2: HUD ──────────────────────────────────────────────── */}
@@ -842,21 +833,14 @@ const styles = StyleSheet.create({
     left: 0, right: 0, bottom: 0,
     zIndex: 10,
   },
-  gridScroll: {
-    flex: 1,
-  },
-  // paddingTop injected inline (= gridPaddingTop)
-  gridScrollContent: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 72,
+  hintOverlay: {
+    position: 'absolute',
+    bottom: FLOATING_TAB_BAR_CLEARANCE + 80,
+    left: 0,
+    right: 0,
     alignItems: 'center',
   },
-  hint: {
-    textAlign: 'center',
-    fontSize: 11,
-    color: 'rgba(43,58,74,0.50)',
-    marginTop: spacing.xs,
-  },
+
   hintActive: {
     textAlign: 'center',
     fontSize: 12,
