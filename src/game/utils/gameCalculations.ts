@@ -166,6 +166,7 @@ export function createInitialGameState(): GameState {
       return {
         recruitmentPool: pool,
         recruitmentRefreshAt: RECRUITMENT_BALANCE.refreshIntervalTicks,
+        mentorXpBonus: {},
         recruitmentNameCounter: nextNameIndex,
       }
     })(),
@@ -2009,7 +2010,8 @@ export function closeBusinessYear(game: GameState): {
 
   // Retirement pass: employees who've served retirementAfterYears retire at
   // year-end. Their workerCounts are decremented and they leave the roster.
-  // Assignments are cleaned up automatically since they reference employee IDs.
+  // Assignments are cleaned up. Severance pay is returned. High-level
+  // retirees leave a mentoring XP bonus for their successor.
   const nextBusinessYear = game.businessYear + 1
   const retirees = game.employees.filter((e) => shouldRetire(e, nextBusinessYear))
   const survivingEmployees = game.employees.filter((e) => !shouldRetire(e, nextBusinessYear))
@@ -2020,9 +2022,23 @@ export function closeBusinessYear(game: GameState): {
     nextWorkerCounts[retiree.type] = Math.max(0, (nextWorkerCounts[retiree.type] ?? 0) - 1)
   }
 
+  // Severance pay: annualWage * level * severanceWageMultiplier
+  const severancePay = retirees.reduce((sum, e) => {
+    const annualWage = WAGE_BALANCE.perWorker[e.type] ?? 0
+    return sum + Math.round(annualWage * e.level * HIRING_BALANCE.severanceWageMultiplier)
+  }, 0)
+
+  // Mentoring bonus: high-level retirees leave XP for their successor
+  const nextMentorXpBonus = { ...(game.mentorXpBonus ?? {}) }
+  for (const retiree of retirees) {
+    if (retiree.level >= HIRING_BALANCE.mentorMinLevel) {
+      const bonus = retiree.level * HIRING_BALANCE.mentorXpPerLevel
+      nextMentorXpBonus[retiree.type] = (nextMentorXpBonus[retiree.type] ?? 0) + bonus
+    }
+  }
+
   // Clean up assignments for retired employee IDs.
   // assignments is Record<number, string> (cellIndex -> employeeId).
-  // Remove any cell assignment pointing to a retired employee.
   const retiredIds = new Set(retirees.map((e) => e.id))
   const nextAssignments: typeof game.assignments = {}
   for (const [cellIndex, employeeId] of Object.entries(game.assignments ?? {})) {
@@ -2031,14 +2047,23 @@ export function closeBusinessYear(game: GameState): {
     }
   }
 
-  const retirementLog = retirees.length > 0
-    ? addLog(game.activityLog, `${retirees.map((e) => e.name).join(', ')} retired after ${HIRING_BALANCE.retirementAfterYears} years of service.`)
-    : game.activityLog
+  // Build retirement log entries
+  let retirementLog = game.activityLog
+  for (const retiree of retirees) {
+    const annualWage = WAGE_BALANCE.perWorker[retiree.type] ?? 0
+    const sev = Math.round(annualWage * retiree.level * HIRING_BALANCE.severanceWageMultiplier)
+    const mentorNote = retiree.level >= HIRING_BALANCE.mentorMinLevel
+      ? ` Left Lv${retiree.level * HIRING_BALANCE.mentorXpPerLevel} XP bonus for successor.`
+      : ''
+    retirementLog = addLog(retirementLog,
+      `${retiree.name} (${retiree.type} Lv${retiree.level}) retired. Severance: $${sev.toLocaleString()}.${mentorNote}`,
+    )
+  }
 
   return {
     game: {
       ...game,
-      money: moneyAfterWages + cashReward,
+      money: moneyAfterWages + cashReward + severancePay,
       reputation: Math.max(0, reputationAfter),
       businessYear: nextBusinessYear,
       yearStartTick: game.tickCount,
@@ -2048,6 +2073,7 @@ export function closeBusinessYear(game: GameState): {
       employees: survivingEmployees,
       workerCounts: nextWorkerCounts,
       assignments: nextAssignments,
+      mentorXpBonus: nextMentorXpBonus,
     },
     record,
   }

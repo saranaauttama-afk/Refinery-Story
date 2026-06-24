@@ -161,6 +161,11 @@ export default function StaffScreen() {
                   {atCap ? ` · Full (${game.workerCounts[candidate.type]}/${cap})` : ` · ${game.workerCounts[candidate.type]}/${cap} hired`}
                 </Text>
                 {worker?.description && <Text style={styles.workerDescription}>{worker.description.en}</Text>}
+                {(game.mentorXpBonus?.[candidate.type] ?? 0) > 0 && (
+                  <Text style={styles.mentorBonusNote}>
+                    🎓 Mentor bonus: +{game.mentorXpBonus![candidate.type]} XP on hire
+                  </Text>
+                )}
                 <AnimatedPressable
                   disabled={!canHire}
                   onPress={() => {
@@ -391,6 +396,13 @@ const styles = StyleSheet.create({
   employeeCardRetiring: {
     borderColor: colors.orange,
     backgroundColor: '#FFF8F0',
+  },
+  mentorBonusNote: {
+    fontSize: 11,
+    color: colors.greenDark,
+    fontWeight: '700',
+    marginTop: 2,
+    marginBottom: 2,
   },
   employeeHeader: {
     flexDirection: 'row',

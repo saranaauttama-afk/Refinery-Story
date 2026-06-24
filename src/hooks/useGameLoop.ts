@@ -1258,10 +1258,16 @@ export function useGameLoop() {
         if (worker.unlockLevel && current.refineryLevel < worker.unlockLevel) return current
         const cap = getMaxHireCount(current.refineryLevel)
         if (current.workerCounts[worker.key] >= cap) return current
+        const mentorBonus = current.mentorXpBonus?.[worker.key] ?? 0
+        const base = createNewEmployee(current.employees, worker.key)
         const newEmployee = {
-          ...createNewEmployee(current.employees, worker.key),
+          ...base,
+          xp: base.xp + mentorBonus,
           hiredOnYear: current.businessYear,
         }
+        const nextMentorXpBonus = mentorBonus > 0
+          ? { ...current.mentorXpBonus, [worker.key]: 0 }
+          : current.mentorXpBonus
         return applyMilestones({
           ...current,
           money: current.money - worker.cost,
@@ -1271,6 +1277,7 @@ export function useGameLoop() {
             [worker.key]: current.workerCounts[worker.key] + 1,
           },
           employees: [...current.employees, newEmployee],
+          mentorXpBonus: nextMentorXpBonus,
         })
       }),
     [update],
@@ -1289,10 +1296,16 @@ export function useGameLoop() {
         const cap = getMaxHireCount(current.refineryLevel)
         if (current.workerCounts[candidate.type] >= cap) return current
 
+        const mentorBonus = current.mentorXpBonus?.[candidate.type] ?? 0
+        const baseCandidate = hireCandidateEmployee(current.employees, candidate)
         const newEmployee = {
-          ...hireCandidateEmployee(current.employees, candidate),
+          ...baseCandidate,
+          xp: baseCandidate.xp + mentorBonus,
           hiredOnYear: current.businessYear,
         }
+        const nextMentorXpBonus = mentorBonus > 0
+          ? { ...current.mentorXpBonus, [candidate.type]: 0 }
+          : current.mentorXpBonus
         const replacement = generateRecruitmentPool(current.refineryLevel, current.recruitmentNameCounter)
         const recruitmentPool = [...current.recruitmentPool]
         recruitmentPool[slotIndex] = replacement.pool[0]
@@ -1308,6 +1321,7 @@ export function useGameLoop() {
           employees: [...current.employees, newEmployee],
           recruitmentPool,
           recruitmentNameCounter: current.recruitmentNameCounter + 1,
+          mentorXpBonus: nextMentorXpBonus,
         })
       }),
     [update],

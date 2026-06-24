@@ -913,6 +913,16 @@ export const HIRING_BALANCE = {
   capStep: 3,
   retirementAfterYears: 5,
   retirementWarningYears: 1,
+  // Severance = annualWage * employeeLevel * this rate. Lv5 chemist
+  // (wage 220, level 5) gets 220*5*0.5 = $550 back -- meaningful but
+  // not so large it makes retirement feel free.
+  severanceWageMultiplier: 0.5,
+  // Minimum level for a retiree to leave a mentoring bonus for their
+  // successor. Lv1/2 retirees contributed little, so no legacy.
+  mentorMinLevel: 3,
+  // XP bonus the next hire of the same type receives = retiree's
+  // level * this multiplier. Lv5 retiree → 5*20 = 100 XP head start.
+  mentorXpPerLevel: 20,
 } as const
 
 export const WAGE_BALANCE = {

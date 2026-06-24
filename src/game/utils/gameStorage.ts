@@ -452,6 +452,13 @@ export function sanitizeLoadedGameState(value: unknown) {
     ),
     boostActiveUntilTick: getSafeNumber(value.boostActiveUntilTick, 0),
     boostAvailableAtTick: getSafeNumber(value.boostAvailableAtTick, 0),
+    mentorXpBonus: (typeof value.mentorXpBonus === 'object' && value.mentorXpBonus !== null)
+      ? Object.fromEntries(
+          Object.entries(value.mentorXpBonus as Record<string, unknown>)
+            .filter(([, v]) => typeof v === 'number' && v > 0)
+            .map(([k, v]) => [k, v as number])
+        )
+      : {},
     esgScore: Math.max(
       ESG_BALANCE.minScore,
       Math.min(ESG_BALANCE.maxScore, getSafeNumber(value.esgScore, fallback.esgScore)),

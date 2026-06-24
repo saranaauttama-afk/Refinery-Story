@@ -91,6 +91,10 @@ export type GameState = {
   // assignEmployeeToCell action, not by the type. Unassigned plants (no
   // entry for that cellIndex) get no specialist bonus.
   assignments: Record<number, string>
+  // Per-type mentoring XP bonus left by high-level retirees. When a new
+  // employee of that type is hired, they receive this XP burst and the bonus
+  // is cleared. Keyed by WorkerType string.
+  mentorXpBonus: Partial<Record<string, number>>
   // Mobile-only: recruitment pool ("3 candidates apply, pick one" hiring
   // flow). See data/recruitment.ts. recruitmentRefreshAt is the tickCount
   // at which the whole pool auto-refreshes; recruitmentNameCounter is a
