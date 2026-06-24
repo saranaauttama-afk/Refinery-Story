@@ -63,6 +63,43 @@ import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGrou
 // renderers still remain available in code for fallback and comparison,
 // but this review pass uses diamond ground as the default experience.
 
+// Compute what unlocks at the next refinery level
+function getNextLevelUnlocks(nextLevel: number): string[] {
+  const unlocks: string[] = []
+  // Buildings
+  const BUILDING_UNLOCK_NAMES: Partial<Record<number, string[]>> = {
+    4:  ['Laboratory'],
+    5:  ['Lubricant Plant', 'Power Plant'],
+    6:  ['Maintenance Workshop'],
+    7:  ['Sales Office', 'Jet Fuel Tank', 'Lubricant Tank', 'Petrochem Tank'],
+    8:  ['Waste Treatment Plant', 'Recycling Bunker'],
+    10: ['Jet Fuel Plant'],
+    12: ['Pellet Silo'],
+    15: ['Petrochemical Plant'],
+    20: ['Polymer Plant'],
+  }
+  if (BUILDING_UNLOCK_NAMES[nextLevel]) {
+    unlocks.push(...BUILDING_UNLOCK_NAMES[nextLevel]!.map((n) => `🏭 ${n}`))
+  }
+  // Eras
+  const ERA_NAMES: Partial<Record<number, string>> = {
+    7: 'Expansion Era unlocks',
+    13: 'Modern Era unlocks',
+    18: 'Energy Transition Era unlocks',
+  }
+  if (ERA_NAMES[nextLevel]) unlocks.push(`🌍 ${ERA_NAMES[nextLevel]}`)
+  // Expansion
+  const EXPANSION_UNLOCK: Partial<Record<number, string>> = {
+    3: 'Grid expansion to 4×4',
+    5: 'Grid expansion to 5×5',
+    8: 'Grid expansion to 6×6',
+  }
+  if (EXPANSION_UNLOCK[nextLevel]) unlocks.push(`📐 ${EXPANSION_UNLOCK[nextLevel]}`)
+  // Hiring cap
+  if ((nextLevel - 2) % 3 === 0 && nextLevel > 2) unlocks.push('👥 Hiring cap +1 per role')
+  return unlocks
+}
+
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 
 // Plant art thumbnails used in build + info sheets
@@ -981,59 +1018,107 @@ export default function RefineryScreen() {
 
       {/* ── Upgrade Modal ──────────────────────────────────────────────── */}
       <Sheet visible={upgradeModalOpen} onClose={() => setUpgradeModalOpen(false)} title="Upgrade Refinery">
-        <View style={styles.upgradeRow}>
-          <Text style={styles.upgradeLabel}>Current level</Text>
-          <Text style={styles.upgradeValue}>Lv{game.refineryLevel}</Text>
-        </View>
-        <View style={styles.upgradeRow}>
-          <Text style={styles.upgradeLabel}>Cost</Text>
-          <Text style={[styles.upgradeValue, !hasEnoughMoney && styles.upgradeBlocked]}>
-            ${upgradeCost.toLocaleString()}
-          </Text>
-        </View>
-        <View style={styles.upgradeRow}>
-          <Text style={styles.upgradeLabel}>Gasoline produced</Text>
-          <Text style={[styles.upgradeValue, !hasEnoughProduction && styles.upgradeBlocked]}>
-            {game.totalGasolineProduced.toLocaleString()} / {upgradeProductionRequired.toLocaleString()}
-          </Text>
-        </View>
-        {getUpgradeReputationRequirement(game.refineryLevel) > 0 && (
-          <View style={styles.upgradeRow}>
-            <Text style={styles.upgradeLabel}>Reputation</Text>
-            <Text style={[styles.upgradeValue, game.reputation < getUpgradeReputationRequirement(game.refineryLevel) && styles.upgradeBlocked]}>
-              {Math.floor(game.reputation)} / {getUpgradeReputationRequirement(game.refineryLevel)}
-            </Text>
-          </View>
-        )}
-        {getUpgradeResearchRequirement(game.refineryLevel) > 0 && (
-          <View style={styles.upgradeRow}>
-            <Text style={styles.upgradeLabel}>Research items</Text>
-            <Text style={[styles.upgradeValue, game.unlockedResearchIds.length < getUpgradeResearchRequirement(game.refineryLevel) && styles.upgradeBlocked]}>
-              {game.unlockedResearchIds.length} / {getUpgradeResearchRequirement(game.refineryLevel)}
-            </Text>
-          </View>
-        )}
-        {upgradeBlockers.length > 0 && (
-          <View>
-            {upgradeBlockers.map((b, i) => (
-              <Text key={i} style={styles.upgradeBlockerNote}>- {b}</Text>
-            ))}
-          </View>
-        )}
-        <AnimatedPressable
-          style={[styles.upgradeButton, !canUpgrade && styles.upgradeButtonDisabled]}
-          onPress={() => {
-            if (!canUpgrade) return
-            spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
-            haptics.confirm()
-            upgradeRefinery()
-            setUpgradeModalOpen(false)
-          }}
-        >
-          <Text style={styles.upgradeButtonLabel}>
-            {canUpgrade ? `Upgrade to Lv${game.refineryLevel + 1}` : 'Requirements not met'}
-          </Text>
-        </AnimatedPressable>
+        {(() => {
+          const nextLevel = game.refineryLevel + 1
+          const repReq    = getUpgradeReputationRequirement(game.refineryLevel)
+          const resReq    = getUpgradeResearchRequirement(game.refineryLevel)
+          const prodPct   = upgradeProductionRequired > 0
+            ? Math.min(100, Math.round((game.totalGasolineProduced / upgradeProductionRequired) * 100))
+            : 100
+          const nextUnlocks = getNextLevelUnlocks(nextLevel)
+
+          const requirements: { label: string; met: boolean; display: string; showBar?: boolean; barPct?: number }[] = [
+            {
+              label: 'Cost',
+              met: hasEnoughMoney,
+              display: `$${upgradeCost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`,
+            },
+            {
+              label: 'Gasoline output',
+              met: hasEnoughProduction,
+              display: `${game.totalGasolineProduced.toLocaleString()} / ${upgradeProductionRequired.toLocaleString()}`,
+              showBar: true,
+              barPct: prodPct,
+            },
+            ...(repReq > 0 ? [{
+              label: 'Reputation',
+              met: game.reputation >= repReq,
+              display: `${Math.floor(game.reputation)} / ${repReq}`,
+            }] : []),
+            ...(resReq > 0 ? [{
+              label: 'Research items',
+              met: game.unlockedResearchIds.length >= resReq,
+              display: `${game.unlockedResearchIds.length} / ${resReq}`,
+            }] : []),
+          ]
+
+          return (
+            <>
+              {/* Level progression strip */}
+              <View style={styles.upgLevelStrip}>
+                <View style={styles.upgLevelBox}>
+                  <Text style={styles.upgLevelNum}>Lv{game.refineryLevel}</Text>
+                  <Text style={styles.upgLevelLabel}>Current</Text>
+                </View>
+                <View style={styles.upgArrowWrap}>
+                  <View style={[styles.upgArrowLine, canUpgrade && styles.upgArrowLineReady]} />
+                  <Text style={[styles.upgArrowHead, canUpgrade && styles.upgArrowHeadReady]}>▶</Text>
+                </View>
+                <View style={[styles.upgLevelBox, styles.upgLevelBoxNext]}>
+                  <Text style={[styles.upgLevelNum, { color: canUpgrade ? colors.green : colors.inkMuted }]}>Lv{nextLevel}</Text>
+                  <Text style={styles.upgLevelLabel}>Next</Text>
+                </View>
+              </View>
+
+              {/* What unlocks */}
+              {nextUnlocks.length > 0 && (
+                <View style={styles.upgUnlockBox}>
+                  <Text style={styles.upgUnlockTitle}>Unlocks at Lv{nextLevel}</Text>
+                  {nextUnlocks.map((u, i) => (
+                    <Text key={i} style={styles.upgUnlockItem}>{u}</Text>
+                  ))}
+                </View>
+              )}
+
+              {/* Requirements checklist */}
+              <Text style={styles.upgSectionLabel}>Requirements</Text>
+              {requirements.map((req, i) => (
+                <View key={i} style={styles.upgReqRow}>
+                  <Text style={[styles.upgReqCheck, req.met ? styles.upgReqCheckMet : styles.upgReqCheckUnmet]}>
+                    {req.met ? '✓' : '✗'}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.upgReqTop}>
+                      <Text style={[styles.upgReqLabel, !req.met && styles.upgReqLabelUnmet]}>{req.label}</Text>
+                      <Text style={[styles.upgReqValue, !req.met && styles.upgReqValueUnmet]}>{req.display}</Text>
+                    </View>
+                    {req.showBar && (
+                      <View style={styles.upgReqBar}>
+                        <View style={[styles.upgReqBarFill, { width: `${req.barPct}%` as any, backgroundColor: req.met ? colors.green : colors.orange }]} />
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ))}
+
+              {/* Upgrade button */}
+              <AnimatedPressable
+                style={[styles.upgButton, !canUpgrade && styles.upgButtonOff]}
+                onPress={() => {
+                  if (!canUpgrade) return
+                  spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+                  haptics.confirm()
+                  upgradeRefinery()
+                  setUpgradeModalOpen(false)
+                }}
+              >
+                <Text style={styles.upgButtonLabel}>
+                  {canUpgrade ? `⬆ Upgrade to Lv${nextLevel}` : 'Requirements not met'}
+                </Text>
+              </AnimatedPressable>
+            </>
+          )
+        })()}
       </Sheet>
 
       {/* ── FAB Navigation ────────────────────────────────────────────── */}
@@ -1303,49 +1388,35 @@ const styles = StyleSheet.create({
     lineHeight: 13,
   },
 
-  upgradeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.creamBorder,
-  },
-  upgradeLabel: {
-    fontSize: 14,
-    color: colors.inkMuted,
-  },
-  upgradeValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  upgradeBlocked: {
-    color: colors.red,
-  },
-  upgradeBlockerNote: {
-    fontSize: 12,
-    color: colors.red,
-    marginTop: 8,
-    lineHeight: 18,
-  },
-  upgradeButton: {
-    marginTop: 16,
-    backgroundColor: colors.green,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    borderRadius: radii.md,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  upgradeButtonDisabled: {
-    backgroundColor: colors.creamBorder,
-    borderColor: colors.inkMuted,
-  },
-  upgradeButtonLabel: {
-    fontWeight: '800',
-    fontSize: 15,
-    color: colors.ink,
-  },
+  // Upgrade refinery modal
+  upgLevelStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md, gap: 0 },
+  upgLevelBox: { alignItems: 'center', backgroundColor: colors.cream, borderRadius: radii.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1.5, borderColor: colors.creamBorder },
+  upgLevelBoxNext: { borderColor: colors.green },
+  upgLevelNum: { fontSize: 24, fontWeight: '900', color: colors.ink },
+  upgLevelLabel: { fontSize: 9, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  upgArrowWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
+  upgArrowLine: { height: 2, width: 28, backgroundColor: colors.creamBorder },
+  upgArrowLineReady: { backgroundColor: colors.green },
+  upgArrowHead: { fontSize: 14, color: colors.creamBorder, marginLeft: -4 },
+  upgArrowHeadReady: { color: colors.green },
+  upgUnlockBox: { backgroundColor: '#EBF5E8', borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.green, padding: spacing.sm, marginBottom: spacing.sm, gap: 3 },
+  upgUnlockTitle: { fontSize: 10, fontWeight: '900', color: colors.greenDark, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
+  upgUnlockItem: { fontSize: 12, color: colors.greenDark, fontWeight: '600' },
+  upgSectionLabel: { fontSize: 10, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs },
+  upgReqRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
+  upgReqCheck: { fontSize: 16, fontWeight: '900', width: 22, textAlign: 'center' },
+  upgReqCheckMet: { color: colors.green },
+  upgReqCheckUnmet: { color: colors.red },
+  upgReqTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  upgReqLabel: { fontSize: 13, color: colors.ink, fontWeight: '600' },
+  upgReqLabelUnmet: { color: colors.inkMuted },
+  upgReqValue: { fontSize: 12, fontWeight: '700', color: colors.ink },
+  upgReqValueUnmet: { color: colors.red },
+  upgReqBar: { height: 4, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden', marginTop: 4 },
+  upgReqBarFill: { height: '100%', borderRadius: radii.pill },
+  upgButton: { marginTop: spacing.sm, backgroundColor: colors.green, borderRadius: radii.md, paddingVertical: 13, alignItems: 'center' },
+  upgButtonOff: { backgroundColor: colors.creamBorder },
+  upgButtonLabel: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
   hintActive: {
     textAlign: 'center',
     fontSize: 12,
