@@ -164,37 +164,53 @@ export default function ContractsScreen() {
               readyCount={readyInGroup}
               defaultOpen={readyInGroup > 0}
             >
-              <SubSection label="Open" count={openContracts.length} defaultOpen>
-                {openContracts
-                  .sort((a, b) => {
-                    const aR = getContractProgress(a, game).have >= getContractProgress(a, game).need ? 0 : 1
-                    const bR = getContractProgress(b, game).have >= getContractProgress(b, game).need ? 0 : 1
-                    return aR - bR || b.unlockLevel - a.unlockLevel
-                  })
-                  .map((contract) => {
-                    const { have, need, unit } = getContractProgress(contract, game)
-                    const ready = have >= need
-                    // Show auto-trade hint when: not ready, have some stock, auto-trade is on
-                    const showAutoTradeHint = !ready && have > 0 && autoTrade.enabled
-                    return (
-                      <View key={contract.id}>
-                        <ListRow
-                          title={contract.name.en}
-                          subtitle={have + "/" + need + " " + unit + " +$" + contract.currentReward.toLocaleString() + " +" + contract.currentRpReward + "RP"}
-                          actionLabel="Complete"
-                          disabled={!ready}
-                          badge={contract.unlockLevel === game.refineryLevel ? 'NEW' : ready ? 'OK' : undefined}
-                          onPress={() => { if (ready) completeContract(contract) }}
-                        />
-                        {showAutoTradeHint && (
-                          <Text style={styles.autoTradeHint}>
-                            Auto-trade is selling your stock — pause it in Supply to accumulate
-                          </Text>
-                        )}
-                      </View>
-                    )
-                  })}
-              </SubSection>
+              {(() => {
+                // Show only the current active tier per product group.
+                // Find the lowest tier that still has open (not completed) contracts.
+                const activeTier = openContracts.length > 0
+                  ? Math.min(...openContracts.map((c) => c.tier))
+                  : null
+                const visibleContracts = activeTier !== null
+                  ? openContracts.filter((c) => c.tier === activeTier)
+                  : []
+                const hiddenCount = openContracts.length - visibleContracts.length
+                const sortedVisible = [...visibleContracts].sort((a, b) => {
+                  const aR = getContractProgress(a, game).have >= getContractProgress(a, game).need ? 0 : 1
+                  const bR = getContractProgress(b, game).have >= getContractProgress(b, game).need ? 0 : 1
+                  return aR - bR
+                })
+                return (
+                  <SubSection label={"Active (Tier " + activeTier + ")"} count={visibleContracts.length} defaultOpen>
+                    {sortedVisible.map((contract) => {
+                      const { have, need, unit } = getContractProgress(contract, game)
+                      const ready = have >= need
+                      const showAutoTradeHint = !ready && have > 0 && autoTrade.enabled
+                      return (
+                        <View key={contract.id}>
+                          <ListRow
+                            title={contract.name.en}
+                            subtitle={have + "/" + need + " " + unit + " +$" + contract.currentReward.toLocaleString() + " +" + contract.currentRpReward + "RP"}
+                            actionLabel="Complete"
+                            disabled={!ready}
+                            badge={ready ? 'OK' : contract.unlockLevel === game.refineryLevel ? 'NEW' : undefined}
+                            onPress={() => { if (ready) completeContract(contract) }}
+                          />
+                          {showAutoTradeHint && (
+                            <Text style={styles.autoTradeHint}>
+                              Auto-trade is selling your stock — pause it in Supply to accumulate
+                            </Text>
+                          )}
+                        </View>
+                      )
+                    })}
+                    {hiddenCount > 0 && (
+                      <Text style={styles.lockedHint}>
+                        + {hiddenCount} higher-tier contract{hiddenCount > 1 ? 's' : ''} unlock after completing this tier
+                      </Text>
+                    )}
+                  </SubSection>
+                )
+              })()}
 
               <SubSection label="Completed" count={completedContracts.length} defaultOpen={false}>
                 {completedContracts.map((contract) => {
@@ -239,5 +255,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.xs,
     marginTop: -2,
+  },
+  lockedHint: {
+    fontSize: 10,
+    color: colors.inkMuted,
+    fontStyle: 'italic',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
 })
