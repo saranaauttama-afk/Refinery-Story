@@ -174,11 +174,9 @@ export default function ContractsScreen() {
                   ? openContracts.filter((c) => c.tier === activeTier)
                   : []
                 const hiddenCount = openContracts.length - visibleContracts.length
-                const sortedVisible = [...visibleContracts].sort((a, b) => {
-                  const aR = getContractProgress(a, game).have >= getContractProgress(a, game).need ? 0 : 1
-                  const bR = getContractProgress(b, game).have >= getContractProgress(b, game).need ? 0 : 1
-                  return aR - bR
-                })
+                // Sort by ID only (stable) — never re-sort by ready state
+                // to avoid cards jumping around as inventory fluctuates
+                const sortedVisible = [...visibleContracts].sort((a, b) => a.id - b.id)
                 return (
                   <SubSection label={"Active (Tier " + activeTier + ")"} count={visibleContracts.length} defaultOpen>
                     {sortedVisible.map((contract) => {
