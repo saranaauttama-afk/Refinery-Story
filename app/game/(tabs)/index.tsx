@@ -206,14 +206,17 @@ function PRODUCT_MAX_STORAGE(
 }
 
 // ── Scene geometry constants ──────────────────────────────────────────────────
-// Sky is atmosphere only — 12 % keeps it visible without eating play space.
-// Horizon strip is a thin separator.  Goal is a compact 28 px chip.
-const SKY_RATIO    = 0.16   // taller sky for company block + resource dock
-const HORIZON_H    = 14    // px — thin treeline separator
-const RESOURCE_H   = 38    // px — resource dock height
-const GOAL_H       = 26    // px — slim goal banner
-const RESOURCE_DOCK_H = 52 // px — dark resource dock card
-const ACTION_DOCK_H   = 48 // px — bottom action dock
+const SKY_RATIO    = 0.08   // สัดส่วนความสูงฟ้า (0.0–1.0) → กำหนดตำแหน่ง HUD + Grid
+const HORIZON_H    = 8    // px — ความสูง horizon strip (ถ้าไม่ใช้ bg รูปก็ set 0 ได้)
+const RESOURCE_H   = 48    // px — resource dock height
+const GOAL_H       = 26    // px — slim goal banner height
+const RESOURCE_DOCK_H = 52 // px — dark resource dock card height
+const ACTION_DOCK_H   = 48 // px — bottom action dock height
+
+// ── Layout tweaks (ปรับ UI position ตรงนี้ได้เลย) ───────────────────────────
+const HUD_OFFSET_UP  = 4  // px — HUD (resource dock) ขยับขึ้นจาก yardTop
+const GOAL_LEFT      = 18  // px — "Growing Refinery" banner ห่างจากขอบซ้าย/ขวา
+const BG_CROP_PCT    = 12  // % — crop ขอบบน/ล่างของ bg image (แสดงส่วนกลางรูป)
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -293,7 +296,7 @@ export default function RefineryScreen() {
   // Where the yard background starts (absolute y within scene)
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
-  const resourceTop = yardTop - Math.floor(RESOURCE_H / 2)
+  const resourceTop = yardTop - Math.floor(RESOURCE_H / 2) - HUD_OFFSET_UP
   // Goal panel sits just below the resource strip, inside the yard
   const goalTop     = resourceTop + RESOURCE_H + 8
 
@@ -397,20 +400,12 @@ export default function RefineryScreen() {
       <View style={styles.scene}>
 
         {/* ── Layer 0: Background (absoluteFill, no pointer events) ─────── */}
-        <View style={[StyleSheet.absoluteFill, styles.sceneBg]} pointerEvents="none">
-          {/* Sky */}
-          <View style={[styles.bgSky, { height: skyH }, !isDaytime && styles.bgSkyNight]}>
-            <View style={styles.bgSkySheen} />
-            <View style={styles.bgSeaBand} />
-            <View style={styles.bgSkyHaze} />
-          </View>
-          {/* Treeline / horizon strip */}
-          <View style={[styles.bgHorizon, { height: HORIZON_H }]} />
-          {/* Yard / factory ground */}
-          <View style={styles.bgYard}>
-            <View style={styles.bgDockEdge} />
-
-          </View>
+        <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+          <Image
+            source={require('../../../assets/bg/ground_day_1.png')}
+            style={{ position: 'absolute', top: `-${BG_CROP_PCT}%`, bottom: `-${BG_CROP_PCT}%`, left: 0, right: 0 }}
+            resizeMode="cover"
+          />
         </View>
 
         {/* Night veil */}
@@ -1196,10 +1191,7 @@ export default function RefineryScreen() {
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const SKY_DAY      = '#6FA8C8'
 const SKY_NIGHT    = '#0D1B2E'
-const HORIZON_COL  = '#6A7A5A'
-const YARD_GROUND  = '#B8A882'
 
 const styles = StyleSheet.create({
   // ── Root ─────────────────────────────────────────────────────────────────
@@ -1227,59 +1219,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Layer 0: Background ───────────────────────────────────────────────────
-  sceneBg: {
-    zIndex: 0,
-  },
-  // Sky — height set dynamically from skyH
-  bgSky: {
-    backgroundColor: SKY_DAY,
-  },
-  bgSkyNight: {
-    backgroundColor: SKY_NIGHT,
-  },
-  // Subtle highlight wash in the upper sky
-  bgSkySheen: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: '55%',
-    backgroundColor: '#FFFFFF',
-    opacity: 0.07,
-  },
-  bgSeaBand: {
-    position: 'absolute',
-    bottom: 2,
-    left: 0,
-    right: 0,
-    height: 12,
-    backgroundColor: 'rgba(87,129,154,0.78)',
-  },
-  // Warm industrial haze near the horizon (proportionally smaller with shorter sky)
-  bgSkyHaze: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    height: 10,
-    backgroundColor: '#C4B888',
-    opacity: 0.40,
-  },
-  // Treeline / horizon strip — height set dynamically
-  bgHorizon: {
-    backgroundColor: HORIZON_COL,
-  },
-  // Yard / factory ground — takes remaining flex space
-  bgYard: {
-    flex: 1,
-    backgroundColor: YARD_GROUND,
-  },
-  bgDockEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 18,
-    backgroundColor: '#7A868E',
-    borderBottomWidth: 4,
-    borderBottomColor: 'rgba(207,189,151,0.92)',
-  },
 
 
   // ── Layer 1: Grid ─────────────────────────────────────────────────────────
@@ -1647,8 +1586,8 @@ const styles = StyleSheet.create({
   // top set dynamically (= goalTop)
   goalBanner: {
     position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
+    left: GOAL_LEFT,
+    right: GOAL_LEFT,
     height: GOAL_H,
     flexDirection: 'row',
     alignItems: 'center',
