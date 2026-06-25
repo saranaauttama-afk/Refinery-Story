@@ -113,7 +113,7 @@ const subStyles = StyleSheet.create({
 
 export default function ContractsScreen() {
   const router = useRouter()
-  const { game, loaded, derived, completeContract, claimHiddenEvent } = useGame()
+  const { game, loaded, derived, completeContract, claimHiddenEvent, autoTrade } = useGame()
 
   if (!loaded || !game || !derived) {
     return <SafeAreaView style={styles.loadingScreen}><ActivityIndicator color={colors.orange} size="large" /></SafeAreaView>
@@ -174,16 +174,24 @@ export default function ContractsScreen() {
                   .map((contract) => {
                     const { have, need, unit } = getContractProgress(contract, game)
                     const ready = have >= need
+                    // Show auto-trade hint when: not ready, have some stock, auto-trade is on
+                    const showAutoTradeHint = !ready && have > 0 && autoTrade.enabled
                     return (
-                      <ListRow
-                        key={contract.id}
-                        title={contract.name.en}
-                        subtitle={have + "/" + need + " " + unit + " +$" + contract.currentReward.toLocaleString() + " +" + contract.currentRpReward + "RP"}
-                        actionLabel="Complete"
-                        disabled={!ready}
-                        badge={contract.unlockLevel === game.refineryLevel ? 'NEW' : ready ? 'OK' : undefined}
-                        onPress={() => { if (ready) completeContract(contract) }}
-                      />
+                      <View key={contract.id}>
+                        <ListRow
+                          title={contract.name.en}
+                          subtitle={have + "/" + need + " " + unit + " +$" + contract.currentReward.toLocaleString() + " +" + contract.currentRpReward + "RP"}
+                          actionLabel="Complete"
+                          disabled={!ready}
+                          badge={contract.unlockLevel === game.refineryLevel ? 'NEW' : ready ? 'OK' : undefined}
+                          onPress={() => { if (ready) completeContract(contract) }}
+                        />
+                        {showAutoTradeHint && (
+                          <Text style={styles.autoTradeHint}>
+                            Auto-trade is selling your stock — pause it in Supply to accumulate
+                          </Text>
+                        )}
+                      </View>
                     )
                   })}
               </SubSection>
@@ -224,4 +232,12 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: colors.green, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
+  autoTradeHint: {
+    fontSize: 10,
+    color: colors.orange,
+    fontStyle: 'italic',
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xs,
+    marginTop: -2,
+  },
 })
