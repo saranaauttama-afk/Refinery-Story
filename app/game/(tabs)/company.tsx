@@ -133,7 +133,10 @@ export default function CompanyScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
+          <Pressable style={styles.closeBtn} onPress={() => router.back()}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
             <Text style={styles.companyName} numberOfLines={1}>{game.refineryName}</Text>
             <Text style={styles.companyTitle}>{refineryTitle}</Text>
           </View>
@@ -391,6 +394,8 @@ export default function CompanyScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 4 },
+  closeBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
   header: { backgroundColor: '#1C2634', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs, gap: spacing.sm },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   companyName: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 0.2 },

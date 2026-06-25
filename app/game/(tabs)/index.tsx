@@ -333,9 +333,11 @@ export default function RefineryScreen() {
   }).length
 
   const FAB_ITEMS: FabNavItem[] = [
-    { route: '/game',            icon: '🏭', label: 'Factory' },
-    { route: '/game/business',   icon: '💼', label: 'Business', badge: (contractsReady + standaloneReady) || undefined },
-    { route: '/game/company',    icon: '🏢', label: 'Company',  badge: (staffReady + researchReady) || undefined },
+    { route: '/game',             icon: '🏭', label: 'Factory' },
+    { route: '/game/contracts',   icon: '📋', label: 'Contracts', badge: contractsReady || undefined },
+    { route: '/game/supply',      icon: '🛢',  label: 'Supply',    badge: standaloneReady || undefined },
+    { route: '/game/recruit',     icon: '👥', label: 'Recruit' },
+    { route: '/game/company',     icon: '🏢', label: 'Company',   badge: (staffReady + researchReady) || undefined },
   ]
   const secondaryStats = [
     { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },

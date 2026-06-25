@@ -14,7 +14,9 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="business" />
+      <Tabs.Screen name="contracts" />
+      <Tabs.Screen name="supply" />
+      <Tabs.Screen name="recruit" />
       <Tabs.Screen name="company" />
     </Tabs>
   )
