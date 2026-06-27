@@ -17,6 +17,8 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
+import { useLang } from '../../../src/hooks/SettingsContext'
+import { text } from '../../../src/game/translations'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
@@ -92,6 +94,8 @@ const statStyles = StyleSheet.create({
 export default function CompanyScreen() {
   const router = useRouter()
   const { game, loaded, derived, trainEmployee, assignEmployeeToCell, unassignCell, unlockResearch, installPerk, expandGrid, renameRefinery, manualSave, resetGame } = useGame()
+  const { t } = useLang()
+  const cs = text.companyScreen
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
   const [activeTab, setActiveTab] = useState<CompanyTab>('team')
@@ -107,7 +111,7 @@ export default function CompanyScreen() {
   }
 
   const cap = getMaxHireCount(game.refineryLevel)
-  const refineryTitle = getRefineryTitle(game.refineryLevel).en
+  const refineryTitle = t(getRefineryTitle(game.refineryLevel))
   const esgTier = getEsgTier(game.esgScore)
   const seasonLabel = getSeasonLabel(game.tickCount, game.yearStartTick)
   const lastAward = game.awardHistory[0]
@@ -121,9 +125,9 @@ export default function CompanyScreen() {
   const researchReady = derived.activeResearchItems.filter((i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost).length
 
   const TABS: { key: CompanyTab; label: string; badge?: number }[] = [
-    { key: 'team',     label: 'Team',     badge: retiringCount || undefined },
-    { key: 'grow',     label: 'Grow',     badge: researchReady || undefined },
-    { key: 'settings', label: 'Settings' },
+    { key: 'team',     label: t(cs.tabs.team),     badge: retiringCount || undefined },
+    { key: 'grow',     label: t(cs.tabs.grow),     badge: researchReady || undefined },
+    { key: 'settings', label: t(cs.tabs.settings) },
   ]
 
   return (
@@ -144,25 +148,25 @@ export default function CompanyScreen() {
             {lastAward && (
               <View style={styles.gradeBadge}>
                 <Text style={styles.gradeText}>{lastAward.grade}</Text>
-                <Text style={styles.gradeLabel}>Yr.{lastAward.year}</Text>
+                <Text style={styles.gradeLabel}>{t(cs.yr(lastAward.year))}</Text>
               </View>
             )}
           </View>
         </View>
         <View style={styles.quickStats}>
-          <View style={styles.qStat}><Text style={styles.qVal}>{game.employees.length}/{cap*WORKERS.length}</Text><Text style={styles.qLbl}>Staff</Text></View>
+          <View style={styles.qStat}><Text style={styles.qVal}>{game.employees.length}/{cap*WORKERS.length}</Text><Text style={styles.qLbl}>{t(cs.quick.staff)}</Text></View>
           <View style={styles.qDiv} />
-          <View style={styles.qStat}><Text style={styles.qVal}>{completedMilestones}/{totalMilestones}</Text><Text style={styles.qLbl}>Goals</Text></View>
+          <View style={styles.qStat}><Text style={styles.qVal}>{completedMilestones}/{totalMilestones}</Text><Text style={styles.qLbl}>{t(cs.quick.goals)}</Text></View>
           <View style={styles.qDiv} />
-          <View style={styles.qStat}><Text style={styles.qVal}>{unlockedResearch}/{totalResearch}</Text><Text style={styles.qLbl}>Research</Text></View>
+          <View style={styles.qStat}><Text style={styles.qVal}>{unlockedResearch}/{totalResearch}</Text><Text style={styles.qLbl}>{t(cs.quick.research)}</Text></View>
           <View style={styles.qDiv} />
-          <View style={styles.qStat}><Text style={styles.qVal}>{currentSize}×{currentSize}</Text><Text style={styles.qLbl}>Grid</Text></View>
+          <View style={styles.qStat}><Text style={styles.qVal}>{currentSize}×{currentSize}</Text><Text style={styles.qLbl}>{t(cs.quick.grid)}</Text></View>
         </View>
         <View style={styles.tabBar}>
-          {TABS.map((t) => (
-            <Pressable key={t.key} style={[styles.tabBtn, activeTab === t.key && styles.tabBtnActive]} onPress={() => setActiveTab(t.key)}>
-              <Text style={[styles.tabLabel, activeTab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-              {t.badge ? <View style={styles.tabBadge}><Text style={styles.tabBadgeText}>{t.badge}</Text></View> : null}
+          {TABS.map((tab) => (
+            <Pressable key={tab.key} style={[styles.tabBtn, activeTab === tab.key && styles.tabBtnActive]} onPress={() => setActiveTab(tab.key)}>
+              <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
+              {tab.badge ? <View style={styles.tabBadge}><Text style={styles.tabBadgeText}>{tab.badge}</Text></View> : null}
             </Pressable>
           ))}
         </View>
@@ -174,8 +178,8 @@ export default function CompanyScreen() {
           {game.employees.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>👥</Text>
-              <Text style={styles.emptyTitle}>No employees yet</Text>
-              <Text style={styles.emptyHint}>Go to Business to hire your first staff.</Text>
+              <Text style={styles.emptyTitle}>{t(cs.noEmployees)}</Text>
+              <Text style={styles.emptyHint}>{t(cs.hireHint)}</Text>
             </View>
           )}
           {game.employees.map((employee) => {
@@ -189,7 +193,7 @@ export default function CompanyScreen() {
             const buildingKey = SPECIALIST_BUILDING[employee.type]
             const eligibleCells = buildingKey
               ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, ci) => {
-                  if (cell === buildingKey) acc.push({ cellIndex: ci, label: `${BUILDINGS[buildingKey].name.en} #${acc.length + 1}` })
+                  if (cell === buildingKey) acc.push({ cellIndex: ci, label: t(cs.plantLabel(t(BUILDINGS[buildingKey].name), acc.length + 1)) })
                   return acc
                 }, [])
               : []
@@ -202,7 +206,7 @@ export default function CompanyScreen() {
                 <View style={styles.empTop}>
                   <View style={styles.empNameBlock}>
                     <Text style={styles.empName}>{employee.name}{employee.trait === 'veteran' ? ' ⭐' : ''}{nearRetire ? ' 🕰' : ''}</Text>
-                    <Text style={styles.empRole}>{w?.name.en ?? employee.type}</Text>
+                    <Text style={styles.empRole}>{w ? t(w.name) : employee.type}</Text>
                   </View>
                   <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
                     <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
@@ -210,7 +214,7 @@ export default function CompanyScreen() {
                 </View>
                 <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
                 {nearRetire && yearsLeft !== null && (
-                  <Text style={styles.retireWarn}>Retires in {yearsLeft} year{yearsLeft !== 1 ? 's' : ''}</Text>
+                  <Text style={styles.retireWarn}>{t(cs.retiresIn(yearsLeft))}</Text>
                 )}
                 <View style={styles.empActions}>
                   <AnimatedPressable
@@ -221,7 +225,7 @@ export default function CompanyScreen() {
                     }}
                     style={[styles.actBtn, canTrain ? styles.actBtnTrain : styles.actBtnOff]}
                   >
-                    <Text style={styles.actBtnLabel}>{maxed ? 'Max Level' : `Train $${cost.money.toLocaleString()} · ${cost.rp}RP`}</Text>
+                    <Text style={styles.actBtnLabel}>{maxed ? t(cs.maxLevel) : t(cs.train(cost.money.toLocaleString(), cost.rp))}</Text>
                   </AnimatedPressable>
                   {isSpecialist && (
                     <Pressable
@@ -233,14 +237,14 @@ export default function CompanyScreen() {
                       style={[styles.actBtn, assignedCellIndex !== null ? styles.actBtnAssigned : styles.actBtnOff]}
                     >
                       <Text style={styles.actBtnLabel}>
-                        {assignedCellIndex !== null ? `📌 ${assignedLabel ?? 'Assigned'}` : eligibleCells.length === 0 ? 'No plant built' : 'Assign →'}
+                        {assignedCellIndex !== null ? `📌 ${assignedLabel ?? t(cs.assigned)}` : eligibleCells.length === 0 ? t(cs.noPlantBuilt) : t(cs.assign)}
                       </Text>
                     </Pressable>
                   )}
                 </View>
                 {pickerEmployeeId === employee.id && assignedCellIndex === null && (
                   <View style={styles.picker}>
-                    <Text style={styles.pickerTitle}>Select plant:</Text>
+                    <Text style={styles.pickerTitle}>{t(cs.selectPlant)}</Text>
                     {eligibleCells.map(({ cellIndex, label }) => {
                       const occ = game.employees.find((e) => getCellAssignedToEmployee(game, e.id) === cellIndex)
                       return (
@@ -261,41 +265,41 @@ export default function CompanyScreen() {
       {activeTab === 'grow' && (
         <ScrollView contentContainerStyle={styles.list}>
           {/* Awards & world */}
-          <Text style={styles.sectionLabel}>Company Status</Text>
+          <Text style={styles.sectionLabel}>{t(cs.companyStatus)}</Text>
           <View style={styles.card}>
-            <StatRow label="Business year" value={`Year ${game.businessYear}`} />
-            <StatRow label="Current era" value={derived.currentEra.name.en} />
-            <StatRow label="Season" value={`${seasonLabel.en} · ${Math.round(derived.seasonalGasolineMultiplier * 100)}% demand`} />
-            <StatRow label="ESG score" value={`${Math.round(game.esgScore)}/100 · ${esgTier.en}`} />
-            {lastAward && <StatRow label="Last award" value={`Grade ${lastAward.grade} · Score ${lastAward.score}`} accent />}
+            <StatRow label={t(cs.businessYear)} value={t(cs.yearValue(game.businessYear))} />
+            <StatRow label={t(cs.currentEra)} value={t(derived.currentEra.name)} />
+            <StatRow label={t(cs.seasonLabel)} value={t(cs.seasonValue(t(seasonLabel), Math.round(derived.seasonalGasolineMultiplier * 100)))} />
+            <StatRow label={t(cs.esgScore)} value={t(cs.esgValue(Math.round(game.esgScore), t(esgTier)))} />
+            {lastAward && <StatRow label={t(cs.lastAward)} value={t(cs.lastAwardValue(lastAward.grade, lastAward.score))} accent />}
           </View>
 
           {/* Expansion */}
-          <Text style={styles.sectionLabel}>Refinery Growth</Text>
+          <Text style={styles.sectionLabel}>{t(cs.refineryGrowth)}</Text>
           <View style={styles.card}>
-            <StatRow label="Grid size" value={`${currentSize}×${currentSize}`} />
+            <StatRow label={t(cs.gridSize)} value={`${currentSize}×${currentSize}`} />
             {nextExpansion ? (
               <>
-                <StatRow label="Next expansion" value={`${nextExpansion.size}×${nextExpansion.size} · Lv${nextExpansion.requiresRefineryLevel}`} />
+                <StatRow label={t(cs.nextExpansion)} value={t(cs.nextExpansionValue(nextExpansion.size, nextExpansion.requiresRefineryLevel))} />
                 <Pressable
                   style={[styles.expandBtn, (game.refineryLevel < nextExpansion.requiresRefineryLevel || game.money < nextExpansion.cost) && styles.expandBtnOff]}
                   disabled={game.refineryLevel < nextExpansion.requiresRefineryLevel || game.money < nextExpansion.cost}
                   onPress={() => expandGrid()}
                 >
-                  <Text style={styles.expandBtnLabel}>Expand to {nextExpansion.size}×{nextExpansion.size} · ${nextExpansion.cost.toLocaleString()}</Text>
+                  <Text style={styles.expandBtnLabel}>{t(cs.expandTo(nextExpansion.size, nextExpansion.cost.toLocaleString()))}</Text>
                 </Pressable>
               </>
-            ) : <Text style={styles.emptyNote}>Maximum size reached.</Text>}
+            ) : <Text style={styles.emptyNote}>{t(cs.maxSizeReached)}</Text>}
           </View>
 
           {/* Research */}
-          <Text style={styles.sectionLabel}>Research · {Math.floor(game.researchPoints)} RP</Text>
+          <Text style={styles.sectionLabel}>{t(cs.researchHeader(Math.floor(game.researchPoints)))}</Text>
           {derived.activeResearchItems.map((item) => (
             <ListRow
               key={item.key}
-              title={item.name.en}
-              subtitle={item.isUnlocked ? item.description.en : item.prerequisiteName ? `Requires ${item.prerequisiteName.en} · ${item.cost} RP` : `${item.description.en} · ${item.cost} RP`}
-              actionLabel="Unlock"
+              title={t(item.name)}
+              subtitle={item.isUnlocked ? t(item.description) : item.prerequisiteName ? t(cs.requiresResearch(t(item.prerequisiteName), item.cost)) : t(cs.descWithRp(t(item.description), item.cost))}
+              actionLabel={t(cs.unlock)}
               disabled={!item.isVisible || game.researchPoints < item.cost}
               done={item.isUnlocked}
               onPress={() => unlockResearch(item)}
@@ -303,19 +307,19 @@ export default function CompanyScreen() {
           ))}
 
           {/* Perks */}
-          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>Perks · {game.upgradePoints} pts</Text>
-          {['efficiency', 'market', 'safety'].map((branch) => (
+          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.perksHeader(game.upgradePoints))}</Text>
+          {(['efficiency', 'market', 'safety'] as const).map((branch) => (
             <View key={branch}>
-              <Text style={styles.branchLabel}>{branch.charAt(0).toUpperCase() + branch.slice(1)}</Text>
+              <Text style={styles.branchLabel}>{t(cs.branches[branch])}</Text>
               {PERKS.filter((p) => p.branch === branch).map((perk) => {
                 const unlocked = game.unlockedPerks.includes(perk.key)
                 const prereqMet = !perk.prerequisite || game.unlockedPerks.includes(perk.prerequisite)
                 return (
                   <ListRow
                     key={perk.key}
-                    title={`${perk.name.en} · Tier ${perk.tier}`}
-                    subtitle={unlocked ? perk.description.en : !prereqMet ? 'Requires previous tier' : `${perk.description.en} · ${perk.cost} pt${perk.cost > 1 ? 's' : ''}`}
-                    actionLabel="Unlock"
+                    title={t(cs.perkTitle(t(perk.name), perk.tier))}
+                    subtitle={unlocked ? t(perk.description) : !prereqMet ? t(cs.requiresPrevTier) : t(cs.descWithPts(t(perk.description), perk.cost))}
+                    actionLabel={t(cs.unlock)}
                     disabled={!prereqMet || game.upgradePoints < perk.cost}
                     done={unlocked}
                     onPress={() => installPerk(perk)}
@@ -326,16 +330,16 @@ export default function CompanyScreen() {
           ))}
 
           {/* Activity log */}
-          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>Activity Log</Text>
+          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.activityLog)}</Text>
           <View style={styles.card}>
             {game.activityLog.length === 0
-              ? <Text style={styles.emptyNote}>Nothing logged yet.</Text>
+              ? <Text style={styles.emptyNote}>{t(cs.nothingLogged)}</Text>
               : game.activityLog.slice(0, 10).map((entry, i) => (
                   <Text key={i} style={styles.logEntry}>{entry}</Text>
                 ))}
           </View>
           <Pressable style={styles.linkBtn} onPress={() => router.push('/achievements')}>
-            <Text style={styles.linkBtnLabel}>View Milestones →</Text>
+            <Text style={styles.linkBtnLabel}>{t(cs.viewMilestones)}</Text>
           </Pressable>
         </ScrollView>
       )}
@@ -343,46 +347,46 @@ export default function CompanyScreen() {
       {/* ══ SETTINGS TAB ══ */}
       {activeTab === 'settings' && (
         <ScrollView contentContainerStyle={styles.list}>
-          <Text style={styles.sectionLabel}>Company Name</Text>
+          <Text style={styles.sectionLabel}>{t(cs.companyNameHeader)}</Text>
           <View style={styles.card}>
             <Text style={styles.currentName}>{game.refineryName}</Text>
             <View style={styles.renameRow}>
-              <TextInput style={styles.input} placeholder="New name..." placeholderTextColor={colors.inkMuted} value={name} onChangeText={setName} />
+              <TextInput style={styles.input} placeholder={t(cs.newNamePlaceholder)} placeholderTextColor={colors.inkMuted} value={name} onChangeText={setName} />
               <Pressable style={[styles.saveBtn, !name.trim() && styles.saveBtnOff]} onPress={() => { const n = name.trim(); if (!n) return; renameRefinery(n); setName('') }}>
-                <Text style={styles.saveBtnLabel}>Save</Text>
+                <Text style={styles.saveBtnLabel}>{t(cs.save)}</Text>
               </Pressable>
             </View>
           </View>
 
-          <Text style={styles.sectionLabel}>Save & Access</Text>
-          <ListRow title="Manual save" subtitle="Autosave runs in the background." actionLabel="Save" onPress={() => manualSave()} />
+          <Text style={styles.sectionLabel}>{t(cs.saveAccess)}</Text>
+          <ListRow title={t(cs.manualSave)} subtitle={t(cs.manualSaveSub)} actionLabel={t(cs.save)} onPress={() => manualSave()} />
           <ListRow
-            title="Export save"
-            subtitle="Share your save data as a text file to back up or transfer"
-            actionLabel="Export"
+            title={t(cs.exportSave)}
+            subtitle={t(cs.exportSaveSub)}
+            actionLabel={t(cs.export)}
             onPress={async () => {
               try {
                 const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default
                 const raw = await AsyncStorage.getItem('refinery_save')
-                if (!raw) { Alert.alert('No save found'); return }
+                if (!raw) { Alert.alert(t(cs.noSaveFound)); return }
                 await Share.share({ message: raw, title: 'Refinery Story Save' })
               } catch (e) {
-                Alert.alert('Export failed', String(e))
+                Alert.alert(t(cs.exportFailed), String(e))
               }
             }}
           />
-          <ListRow title="Settings" subtitle="Language, audio, and app-level controls" actionLabel="Open" onPress={() => router.push('/settings')} />
-          <ListRow title="Store" subtitle="Remove ads, boosts (demo)" actionLabel="Open" onPress={() => router.push('/store')} />
-          <ListRow title="Main Menu" subtitle="Return to front menu" actionLabel="Go" onPress={() => router.replace('/')} />
+          <ListRow title={t(cs.settingsRow)} subtitle={t(cs.settingsRowSub)} actionLabel={t(cs.open)} onPress={() => router.push('/settings')} />
+          <ListRow title={t(cs.store)} subtitle={t(cs.storeSub)} actionLabel={t(cs.open)} onPress={() => router.push('/store')} />
+          <ListRow title={t(cs.mainMenu)} subtitle={t(cs.mainMenuSub)} actionLabel={t(cs.go)} onPress={() => router.replace('/')} />
 
-          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>Danger Zone</Text>
+          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.dangerZone)}</Text>
           <ListRow
-            title="Reset save"
-            subtitle="Deletes all progress after confirmation."
-            actionLabel="Reset"
-            onPress={() => Alert.alert('Reset save?', 'This deletes all progress.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Reset', style: 'destructive', onPress: () => { resetGame(); router.replace('/') } },
+            title={t(cs.resetSave)}
+            subtitle={t(cs.resetSaveSub)}
+            actionLabel={t(cs.reset)}
+            onPress={() => Alert.alert(t(cs.resetConfirmTitle), t(cs.resetConfirmBody), [
+              { text: t(cs.cancel), style: 'cancel' },
+              { text: t(cs.reset), style: 'destructive', onPress: () => { resetGame(); router.replace('/') } },
             ])}
           />
         </ScrollView>
