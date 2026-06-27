@@ -1115,6 +1115,26 @@ export const ESG_DIRTY_BUILDINGS: BuildingType[] = [
   'petrochemicalPlant',
 ]
 
+// --- Layout depth (Roadmap feature 3): negative adjacency ---
+// A "sensitive" building (research / sales) loses dirtyPenaltyRate of its bonus
+// if it sits orthogonally adjacent to a heavy "polluting" plant -- a real
+// reason to keep those buildings away from the dirty production core, turning
+// tile placement into a tradeoff rather than "fill every cell". Distinct from
+// ESG_DIRTY_BUILDINGS (storage tanks aren't "polluting" for layout purposes).
+export const LAYOUT_BALANCE = {
+  dirtyPenaltyRate: 0.5,
+  sensitiveBuildings: ['laboratory', 'salesOffice'] as BuildingType[],
+  pollutingBuildings: [
+    'distillationUnit',
+    'lubricantPlant',
+    'jetFuelPlant',
+    'petrochemicalPlant',
+    'powerPlant',
+    'wasteTreatmentPlant',
+    'polymerPlant',
+  ] as BuildingType[],
+} as const
+
 // --- Production Complexity Expansion Phase 1: waste byproduct ---
 // Every "dirty" production building (reuses ESG_DIRTY_BUILDINGS) emits a
 // small amount of waste per tick. Waste has its own storage cap; once

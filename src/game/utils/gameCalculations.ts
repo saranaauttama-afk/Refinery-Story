@@ -25,6 +25,7 @@ import {
   STARTING_BALANCE,
   STORAGE_BALANCE,
   TANK_FARM_BALANCE,
+  LAYOUT_BALANCE,
   MAINTENANCE_BALANCE,
   MARKET_BALANCE,
   WAGE_BALANCE,
@@ -697,12 +698,19 @@ export function getBuildingEffectLines(
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
       const count = derived.buildingCounts.laboratory
+      const polluted = hasPollutingNeighbor(game.grid, cellIndex)
       return [
         {
           label: 'Research points from contracts',
           value: `+${Math.round(rate * 100)}%`,
           bonus: count > 1 ? `(x${count} labs = +${Math.round(rate * 100 * count)}% total)` : undefined,
         },
+        ...(polluted
+          ? [{
+              label: '⚠️ Next to a polluting plant',
+              value: `−${Math.round(LAYOUT_BALANCE.dirtyPenaltyRate * 100)}% bonus`,
+            }]
+          : []),
       ]
     }
     case 'maintenanceWorkshop': {
@@ -721,12 +729,19 @@ export function getBuildingEffectLines(
     case 'salesOffice': {
       const rate = BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[1] ?? 0.1
       const count = derived.buildingCounts.salesOffice
+      const polluted = hasPollutingNeighbor(game.grid, cellIndex)
       return [
         {
           label: 'Contract rewards',
           value: `+${Math.round(rate * 100)}%`,
           bonus: count > 1 ? `(x${count} offices = +${Math.round(rate * 100 * count)}% total)` : undefined,
         },
+        ...(polluted
+          ? [{
+              label: '⚠️ Next to a polluting plant',
+              value: `−${Math.round(LAYOUT_BALANCE.dirtyPenaltyRate * 100)}% bonus`,
+            }]
+          : []),
       ]
     }
     default:
@@ -1063,6 +1078,22 @@ function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem
   }))
 }
 
+// Layout depth (feature 3): true if the cell at `cellIndex` is orthogonally
+// adjacent to a heavy polluting plant. Used to penalize sensitive buildings
+// (lab / sales office) placed next to the dirty production core.
+export function hasPollutingNeighbor(grid: GridCell[], cellIndex: number): boolean {
+  const cols = Math.round(Math.sqrt(grid.length))
+  const row = Math.floor(cellIndex / cols)
+  const col = cellIndex % cols
+  const neighbors: (GridCell | null)[] = [
+    col > 0 ? grid[cellIndex - 1] : null,
+    col < cols - 1 ? grid[cellIndex + 1] : null,
+    row > 0 ? grid[cellIndex - cols] : null,
+    row < cols - 1 ? grid[cellIndex + cols] : null,
+  ]
+  return neighbors.some((n) => n !== null && LAYOUT_BALANCE.pollutingBuildings.includes(n))
+}
+
 function getComboStats(grid: GridCell[]): ComboStats {
   const combos: ComboStats = {
     crudeToDistillation: 0,
@@ -1382,14 +1413,17 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       distillationUpgradeBonusRate +=
         BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel[level] ?? 0
     } else if (cell === 'laboratory') {
+      // Layout depth: a lab next to a polluting plant loses part of its bonus.
+      const penalty = hasPollutingNeighbor(game.grid, i) ? 1 - LAYOUT_BALANCE.dirtyPenaltyRate : 1
       laboratoryRpBonusTotal +=
-        BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[level] ?? 0.1
+        (BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[level] ?? 0.1) * penalty
     } else if (cell === 'maintenanceWorkshop') {
       workshopPenaltyMultiplier *=
         BUILDING_UPGRADE_BALANCE.maintenanceWorkshopPenaltyRateByLevel[level] ?? 0.5
     } else if (cell === 'salesOffice') {
+      const penalty = hasPollutingNeighbor(game.grid, i) ? 1 - LAYOUT_BALANCE.dirtyPenaltyRate : 1
       salesOfficeContractBonusTotal +=
-        BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1
+        (BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1) * penalty
     }
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate

@@ -70,10 +70,11 @@ divergent research/perk archetypes (e.g. Green vs. Industrial) with real
 mechanical payoffs, and lean on shared-crude scarcity + the market so you can't
 scale everything at once. Converts "many systems" into "deep game."
 
-### 3. 🥉 Layout / adjacency as a first-class system (`⏳ P1`)
-Hidden combos (adjacency) are the most Kairosoft-feeling mechanic but are a
-side dish. Promote layout to a core puzzle: visible synergy auras, more combo
-types, and **negative adjacencies** (don't put waste next to the lab/housing).
+### 3. 🥉 Layout / adjacency as a first-class system (`🚧 in progress`)
+- ✅ **Negative adjacency** — a lab / sales office adjacent to a heavy
+  polluting plant loses 50% of its bonus (`LAYOUT_BALANCE`), surfaced as a
+  warning line in the tile info sheet. Makes placement a tradeoff.
+- ⏳ Follow-ups: visible synergy auras on the map, more positive combo types.
 
 ### 4. People / morale layer (`⏳ P2`)
 Employees have names/levels/veterans but no soul. Add morale + small staff
