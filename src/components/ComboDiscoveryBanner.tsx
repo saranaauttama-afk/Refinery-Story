@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import type { HiddenComboConfig } from '../game/data/hiddenCombos'
-import { colors, radii, spacing } from '../theme'
+import { colors, radii, spacing, OVERLAY_BANNER_TOP } from '../theme'
 
 type ComboDiscoveryBannerProps = {
   combo: HiddenComboConfig | null
@@ -32,7 +32,7 @@ function ComboDiscoveryBanner({ combo, onDismiss }: ComboDiscoveryBannerProps) {
 const styles = StyleSheet.create({
   banner: {
     position: 'absolute',
-    top: 50,
+    top: OVERLAY_BANNER_TOP,
     left: spacing.lg,
     right: spacing.lg,
     backgroundColor: colors.teal,

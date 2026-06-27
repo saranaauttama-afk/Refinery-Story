@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay } from 'react-native-reanimated'
-import { colors, fonts, radii, spacing } from '../theme'
+import { colors, fonts, radii, spacing, OVERLAY_BANNER_TOP } from '../theme'
 
 export type HeadlineData = {
   icon: string
@@ -65,7 +65,7 @@ export default function MilestoneHeadline({ headline, onDismiss }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    top: 60,
+    top: OVERLAY_BANNER_TOP,
     left: spacing.lg,
     right: spacing.lg,
     zIndex: 90,

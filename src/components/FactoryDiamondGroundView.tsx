@@ -14,6 +14,11 @@ import PlantSmoke from './PlantSmoke'
 // Storage/research/support buildings don't process anything, so they stay
 // still. Power burns crude (sootier tint); production/waste give off pale
 // steam.
+// Per-tile row,col coordinate labels were a development aid for tuning the
+// isometric grid. Off for normal play -- flip to true if you need to debug
+// tile placement again.
+const SHOW_DEBUG_LABELS = false
+
 const SMOKING_CATEGORIES = new Set(['production', 'power', 'waste'])
 const SMOKE_COLOR_BY_CATEGORY: Record<string, string> = {
   production: 'rgba(214, 206, 196, 1)',
@@ -333,7 +338,7 @@ function FactoryDiamondGroundView({
                       strokeWidth={0.8}
                     />
                   </Svg>
-                  <Text style={styles.debugLabelDisabled}>{debugLabel}</Text>
+                  {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabelDisabled}>{debugLabel}</Text> : null}
                 </View>
               )
             }
@@ -356,7 +361,7 @@ function FactoryDiamondGroundView({
                     />
                   </Svg>
                   <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
-                  <Text style={styles.debugLabel}>{debugLabel}</Text>
+                  {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
                 </Pressable>
               )
             }
@@ -418,7 +423,7 @@ function FactoryDiamondGroundView({
                     color={SMOKE_COLOR_BY_CATEGORY[category] ?? SMOKE_COLOR_BY_CATEGORY.production}
                   />
                 ) : null}
-                {!plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+                {SHOW_DEBUG_LABELS && !plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
                 {!plantImage ? (
                   <View style={styles.levelBadge}>
                     <Text style={styles.levelText}>L{level}</Text>

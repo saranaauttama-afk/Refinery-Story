@@ -58,6 +58,13 @@ export const radii = {
   pill: 999,
 } as const
 
+// Vertical clearance (px from screen top) for transient overlay banners
+// (hidden-event / era / combo / milestone). Kept below the persistent top HUD
+// + resource dock on the factory screen so a banner never covers the player's
+// money/crude/gas read-out. Global overlays render outside the SafeAreaView,
+// so this also accounts for the status bar / notch area.
+export const OVERLAY_BANNER_TOP = 132
+
 // The floating bottom tab bar (app/game/(tabs)/_layout.tsx) is
 // position: 'absolute' with its own height + bottom margin, so React
 // Navigation's automatic content-inset doesn't apply -- every tab
