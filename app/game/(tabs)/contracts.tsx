@@ -5,22 +5,24 @@ import { useRouter } from 'expo-router'
 
 import ListRow from '../../../src/components/ListRow'
 import { useGame } from '../../../src/hooks/GameContext'
+import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { getContractProgress } from '../../../src/game/utils/gameCalculations'
+import { text } from '../../../src/game/translations'
 import type { ActiveContract } from '../../../src/game/types'
 
 // Product group config
 type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
 
-const PRODUCT_GROUPS: { key: ProductKey; label: string; icon: string; field: keyof ActiveContract }[] = [
-  { key: 'gasoline',         label: 'Gasoline',         icon: 'gasoline',        field: 'gasolineRequired' },
-  { key: 'asphalt',          label: 'Asphalt',          icon: 'asphalt',         field: 'asphaltRequired' },
-  { key: 'jetFuel',          label: 'Jet Fuel',         icon: 'jetFuel',         field: 'jetFuelRequired' },
-  { key: 'lubricants',       label: 'Lubricants',       icon: 'lubricants',      field: 'lubricantsRequired' },
-  { key: 'petrochemicals',   label: 'Petrochemicals',   icon: 'petrochemicals',  field: 'petrochemicalsRequired' },
-  { key: 'recycledMaterial', label: 'Recycled Material',icon: 'recycledMaterial',field: 'recycledMaterialRequired' },
-  { key: 'plasticPellets',   label: 'Plastic Pellets',  icon: 'plasticPellets',  field: 'plasticPelletsRequired' },
+const PRODUCT_GROUPS: { key: ProductKey; icon: string; field: keyof ActiveContract }[] = [
+  { key: 'gasoline',         icon: 'gasoline',        field: 'gasolineRequired' },
+  { key: 'asphalt',          icon: 'asphalt',         field: 'asphaltRequired' },
+  { key: 'jetFuel',          icon: 'jetFuel',         field: 'jetFuelRequired' },
+  { key: 'lubricants',       icon: 'lubricants',      field: 'lubricantsRequired' },
+  { key: 'petrochemicals',   icon: 'petrochemicals',  field: 'petrochemicalsRequired' },
+  { key: 'recycledMaterial', icon: 'recycledMaterial',field: 'recycledMaterialRequired' },
+  { key: 'plasticPellets',   icon: 'plasticPellets',  field: 'plasticPelletsRequired' },
 ]
 
 const PRODUCT_EMOJI: Record<ProductKey, string> = {
@@ -43,6 +45,7 @@ function Section({
   defaultOpen?: boolean
   children: React.ReactNode
 }) {
+  const { t } = useLang()
   const [open, setOpen] = useState(defaultOpen)
   if (count === 0) return null
   return (
@@ -52,7 +55,7 @@ function Section({
         <View style={sectionStyles.right}>
           {readyCount !== undefined && readyCount > 0 && (
             <View style={sectionStyles.readyBadge}>
-              <Text style={sectionStyles.readyBadgeText}>{readyCount} ready</Text>
+              <Text style={sectionStyles.readyBadgeText}>{t(text.contracts.screen.ready(readyCount))}</Text>
             </View>
           )}
           <Text style={sectionStyles.count}>{count}</Text>
@@ -114,6 +117,8 @@ const subStyles = StyleSheet.create({
 export default function ContractsScreen() {
   const router = useRouter()
   const { game, loaded, derived, completeContract, claimHiddenEvent, autoTrade } = useGame()
+  const { t } = useLang()
+  const sc = text.contracts.screen
 
   if (!loaded || !game || !derived) {
     return <SafeAreaView style={styles.loadingScreen}><ActivityIndicator color={colors.orange} size="large" /></SafeAreaView>
@@ -132,16 +137,16 @@ export default function ContractsScreen() {
         <Pressable style={styles.closeBtn} onPress={() => router.back()}>
           <Text style={styles.closeBtnText}>X</Text>
         </Pressable>
-        <Text style={styles.title}>Contracts</Text>
+        <Text style={styles.title}>{t(sc.title)}</Text>
         {totalReady > 0 && (
-          <View style={styles.badge}><Text style={styles.badgeText}>{totalReady} ready</Text></View>
+          <View style={styles.badge}><Text style={styles.badgeText}>{t(sc.ready(totalReady))}</Text></View>
         )}
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         {/* Mystery contracts */}
         {HIDDEN_EVENTS.filter((e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked').map((event) => (
-          <ListRow key={event.key} title="??? Mystery Contract" subtitle="Something unusual happened." badge="???" actionLabel="Reveal" onPress={() => claimHiddenEvent(event.key)} />
+          <ListRow key={event.key} title={t(sc.mysteryTitle)} subtitle={t(sc.mysterySubtitle)} badge="???" actionLabel={t(sc.reveal)} onPress={() => claimHiddenEvent(event.key)} />
         ))}
 
         {/* Product groups */}
@@ -159,7 +164,7 @@ export default function ContractsScreen() {
           return (
             <Section
               key={group.key}
-              title={group.label}
+              title={t(sc.groups[group.key])}
               count={groupContracts.length}
               readyCount={readyInGroup}
               defaultOpen={readyInGroup > 0}
@@ -178,7 +183,7 @@ export default function ContractsScreen() {
                 // to avoid cards jumping around as inventory fluctuates
                 const sortedVisible = [...visibleContracts].sort((a, b) => a.id - b.id)
                 return (
-                  <SubSection label={"Active (Tier " + activeTier + ")"} count={visibleContracts.length} defaultOpen>
+                  <SubSection label={t(sc.activeTier(activeTier ?? 1))} count={visibleContracts.length} defaultOpen>
                     {sortedVisible.map((contract) => {
                       const { have, need, unit } = getContractProgress(contract, game)
                       const ready = have >= need
@@ -186,16 +191,16 @@ export default function ContractsScreen() {
                       return (
                         <View key={contract.id}>
                           <ListRow
-                            title={contract.name.en}
+                            title={t(contract.name)}
                             subtitle={have + "/" + need + " " + unit + " +$" + contract.currentReward.toLocaleString() + " +" + contract.currentRpReward + "RP"}
-                            actionLabel="Complete"
+                            actionLabel={t(sc.complete)}
                             disabled={!ready}
-                            badge={ready ? 'OK' : contract.unlockLevel === game.refineryLevel ? 'NEW' : undefined}
+                            badge={ready ? t(sc.ok) : contract.unlockLevel === game.refineryLevel ? t(sc.newBadge) : undefined}
                             onPress={() => { if (ready) completeContract(contract) }}
                           />
                           {showAutoTradeHint && (
                             <Text style={styles.autoTradeHint}>
-                              Auto-trade is selling your stock — pause it in Supply to accumulate
+                              {t(sc.autoTradeHint)}
                             </Text>
                           )}
                         </View>
@@ -203,22 +208,22 @@ export default function ContractsScreen() {
                     })}
                     {hiddenCount > 0 && (
                       <Text style={styles.lockedHint}>
-                        + {hiddenCount} higher-tier contract{hiddenCount > 1 ? 's' : ''} unlock after completing this tier
+                        {t(sc.higherTierHint(hiddenCount))}
                       </Text>
                     )}
                   </SubSection>
                 )
               })()}
 
-              <SubSection label="Completed" count={completedContracts.length} defaultOpen={false}>
+              <SubSection label={t(sc.completed)} count={completedContracts.length} defaultOpen={false}>
                 {completedContracts.map((contract) => {
                   const { have, need, unit } = getContractProgress(contract, game)
                   return (
                     <ListRow
                       key={contract.id}
-                      title={contract.name.en}
+                      title={t(contract.name)}
                       subtitle={have + "/" + need + " " + unit}
-                      actionLabel="Done"
+                      actionLabel={t(sc.done)}
                       done
                       onPress={() => {}}
                     />

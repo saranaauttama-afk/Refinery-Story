@@ -200,6 +200,44 @@ export const text = {
     recruit: bilingual('Recruit', 'จ้างงาน'),
     company: bilingual('Company', 'บริษัท'),
   },
+  supplyScreen: {
+    title: bilingual('Supply', 'จัดหา'),
+    ready: (n: number) => bilingual(`${n} ready`, `พร้อม ${n}`),
+    incoming: bilingual('Incoming Shipments', 'การจัดส่งที่กำลังมา'),
+    crudeIn: (amount: number, secs: number) =>
+      bilingual(`${amount} crude in ${secs}s`, `น้ำมันดิบ ${amount} ใน ${secs} วิ`),
+    orderCrude: bilingual('Order Crude', 'สั่งน้ำมันดิบ'),
+    plusCrude: (n: number) => bilingual(` +${n} crude`, ` +${n} น้ำมันดิบ`),
+    shipmentSub: (cost: string, secs: number) =>
+      bilingual(`$${cost} arrives in ${secs}s`, `$${cost} มาถึงใน ${secs} วิ`),
+    order: bilingual('Order', 'สั่งซื้อ'),
+    standingOrders: bilingual('Standing Orders', 'คำสั่งซื้อประจำ'),
+    cooldown: (secs: number) => bilingual(`Cooldown ${secs}s`, `รอ ${secs} วิ`),
+    fulfill: bilingual('Fulfill', 'ส่งมอบ'),
+  },
+  recruitScreen: {
+    title: bilingual('Recruit', 'จ้างงาน'),
+    hiringOffice: bilingual('Hiring Office', 'สำนักงานจัดหางาน'),
+    mystery: bilingual('Mystery!', 'ปริศนา!'),
+    veteran: bilingual(' · Veteran +20%', ' · มากประสบการณ์ +20%'),
+    starts: bilingual('Starts', 'เริ่มที่'),
+    hired: bilingual('Hired', 'จ้างแล้ว'),
+    mentorXp: bilingual('Mentor XP', 'XP พี่เลี้ยง'),
+    full: (cap: number) => bilingual(`Full (${cap} max)`, `เต็ม (สูงสุด ${cap})`),
+    need: (cost: string) => bilingual(`Need $${cost}`, `ต้องการ $${cost}`),
+    hireName: (name: string, cost: string) =>
+      bilingual(`Hire ${name} $${cost}`, `จ้าง ${name} $${cost}`),
+    newCandidatesIn: (mins: number) =>
+      bilingual(`New candidates in ${mins}m`, `ผู้สมัครใหม่ใน ${mins} นาที`),
+    candidatesReady: bilingual('Candidates ready', 'มีผู้สมัครพร้อม'),
+    refresh: (cost: string) => bilingual(`Refresh $${cost}`, `รีเฟรช $${cost}`),
+    tiers: {
+      rookie: bilingual('Rookie', 'มือใหม่'),
+      skilled: bilingual('Skilled', 'มีฝีมือ'),
+      expert: bilingual('Expert', 'เชี่ยวชาญ'),
+      star: bilingual('Star', 'ดาวเด่น'),
+    },
+  },
   production: {
     kicker: bilingual('Automation', 'ระบบอัตโนมัติ'),
     title: bilingual('Refinery Floor', 'พื้นที่การกลั่น'),
@@ -792,6 +830,38 @@ export const text = {
       jetFuel: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
       lubricants: bilingual('Lubricants', 'สารหล่อลื่น'),
       petrochemicals: bilingual('Petrochemicals', 'ปิโตรเคมี'),
+    },
+    // Contracts tab (the pushed screen) — its own UI strings.
+    screen: {
+      title: bilingual('Contracts', 'สัญญา'),
+      ready: (n: number) => bilingual(`${n} ready`, `พร้อม ${n}`),
+      mysteryTitle: bilingual('??? Mystery Contract', '??? สัญญาปริศนา'),
+      mysterySubtitle: bilingual('Something unusual happened.', 'มีเรื่องผิดปกติเกิดขึ้น'),
+      reveal: bilingual('Reveal', 'เปิดเผย'),
+      activeTier: (n: number) => bilingual(`Active (Tier ${n})`, `กำลังใช้งาน (ระดับ ${n})`),
+      complete: bilingual('Complete', 'ส่งมอบ'),
+      done: bilingual('Done', 'เสร็จแล้ว'),
+      completed: bilingual('Completed', 'เสร็จสิ้น'),
+      ok: bilingual('OK', 'พร้อม'),
+      newBadge: bilingual('NEW', 'ใหม่'),
+      autoTradeHint: bilingual(
+        'Auto-trade is selling your stock — pause it in Supply to accumulate',
+        'ระบบเทรดอัตโนมัติกำลังขายสต๊อก — หยุดที่หน้าจัดหาเพื่อสะสม',
+      ),
+      higherTierHint: (n: number) =>
+        bilingual(
+          `+ ${n} higher-tier contract${n > 1 ? 's' : ''} unlock after completing this tier`,
+          `+ สัญญาระดับสูงอีก ${n} รายการจะปลดล็อกเมื่อทำระดับนี้สำเร็จ`,
+        ),
+      groups: {
+        gasoline: bilingual('Gasoline', 'น้ำมันเบนซิน'),
+        asphalt: bilingual('Asphalt', 'แอสฟัลต์'),
+        jetFuel: bilingual('Jet Fuel', 'เชื้อเพลิงอากาศยาน'),
+        lubricants: bilingual('Lubricants', 'สารหล่อลื่น'),
+        petrochemicals: bilingual('Petrochemicals', 'ปิโตรเคมี'),
+        recycledMaterial: bilingual('Recycled Material', 'วัสดุรีไซเคิล'),
+        plasticPellets: bilingual('Plastic Pellets', 'เม็ดพลาสติก'),
+      },
     },
     requires: (amount: number, product: BilingualTextValue) =>
       bilingual(

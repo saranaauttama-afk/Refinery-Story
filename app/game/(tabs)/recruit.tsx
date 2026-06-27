@@ -7,9 +7,11 @@ import { useRouter } from 'expo-router'
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
+import { useLang } from '../../../src/hooks/SettingsContext'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
+import { text } from '../../../src/game/translations'
 import { WORKERS } from '../../../src/game/data/workers'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
@@ -24,6 +26,7 @@ const TIER_CONFIG: Record<RecruitmentTier, { label: string; bodyColor: string; l
 }
 
 function CandidateFigure({ candidate, selected, onPress }: { candidate: RecruitmentCandidate; selected: boolean; onPress: () => void }) {
+  const { t } = useLang()
   const tc = TIER_CONFIG[candidate.tier]
   const worker = WORKERS.find((w) => w.key === candidate.type)
   const prog = useSharedValue(0)
@@ -39,7 +42,7 @@ function CandidateFigure({ candidate, selected, onPress }: { candidate: Recruitm
         <View style={[figStyles.body, { backgroundColor: tc.bodyColor }]} />
         <View style={figStyles.legs}><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /></View>
         {selected && <View style={figStyles.ring} />}
-        <Text style={figStyles.roleLabel} numberOfLines={1}>{worker?.name.en ?? candidate.type}</Text>
+        <Text style={figStyles.roleLabel} numberOfLines={1}>{worker ? t(worker.name) : candidate.type}</Text>
       </Animated.View>
     </Pressable>
   )
@@ -59,6 +62,8 @@ const figStyles = StyleSheet.create({
 export default function RecruitScreen() {
   const router = useRouter()
   const { game, loaded, hireCandidate, refreshRecruitmentPool, claimHiddenEvent } = useGame()
+  const { t } = useLang()
+  const rs = text.recruitScreen
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
   const [selectedSlot, setSelectedSlot] = useState(0)
@@ -88,21 +93,21 @@ export default function RecruitScreen() {
         <Pressable style={styles.closeBtn} onPress={() => router.back()}>
           <Text style={styles.closeBtnText}>X</Text>
         </Pressable>
-        <Text style={styles.title}>Recruit</Text>
+        <Text style={styles.title}>{t(rs.title)}</Text>
       </View>
 
       {/* Scene */}
       <View style={styles.scene}>
         <View style={styles.sceneBuildingLarge} />
         <View style={styles.sceneBuildingSmall} />
-        <View style={styles.sceneSign}><Text style={styles.sceneSignText}>Hiring Office</Text></View>
+        <View style={styles.sceneSign}><Text style={styles.sceneSignText}>{t(rs.hiringOffice)}</Text></View>
         <View style={styles.candidatesStage}>
           {HIDDEN_EVENTS.filter((e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked').slice(0, 1).map((event) => (
             <Pressable key={event.key} style={figStyles.wrap} onPress={() => claimHiddenEvent(event.key)}>
               <View style={[figStyles.bubble, { backgroundColor: 'rgba(232,131,58,0.9)' }]}><Text style={figStyles.bubbleName}>???</Text></View>
               <View style={{ width: 20, height: 50, backgroundColor: '#333', borderRadius: 4, opacity: 0.6 }} />
               <View style={figStyles.legs}><View style={[figStyles.leg, { backgroundColor: '#444' }]} /><View style={[figStyles.leg, { backgroundColor: '#444' }]} /></View>
-              <Text style={[figStyles.roleLabel, { color: colors.orange }]}>Mystery!</Text>
+              <Text style={[figStyles.roleLabel, { color: colors.orange }]}>{t(rs.mystery)}</Text>
             </Pressable>
           ))}
           {game.recruitmentPool.map((candidate, slotIndex) => (
@@ -117,17 +122,17 @@ export default function RecruitScreen() {
           <View style={styles.infoTop}>
             <View style={{ flex: 1 }}>
               <Text style={styles.infoName}>{selectedCandidate.name}</Text>
-              <Text style={styles.infoRole}>{selectedWorker?.name.en ?? selectedCandidate.type}{selectedCandidate.isVeteran ? ' · Veteran +20%' : ''}</Text>
+              <Text style={styles.infoRole}>{selectedWorker ? t(selectedWorker.name) : selectedCandidate.type}{selectedCandidate.isVeteran ? t(rs.veteran) : ''}</Text>
             </View>
             <View style={[styles.tierBadge, { backgroundColor: selectedTc.borderColor }]}>
-              <Text style={styles.tierBadgeText}>{selectedTc.label}</Text>
+              <Text style={styles.tierBadgeText}>{t(rs.tiers[selectedCandidate.tier])}</Text>
             </View>
           </View>
           <View style={styles.infoStats}>
-            <View style={styles.iStat}><Text style={styles.iStatVal}>Lv{selectedCandidate.startingLevel}</Text><Text style={styles.iStatLabel}>Starts</Text></View>
+            <View style={styles.iStat}><Text style={styles.iStatVal}>Lv{selectedCandidate.startingLevel}</Text><Text style={styles.iStatLabel}>{t(rs.starts)}</Text></View>
             <View style={styles.iStatDiv} />
-            <View style={styles.iStat}><Text style={styles.iStatVal}>{game.workerCounts[selectedCandidate.type]}/{cap}</Text><Text style={styles.iStatLabel}>Hired</Text></View>
-            {mentorBonus > 0 && <><View style={styles.iStatDiv} /><View style={styles.iStat}><Text style={[styles.iStatVal, { color: colors.green }]}>+{mentorBonus}</Text><Text style={styles.iStatLabel}>Mentor XP</Text></View></>}
+            <View style={styles.iStat}><Text style={styles.iStatVal}>{game.workerCounts[selectedCandidate.type]}/{cap}</Text><Text style={styles.iStatLabel}>{t(rs.hired)}</Text></View>
+            {mentorBonus > 0 && <><View style={styles.iStatDiv} /><View style={styles.iStat}><Text style={[styles.iStatVal, { color: colors.green }]}>+{mentorBonus}</Text><Text style={styles.iStatLabel}>{t(rs.mentorXp)}</Text></View></>}
           </View>
           <AnimatedPressable
             disabled={!canHire}
@@ -135,7 +140,7 @@ export default function RecruitScreen() {
             style={[styles.hireBtn, canHire ? styles.hireBtnActive : styles.hireBtnOff]}
           >
             <Text style={styles.hireBtnLabel}>
-              {atCap ? "Full (" + cap + " max)" : !affordable ? "Need $" + selectedCandidate.cost.toLocaleString() : "Hire " + selectedCandidate.name + " $" + selectedCandidate.cost.toLocaleString()}
+              {atCap ? t(rs.full(cap)) : !affordable ? t(rs.need(selectedCandidate.cost.toLocaleString())) : t(rs.hireName(selectedCandidate.name, selectedCandidate.cost.toLocaleString()))}
             </Text>
           </AnimatedPressable>
         </View>
@@ -143,11 +148,11 @@ export default function RecruitScreen() {
 
       {/* Refresh bar */}
       <View style={styles.refreshBar}>
-        <Text style={styles.refreshTimer}>{refreshSecsLeft > 0 ? "New candidates in " + Math.ceil(refreshSecsLeft / 60) + "m" : 'Candidates ready'}</Text>
+        <Text style={styles.refreshTimer}>{refreshSecsLeft > 0 ? t(rs.newCandidatesIn(Math.ceil(refreshSecsLeft / 60))) : t(rs.candidatesReady)}</Text>
         <AnimatedPressable disabled={!canRefresh}
           onPress={() => { if (canRefresh) { spawnFloat("-$" + refreshCost.toLocaleString(), 'expense'); haptics.tap() }; refreshRecruitmentPool(); setSelectedSlot(0) }}
           style={[styles.refreshBtn, canRefresh ? styles.refreshBtnActive : styles.refreshBtnOff]}>
-          <Text style={styles.refreshBtnLabel}>Refresh ${refreshCost.toLocaleString()}</Text>
+          <Text style={styles.refreshBtnLabel}>{t(rs.refresh(refreshCost.toLocaleString()))}</Text>
         </AnimatedPressable>
       </View>
     </SafeAreaView>
