@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
 import ListRow from '../../../src/components/ListRow'
+import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
@@ -31,15 +32,11 @@ export default function SupplyScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable style={styles.closeBtn} onPress={() => router.back()}>
-          <Text style={styles.closeBtnText}>X</Text>
-        </Pressable>
-        <Text style={styles.title}>{t(ss.title)}</Text>
-        {standaloneReady > 0 && (
-          <View style={styles.badge}><Text style={styles.badgeText}>{t(ss.ready(standaloneReady))}</Text></View>
-        )}
-      </View>
+      <ScreenHeader
+        title={t(ss.title)}
+        badge={standaloneReady > 0 ? t(ss.ready(standaloneReady)) : undefined}
+        onClose={() => router.back()}
+      />
 
       <ScrollView contentContainerStyle={styles.list}>
         {game.pendingShipments.length > 0 && (
@@ -89,19 +86,6 @@ export default function SupplyScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    backgroundColor: '#1C2634', flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm,
-  },
-  closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  closeBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-  title: { flex: 1, fontSize: 20, fontWeight: '900', color: '#fff' },
-  badge: { backgroundColor: colors.green, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
   sectionLabel: { fontSize: 11, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs },
   pendingBox: { backgroundColor: '#EBF4FF', borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.blue, padding: spacing.sm, gap: 4 },

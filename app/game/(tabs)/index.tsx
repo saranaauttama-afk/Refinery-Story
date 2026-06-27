@@ -1674,10 +1674,10 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   dockIcon: {
-    fontSize: 12,
+    fontSize: 14,
   },
   dockVal: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: fonts.heading,
     color: '#FFFFFF',
     letterSpacing: 0.2,
@@ -1686,15 +1686,17 @@ const styles = StyleSheet.create({
     color: colors.orange,
   },
   dockLabel: {
-    fontSize: 7,
+    fontSize: 8,
     fontFamily: fonts.body,
-    color: '#6B8099',
+    // Brighter than the old #6B8099 — the 7px labels were nearly
+    // illegible on a real phone; bumped size + contrast together.
+    color: '#90A6BE',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   dockDivider: {
     width: 1,
-    height: 28,
+    height: 30,
     backgroundColor: '#2E3D50',
   },
   // Flow-rate strip — slim translucent bar under the resource dock
@@ -1726,15 +1728,15 @@ const styles = StyleSheet.create({
   flowDotLoss:   { backgroundColor: colors.orange },
   flowDotIdle:   { backgroundColor: '#6B8099' },
   flowState: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: fonts.heading,
-    color: 'rgba(255,255,255,0.82)',
+    color: 'rgba(255,255,255,0.9)',
   },
   flowIcon: {
-    fontSize: 11,
+    fontSize: 12,
   },
   flowVal: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: fonts.heading,
     color: '#FFFFFF',
     letterSpacing: 0.2,
@@ -1743,9 +1745,9 @@ const styles = StyleSheet.create({
   flowValDown: { color: colors.orange },
   flowValFlat: { color: 'rgba(255,255,255,0.7)' },
   flowUnit: {
-    fontSize: 8,
+    fontSize: 8.5,
     fontFamily: fonts.body,
-    color: '#6B8099',
+    color: '#90A6BE',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },

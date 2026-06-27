@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
+import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
@@ -89,12 +90,7 @@ export default function RecruitScreen() {
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.closeBtn} onPress={() => router.back()}>
-          <Text style={styles.closeBtnText}>X</Text>
-        </Pressable>
-        <Text style={styles.title}>{t(rs.title)}</Text>
-      </View>
+      <ScreenHeader title={t(rs.title)} onClose={() => router.back()} />
 
       {/* Scene */}
       <View style={styles.scene}>
@@ -162,10 +158,6 @@ export default function RecruitScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#0D1520' },
   loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-  header: { backgroundColor: '#1C2634', flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  closeBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-  title: { flex: 1, fontSize: 20, fontWeight: '900', color: '#fff' },
   scene: { height: 200, backgroundColor: '#4A7A9A', position: 'relative', overflow: 'hidden', flexShrink: 0 },
   sceneBuildingLarge: { position: 'absolute', right: 16, bottom: 0, width: 80, height: 110, backgroundColor: '#7A8A70', borderRadius: 4, opacity: 0.5 },
   sceneBuildingSmall: { position: 'absolute', right: 90, bottom: 0, width: 50, height: 70, backgroundColor: '#6A7A60', borderRadius: 4, opacity: 0.4 },
