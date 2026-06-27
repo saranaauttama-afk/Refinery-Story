@@ -18,6 +18,7 @@ import EraBanner from '../src/components/EraBanner'
 import MilestoneHeadline from '../src/components/MilestoneHeadline'
 import HiddenEventBanner from '../src/components/HiddenEventBanner'
 import WinCelebrationModal from '../src/components/WinCelebrationModal'
+import LegendCelebrationModal from '../src/components/LegendCelebrationModal'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
 import { useHaptics } from '../src/hooks/useHaptics'
 import { useSound } from '../src/hooks/useSound'
@@ -32,6 +33,7 @@ function GlobalOverlays() {
     pendingEraBanner,
     pendingMilestoneHeadline,
     pendingWinCelebration,
+    pendingLegendCelebration,
     pendingComboDiscovery,
     pendingHiddenEventUnlock,
     chooseEventOption,
@@ -39,6 +41,7 @@ function GlobalOverlays() {
     dismissEraBanner,
     dismissMilestoneHeadline,
     dismissWinCelebration,
+    dismissLegendCelebration,
     dismissComboDiscovery,
     dismissHiddenEventUnlock,
   } = useGame()
@@ -81,6 +84,15 @@ function GlobalOverlays() {
     }
   }, [pendingWinCelebration, haptics, sound])
 
+  // The full-clear "Industry Legend" endgame — the biggest celebration.
+  useEffect(() => {
+    if (pendingLegendCelebration) {
+      haptics.success()
+      sound.play('levelup')
+      burstConfetti()
+    }
+  }, [pendingLegendCelebration, haptics, sound])
+
   // Success haptic + confetti when a hidden layout combo is discovered.
   useEffect(() => {
     if (pendingComboDiscovery) {
@@ -115,6 +127,7 @@ function GlobalOverlays() {
       <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />
       <AwardModal record={pendingAward} onDismiss={dismissAward} />
       <WinCelebrationModal visible={pendingWinCelebration} game={game} onDismiss={dismissWinCelebration} />
+      <LegendCelebrationModal visible={pendingLegendCelebration} game={game} onDismiss={dismissLegendCelebration} />
       <Confetti burstKey={confettiKey} />
     </>
   )

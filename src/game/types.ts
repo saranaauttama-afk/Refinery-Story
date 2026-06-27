@@ -171,6 +171,9 @@ export type GameState = {
   gridLevels: number[]
   gridExpansionLevel: number
   prototypeCompleted: boolean
+  // Endgame spine: set once every ENDGAME_GOALS objective is complete (the
+  // permanent "Industry Legend" status). Triggers a one-time celebration.
+  legendAchieved: boolean
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
   // Player-chosen name for their refinery, shown in the hero panel alongside

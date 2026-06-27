@@ -44,10 +44,11 @@ import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
+import { areAllEndgameGoalsComplete } from '../data/endgameGoals'
 import { getStaffName } from '../data/staffNames'
 import { generateRecruitmentPool, RECRUITMENT_BALANCE } from '../data/recruitment'
 import { WORKERS } from '../data/workers'
-import { serializeBilingualText, text } from '../translations'
+import { bilingual, serializeBilingualText, text } from '../translations'
 import type {
   ActiveWorkerItem,
   AwardGrade,
@@ -201,6 +202,7 @@ export function createInitialGameState(): GameState {
     gridLevels: Array(EXPANSION_BALANCE[0].cells).fill(1),
     gridExpansionLevel: 0,
     prototypeCompleted: false,
+    legendAchieved: false,
     everBoughtCrude: false,
     starterGuideDismissed: false,
     refineryName: DEFAULT_REFINERY_NAME,
@@ -1743,6 +1745,21 @@ export function applyWinGoal(game: GameState): GameState {
     activityLog: addLog(
       game.activityLog,
       serializeBilingualText(text.goal.completionLog),
+    ),
+  }
+}
+
+// Endgame spine (feature 5): once every ENDGAME_GOALS objective is met, award
+// the permanent "Industry Legend" status. Idempotent -- a no-op once achieved.
+export function applyLegendGoal(game: GameState): GameState {
+  if (game.legendAchieved) return game
+  if (!areAllEndgameGoalsComplete(game)) return game
+  return {
+    ...game,
+    legendAchieved: true,
+    activityLog: addLog(
+      game.activityLog,
+      serializeBilingualText(bilingual('🏆 INDUSTRY LEGEND — every legacy goal complete!', '🏆 ตำนานวงการ — พิชิตเป้าหมายปลายเกมครบทุกข้อ!')),
     ),
   }
 }

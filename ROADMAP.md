@@ -81,9 +81,12 @@ Employees have names/levels/veterans but no soul. Add morale + small staff
 events (a standout hire, a feud, a raise request) so managing the crew is an
 ongoing soft decision — Kairosoft charm.
 
-### 5. Endgame / prestige spine (`⏳ P2`)
-Maxing Lv20 currently dead-ends. Give the long arc a climax — go global / IPO /
-Hall of Fame, or a New Game+ that carries something forward.
+### 5. Endgame / prestige spine (`✅ shipped`)
+A ladder of 6 "legacy goals" (`ENDGAME_GOALS`: max level, $1M, all research,
+max grid, an S-grade year, 100k lifetime gasoline) shown on the Achievements
+screen with progress bars. Completing all flips `legendAchieved` → the
+"Industry Legend" celebration (modal + confetti). Closes the post-Lv20 loop.
+Follow-up: a New Game+ / prestige that carries something forward.
 
 ---
 

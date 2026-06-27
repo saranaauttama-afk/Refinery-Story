@@ -556,6 +556,7 @@ export function sanitizeLoadedGameState(value: unknown) {
     gridLevels: getSafeGridLevels(value.gridLevels, grid.length),
     gridExpansionLevel: getSafeNumber(value.gridExpansionLevel, fallback.gridExpansionLevel),
     prototypeCompleted: getSafeBoolean(value.prototypeCompleted, fallback.prototypeCompleted),
+    legendAchieved: getSafeBoolean(value.legendAchieved, fallback.legendAchieved),
     everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
     refineryName: getSafeString(value.refineryName, DEFAULT_REFINERY_NAME).trim().slice(0, 40) || DEFAULT_REFINERY_NAME,

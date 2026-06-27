@@ -23,6 +23,7 @@ import {
   applyShipmentArrivals,
   applyStaffXp,
   applyWinGoal,
+  applyLegendGoal,
   calculateDerivedStats,
   closeBusinessYear,
   getMaxHireCount,
@@ -708,6 +709,7 @@ export function useGameLoop() {
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
   const [pendingMilestoneHeadline, setPendingMilestoneHeadline] = useState<{ icon: string; title: string; body: string } | null>(null)
   const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
+  const [pendingLegendCelebration, setPendingLegendCelebration] = useState(false)
   const [pendingComboDiscovery, setPendingComboDiscovery] = useState<HiddenComboConfig | null>(null)
   // Hidden Event banner: which difficulty just unlocked (for the toast's
   // styling/copy only -- never the actual reward, since the design
@@ -842,6 +844,13 @@ export function useGameLoop() {
           next = triggerChoiceEvent(next)
         }
 
+        // Endgame: catch tick-driven completions (money via auto-trade/sells,
+        // an S-grade year from the award close above).
+        next = applyLegendGoal(next)
+        if (!current.legendAchieved && next.legendAchieved) {
+          setPendingLegendCelebration(true)
+        }
+
         gameRef.current = next
         return next
       })
@@ -866,6 +875,13 @@ export function useGameLoop() {
       }
       if (!current.prototypeCompleted && next.prototypeCompleted) {
         setPendingWinCelebration(true)
+      }
+      // Endgame: catch action-driven completions (upgrade to Lv20, research,
+      // grid expansion). Tick-driven ones (money, awards) are caught in the
+      // main tick loop.
+      next = applyLegendGoal(next)
+      if (!current.legendAchieved && next.legendAchieved) {
+        setPendingLegendCelebration(true)
       }
       gameRef.current = next
       return next
@@ -1616,6 +1632,7 @@ export function useGameLoop() {
     pendingEraBanner,
     pendingMilestoneHeadline,
     pendingWinCelebration,
+    pendingLegendCelebration,
     pendingComboDiscovery,
     pendingHiddenEventUnlock,
     buyCrude,
@@ -1709,6 +1726,7 @@ export function useGameLoop() {
         return applyCrisisPenalty(current)
       }),
     dismissWinCelebration: () => setPendingWinCelebration(false),
+    dismissLegendCelebration: () => setPendingLegendCelebration(false),
     dismissComboDiscovery: () => setPendingComboDiscovery(null),
     dismissHiddenEventUnlock: () => setPendingHiddenEventUnlock(null),
   }
