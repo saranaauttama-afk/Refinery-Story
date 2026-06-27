@@ -947,6 +947,11 @@ export const text = {
         recycledMaterial: bilingual('Recycled Material', 'วัสดุรีไซเคิล'),
         plasticPellets: bilingual('Plastic Pellets', 'เม็ดพลาสติก'),
       },
+      emptyTitle: bilingual('No contracts yet', 'ยังไม่มีสัญญา'),
+      emptyHint: bilingual(
+        'Level up your refinery to unlock supply contracts — they pay far more than spot-selling.',
+        'อัปเกรดโรงกลั่นเพื่อปลดล็อกสัญญาจัดส่ง — จ่ายดีกว่าขายในตลาดมาก',
+      ),
     },
     requires: (amount: number, product: BilingualTextValue) =>
       bilingual(

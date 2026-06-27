@@ -131,6 +131,10 @@ export default function ContractsScreen() {
     const { have, need } = getContractProgress(c, game)
     return have >= need
   }).length
+  const mysteryEvents = HIDDEN_EVENTS.filter(
+    (e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked',
+  )
+  const hasAnyContent = mysteryEvents.length > 0 || unlockedContracts.length > 0
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -141,8 +145,16 @@ export default function ContractsScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.list}>
+        {!hasAnyContent && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📋</Text>
+            <Text style={styles.emptyTitle}>{t(sc.emptyTitle)}</Text>
+            <Text style={styles.emptyHint}>{t(sc.emptyHint)}</Text>
+          </View>
+        )}
+
         {/* Mystery contracts */}
-        {HIDDEN_EVENTS.filter((e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked').map((event) => (
+        {mysteryEvents.map((event) => (
           <ListRow key={event.key} title={t(sc.mysteryTitle)} subtitle={t(sc.mysterySubtitle)} badge="???" actionLabel={t(sc.reveal)} onPress={() => claimHiddenEvent(event.key)} />
         ))}
 
@@ -239,6 +251,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
+  emptyState: { alignItems: 'center', paddingTop: 56, paddingHorizontal: spacing.lg, gap: 10 },
+  emptyIcon: { fontSize: 44 },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.ink },
+  emptyHint: { fontSize: 13, color: colors.inkMuted, textAlign: 'center', lineHeight: 19 },
   autoTradeHint: {
     fontSize: 10,
     color: colors.orange,
