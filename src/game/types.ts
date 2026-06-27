@@ -188,6 +188,12 @@ export type GameState = {
   // feedstock availability). Has no effect when feedstock supply covers
   // total demand -- every plant still gets its normal full output then.
   feedstockPriority: Record<'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant', number>
+  // Dynamic Market: per-product demand-saturation level (1.0 = full price).
+  // Selling a product lowers its level; it recovers toward 1 over time, so
+  // flooding the market with one product crashes its own price. A missing
+  // entry means 1.0 (full price). Keyed by ProductKey. See MARKET_BALANCE and
+  // getProductMarketLevel.
+  productMarket: Partial<Record<ProductKey, number>>
 }
 
 export type BuildingConfig = {
@@ -680,6 +686,8 @@ export type DerivedStats = {
   productionRate: number
   progressPercent: number
   sellPrice: number
+  // Current crude spot price (Dynamic Market wave). Bulk shipments ignore this.
+  crudePrice: number
   seasonalGasolineMultiplier: number
   gameClock: GameClock
   sellPriceMultiplier: number

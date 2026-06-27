@@ -600,11 +600,11 @@ export default function RefineryScreen() {
                   onPress={() => {
                     const actualBuy = Math.min(
                       10,
-                      Math.floor(game.money / CRUDE_COST),
+                      Math.floor(game.money / derived.crudePrice),
                       derived.maxCrudeStorage - game.crudeOil,
                     )
                     if (actualBuy > 0) {
-                      spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
+                      spawnFloat(`-$${(actualBuy * derived.crudePrice).toLocaleString()}`, 'expense')
                       haptics.tap()
                       sound.play('tap')
                       sendTruck('in')
@@ -613,7 +613,13 @@ export default function RefineryScreen() {
                   }}
                 >
                   <Text style={styles.tradeActionLabel}>Buy 10 Crude</Text>
-                  <Text style={styles.tradeActionSub}>${CRUDE_COST}/unit</Text>
+                  {/* Dynamic Market: live spot price + cheap/pricey hint vs base */}
+                  <Text style={styles.tradeActionSub}>
+                    ${derived.crudePrice}/unit{' '}
+                    <Text style={derived.crudePrice <= CRUDE_COST ? styles.priceCheap : styles.pricePricey}>
+                      {derived.crudePrice <= CRUDE_COST ? '↓ cheap' : '↑ high'}
+                    </Text>
+                  </Text>
                 </AnimatedPressable>
                 <AnimatedPressable
                   style={[styles.tradeActionBtn, styles.sellBtn]}
@@ -1807,6 +1813,14 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontSize: 10,
     marginTop: 2,
+  },
+  priceCheap: {
+    color: colors.greenDark,
+    fontWeight: '800',
+  },
+  pricePricey: {
+    color: colors.orangeDark,
+    fontWeight: '800',
   },
   tradeDivider: {
     height: 1,

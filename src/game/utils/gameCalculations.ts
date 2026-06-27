@@ -26,6 +26,7 @@ import {
   STORAGE_BALANCE,
   TANK_FARM_BALANCE,
   MAINTENANCE_BALANCE,
+  MARKET_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
@@ -70,6 +71,7 @@ import type {
   MilestoneProgress,
   PendingShipment,
   PerkKey,
+  ProductKey,
   RandomEvent,
   ReputationTier,
   WorkerCounts,
@@ -208,6 +210,7 @@ export function createInitialGameState(): GameState {
       jetFuelPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
       petrochemicalPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
     },
+    productMarket: {},
     productInventory: {
       gasoline: 0,
       asphalt: 0,
@@ -997,6 +1000,57 @@ export function getProductSellPrice(
   return Math.round(base * productSellMultiplier * demandMultiplier)
 }
 
+// --- Dynamic Market (Roadmap feature 1) ---
+
+// Crude spot-price multiplier: a deterministic wave from tickCount (replayable,
+// no stored RNG). Oscillates around 1.0 by +/- crudeAmplitude.
+export function getCrudeMarketMultiplier(tickCount: number): number {
+  return 1 + MARKET_BALANCE.crudeAmplitude * Math.sin((2 * Math.PI * tickCount) / MARKET_BALANCE.crudePeriodTicks)
+}
+
+// Current crude spot price (what buyCrude / auto-trade pay per unit). Bulk
+// shipments keep their own fixed pre-negotiated prices.
+export function getCrudePrice(tickCount: number): number {
+  return Math.max(1, Math.round(ECONOMY_BALANCE.crudeCost * getCrudeMarketMultiplier(tickCount)))
+}
+
+// A product's current demand-saturation level (1.0 = full price), clamped to
+// [saturationFloor, 1]. Missing entry = 1.0.
+export function getProductMarketLevel(game: GameState, productKey: ProductKey): number {
+  const raw = game.productMarket[productKey] ?? 1
+  return Math.max(MARKET_BALANCE.saturationFloor, Math.min(1, raw))
+}
+
+// Pure: apply a sale of `units` of `productKey`, pushing its saturation down
+// (floored). Returns a new productMarket map.
+export function applyProductSaturation(
+  productMarket: GameState['productMarket'],
+  productKey: ProductKey,
+  units: number,
+): GameState['productMarket'] {
+  if (units <= 0) return productMarket
+  const current = productMarket[productKey] ?? 1
+  const next = Math.max(
+    MARKET_BALANCE.saturationFloor,
+    current - units * MARKET_BALANCE.saturationPerUnitSold,
+  )
+  return { ...productMarket, [productKey]: next }
+}
+
+// Pure: recover every below-1 product toward 1.0 by one tick's worth. Returns
+// the same reference when nothing changed (cheap no-op for the common case).
+export function recoverProductMarket(productMarket: GameState['productMarket']): GameState['productMarket'] {
+  let changed = false
+  const next: GameState['productMarket'] = { ...productMarket }
+  for (const key of Object.keys(next) as ProductKey[]) {
+    const level = next[key]
+    if (level === undefined || level >= 1) continue
+    next[key] = Math.min(1, level + MARKET_BALANCE.saturationRecoveryPerTick)
+    changed = true
+  }
+  return changed ? next : productMarket
+}
+
 function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem[] {
   const safeCounts = {
     ...getEmptyWorkerCounts(),
@@ -1513,6 +1567,9 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     game.tickCount,
     game.yearStartTick,
   )
+  // Dynamic Market: gasoline saturates like every other product -- dumping a
+  // lot depresses its price until demand recovers.
+  const gasolineMarketLevel = getProductMarketLevel(game, 'gasoline')
   const sellPrice =
     Math.round(
       ECONOMY_BALANCE.gasolinePrice *
@@ -1520,9 +1577,12 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
         fuelSpecialistSellPriceMultiplier *
         productSellMultiplier *
         game.gasolineDemandMultiplier *
-        seasonalGasolineMultiplier,
+        seasonalGasolineMultiplier *
+        gasolineMarketLevel,
     ) +
     researchSellPriceBonus
+  // Current crude spot price (wave) -- surfaced for the trade UI.
+  const crudePrice = getCrudePrice(game.tickCount)
   const upgradeCost = getUpgradeCost(game.refineryLevel)
   const availableSpace = game.grid.filter((cell) => cell === null).length
   // Hidden Event 'contract' rewards are appended to game.hiddenContracts
@@ -1622,6 +1682,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     productionRate,
     progressPercent,
     sellPrice,
+    crudePrice,
     seasonalGasolineMultiplier,
     gameClock: getGameClock(game.tickCount),
     sellPriceMultiplier,

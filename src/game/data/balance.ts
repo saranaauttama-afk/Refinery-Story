@@ -129,6 +129,25 @@ export const STARTING_BALANCE = {
   reputation: 0,
 } as const
 
+// --- Dynamic Market (Roadmap feature 1) ---
+// Crude spot price swings on a deterministic wave (replayable, derived from
+// tickCount) so buying is a timing decision: stockpile when cheap. Each
+// product also has a demand-saturation level (1.0 = full price): selling
+// pushes it down and it recovers over time, so dumping a lot of one product
+// crashes its own price -- the structural fix for "petrochem obsoletes
+// everything" (over-producing one product tanks its margin, rewarding a
+// diversified catalogue). See getCrudePrice / getProductMarketLevel and the
+// productMarket field on GameState.
+export const MARKET_BALANCE = {
+  // Crude price wave around ECONOMY_BALANCE.crudeCost.
+  crudeAmplitude: 0.35, // +/-35% -> roughly $6.5 .. $13.5 at base 10
+  crudePeriodTicks: 2700, // ~1.5 in-game days per full cycle
+  // Per-product demand saturation.
+  saturationFloor: 0.45, // price never falls below 45% of base
+  saturationPerUnitSold: 0.004, // each unit sold drops the level by this
+  saturationRecoveryPerTick: 0.0015, // recovery toward 1.0 each tick
+} as const
+
 export const ECONOMY_BALANCE = {
   gasolinePrice: 18,
   lubricantPrice: 45,

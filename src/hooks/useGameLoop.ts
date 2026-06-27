@@ -43,6 +43,10 @@ import {
   getNewlyDiscoveredCombos,
   getNewlyUnlockedHiddenEvents,
   getProductSellPrice,
+  getCrudePrice,
+  getProductMarketLevel,
+  applyProductSaturation,
+  recoverProductMarket,
   getRandomEvent,
   getSpecialistMultiplierForCell,
   getTrainingCost,
@@ -199,13 +203,15 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
       const targetPct = Math.min(100, settings.buyThreshold + AUTO_TRADE_BUFFER_PERCENT)
       const targetCrude = Math.floor((targetPct / 100) * stats.maxCrudeStorage)
       const needed = Math.max(0, targetCrude - next.crudeOil)
-      const affordable = Math.floor(next.money / CRUDE_COST)
+      // Dynamic Market: auto-buy at the current spot price (no timing edge --
+      // manual buying when crude is cheap can still beat auto-trade).
+      const affordable = Math.floor(next.money / stats.crudePrice)
       const space = stats.maxCrudeStorage - next.crudeOil
       const amount = Math.min(needed, affordable, space)
       if (amount > 0) {
         next = {
           ...next,
-          money: next.money - amount * CRUDE_COST,
+          money: next.money - amount * stats.crudePrice,
           crudeOil: next.crudeOil + amount,
           everBoughtCrude: true,
         }
@@ -223,7 +229,12 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
       const targetGasoline = Math.floor((targetPct / 100) * stats.maxGasolineStorage)
       const excess = Math.max(0, next.gasoline - targetGasoline)
       if (excess > 0) {
-        next = { ...next, gasoline: next.gasoline - excess, money: next.money + excess * stats.sellPrice }
+        next = {
+          ...next,
+          gasoline: next.gasoline - excess,
+          money: next.money + excess * stats.sellPrice,
+          productMarket: applyProductSaturation(next.productMarket, 'gasoline', excess),
+        }
       }
     }
   }
@@ -253,12 +264,18 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
     const excess = Math.max(0, have - targetAmount)
     if (excess <= 0) continue
     const demandMultiplier = product.key === 'petrochemicals' ? next.petrochemicalsDemandMultiplier : 1
-    const price = getProductSellPrice(product.key, stats.productSellMultiplier, demandMultiplier)
+    // Dynamic Market: effective price includes this product's saturation, and
+    // the auto-sell pushes that saturation down further.
+    const price = Math.round(
+      getProductSellPrice(product.key, stats.productSellMultiplier, demandMultiplier) *
+        getProductMarketLevel(next, product.key),
+    )
     if (price <= 0) continue
     next = {
       ...next,
       productInventory: { ...next.productInventory, [product.key]: have - excess },
       money: next.money + excess * price,
+      productMarket: applyProductSaturation(next.productMarket, product.key, excess),
     }
   }
 
@@ -650,6 +667,10 @@ export function tick(current: GameState): GameState {
     current.petrochemicalsDemandMultiplier + petrochemicalsDelta,
   )
 
+  // Dynamic Market: product demand-saturation recovers toward full price each
+  // tick (selling pushes it down, see the sell handlers / auto-trade).
+  const productMarket = recoverProductMarket(current.productMarket)
+
   return applyMilestones({
     ...current,
     tickCount: nextTick,
@@ -665,6 +686,7 @@ export function tick(current: GameState): GameState {
     esgScore,
     gasolineDemandMultiplier,
     petrochemicalsDemandMultiplier,
+    productMarket,
   })
 }
 
@@ -855,13 +877,15 @@ export function useGameLoop() {
     (amount: number) =>
       update((current) => {
         const stats = calculateDerivedStats(current)
-        const canAfford = Math.floor(current.money / CRUDE_COST)
+        // Dynamic Market: crude is bought at the current spot price (wave).
+        const crudePrice = stats.crudePrice
+        const canAfford = Math.floor(current.money / crudePrice)
         const space = stats.maxCrudeStorage - current.crudeOil
         const actual = Math.min(amount, canAfford, space)
         if (actual <= 0) return current
         return {
           ...current,
-          money: current.money - actual * CRUDE_COST,
+          money: current.money - actual * crudePrice,
           crudeOil: current.crudeOil + actual,
           everBoughtCrude: true,
         }
@@ -875,10 +899,13 @@ export function useGameLoop() {
         const stats = calculateDerivedStats(current)
         const actual = Math.min(amount, current.gasoline)
         if (actual <= 0) return current
+        // stats.sellPrice already factors gasoline's market saturation; the
+        // sale then pushes that saturation down a bit further.
         return {
           ...current,
           gasoline: current.gasoline - actual,
           money: current.money + actual * stats.sellPrice,
+          productMarket: applyProductSaturation(current.productMarket, 'gasoline', actual),
         }
       }),
     [update],
@@ -892,12 +919,18 @@ export function useGameLoop() {
         const actual = Math.min(amount, have)
         if (actual <= 0) return current
         const demandMultiplier = key === 'petrochemicals' ? current.petrochemicalsDemandMultiplier : 1
-        const price = getProductSellPrice(key, stats.productSellMultiplier, demandMultiplier)
+        // Dynamic Market: effective price = base * sell multipliers * this
+        // product's saturation level. Selling then lowers that level.
+        const price = Math.round(
+          getProductSellPrice(key, stats.productSellMultiplier, demandMultiplier) *
+            getProductMarketLevel(current, key),
+        )
         if (price <= 0) return current
         return {
           ...current,
           productInventory: { ...current.productInventory, [key]: have - actual },
           money: current.money + price * actual,
+          productMarket: applyProductSaturation(current.productMarket, key, actual),
         }
       }),
     [update],

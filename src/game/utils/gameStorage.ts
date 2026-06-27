@@ -562,6 +562,7 @@ export function sanitizeLoadedGameState(value: unknown) {
     pendingShipments: getSafePendingShipments(value.pendingShipments),
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
     feedstockPriority: getSafeFeedstockPriority(value),
+    productMarket: getSafeProductMarket(value),
     // productInventory is now live gameplay state for all secondary products.
     // gasoline mirrors value.gasoline (source of truth for the primary product).
     // Previously asphalt/jetFuel/lubricants/petrochemicals were reset to 0 on
@@ -620,6 +621,22 @@ function getSafeStandingOrderCooldowns(
 // (created before this feature) have no feedstockPriority at all, so
 // every plant defaults to 100% -- identical to the proportional-sharing
 // behavior they already had.
+// Dynamic Market saturation levels. Old saves have none -> {} (every product
+// at full price). Each entry is clamped to (0, 1].
+function getSafeProductMarket(value: unknown): GameState['productMarket'] {
+  const raw = isRecord(value) ? value.productMarket : undefined
+  const result: GameState['productMarket'] = {}
+  if (isRecord(raw)) {
+    for (const key of Object.keys(raw) as (keyof GameState['productMarket'])[]) {
+      const entry = raw[key]
+      if (typeof entry === 'number' && Number.isFinite(entry) && entry > 0 && entry <= 1) {
+        result[key] = entry
+      }
+    }
+  }
+  return result
+}
+
 function getSafeFeedstockPriority(value: unknown): GameState['feedstockPriority'] {
   const raw = isRecord(value) ? value.feedstockPriority : undefined
   const result: GameState['feedstockPriority'] = {
