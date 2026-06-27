@@ -220,6 +220,7 @@ const ACTION_DOCK_H   = 48 // px — bottom action dock height
 const HUD_OFFSET_UP  = 4  // px — HUD (resource dock) ขยับขึ้นจาก yardTop
 const GOAL_LEFT      = 18  // px — "Growing Refinery" banner ห่างจากขอบซ้าย/ขวา
 const BG_CROP_PCT    = 12  // % — crop ขอบบน/ล่างของ bg image (แสดงส่วนกลางรูป)
+const GRID_DROP      = 90  // px — ดัน factory grid ลงจาก HUD (กันไม่ให้ลอยสูงไป)
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -421,15 +422,15 @@ export default function RefineryScreen() {
           <View style={[StyleSheet.absoluteFill, styles.nightOverlay]} pointerEvents="none" />
         )}
 
-        {/* ── Layer 1: Grid (absolute, starts at yardTop) ───────────────── */}
-        <View style={[styles.gridLayer, { top: yardTop }]}>
+        {/* ── Layer 1: Grid (absolute, pushed down from HUD by GRID_DROP) ── */}
+        <View style={[styles.gridLayer, { top: yardTop + GRID_DROP }]}>
           <FactoryDiamondGroundView
             game={game}
             derived={derived}
             grid={game.grid}
             gridLevels={game.gridLevels}
             containerWidth={width}
-            viewportHeight={sceneHeight - yardTop}
+            viewportHeight={sceneHeight - yardTop - GRID_DROP}
             displayGridSize={11}
             anchorGridSize={EXPANSION_BALANCE[0].size}
             onCellPress={handleCellPress}
