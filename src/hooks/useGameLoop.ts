@@ -185,9 +185,9 @@ const PRODUCT_MAX_STORAGE_KEY: Record<SellableProductKey, (stats: DerivedStats) 
 // Pure, exported for testing. Runs after the main tick: top up crude toward
 // buyThreshold% (limited by cash + storage), then sell gasoline down to
 // sellThreshold% if it's currently above that.
-export function applyAutoTrade(current: GameState, settings: AutoTradeSettings): GameState {
+export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, precomputedStats?: DerivedStats): GameState {
   if (!settings.enabled) return current
-  const stats = calculateDerivedStats(current)
+  const stats = precomputedStats ?? calculateDerivedStats(current)
   let next = current
 
   if (stats.maxCrudeStorage > 0) {
@@ -791,7 +791,7 @@ export function useGameLoop() {
           setPendingAward(record)
         }
 
-        next = applyAutoTrade(next, autoTradeRef.current)
+        next = applyAutoTrade(next, autoTradeRef.current, derivedForTick)
         next = applyRecruitmentRefresh(next)
 
         if (shouldFireRandomEvent(next)) {
@@ -1156,7 +1156,14 @@ export function useGameLoop() {
               xp: 0,
               trait: 'veteran',
             }
-            next = { ...next, employees: [...next.employees, employee] }
+            next = {
+              ...next,
+              employees: [...next.employees, employee],
+              workerCounts: {
+                ...next.workerCounts,
+                [workerType]: next.workerCounts[workerType] + 1,
+              },
+            }
             break
           }
         }
@@ -1598,42 +1605,35 @@ export function useGameLoop() {
         if (current.refineryLevel < contract.unlockLevel) return current
         if (current.completedContractIds.includes(contract.id)) return current
 
-        const isPetro = (contract.petrochemicalsRequired ?? 0) > 0
-        const isLube = !isPetro && (contract.lubricantsRequired ?? 0) > 0
-        const isJet = !isPetro && !isLube && (contract.jetFuelRequired ?? 0) > 0
-        const isAsphalt = !isPetro && !isLube && !isJet && (contract.asphaltRequired ?? 0) > 0
-        const isRecycled = !isPetro && !isLube && !isJet && !isAsphalt && (contract.recycledMaterialRequired ?? 0) > 0
-        const isPellets = !isPetro && !isLube && !isJet && !isAsphalt && !isRecycled && (contract.plasticPelletsRequired ?? 0) > 0
+        type ProductCost = { key: keyof typeof current.productInventory; need: number }
+        const allCosts: ProductCost[] = [
+          { key: 'petrochemicals', need: contract.petrochemicalsRequired ?? 0 },
+          { key: 'lubricants', need: contract.lubricantsRequired ?? 0 },
+          { key: 'jetFuel', need: contract.jetFuelRequired ?? 0 },
+          { key: 'asphalt', need: contract.asphaltRequired ?? 0 },
+          { key: 'recycledMaterial', need: contract.recycledMaterialRequired ?? 0 },
+          { key: 'plasticPellets', need: contract.plasticPelletsRequired ?? 0 },
+        ]
+        const costs = allCosts.filter((c): c is ProductCost => c.need > 0)
 
-        if (isPetro && current.productInventory.petrochemicals < (contract.petrochemicalsRequired ?? 0)) return current
-        if (isLube && current.productInventory.lubricants < (contract.lubricantsRequired ?? 0)) return current
-        if (isJet && current.productInventory.jetFuel < (contract.jetFuelRequired ?? 0)) return current
-        if (isAsphalt && current.productInventory.asphalt < (contract.asphaltRequired ?? 0)) return current
-        if (isRecycled && current.productInventory.recycledMaterial < (contract.recycledMaterialRequired ?? 0)) return current
-        if (isPellets && current.productInventory.plasticPellets < (contract.plasticPelletsRequired ?? 0)) return current
-        if (!isPetro && !isLube && !isJet && !isAsphalt && current.gasoline < contract.gasolineRequired) return current
+        for (const c of costs) {
+          if (current.productInventory[c.key] < c.need) return current
+        }
+        const isProductContract = costs.length > 0
+        if (!isProductContract && current.gasoline < contract.gasolineRequired) return current
 
         const stats = calculateDerivedStats(current)
         const reward = Math.round(contract.reward * stats.contractRewardMultiplier)
         const rpReward = Math.round(contract.rpReward * stats.contractRpRewardMultiplier)
 
-        const productInventory = isPetro
-          ? { ...current.productInventory, petrochemicals: current.productInventory.petrochemicals - (contract.petrochemicalsRequired ?? 0) }
-          : isLube
-            ? { ...current.productInventory, lubricants: current.productInventory.lubricants - (contract.lubricantsRequired ?? 0) }
-            : isJet
-              ? { ...current.productInventory, jetFuel: current.productInventory.jetFuel - (contract.jetFuelRequired ?? 0) }
-              : isAsphalt
-                ? { ...current.productInventory, asphalt: current.productInventory.asphalt - (contract.asphaltRequired ?? 0) }
-                : isRecycled
-                  ? { ...current.productInventory, recycledMaterial: current.productInventory.recycledMaterial - (contract.recycledMaterialRequired ?? 0) }
-                  : isPellets
-                    ? { ...current.productInventory, plasticPellets: current.productInventory.plasticPellets - (contract.plasticPelletsRequired ?? 0) }
-                    : current.productInventory
+        const productInventory = { ...current.productInventory }
+        for (const c of costs) {
+          productInventory[c.key] -= c.need
+        }
 
         return applyWinGoal(applyMilestones({
           ...current,
-          gasoline: isPetro || isLube || isJet || isAsphalt || isRecycled || isPellets ? current.gasoline : current.gasoline - contract.gasolineRequired,
+          gasoline: isProductContract ? current.gasoline : current.gasoline - contract.gasolineRequired,
           productInventory,
           money: current.money + reward,
           researchPoints: current.researchPoints + rpReward,
