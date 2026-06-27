@@ -42,13 +42,12 @@ Findings (see audit): downstream margins (2.5–5×) dwarf gasoline (1.8×) so
 later products obsolete earlier ones; late-game money inflates because sinks
 are weak; tier-1 contracts don't beat spot-selling.
 
-- 🚧 **P0 — Contract rewards** — bump tier-1 contracts so $/unit clearly beats
-  spot gasoline ($18). Pure-number change in `CONTRACT_BALANCE`.
-- 🚧 **P0 — Ongoing money sink** — annual building maintenance deducted at
-  year-end (`closeBusinessYear`), so a large factory has real upkeep.
-- ⏳ **P1 — Margin compression** — the "downstream obsoletes gasoline" gap is
-  addressed structurally by the **Dynamic Market** (demand saturation) below,
-  rather than a flat nerf that would punish progression.
+- ✅ **P0 — Contract rewards** — tier-1 contracts now clearly beat spot
+  gasoline ($22–24/unit vs $18).
+- ✅ **P0 — Ongoing money sink** — annual building maintenance
+  (`MAINTENANCE_BALANCE`) deducted at year-end, shown in the ceremony.
+- ✅ **P1 — Margin compression** — handled structurally by the Dynamic Market's
+  demand saturation (over-producing one product crashes its own price).
 
 ---
 
@@ -57,14 +56,13 @@ are weak; tier-1 contracts don't beat spot-selling.
 Ordered by impact. The throughline: the game is mechanically rich but light on
 *recurring decisions* and *tension that forces choices*. These add both.
 
-### 1. 🥇 Dynamic market (`⏳ P0` — flagship)
-Crude is a fixed $10 and sell prices barely move, so "buy crude / sell product"
-is a chore, not a decision. Make prices **swing** (reusing the existing
-`gasolineDemandMultiplier` / seasonal / era systems, surfaced as a visible
-market), plus **per-product demand saturation** (flooding one product depresses
-its price). Turns trading into a strategic minigame and naturally fixes the
-margin gap (over-producing petrochem tanks its own price). Highest ROI for
-retention — a reason to engage every few minutes.
+### 1. 🥇 Dynamic market (`✅ shipped` — flagship)
+Crude spot price swings on a deterministic wave (buy when cheap); each product
+has demand saturation that drops on selling and recovers over time, so flooding
+one product tanks its own price. Surfaced in the trade panel (live crude price
++ cheap/high hint). Resolves the margin-gap balance item structurally.
+Follow-ups: a fuller market panel/price graph; expose saturation per product in
+the sell UI; tie crude waves to events (supply shocks).
 
 ### 2. 🥈 Specialization / forced tradeoffs (`⏳ P1`)
 You can currently build everything, so nothing is a real choice. Add tension:
