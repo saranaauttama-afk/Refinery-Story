@@ -24,6 +24,7 @@ import { Bell, Clock3 } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
+import DeliveryTruck from '../../../src/components/DeliveryTruck'
 import FabNav, { type FabNavItem } from '../../../src/components/FabNav'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
 import CrisisBanner from '../../../src/components/CrisisBanner'
@@ -281,6 +282,11 @@ export default function RefineryScreen() {
   }
   const [secondaryOpen, setSecondaryOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
+  // Drives the delivery-truck flyby on the yard: bump the counter on a trade
+  // and stamp the direction (crude in / gasoline out).
+  const [truck, setTruck] = useState<{ key: number; direction: 'in' | 'out' }>({ key: 0, direction: 'in' })
+  const sendTruck = (direction: 'in' | 'out') =>
+    setTruck((t) => ({ key: t.key + 1, direction }))
 
   if (!loaded || !game || !derived) {
     return (
@@ -441,6 +447,14 @@ export default function RefineryScreen() {
           )}
         </View>
 
+        {/* Delivery truck flyby — crude in / gasoline out on each trade */}
+        <DeliveryTruck
+          triggerKey={truck.key}
+          direction={truck.direction}
+          sceneWidth={width}
+          y={sceneHeight * 0.6}
+        />
+
         {/* ── Layer 2 + 3: Company block + Resource Dock + Goal ─────────── */}
 
         {/* Company block — top left: name + title */}
@@ -583,6 +597,7 @@ export default function RefineryScreen() {
                       spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
                       haptics.tap()
                       sound.play('tap')
+                      sendTruck('in')
                     }
                     buyCrude(10)
                   }}
@@ -598,6 +613,7 @@ export default function RefineryScreen() {
                       spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
                       haptics.tap()
                       sound.play('sell')
+                      sendTruck('out')
                     }
                     sellGasoline(10)
                   }}
