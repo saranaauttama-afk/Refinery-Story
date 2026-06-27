@@ -13,7 +13,9 @@ import HiddenEventBanner from '../src/components/HiddenEventBanner'
 import WinCelebrationModal from '../src/components/WinCelebrationModal'
 import { GameProvider, useGame } from '../src/hooks/GameContext'
 import { useHaptics } from '../src/hooks/useHaptics'
-import { SettingsProvider } from '../src/hooks/SettingsContext'
+import { useSound } from '../src/hooks/useSound'
+import { setBgmEnabled } from '../src/audio/soundManager'
+import { SettingsProvider, useSettingsContext } from '../src/hooks/SettingsContext'
 
 function GlobalOverlays() {
   const {
@@ -34,7 +36,15 @@ function GlobalOverlays() {
     dismissHiddenEventUnlock,
   } = useGame()
   const haptics = useHaptics()
+  const sound = useSound()
+  const { settings } = useSettingsContext()
   const lastMilestoneCount = useRef<number | null>(null)
+
+  // Background music follows the "Music" setting. BGM is a no-op until a
+  // track is added (see sounds.ts BGM_SOURCE), but the wiring is live.
+  useEffect(() => {
+    setBgmEnabled(settings.musicEnabled)
+  }, [settings.musicEnabled])
 
   // Confetti: a single incrementing key drives the global burst layer. Every
   // celebration moment below bumps it; Confetti remounts on the new key and
@@ -49,34 +59,38 @@ function GlobalOverlays() {
     const count = game.completedMilestoneKeys.length
     if (lastMilestoneCount.current !== null && count > lastMilestoneCount.current) {
       haptics.success()
+      sound.play('levelup')
       burstConfetti()
     }
     lastMilestoneCount.current = count
-  }, [game?.completedMilestoneKeys.length, haptics])
+  }, [game?.completedMilestoneKeys.length, haptics, sound])
 
   // Extra-celebratory haptic + confetti when the win condition is first reached.
   useEffect(() => {
     if (pendingWinCelebration) {
       haptics.success()
+      sound.play('levelup')
       burstConfetti()
     }
-  }, [pendingWinCelebration, haptics])
+  }, [pendingWinCelebration, haptics, sound])
 
   // Success haptic + confetti when a hidden layout combo is discovered.
   useEffect(() => {
     if (pendingComboDiscovery) {
       haptics.success()
+      sound.play('success')
       burstConfetti()
     }
-  }, [pendingComboDiscovery, haptics])
+  }, [pendingComboDiscovery, haptics, sound])
 
-  // Confetti for a standout year-end result (S or A grade only -- a routine
-  // year shouldn't trigger the full celebration).
+  // Confetti + chime for a standout year-end result (S or A grade only -- a
+  // routine year shouldn't trigger the full celebration).
   useEffect(() => {
     if (pendingAward && (pendingAward.grade === 'S' || pendingAward.grade === 'A')) {
+      sound.play('success')
       burstConfetti()
     }
-  }, [pendingAward])
+  }, [pendingAward, sound])
 
   // Success haptic when a Hidden Event newly unlocks (separate system
   // from combos -- gated by the in-game calendar clock, see

@@ -35,6 +35,7 @@ import { BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
+import { useSound } from '../../../src/hooks/useSound'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
@@ -222,6 +223,7 @@ export default function RefineryScreen() {
   const router = useRouter()
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
+  const sound = useSound()
   const {
     game, loaded, derived,
     buyCrude, sellGasoline, sellProduct,
@@ -580,6 +582,7 @@ export default function RefineryScreen() {
                     if (actualBuy > 0) {
                       spawnFloat(`-$${(actualBuy * CRUDE_COST).toLocaleString()}`, 'expense')
                       haptics.tap()
+                      sound.play('tap')
                     }
                     buyCrude(10)
                   }}
@@ -594,6 +597,7 @@ export default function RefineryScreen() {
                     if (actualSell > 0) {
                       spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
                       haptics.tap()
+                      sound.play('sell')
                     }
                     sellGasoline(10)
                   }}
@@ -792,6 +796,8 @@ export default function RefineryScreen() {
                       onPress={() => {
                         if (locked || !affordable) return
                         if (pickerCell !== null) placeBuilding(pickerCell, key)
+                        haptics.confirm()
+                        sound.play('build')
                         setPickerCell(null)
                         setHoveredBuildingKey(null)
                       }}
