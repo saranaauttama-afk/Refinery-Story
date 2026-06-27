@@ -62,6 +62,9 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
           <Text style={styles.row}>Score: {record.score}</Text>
           <Text style={styles.row}>Money earned: ${record.moneyEarned.toLocaleString()}</Text>
           <Text style={styles.row}>Payroll: ${record.payroll.toLocaleString()}</Text>
+          {record.maintenance ? (
+            <Text style={styles.row}>Maintenance: ${record.maintenance.toLocaleString()}</Text>
+          ) : null}
           <Text style={styles.row}>Net profit: ${record.netProfit.toLocaleString()}</Text>
           <Text style={styles.row}>Cash bonus: +${record.cashReward.toLocaleString()}</Text>
           <Text style={styles.row}>Gasoline produced: {record.gasolineProduced.toLocaleString()}</Text>

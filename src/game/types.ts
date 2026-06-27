@@ -372,6 +372,9 @@ export type AwardRecord = {
   score: number
   cashReward: number
   payroll: number
+  // Annual building upkeep deducted this year (Economy audit money sink). 0 for
+  // records saved before this field existed.
+  maintenance?: number
   netProfit: number
   // True if cash on hand couldn't fully cover payroll this year (a small
   // reputation penalty was applied). Surfaced in the ceremony so the player

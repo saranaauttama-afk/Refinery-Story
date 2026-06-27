@@ -25,10 +25,12 @@ import {
   STARTING_BALANCE,
   STORAGE_BALANCE,
   TANK_FARM_BALANCE,
+  MAINTENANCE_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
 } from '../data/balance'
+import { BUILDINGS } from '../data/buildings'
 import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
 import { getCurrentEra, getNextEra } from '../data/eras'
@@ -2003,6 +2005,17 @@ export function getYearlyPayroll(game: GameState): number {
   return Math.round(total)
 }
 
+// Annual building upkeep (Economy audit money sink): flat fee + a fraction of
+// each built tile's purchase price. Deducted at year-end alongside payroll.
+export function getYearlyMaintenance(game: GameState): number {
+  let total = 0
+  for (const cell of game.grid) {
+    if (!cell) continue
+    total += MAINTENANCE_BALANCE.flatPerBuilding + BUILDINGS[cell].cost * MAINTENANCE_BALANCE.costRate
+  }
+  return Math.round(total)
+}
+
 // Award score uses NET profit (revenue − payroll) for the money component, so
 // over-hiring directly lowers the grade. gasoline & contracts are unaffected.
 export function getAwardScore(stats: YearStats, payroll = 0): number {
@@ -2054,15 +2067,19 @@ export function closeBusinessYear(game: GameState): {
 } {
   const stats = game.yearStats
   const payroll = getYearlyPayroll(game)
-  const netProfit = stats.moneyEarned - payroll
+  const maintenance = getYearlyMaintenance(game)
+  // Score still uses payroll only (the over-hiring lever). Maintenance is a
+  // flat cost of doing business, deducted from cash but not graded.
+  const netProfit = stats.moneyEarned - payroll - maintenance
   const score = getAwardScore(stats, payroll)
   const grade = getAwardGrade(score)
   const cashReward = AWARDS_BALANCE.cashByGrade[grade]
   const reputationReward = AWARDS_BALANCE.reputationByGrade[grade]
 
-  // Pay wages out of cash. If short, pay what's available and take a small
-  // reputation hit (no hard bankruptcy in this prototype).
-  const moneyAfterPayroll = game.money - payroll
+  // Pay wages + building upkeep out of cash. If short, pay what's available and
+  // take a small reputation hit (no hard bankruptcy in this prototype).
+  const totalCosts = payroll + maintenance
+  const moneyAfterPayroll = game.money - totalCosts
   const couldNotAfford = moneyAfterPayroll < 0
   const moneyAfterWages = Math.max(0, moneyAfterPayroll)
   const reputationAfter =
@@ -2079,6 +2096,7 @@ export function closeBusinessYear(game: GameState): {
     score,
     cashReward,
     payroll,
+    maintenance,
     netProfit,
     couldNotAfford,
     rivals,

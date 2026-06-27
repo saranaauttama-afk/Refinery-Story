@@ -284,7 +284,9 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 20,
-    reward: 300,
+    // Economy audit: tier-1 contracts must clearly beat spot-selling
+    // gasoline ($18/unit) to feel worth doing. 20 gas -> $440 = $22/unit.
+    reward: 440,
     rpReward: 2,
     reputationReward: 3,
   },
@@ -293,7 +295,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 50,
-    reward: 900,
+    reward: 1150,
     rpReward: 5,
     reputationReward: 6,
   },
@@ -302,7 +304,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 100,
-    reward: 2200,
+    reward: 2400,
     rpReward: 10,
     reputationReward: 12,
   },
@@ -348,7 +350,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 30,
-    reward: 480,
+    reward: 690,
     rpReward: 3,
     reputationReward: 4,
   },
@@ -357,7 +359,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 65,
-    reward: 1150,
+    reward: 1500,
     rpReward: 6,
     reputationReward: 8,
   },
@@ -366,7 +368,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 120,
-    reward: 2700,
+    reward: 2900,
     rpReward: 12,
     reputationReward: 14,
   },
@@ -950,6 +952,18 @@ export const WAGE_BALANCE = {
   // If cash can't cover payroll, the player pays what they can and takes this
   // reputation hit (gentle — no hard bankruptcy in this prototype).
   unpaidReputationPenalty: 10,
+} as const
+
+// --- Building maintenance (Economy audit: ongoing money sink) ---
+// Deducted each business year in closeBusinessYear, alongside payroll. Every
+// built tile costs a flat upkeep plus a fraction of its purchase price, so a
+// sprawling factory has real running costs and "build one of everything" is no
+// longer free. Kept modest on purpose -- the heavier late-game money pressure
+// comes from the Dynamic Market (fluctuating crude cost), not from upkeep
+// alone. A full 36-tile factory lands around a few thousand $/year.
+export const MAINTENANCE_BALANCE = {
+  flatPerBuilding: 40,
+  costRate: 0.05,
 } as const
 
 // --- Refinery Process Chain: feedstock layer ---
