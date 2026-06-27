@@ -19,12 +19,14 @@ import type {
 import {
   applyChoiceEventOption,
   applyMilestones,
+  applyMoraleDrift,
   applyRandomEvent,
   applyShipmentArrivals,
   applyStaffXp,
   applyWinGoal,
   applyLegendGoal,
   calculateDerivedStats,
+  clampMorale,
   closeBusinessYear,
   getMaxHireCount,
   CRUDE_COST,
@@ -83,6 +85,7 @@ import {
   WASTE_TREATMENT_PLANT_BALANCE,
   POLYMER_PLANT_BALANCE,
   BONUS_BALANCE,
+  MORALE_BALANCE,
   STAFF_LEVEL_BALANCE,
   STANDING_ORDER_BALANCE,
   MAX_REFINERY_LEVEL,
@@ -94,7 +97,7 @@ import { MILESTONE_HEADLINES } from '../components/MilestoneHeadline'
 import { shouldSpawnCrisis, spawnCrisis, applyCrisisPenalty } from '../game/data/crisisEvents'
 import { BUILDINGS } from '../game/data/buildings'
 import { SELLABLE_PRODUCTS, type SellableProductKey } from '../game/data/products'
-import { getRandomChoiceEvent } from '../game/data/choiceEvents'
+import { getRandomChoiceEvent, getRandomStaffEvent } from '../game/data/choiceEvents'
 import type { HiddenComboConfig } from '../game/data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../game/data/hiddenEvents'
 import {
@@ -730,6 +733,14 @@ export function useGameLoop() {
     return { ...next, lastChoiceEventTick: next.tickCount }
   }, [])
 
+  const triggerStaffEvent = useCallback((next: GameState): GameState => {
+    if (pendingChoiceEventRef.current) return next
+    const event = getRandomStaffEvent()
+    pendingChoiceEventRef.current = event
+    setPendingChoiceEvent(event)
+    return { ...next, lastStaffEventTick: next.tickCount, lastChoiceEventTick: next.tickCount }
+  }, [])
+
   useEffect(() => {
     loadStoredGameState().then(({ game: loadedGame, message }) => {
       gameRef.current = loadedGame
@@ -759,8 +770,12 @@ export function useGameLoop() {
         if (!current) return current
         let next = tick(current)
 
-        const { employees, levelUpLog } = applyStaffXp(next)
-        next = { ...next, employees }
+        const { employees, levelUpLog, moraleDelta } = applyStaffXp(next)
+        next = {
+          ...next,
+          employees,
+          staffMorale: clampMorale(applyMoraleDrift(next.staffMorale) + moraleDelta),
+        }
         if (levelUpLog) {
           next = { ...next, activityLog: addLog(next.activityLog, levelUpLog) }
         }
@@ -844,6 +859,14 @@ export function useGameLoop() {
           next = triggerChoiceEvent(next)
         }
 
+        if (
+          next.employees.length >= MORALE_BALANCE.staffEventMinEmployees &&
+          next.tickCount - next.lastStaffEventTick >= MORALE_BALANCE.staffEventCooldownTicks &&
+          !pendingChoiceEventRef.current
+        ) {
+          next = triggerStaffEvent(next)
+        }
+
         // Endgame: catch tick-driven completions (money via auto-trade/sells,
         // an S-grade year from the award close above).
         next = applyLegendGoal(next)
@@ -856,7 +879,7 @@ export function useGameLoop() {
       })
     }, period)
     return () => clearInterval(interval)
-  }, [loaded, triggerChoiceEvent, speed])
+  }, [loaded, triggerChoiceEvent, triggerStaffEvent, speed])
 
   useEffect(() => {
     if (!loaded) return
@@ -1360,6 +1383,7 @@ export function useGameLoop() {
         return applyMilestones({
           ...current,
           money: current.money - worker.cost,
+          staffMorale: clampMorale(current.staffMorale + MORALE_BALANCE.hireBoost),
           totalWorkersHired: current.totalWorkersHired + 1,
           workerCounts: {
             ...current.workerCounts,
@@ -1402,6 +1426,7 @@ export function useGameLoop() {
         return applyMilestones({
           ...current,
           money: current.money - candidate.cost,
+          staffMorale: clampMorale(current.staffMorale + MORALE_BALANCE.hireBoost),
           totalWorkersHired: current.totalWorkersHired + 1,
           workerCounts: {
             ...current.workerCounts,

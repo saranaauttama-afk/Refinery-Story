@@ -197,6 +197,12 @@ export type GameState = {
   // entry means 1.0 (full price). Keyed by ProductKey. See MARKET_BALANCE and
   // getProductMarketLevel.
   productMarket: Partial<Record<ProductKey, number>>
+  // People/morale layer (Roadmap feature 4): 0-100, drifts toward equilibrium
+  // each tick. High morale boosts worker effectiveness; low morale penalizes
+  // it. Reacts to level-ups, hires, retirements, wage payments, year-end
+  // grade, and staff choice events.
+  staffMorale: number
+  lastStaffEventTick: number
 }
 
 export type BuildingConfig = {
@@ -389,6 +395,7 @@ export type AwardRecord = {
   // reputation penalty was applied). Surfaced in the ceremony so the player
   // understands why reputation dropped — previously computed but discarded.
   couldNotAfford: boolean
+  morale?: number
   // Annual Ranking (Charm Pass follow-up): 3 fictional rivals + the player's
   // rank among all 4. Empty array for records saved before this feature —
   // the ceremony hides the ranking section in that case.
@@ -474,6 +481,10 @@ export type ChoiceEventKey =
   | 'trainingRequest'
   | 'communityComplaint'
   | 'rushOrder'
+  | 'standoutHire'
+  | 'teamFeud'
+  | 'raiseRequest'
+  | 'teamOuting'
 
 export type ChoiceEvent = {
   key: ChoiceEventKey
@@ -691,6 +702,7 @@ export type DerivedStats = {
   sellPrice: number
   // Current crude spot price (Dynamic Market wave). Bulk shipments ignore this.
   crudePrice: number
+  moraleMultiplier: number
   seasonalGasolineMultiplier: number
   gameClock: GameClock
   sellPriceMultiplier: number

@@ -76,10 +76,15 @@ scale everything at once. Converts "many systems" into "deep game."
   warning line in the tile info sheet. Makes placement a tradeoff.
 - ⏳ Follow-ups: visible synergy auras on the map, more positive combo types.
 
-### 4. People / morale layer (`⏳ P2`)
-Employees have names/levels/veterans but no soul. Add morale + small staff
-events (a standout hire, a feud, a raise request) so managing the crew is an
-ongoing soft decision — Kairosoft charm.
+### 4. People / morale layer (`✅ shipped`)
+Global `staffMorale` (0–100) drifts toward equilibrium each tick. High morale
+(>75) gives workers a 10% effectiveness bonus; low morale (<40) applies a 15%
+penalty — the multiplier flows through `workerProductionMultiplier` transparently.
+Morale reacts to: employee level-ups (+3), hires (+2), retirements (−5), unpaid
+wages (−15), year-end grade (S/A: +8, C: −5), and 4 dedicated staff choice
+events (Standout Hire, Team Feud, Raise Request, Team Outing) that fire on their
+own ~6-minute cooldown once you have 3+ employees. Shown in the HUD resource
+dock and the year-end ceremony.
 
 ### 5. Endgame / prestige spine (`✅ shipped`)
 A ladder of 6 "legacy goals" (`ENDGAME_GOALS`: max level, $1M, all research,

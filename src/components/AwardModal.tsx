@@ -69,6 +69,12 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
           <Text style={styles.row}>Cash bonus: +${record.cashReward.toLocaleString()}</Text>
           <Text style={styles.row}>Gasoline produced: {record.gasolineProduced.toLocaleString()}</Text>
           <Text style={styles.row}>Contracts completed: {record.contractsCompleted}</Text>
+          {typeof record.morale === 'number' && (
+            <Text style={styles.row}>
+              Staff morale: {record.morale}%{' '}
+              {record.morale >= 75 ? '😊' : record.morale < 40 ? '😟' : '😐'}
+            </Text>
+          )}
           {record.couldNotAfford && (
             <Text style={styles.warning}>⚠️ Payroll exceeded cash on hand -- reputation took a small hit.</Text>
           )}

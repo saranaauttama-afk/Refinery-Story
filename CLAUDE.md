@@ -63,6 +63,9 @@ fork off `devMobile`.
 - **Invariant**: for each `WorkerType`,
   `employees.filter(e => e.type === t).length === workerCounts[t]`. Update both
   together (a past bug skipped `workerCounts` on a hidden-event hire).
+- **Staff morale** — `staffMorale` (0–100) drifts toward 60 each tick. Actions
+  (hires, level-ups, retirements, wages, year-end grade, staff choice events)
+  bump it. `moraleMultiplier` in `DerivedStats` scales worker effectiveness.
 - **Time is a pure pause model** — everything is keyed off `tickCount`; the tick
   loop pauses when backgrounded and when `speed === 0`. Do NOT introduce
   wall-clock (`Date.now()`) into game logic; shipments were migrated off it.

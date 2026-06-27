@@ -86,13 +86,48 @@ export const CHOICE_EVENTS: Record<ChoiceEventKey, ChoiceEvent> = {
     optionA: text.choiceEvents.events.rushOrder.optionA,
     optionB: text.choiceEvents.events.rushOrder.optionB,
   },
+  standoutHire: {
+    key: 'standoutHire',
+    title: text.choiceEvents.events.standoutHire.title,
+    description: text.choiceEvents.events.standoutHire.description,
+    optionA: text.choiceEvents.events.standoutHire.optionA,
+    optionB: text.choiceEvents.events.standoutHire.optionB,
+  },
+  teamFeud: {
+    key: 'teamFeud',
+    title: text.choiceEvents.events.teamFeud.title,
+    description: text.choiceEvents.events.teamFeud.description,
+    optionA: text.choiceEvents.events.teamFeud.optionA,
+    optionB: text.choiceEvents.events.teamFeud.optionB,
+  },
+  raiseRequest: {
+    key: 'raiseRequest',
+    title: text.choiceEvents.events.raiseRequest.title,
+    description: text.choiceEvents.events.raiseRequest.description,
+    optionA: text.choiceEvents.events.raiseRequest.optionA,
+    optionB: text.choiceEvents.events.raiseRequest.optionB,
+  },
+  teamOuting: {
+    key: 'teamOuting',
+    title: text.choiceEvents.events.teamOuting.title,
+    description: text.choiceEvents.events.teamOuting.description,
+    optionA: text.choiceEvents.events.teamOuting.optionA,
+    optionB: text.choiceEvents.events.teamOuting.optionB,
+  },
 }
 
 export const CHOICE_EVENT_KEYS: ChoiceEventKey[] = Object.keys(
   CHOICE_EVENTS,
 ) as ChoiceEventKey[]
 
+const STAFF_EVENT_KEYS: ChoiceEventKey[] = ['standoutHire', 'teamFeud', 'raiseRequest', 'teamOuting']
+
 export function getRandomChoiceEvent(): ChoiceEvent {
   const key = CHOICE_EVENT_KEYS[Math.floor(Math.random() * CHOICE_EVENT_KEYS.length)]
+  return CHOICE_EVENTS[key]
+}
+
+export function getRandomStaffEvent(): ChoiceEvent {
+  const key = STAFF_EVENT_KEYS[Math.floor(Math.random() * STAFF_EVENT_KEYS.length)]
   return CHOICE_EVENTS[key]
 }

@@ -28,6 +28,7 @@ import {
   LAYOUT_BALANCE,
   MAINTENANCE_BALANCE,
   MARKET_BALANCE,
+  MORALE_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
@@ -214,6 +215,8 @@ export function createInitialGameState(): GameState {
       petrochemicalPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
     },
     productMarket: {},
+    staffMorale: MORALE_BALANCE.startingMorale,
+    lastStaffEventTick: 0,
     productInventory: {
       gasoline: 0,
       asphalt: 0,
@@ -1344,6 +1347,31 @@ function getNextReputationTier(reputation: number) {
   return REPUTATION_TIERS.find((tier) => tier.minimumReputation > reputation)
 }
 
+export function getMoraleMultiplier(morale: number): number {
+  if (morale < MORALE_BALANCE.lowMoraleThreshold) return MORALE_BALANCE.lowMoralePenalty
+  if (morale > MORALE_BALANCE.highMoraleThreshold) {
+    const range = MORALE_BALANCE.maxMorale - MORALE_BALANCE.highMoraleThreshold
+    const above = morale - MORALE_BALANCE.highMoraleThreshold
+    return 1 + (MORALE_BALANCE.highMoraleBonus - 1) * (above / range)
+  }
+  return 1
+}
+
+export function applyMoraleDrift(morale: number): number {
+  const { equilibrium, driftPerTick, minMorale, maxMorale } = MORALE_BALANCE
+  if (morale > equilibrium) {
+    return Math.max(equilibrium, morale - driftPerTick)
+  }
+  if (morale < equilibrium) {
+    return Math.min(equilibrium, morale + driftPerTick)
+  }
+  return morale
+}
+
+export function clampMorale(morale: number): number {
+  return Math.max(MORALE_BALANCE.minMorale, Math.min(MORALE_BALANCE.maxMorale, morale))
+}
+
 export function calculateDerivedStats(game: GameState): DerivedStats {
   const buildingCounts = countBuildings(game.grid)
   const comboStats = getComboStats(game.grid)
@@ -1528,8 +1556,9 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       ? 1 + BONUS_BALANCE.advancedDistillationBonusRate
       : 1) *
     (hasAdvancedProcessing ? 1 + BONUS_BALANCE.advancedProcessingBonusRate : 1)
+  const moraleMultiplier = getMoraleMultiplier(game.staffMorale)
   const workerProductionMultiplier =
-    1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
@@ -1719,6 +1748,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     progressPercent,
     sellPrice,
     crudePrice,
+    moraleMultiplier,
     seasonalGasolineMultiplier,
     gameClock: getGameClock(game.tickCount),
     sellPriceMultiplier,
@@ -2060,9 +2090,11 @@ export function applyMilestones(game: GameState) {
 export function applyStaffXp(game: GameState): {
   employees: Employee[]
   levelUpLog: string | null
+  moraleDelta: number
 } {
   let employees = game.employees
   let levelUpLog: string | null = null
+  let moraleDelta = 0
 
   for (const worker of WORKERS) {
     const type = worker.key
@@ -2079,7 +2111,7 @@ export function applyStaffXp(game: GameState): {
     let updated: Employee
     if (newXp >= threshold) {
       updated = { ...target, level: target.level + 1, xp: newXp - threshold }
-      // Only surface the most recent level-up in the log to avoid spam.
+      moraleDelta += MORALE_BALANCE.levelUpBoost
       levelUpLog = serializeBilingualText(
         text.logs.staffLevelUp(target.name, worker.name, updated.level),
       )
@@ -2090,7 +2122,7 @@ export function applyStaffXp(game: GameState): {
     employees = employees.map((employee) => (employee.id === target.id ? updated : employee))
   }
 
-  return { employees, levelUpLog }
+  return { employees, levelUpLog, moraleDelta }
 }
 
 // Cost to instantly train an employee to their next level.
@@ -2274,22 +2306,32 @@ export function closeBusinessYear(game: GameState): {
     )
   }
 
+  let moraleDelta = 0
+  if (grade === 'S' || grade === 'A') moraleDelta += MORALE_BALANCE.goodYearBoost
+  if (grade === 'C') moraleDelta += MORALE_BALANCE.badYearDrop
+  if (couldNotAfford) moraleDelta += MORALE_BALANCE.unpaidWageDrop
+  moraleDelta += retirees.length * MORALE_BALANCE.retirementDrop
+  const nextMorale = clampMorale(game.staffMorale + moraleDelta)
+
+  const recordWithMorale: AwardRecord = { ...record, morale: Math.round(nextMorale) }
+
   return {
     game: {
       ...game,
       money: moneyAfterWages + cashReward + severancePay,
       reputation: Math.max(0, reputationAfter),
+      staffMorale: nextMorale,
       businessYear: nextBusinessYear,
       yearStartTick: game.tickCount,
       yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },
-      awardHistory: [record, ...game.awardHistory].slice(0, 12),
+      awardHistory: [recordWithMorale, ...game.awardHistory].slice(0, 12),
       activityLog: addLog(retirementLog, message),
       employees: survivingEmployees,
       workerCounts: nextWorkerCounts,
       assignments: nextAssignments,
       mentorXpBonus: nextMentorXpBonus,
     },
-    record,
+    record: recordWithMorale,
   }
 }
 
@@ -2739,18 +2781,87 @@ export function applyChoiceEventOption(
     }
   }
 
-  // rushOrder
+  if (event.key === 'rushOrder') {
+    if (option === 'A') {
+      return {
+        ...game,
+        gasoline: Math.max(0, game.gasoline - 30),
+        money: game.money + 800,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      reputation: game.reputation + 10,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'standoutHire') {
+    if (option === 'A') {
+      return applyMilestones({
+        ...game,
+        money: Math.max(0, game.money - 800),
+        staffMorale: clampMorale(game.staffMorale + 5),
+        totalWorkersHired: game.totalWorkersHired + 1,
+        workerCounts: { ...game.workerCounts, operator: game.workerCounts.operator + 1 },
+        employees: [
+          ...game.employees,
+          { ...createNewEmployee(game.employees, 'operator'), trait: 'veteran' as const },
+        ],
+        activityLog: addLog(game.activityLog, logMessage),
+      })
+    }
+    return {
+      ...game,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'teamFeud') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 300),
+        staffMorale: clampMorale(game.staffMorale + 8),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      staffMorale: clampMorale(game.staffMorale - 6),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'raiseRequest') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 500),
+        staffMorale: clampMorale(game.staffMorale + 8),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      staffMorale: clampMorale(game.staffMorale - 8),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  // teamOuting
   if (option === 'A') {
     return {
       ...game,
-      gasoline: Math.max(0, game.gasoline - 30),
-      money: game.money + 800,
+      money: Math.max(0, game.money - 600),
+      staffMorale: clampMorale(game.staffMorale + 12),
       activityLog: addLog(game.activityLog, logMessage),
     }
   }
   return {
     ...game,
-    reputation: game.reputation + 10,
+    staffMorale: clampMorale(game.staffMorale - 3),
     activityLog: addLog(game.activityLog, logMessage),
   }
 }

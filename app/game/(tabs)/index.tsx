@@ -522,6 +522,12 @@ export default function RefineryScreen() {
             <Text style={styles.dockLabel}>ESG</Text>
           </View>
           <View style={styles.dockDivider} />
+          <View style={styles.dockStat}>
+            <Text style={styles.dockIcon}>{game.staffMorale >= 75 ? '😊' : game.staffMorale < 40 ? '😟' : '😐'}</Text>
+            <Text style={styles.dockVal}>{Math.round(game.staffMorale)}</Text>
+            <Text style={styles.dockLabel}>Morale</Text>
+          </View>
+          <View style={styles.dockDivider} />
           <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
             <Text style={styles.dockIcon}>⭐</Text>
             <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>

@@ -1697,6 +1697,66 @@ export const text = {
           'ปฏิเสธอย่างสุภาพ (+5 ชื่อเสียงจากความน่าเชื่อถือ)',
         ),
       },
+      standoutHire: {
+        title: bilingual('Standout Applicant', 'ผู้สมัครโดดเด่น'),
+        description: bilingual(
+          'A talented veteran worker heard about your refinery and wants to join.',
+          'คนงานที่มีประสบการณ์ได้ยินชื่อเสียงโรงกลั่นของคุณและต้องการร่วมงาน',
+        ),
+        optionA: bilingual(
+          'Offer premium package (−$800, +veteran operator, morale ↑)',
+          'เสนอแพ็คเกจพิเศษ (−$800, +โอเปอเรเตอร์มือดี, ขวัญกำลังใจ ↑)',
+        ),
+        optionB: bilingual(
+          'Pass on the candidate (no change)',
+          'ปฏิเสธผู้สมัคร (ไม่มีการเปลี่ยนแปลง)',
+        ),
+      },
+      teamFeud: {
+        title: bilingual('Staff Disagreement', 'ความขัดแย้งของพนักงาน'),
+        description: bilingual(
+          'Two crew members are clashing over shift schedules. It\'s affecting the team.',
+          'พนักงานสองคนทะเลาะกันเรื่องตารางกะ กำลังกระทบทีม',
+        ),
+        optionA: bilingual(
+          'Mediate the dispute (−$300, morale ↑↑)',
+          'ไกล่เกลี่ยข้อพิพาท (−$300, ขวัญกำลังใจ ↑↑)',
+        ),
+        optionB: bilingual(
+          'Let them sort it out (morale ↓)',
+          'ปล่อยให้แก้กันเอง (ขวัญกำลังใจ ↓)',
+        ),
+      },
+      raiseRequest: {
+        title: bilingual('Raise Request', 'คำขอขึ้นเงินเดือน'),
+        description: bilingual(
+          'A dedicated senior worker feels they deserve a pay bump.',
+          'พนักงานอาวุโสรู้สึกว่าควรได้รับค่าตอบแทนเพิ่ม',
+        ),
+        optionA: bilingual(
+          'Grant the raise (−$500, morale ↑↑)',
+          'ขึ้นเงินเดือน (−$500, ขวัญกำลังใจ ↑↑)',
+        ),
+        optionB: bilingual(
+          'Decline the request (morale ↓↓)',
+          'ปฏิเสธ (ขวัญกำลังใจ ↓↓)',
+        ),
+      },
+      teamOuting: {
+        title: bilingual('Team Building Proposal', 'ข้อเสนอกิจกรรมทีม'),
+        description: bilingual(
+          'The crew wants to organize a team outing to boost spirits.',
+          'ทีมงานอยากจัดกิจกรรมสร้างสัมพันธ์เพื่อเพิ่มขวัญกำลังใจ',
+        ),
+        optionA: bilingual(
+          'Fund the outing (−$600, morale ↑↑↑)',
+          'สนับสนุนกิจกรรม (−$600, ขวัญกำลังใจ ↑↑↑)',
+        ),
+        optionB: bilingual(
+          'Budget is tight (morale ↓)',
+          'งบไม่พอ (ขวัญกำลังใจ ↓)',
+        ),
+      },
     } satisfies Record<
       ChoiceEventKey,
       {
@@ -2010,6 +2070,11 @@ export const text = {
       bilingual(
         `${employeeName} (${typeName.en}) trained to Level ${level}.`,
         `ฝึก ${employeeName} (${typeName.th}) ขึ้นเป็นระดับ ${level}`,
+      ),
+    moraleChanged: (delta: number) =>
+      bilingual(
+        `Staff morale ${delta >= 0 ? 'improved' : 'dropped'} (${delta >= 0 ? '+' : ''}${delta}).`,
+        `ขวัญกำลังใจพนักงาน${delta >= 0 ? 'ดีขึ้น' : 'ลดลง'} (${delta >= 0 ? '+' : ''}${delta})`,
       ),
     perkUnlocked: (name: BilingualTextValue) =>
       bilingual(

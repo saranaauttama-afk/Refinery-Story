@@ -16,7 +16,7 @@ import type {
 } from '../types'
 import { text } from '../translations'
 import { createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
-import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, PLANT_PRODUCTION } from '../data/balance'
+import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, MORALE_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../data/hiddenEvents'
 import { BUILDINGS } from '../data/buildings'
@@ -564,6 +564,14 @@ export function sanitizeLoadedGameState(value: unknown) {
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
     feedstockPriority: getSafeFeedstockPriority(value),
     productMarket: getSafeProductMarket(value),
+    staffMorale: Math.max(
+      MORALE_BALANCE.minMorale,
+      Math.min(MORALE_BALANCE.maxMorale, getSafeNumber(value.staffMorale, MORALE_BALANCE.startingMorale)),
+    ),
+    lastStaffEventTick: getSafeNumber(
+      value.lastStaffEventTick,
+      getSafeNumber(value.tickCount, fallback.tickCount),
+    ),
     // productInventory is now live gameplay state for all secondary products.
     // gasoline mirrors value.gasoline (source of truth for the primary product).
     // Previously asphalt/jetFuel/lubricants/petrochemicals were reset to 0 on

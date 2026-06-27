@@ -985,6 +985,31 @@ export const MAINTENANCE_BALANCE = {
   costRate: 0.05,
 } as const
 
+// --- People / Morale layer (Roadmap feature 4) ---
+// Global morale (0-100) drifts toward equilibrium each tick. High morale
+// boosts worker effectiveness; low morale penalizes it. Reacts to staff
+// events, level-ups, hires, retirements, wage payment status, and year-end
+// grade. Kairosoft-style recurring soft decisions.
+export const MORALE_BALANCE = {
+  startingMorale: 70,
+  minMorale: 10,
+  maxMorale: 100,
+  equilibrium: 60,
+  driftPerTick: 0.003,
+  levelUpBoost: 3,
+  hireBoost: 2,
+  retirementDrop: -5,
+  unpaidWageDrop: -15,
+  goodYearBoost: 8,
+  badYearDrop: -5,
+  lowMoraleThreshold: 40,
+  highMoraleThreshold: 75,
+  lowMoralePenalty: 0.85,
+  highMoraleBonus: 1.10,
+  staffEventCooldownTicks: 1800,
+  staffEventMinEmployees: 3,
+} as const
+
 // --- Refinery Process Chain: feedstock layer ---
 // Distillation Units convert crude → feedstock; downstream plants consume it.
 export const FEEDSTOCK_BALANCE = {
