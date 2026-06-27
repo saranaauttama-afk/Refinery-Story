@@ -25,7 +25,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import DeliveryTruck from '../../../src/components/DeliveryTruck'
-import FabNav, { type FabNavItem } from '../../../src/components/FabNav'
+import BottomNav from '../../../src/components/BottomNav'
+import { type FabNavItem } from '../../../src/components/FabNav'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
 import CrisisBanner from '../../../src/components/CrisisBanner'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
@@ -241,7 +242,6 @@ export default function RefineryScreen() {
 
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
-  const [fabOpen, setFabOpen] = useState(false)
   const [hoveredBuildingKey, setHoveredBuildingKey] = useState<BuildingType | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
@@ -562,7 +562,8 @@ export default function RefineryScreen() {
             so it still reads as "this panel belongs to that pill" rather
             than a disconnected modal. */}
         {/* ── Action Dock — gasoline context + AUTO badge + trade toggle ── */}
-        <View style={styles.actionDock} pointerEvents="box-none">
+        {/* Sits just above the persistent BottomNav (height 56 + safe-area). */}
+        <View style={[styles.actionDock, { bottom: 66 + insets.bottom }]} pointerEvents="box-none">
           <View style={styles.actionDockLeft}>
             <Text style={styles.actionDockVal}>⛽ {game.gasoline}/{derived.maxGasolineStorage}</Text>
             <Text style={styles.actionDockLabel}>Gasoline</Text>
@@ -1200,13 +1201,8 @@ export default function RefineryScreen() {
         <OnboardingOverlay onDismiss={handleDismissOnboarding} />
       )}
 
-      {/* ── FAB Navigation ────────────────────────────────────────────── */}
-      <FabNav
-        open={fabOpen}
-        onToggle={() => setFabOpen((v) => !v)}
-        onClose={() => setFabOpen(false)}
-        items={FAB_ITEMS}
-      />
+      {/* ── Persistent bottom navigation ──────────────────────────────── */}
+      <BottomNav items={FAB_ITEMS} />
 
     </SafeAreaView>
   )
