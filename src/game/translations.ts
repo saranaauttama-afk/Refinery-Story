@@ -200,6 +200,17 @@ export const text = {
     recruit: bilingual('Recruit', 'จ้างงาน'),
     company: bilingual('Company', 'บริษัท'),
   },
+  hiddenEventBanner: {
+    title: bilingual('✨ Something happened...', '✨ มีบางอย่างเกิดขึ้น...'),
+    message: (where: BilingualTextValue) =>
+      bilingual(
+        `Check the ${where.en} for a mystery "???" entry.`,
+        `ดูที่${where.th}เพื่อหารายการปริศนา "???"`,
+      ),
+    whereContract: bilingual('Contracts tab', 'แท็บสัญญา'),
+    whereBuilding: bilingual('Build menu', 'เมนูสร้าง'),
+    whereStaff: bilingual('Recruit tab', 'แท็บจ้างงาน'),
+  },
   supplyScreen: {
     title: bilingual('Supply', 'จัดหา'),
     ready: (n: number) => bilingual(`${n} ready`, `พร้อม ${n}`),
