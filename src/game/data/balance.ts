@@ -811,12 +811,17 @@ export const STANDING_ORDER_BALANCE = [
 
 export type StandingOrderConfig = (typeof STANDING_ORDER_BALANCE)[number]
 
+// delayTicks (not wall-clock) is the source of truth for arrival timing, so
+// shipments advance on the same game clock as production and pause when the
+// app is backgrounded -- a pure pause model (see useGameLoop tick loop).
+// delayTicks = delaySeconds * 5 (5 ticks/sec at 200ms). delayMs is kept only
+// for the "~Ns" display copy in the Supply UI.
 export const SHIPMENT_BALANCE = [
-  { key: 'miniDelivery' as const, amount: 50, cost: 450, delayMs: 15_000 },
-  { key: 'localTruck' as const, amount: 100, cost: 900, delayMs: 30_000 },
-  { key: 'coastalTanker' as const, amount: 500, cost: 4000, delayMs: 90_000 },
-  { key: 'importedShip' as const, amount: 1500, cost: 10500, delayMs: 180_000 },
-  { key: 'tankerConvoy' as const, amount: 3000, cost: 20000, delayMs: 300_000 },
+  { key: 'miniDelivery' as const, amount: 50, cost: 450, delayMs: 15_000, delayTicks: 75 },
+  { key: 'localTruck' as const, amount: 100, cost: 900, delayMs: 30_000, delayTicks: 150 },
+  { key: 'coastalTanker' as const, amount: 500, cost: 4000, delayMs: 90_000, delayTicks: 450 },
+  { key: 'importedShip' as const, amount: 1500, cost: 10500, delayMs: 180_000, delayTicks: 900 },
+  { key: 'tankerConvoy' as const, amount: 3000, cost: 20000, delayMs: 300_000, delayTicks: 1500 },
 ]
 
 export type ShipmentOption = (typeof SHIPMENT_BALANCE)[number]

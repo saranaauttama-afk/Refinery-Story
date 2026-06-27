@@ -206,7 +206,8 @@ export default function BusinessScreen() {
             <View style={styles.pendingBox}>
               <Text style={styles.pendingTitle}>📦 Incoming Shipments</Text>
               {game.pendingShipments.map((s) => {
-                const secsLeft = Math.max(0, Math.ceil((s.arrivesAt - Date.now()) / 1000))
+                // arrivesAt is a tickCount now; 5 ticks/sec at 200ms.
+                const secsLeft = Math.max(0, Math.ceil((s.arrivesAt - game.tickCount) / 5))
                 return <Text key={s.id} style={styles.pendingRow}>{s.amount} crude · arrives in {secsLeft}s</Text>
               })}
             </View>

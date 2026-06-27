@@ -481,6 +481,8 @@ export type ShipmentKey =
 export type PendingShipment = {
   id: number
   amount: number
+  // tickCount at which this shipment arrives (NOT a wall-clock timestamp) --
+  // so deliveries pause with the rest of the sim when the app is closed.
   arrivesAt: number
 }
 

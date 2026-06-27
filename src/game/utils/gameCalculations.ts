@@ -2351,14 +2351,16 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
 export function orderShipment(
   game: GameState,
   option: ShipmentOption,
-  now: number,
 ): GameState {
   if (game.money < option.cost) return game
 
   const shipment: PendingShipment = {
-    id: now,
+    // Unique-enough key; arrival is tick-based below. tickCount alone could
+    // collide if two orders landed on the same tick, so offset by the queue
+    // length.
+    id: game.tickCount * 1000 + game.pendingShipments.length,
     amount: option.amount,
-    arrivesAt: now + option.delayMs,
+    arrivesAt: game.tickCount + option.delayTicks,
   }
 
   const delaySecs = option.delayMs / 1000
@@ -2377,11 +2379,11 @@ export function orderShipment(
   }
 }
 
-export function applyShipmentArrivals(game: GameState, now: number): GameState {
-  const arrived = game.pendingShipments.filter((s) => s.arrivesAt <= now)
+export function applyShipmentArrivals(game: GameState): GameState {
+  const arrived = game.pendingShipments.filter((s) => s.arrivesAt <= game.tickCount)
   if (arrived.length === 0) return game
 
-  const remaining = game.pendingShipments.filter((s) => s.arrivesAt > now)
+  const remaining = game.pendingShipments.filter((s) => s.arrivesAt > game.tickCount)
   let nextGame: GameState = { ...game, pendingShipments: remaining }
 
   for (const shipment of arrived) {

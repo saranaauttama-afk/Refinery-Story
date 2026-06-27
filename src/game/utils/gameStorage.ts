@@ -94,15 +94,26 @@ function getSafeGridLevels(value: unknown, length: number): number[] {
   return result
 }
 
+// Migration: arrivesAt used to be a wall-clock timestamp (Date.now()+delayMs,
+// ~1.7e12). It is now a tickCount (well under ~1e7 even after long sessions).
+// Any value that large is a pre-migration save -- rebase it to 0 so the
+// crude the player already paid for is delivered on the next tick instead of
+// being stuck forever.
+const WALLCLOCK_ARRIVES_AT_THRESHOLD = 1_000_000_000
+
 function getSafePendingShipments(value: unknown): PendingShipment[] {
   if (!Array.isArray(value)) return []
-  return value.filter(
-    (item): item is PendingShipment =>
-      isRecord(item) &&
-      typeof item.id === 'number' &&
-      typeof item.amount === 'number' &&
-      typeof item.arrivesAt === 'number',
-  )
+  return value
+    .filter(
+      (item): item is PendingShipment =>
+        isRecord(item) &&
+        typeof item.id === 'number' &&
+        typeof item.amount === 'number' &&
+        typeof item.arrivesAt === 'number',
+    )
+    .map((item) =>
+      item.arrivesAt >= WALLCLOCK_ARRIVES_AT_THRESHOLD ? { ...item, arrivesAt: 0 } : item,
+    )
 }
 
 function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {

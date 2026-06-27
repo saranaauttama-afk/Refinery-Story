@@ -234,6 +234,7 @@ export default function RefineryScreen() {
     claimHiddenEvent, upgradeBuilding, upgradeRefinery,
     autoTrade, updateAutoTrade, activateBoost,
     adjustFeedstockPriority, assignEmployeeToCell, unassignCell,
+    speed, cycleSpeed,
   } = useGame()
   const { fixCrisis, ignoreCrisis } = useGame()
 
@@ -478,6 +479,13 @@ export default function RefineryScreen() {
             <Clock3 size={11} color={isDaytime ? colors.orangeDark : colors.blueDark} />
             <Text style={styles.timePillText}>{timeLabel}</Text>
           </View>
+          {/* Speed / pause control (Kairosoft-style): cycles 1× → 2× → 3× → ⏸ */}
+          <Pressable
+            style={[styles.speedPill, speed === 0 && styles.speedPillPaused]}
+            onPress={() => { haptics.tap(); cycleSpeed() }}
+          >
+            <Text style={[styles.speedPillText, speed === 0 && styles.speedPillTextPaused]}>{speed === 0 ? '⏸' : `${speed}×`}</Text>
+          </Pressable>
           <Pressable style={styles.eventsBtn} onPress={() => setEventModalOpen(true)}>
             <Bell size={13} color={colors.white} />
             {claimableHiddenEvents.length > 0 && (
@@ -1523,6 +1531,26 @@ const styles = StyleSheet.create({
   timePillText: {
     fontSize: 10,
     fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  speedPill: {
+    minWidth: 30,
+    height: 28,
+    paddingHorizontal: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speedPillPaused: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  speedPillText: {
+    fontSize: 12,
+    fontFamily: fonts.heading,
+    color: colors.ink,
+  },
+  speedPillTextPaused: {
     color: '#FFFFFF',
   },
   eventsBtn: {

@@ -673,6 +673,11 @@ export function useGameLoop() {
   const gameRef = useRef<GameState | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [hasSave, setHasSave] = useState(false)
+  // Game speed (Kairosoft-style): 0 = paused, 1/2/3 = fast-forward. Drives the
+  // tick interval period below -- a pure pause model, so nothing advances
+  // while paused and everything (production, calendar, shipments) scales
+  // together when sped up. Session-only; resets to 1x on reload.
+  const [speed, setSpeed] = useState(1)
   const [autoTrade, setAutoTrade] = useState<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const autoTradeRef = useRef<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
@@ -718,10 +723,13 @@ export function useGameLoop() {
       .catch(() => {})
   }, [])
 
-  // Main production tick (200ms): production + ESG/demand drift + staff XP +
-  // era-advance detection + year-end award close.
+  // Main production tick: production + ESG/demand drift + staff XP +
+  // era-advance detection + year-end award close. Runs every TICK_MS / speed,
+  // so 2x/3x fast-forward shortens the period and "paused" (speed 0) tears the
+  // interval down entirely -- the whole sim freezes, no catch-up on resume.
   useEffect(() => {
-    if (!loaded) return
+    if (!loaded || speed <= 0) return
+    const period = TICK_MS / speed
     const interval = setInterval(() => {
       setGame((current) => {
         if (!current) return current
@@ -794,6 +802,14 @@ export function useGameLoop() {
         next = applyAutoTrade(next, autoTradeRef.current, derivedForTick)
         next = applyRecruitmentRefresh(next)
 
+        // Crude shipments now arrive on the game clock (tick-based), so they
+        // advance and pause together with production -- a consistent pause
+        // model. Checked here in the main tick instead of a separate
+        // wall-clock timer.
+        if (next.pendingShipments.length > 0) {
+          next = applyShipmentArrivals(next)
+        }
+
         if (shouldFireRandomEvent(next)) {
           next = applyRandomEvent(next, getRandomEvent(next))
         }
@@ -807,23 +823,9 @@ export function useGameLoop() {
         gameRef.current = next
         return next
       })
-    }, TICK_MS)
+    }, period)
     return () => clearInterval(interval)
-  }, [loaded, triggerChoiceEvent])
-
-  // Crude shipment arrivals (real-time delay, checked every second).
-  useEffect(() => {
-    if (!loaded) return
-    const interval = setInterval(() => {
-      setGame((current) => {
-        if (!current || current.pendingShipments.length === 0) return current
-        const next = applyShipmentArrivals(current, Date.now())
-        gameRef.current = next
-        return next
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [loaded])
+  }, [loaded, triggerChoiceEvent, speed])
 
   useEffect(() => {
     if (!loaded) return
@@ -1521,7 +1523,7 @@ export function useGameLoop() {
   )
 
   const buyShipment = useCallback(
-    (option: ShipmentOption) => update((current) => orderShipmentFn(current, option, Date.now())),
+    (option: ShipmentOption) => update((current) => orderShipmentFn(current, option)),
     [update],
   )
 
@@ -1561,10 +1563,18 @@ export function useGameLoop() {
     setHasSave(false)
   }, [])
 
+  // Cycles 1x → 2x → 3x → ⏸(0) → 1x. The factory screen's speed button calls
+  // this; the label reads `speed` to show the current state.
+  const cycleSpeed = useCallback(() => {
+    setSpeed((s) => (s >= 3 ? 0 : s + 1))
+  }, [])
+
   return {
     game,
     loaded,
     hasSave,
+    speed,
+    cycleSpeed,
     autoTrade,
     updateAutoTrade,
     derived: game ? calculateDerivedStats(game) : null,
