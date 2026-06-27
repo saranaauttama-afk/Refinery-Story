@@ -527,6 +527,15 @@ export default function RefineryScreen() {
             <Text style={styles.dockVal}>{Math.round(game.staffMorale)}</Text>
             <Text style={styles.dockLabel}>Morale</Text>
           </View>
+          {game.specialization && (
+            <>
+              <View style={styles.dockDivider} />
+              <View style={styles.dockStat}>
+                <Text style={styles.dockIcon}>{game.specialization === 'green' ? '🌿' : '🏭'}</Text>
+                <Text style={styles.dockLabel}>{game.specialization === 'green' ? 'Green' : 'Industrial'}</Text>
+              </View>
+            </>
+          )}
           <View style={styles.dockDivider} />
           <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
             <Text style={styles.dockIcon}>⭐</Text>

@@ -29,6 +29,7 @@ import {
   MAINTENANCE_BALANCE,
   MARKET_BALANCE,
   MORALE_BALANCE,
+  SPECIALIZATION_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
@@ -215,6 +216,7 @@ export function createInitialGameState(): GameState {
       petrochemicalPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
     },
     productMarket: {},
+    specialization: null,
     staffMorale: MORALE_BALANCE.startingMorale,
     lastStaffEventTick: 0,
     productInventory: {
@@ -888,10 +890,11 @@ export function shouldRetire(employee: { hiredOnYear?: number }, businessYear: n
 export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {
   const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
   const safetyEffectiveSum = getEffectiveWorkerSum(game.employees, 'safetyOfficer')
-  return (
-    safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick -
-    dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick
-  )
+  const regen = safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick *
+    (game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.esgRegenMultiplier : 1)
+  const decay = dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick *
+    (game.specialization === 'industrial' ? SPECIALIZATION_BALANCE.industrial.esgDecayMultiplier : 1)
+  return regen - decay
 }
 
 // --- Production Complexity Expansion Phase 1: waste byproduct ---
@@ -1419,6 +1422,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     perkSellPriceBonusRate += effect.sellPrice ?? 0
   }
 
+  // --- Specialization bonuses (Roadmap feature 2) ---
+  const isGreen = game.specialization === 'green'
+  const isIndustrial = game.specialization === 'industrial'
+
   // --- System 3: Tech Era bonuses ---
   const currentEra = getCurrentEra(game.unlockedResearchCount, game.refineryLevel)
   const nextEra = getNextEra(currentEra.index)
@@ -1536,8 +1543,9 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   )
   // Perk capacity branch adds a multiplicative storage bonus on top of base+combo.
   const perkStorageMultiplier = 1 + perkStorageBonusRate
+  const specCrudeStorageMultiplier = isIndustrial ? 1 + SPECIALIZATION_BALANCE.industrial.crudeStorageBonusRate : 1
   const maxCrudeStorage =
-    Math.round(baseCrudeStorage * storageMultiplier * perkStorageMultiplier) +
+    Math.round(baseCrudeStorage * storageMultiplier * perkStorageMultiplier * specCrudeStorageMultiplier) +
     researchStorageBonus +
     workerStorageBonus
   const maxGasolineStorage =
@@ -1557,8 +1565,11 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       : 1) *
     (hasAdvancedProcessing ? 1 + BONUS_BALANCE.advancedProcessingBonusRate : 1)
   const moraleMultiplier = getMoraleMultiplier(game.staffMorale)
+  const specProductionMultiplier = isIndustrial
+    ? 1 + SPECIALIZATION_BALANCE.industrial.productionOutputBonus
+    : isGreen ? 1 - SPECIALIZATION_BALANCE.green.productionSpeedPenalty : 1
   const workerProductionMultiplier =
-    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
@@ -1588,11 +1599,13 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     game.esgScore >= ESG_BALANCE.premiumThreshold
       ? 1 + ESG_BALANCE.premiumContractRewardBonusRate
       : 1
+  const specContractMultiplier = isIndustrial ? 1 + SPECIALIZATION_BALANCE.industrial.contractCashBonusRate : 1
   const contractRewardMultiplier =
     reputationContractRewardMultiplier *
     researchContractRewardMultiplier *
     specialBuildingContractRewardMultiplier *
-    esgContractRewardMultiplier
+    esgContractRewardMultiplier *
+    specContractMultiplier
   const specialBuildingRpRewardMultiplier =
     1 + laboratoryRpBonusTotal
   const chemistRpMultiplier = 1 + chemistCount * BONUS_BALANCE.chemistRpBonusRate
@@ -1614,11 +1627,13 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // Global product sell multiplier — Sales Agents (now %), quality perks, and the
   // current tech era. Applies to EVERY product, not just gasoline, so the player's
   // sell-side investments lift their whole catalogue consistently.
+  const specSellPriceBonusRate = isGreen ? SPECIALIZATION_BALANCE.green.sellPriceBonusRate : 0
   const productSellMultiplier =
     1 +
     salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonusRate +
     perkSellPriceBonusRate +
-    eraSellPriceBonusRate
+    eraSellPriceBonusRate +
+    specSellPriceBonusRate
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
   // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier
@@ -2146,7 +2161,8 @@ export function getYearlyPayroll(game: GameState): number {
     const levelFactor = 1 + (employee.level - 1) * WAGE_BALANCE.levelWageRate
     total += wage * levelFactor
   }
-  return Math.round(total)
+  const specDiscount = game.specialization === 'green' ? 1 - SPECIALIZATION_BALANCE.green.wageCostReduction : 1
+  return Math.round(total * specDiscount)
 }
 
 // Annual building upkeep (Economy audit money sink): flat fee + a fraction of
@@ -2157,7 +2173,8 @@ export function getYearlyMaintenance(game: GameState): number {
     if (!cell) continue
     total += MAINTENANCE_BALANCE.flatPerBuilding + BUILDINGS[cell].cost * MAINTENANCE_BALANCE.costRate
   }
-  return Math.round(total)
+  const specDiscount = game.specialization === 'industrial' ? 1 - SPECIALIZATION_BALANCE.industrial.maintenanceCostReduction : 1
+  return Math.round(total * specDiscount)
 }
 
 // Award score uses NET profit (revenue − payroll) for the money component, so
@@ -2226,9 +2243,11 @@ export function closeBusinessYear(game: GameState): {
   const moneyAfterPayroll = game.money - totalCosts
   const couldNotAfford = moneyAfterPayroll < 0
   const moneyAfterWages = Math.max(0, moneyAfterPayroll)
+  const greenReputationBonus = game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.yearEndReputationBonus : 0
   const reputationAfter =
     game.reputation +
-    reputationReward -
+    reputationReward +
+    greenReputationBonus -
     (couldNotAfford ? WAGE_BALANCE.unpaidReputationPenalty : 0)
 
   const rivals = getRivalResults(game.businessYear)
@@ -2850,18 +2869,26 @@ export function applyChoiceEventOption(
     }
   }
 
-  // teamOuting
-  if (option === 'A') {
+  if (event.key === 'teamOuting') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 600),
+        staffMorale: clampMorale(game.staffMorale + 12),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
     return {
       ...game,
-      money: Math.max(0, game.money - 600),
-      staffMorale: clampMorale(game.staffMorale + 12),
+      staffMorale: clampMorale(game.staffMorale - 3),
       activityLog: addLog(game.activityLog, logMessage),
     }
   }
+
+  // specializationChoice — permanent strategic direction
   return {
     ...game,
-    staffMorale: clampMorale(game.staffMorale - 3),
+    specialization: option === 'A' ? 'green' : 'industrial',
     activityLog: addLog(game.activityLog, logMessage),
   }
 }

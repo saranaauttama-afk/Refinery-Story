@@ -1757,6 +1757,21 @@ export const text = {
           'งบไม่พอ (ขวัญกำลังใจ ↓)',
         ),
       },
+      specializationChoice: {
+        title: bilingual('Strategic Direction', 'ทิศทางเชิงกลยุทธ์'),
+        description: bilingual(
+          'Your refinery is ready to specialize. This is a permanent choice that will shape your operation.',
+          'โรงกลั่นของคุณพร้อมเลือกทิศทาง นี่คือการตัดสินใจถาวรที่จะกำหนดทิศทางการดำเนินงาน',
+        ),
+        optionA: bilingual(
+          '🌿 Green Path — ESG +50%, sell price +10%, wages −20%, production −10%',
+          '🌿 แนวทางสีเขียว — ESG +50%, ราคาขาย +10%, ค่าจ้าง −20%, ผลิต −10%',
+        ),
+        optionB: bilingual(
+          '🏭 Industrial Path — output +15%, crude storage +25%, contracts +20%, maintenance −25%',
+          '🏭 แนวทางอุตสาหกรรม — ผลิต +15%, เก็บน้ำมันดิบ +25%, สัญญา +20%, บำรุงรักษา −25%',
+        ),
+      },
     } satisfies Record<
       ChoiceEventKey,
       {

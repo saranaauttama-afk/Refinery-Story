@@ -985,6 +985,29 @@ export const MAINTENANCE_BALANCE = {
   costRate: 0.05,
 } as const
 
+// --- Specialization (Roadmap feature 2) ---
+// Permanent one-time choice at Level 5. Each path grants exclusive bonuses
+// and a trade-off, forcing a strategic direction. The existing perk tree
+// and Dynamic Market supply the tactical layer; this supplies the strategic
+// identity that shapes the rest of the run.
+export const SPECIALIZATION_BALANCE = {
+  unlockLevel: 5,
+  green: {
+    esgRegenMultiplier: 1.5,
+    sellPriceBonusRate: 0.10,
+    yearEndReputationBonus: 15,
+    wageCostReduction: 0.20,
+    productionSpeedPenalty: 0.10,
+  },
+  industrial: {
+    productionOutputBonus: 0.15,
+    crudeStorageBonusRate: 0.25,
+    contractCashBonusRate: 0.20,
+    maintenanceCostReduction: 0.25,
+    esgDecayMultiplier: 1.3,
+  },
+} as const
+
 // --- People / Morale layer (Roadmap feature 4) ---
 // Global morale (0-100) drifts toward equilibrium each tick. High morale
 // boosts worker effectiveness; low morale penalizes it. Reacts to staff

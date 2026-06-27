@@ -564,6 +564,7 @@ export function sanitizeLoadedGameState(value: unknown) {
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
     feedstockPriority: getSafeFeedstockPriority(value),
     productMarket: getSafeProductMarket(value),
+    specialization: (value.specialization === 'green' || value.specialization === 'industrial') ? value.specialization as GameState['specialization'] : null,
     staffMorale: Math.max(
       MORALE_BALANCE.minMorale,
       Math.min(MORALE_BALANCE.maxMorale, getSafeNumber(value.staffMorale, MORALE_BALANCE.startingMorale)),

@@ -87,6 +87,7 @@ import {
   BONUS_BALANCE,
   MORALE_BALANCE,
   STAFF_LEVEL_BALANCE,
+  SPECIALIZATION_BALANCE,
   STANDING_ORDER_BALANCE,
   MAX_REFINERY_LEVEL,
   type PaidExpansionEntry,
@@ -97,7 +98,7 @@ import { MILESTONE_HEADLINES } from '../components/MilestoneHeadline'
 import { shouldSpawnCrisis, spawnCrisis, applyCrisisPenalty } from '../game/data/crisisEvents'
 import { BUILDINGS } from '../game/data/buildings'
 import { SELLABLE_PRODUCTS, type SellableProductKey } from '../game/data/products'
-import { getRandomChoiceEvent, getRandomStaffEvent } from '../game/data/choiceEvents'
+import { CHOICE_EVENTS, getRandomChoiceEvent, getRandomStaffEvent } from '../game/data/choiceEvents'
 import type { HiddenComboConfig } from '../game/data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../game/data/hiddenEvents'
 import {
@@ -1298,12 +1299,22 @@ export function useGameLoop() {
         if (current.totalGasolineProduced < requiredProduction) return current
         if (current.reputation < requiredReputation) return current
         if (current.unlockedResearchIds.length < requiredResearch) return current
-        return applyWinGoal({
+        const next = applyWinGoal({
           ...current,
           money: current.money - cost,
           refineryLevel: current.refineryLevel + 1,
           upgradePoints: current.upgradePoints + 1,
         })
+        if (
+          next.refineryLevel >= SPECIALIZATION_BALANCE.unlockLevel &&
+          !next.specialization &&
+          !pendingChoiceEventRef.current
+        ) {
+          const event = CHOICE_EVENTS.specializationChoice
+          pendingChoiceEventRef.current = event
+          setPendingChoiceEvent(event)
+        }
+        return next
       }),
     [update],
   )

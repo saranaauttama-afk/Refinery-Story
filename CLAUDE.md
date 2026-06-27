@@ -66,6 +66,13 @@ fork off `devMobile`.
 - **Staff morale** — `staffMorale` (0–100) drifts toward 60 each tick. Actions
   (hires, level-ups, retirements, wages, year-end grade, staff choice events)
   bump it. `moraleMultiplier` in `DerivedStats` scales worker effectiveness.
+- **Specialization** — permanent choice at Level 5 (`SPECIALIZATION_BALANCE`).
+  `game.specialization` is `'green' | 'industrial' | null`. Green boosts ESG
+  regen ×1.5, sell price +10%, wages −20%, reputation +15/year, but production
+  −10%. Industrial boosts output +15%, crude storage +25%, contracts +20%,
+  maintenance −25%, but ESG decay ×1.3. Triggered via `specializationChoice`
+  event in `upgradeRefinery`; modifiers applied across `calculateDerivedStats`,
+  `getEsgDrift`, `getYearlyPayroll`, `getYearlyMaintenance`, `closeBusinessYear`.
 - **Time is a pure pause model** — everything is keyed off `tickCount`; the tick
   loop pauses when backgrounded and when `speed === 0`. Do NOT introduce
   wall-clock (`Date.now()`) into game logic; shipments were migrated off it.

@@ -64,11 +64,13 @@ one product tanks its own price. Surfaced in the trade panel (live crude price
 Follow-ups: a fuller market panel/price graph; expose saturation per product in
 the sell UI; tie crude waves to events (supply shocks).
 
-### 2. 🥈 Specialization / forced tradeoffs (`⏳ P1`)
-You can currently build everything, so nothing is a real choice. Add tension:
-divergent research/perk archetypes (e.g. Green vs. Industrial) with real
-mechanical payoffs, and lean on shared-crude scarcity + the market so you can't
-scale everything at once. Converts "many systems" into "deep game."
+### 2. 🥈 Specialization / forced tradeoffs (`✅ shipped`)
+Permanent one-time choice at refinery Level 5 between Green and Industrial paths.
+**Green** — ESG regen ×1.5, sell price +10% eco-premium, wages −20%, year-end
+reputation +15, but production −10%. **Industrial** — production output +15%,
+crude storage +25%, contract cash +20%, maintenance −25%, but ESG decay ×1.3.
+Triggered via the ChoiceEvent modal on upgrade; shown as a badge in the HUD.
+Save-safe (old saves default to no specialization).
 
 ### 3. 🥉 Layout / adjacency as a first-class system (`🚧 in progress`)
 - ✅ **Negative adjacency** — a lab / sales office adjacent to a heavy

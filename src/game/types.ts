@@ -157,6 +157,9 @@ export type GameState = {
   // CONTRACTS so claimed hidden contracts show up and are completable
   // exactly like normal ones, just sourced from here instead.
   hiddenContracts: Contract[]
+  // Specialization (Roadmap feature 2): permanent strategic choice, null until
+  // the player picks at Level 5.
+  specialization: SpecializationPath | null
   // System 2: Refinery Upgrade Perk Tree
   upgradePoints: number
   unlockedPerks: PerkKey[]
@@ -318,6 +321,11 @@ export type Employee = {
   // retirement eligibility (see HIRING_BALANCE.retirementAfterYears).
   hiredOnYear?: number
 }
+
+// --- Specialization (Roadmap feature 2) ---
+// Permanent one-time choice at Level 5. Each path grants exclusive bonuses and a
+// trade-off, forcing a strategic direction. See SPECIALIZATION_BALANCE.
+export type SpecializationPath = 'green' | 'industrial'
 
 // --- System 2: Refinery Upgrade Perk Tree ---
 // Spend upgradePoints (earned on refinery level-up) on perks across 3 branches.
@@ -485,6 +493,7 @@ export type ChoiceEventKey =
   | 'teamFeud'
   | 'raiseRequest'
   | 'teamOuting'
+  | 'specializationChoice'
 
 export type ChoiceEvent = {
   key: ChoiceEventKey

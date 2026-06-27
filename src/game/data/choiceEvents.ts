@@ -114,6 +114,13 @@ export const CHOICE_EVENTS: Record<ChoiceEventKey, ChoiceEvent> = {
     optionA: text.choiceEvents.events.teamOuting.optionA,
     optionB: text.choiceEvents.events.teamOuting.optionB,
   },
+  specializationChoice: {
+    key: 'specializationChoice',
+    title: text.choiceEvents.events.specializationChoice.title,
+    description: text.choiceEvents.events.specializationChoice.description,
+    optionA: text.choiceEvents.events.specializationChoice.optionA,
+    optionB: text.choiceEvents.events.specializationChoice.optionB,
+  },
 }
 
 export const CHOICE_EVENT_KEYS: ChoiceEventKey[] = Object.keys(
