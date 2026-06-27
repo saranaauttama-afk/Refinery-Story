@@ -110,6 +110,20 @@ import {
 
 const SAVE_INTERVAL_MS = 5000
 
+// Flow-rate tracker tuning. The window is long enough (~150 ticks ≈ 30s of play
+// at 1x) that one-off jumps (a manual crude buy, a contract payout) are diluted
+// into a stable trend rather than spiking the readout, and we only recompute the
+// displayed rate every few ticks to avoid re-rendering the HUD every single tick.
+const RATE_WINDOW_TICKS = 150
+const RATE_REFRESH_TICKS = 5
+// 1 tick = TICK_MS (200ms) → 300 ticks per real minute at 1x speed.
+const TICKS_PER_MINUTE = 60000 / 200
+
+export type FlowRates = {
+  moneyPerMin: number
+  gasPerMin: number
+}
+
 // --- Auto-trade (QoL feature, mobile-only) ---
 //
 // Repeatedly tapping "Buy 10 Crude" / "Sell 10 Gas" was the #1 reported
@@ -722,6 +736,16 @@ export function useGameLoop() {
   // immediately, no separate claim step) -- different UX on purpose.
   const [pendingHiddenEventUnlock, setPendingHiddenEventUnlock] = useState<HiddenEventConfig | null>(null)
 
+  // --- Flow-rate tracker (UI legibility) ---
+  // The sim is rich (production, auto-trade, market, morale, specialization) but
+  // the HUD only ever showed *stocks*, never *flows* -- a player couldn't tell if
+  // the factory was net-profitable or how fast it was producing. We derive rates
+  // from real state deltas over a rolling tick window (rather than re-deriving the
+  // tick math, which would drift), so the numbers automatically reflect every
+  // system. Keyed on tickCount, so the window freezes when the game is paused.
+  const [flowRates, setFlowRates] = useState<FlowRates>({ moneyPerMin: 0, gasPerMin: 0 })
+  const flowSamplesRef = useRef<{ tick: number; money: number; gas: number }[]>([])
+
   // Shows a choice event (if none is currently pending) and stamps
   // lastChoiceEventTick so the fallback timer restarts from "now".
   // Synchronously updates pendingChoiceEventRef so back-to-back
@@ -873,6 +897,26 @@ export function useGameLoop() {
         next = applyLegendGoal(next)
         if (!current.legendAchieved && next.legendAchieved) {
           setPendingLegendCelebration(true)
+        }
+
+        // Flow-rate sampling: record (tick, money, lifetime gasoline), drop
+        // anything older than the window, and every RATE_REFRESH_TICKS recompute
+        // the $/min and gas/min trend from the oldest surviving sample.
+        const samples = flowSamplesRef.current
+        samples.push({ tick: next.tickCount, money: next.money, gas: next.totalGasolineProduced })
+        while (samples.length > 1 && next.tickCount - samples[0].tick > RATE_WINDOW_TICKS) {
+          samples.shift()
+        }
+        if (next.tickCount % RATE_REFRESH_TICKS === 0) {
+          const oldest = samples[0]
+          const elapsed = next.tickCount - oldest.tick
+          if (elapsed > 0) {
+            const scale = TICKS_PER_MINUTE / elapsed
+            setFlowRates({
+              moneyPerMin: Math.round((next.money - oldest.money) * scale),
+              gasPerMin: Math.round((next.totalGasolineProduced - oldest.gas) * scale),
+            })
+          }
         }
 
         gameRef.current = next
@@ -1646,6 +1690,8 @@ export function useGameLoop() {
     gameRef.current = fresh
     setGame(fresh)
     setHasSave(false)
+    flowSamplesRef.current = []
+    setFlowRates({ moneyPerMin: 0, gasPerMin: 0 })
   }, [])
 
   // Cycles 1x → 2x → 3x → ⏸(0) → 1x. The factory screen's speed button calls
@@ -1662,6 +1708,7 @@ export function useGameLoop() {
     cycleSpeed,
     autoTrade,
     updateAutoTrade,
+    flowRates,
     derived: game ? calculateDerivedStats(game) : null,
     pendingChoiceEvent,
     pendingAward,

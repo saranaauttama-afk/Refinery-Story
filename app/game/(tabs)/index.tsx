@@ -38,7 +38,9 @@ import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { useSound } from '../../../src/hooks/useSound'
+import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, fonts, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
@@ -212,6 +214,7 @@ function PRODUCT_MAX_STORAGE(
 const SKY_RATIO    = 0.08   // สัดส่วนความสูงฟ้า (0.0–1.0) → กำหนดตำแหน่ง HUD + Grid
 const HORIZON_H    = 8    // px — ความสูง horizon strip (ถ้าไม่ใช้ bg รูปก็ set 0 ได้)
 const RESOURCE_H   = 48    // px — resource dock height
+const FLOW_H       = 22    // px — slim flow-rate strip (net $/min + output/min)
 const GOAL_H       = 26    // px — slim goal banner height
 const RESOURCE_DOCK_H = 52 // px — dark resource dock card height
 const ACTION_DOCK_H   = 48 // px — bottom action dock height
@@ -234,9 +237,10 @@ export default function RefineryScreen() {
     claimHiddenEvent, upgradeBuilding, upgradeRefinery,
     autoTrade, updateAutoTrade, activateBoost,
     adjustFeedstockPriority, assignEmployeeToCell, unassignCell,
-    speed, cycleSpeed,
+    speed, cycleSpeed, flowRates,
   } = useGame()
   const { fixCrisis, ignoreCrisis } = useGame()
+  const { t } = useLang()
 
   // All hooks before any early returns
   const { width, height } = useWindowDimensions()
@@ -307,8 +311,10 @@ export default function RefineryScreen() {
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
   const resourceTop = yardTop - Math.floor(RESOURCE_H / 2) - HUD_OFFSET_UP
-  // Goal panel sits just below the resource strip, inside the yard
-  const goalTop     = resourceTop + RESOURCE_H + 8
+  // Flow-rate strip sits directly under the resource dock...
+  const flowTop     = resourceTop + RESOURCE_H + 6
+  // ...and the goal panel sits just below that, inside the yard
+  const goalTop     = flowTop + FLOW_H + 6
 
   // ── Derived game values ───────────────────────────────────────────────────
   const seasonLabel        = getSeasonLabel(game.tickCount, game.yearStartTick)
@@ -318,7 +324,26 @@ export default function RefineryScreen() {
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
   const isDaytime          = derived.gameClock.isDaytime
 
-  const refineryTitle = getRefineryTitle(game.refineryLevel).en
+  // ── Flow-rate strip (net $/min + output/min) ──────────────────────────────
+  // Surfaces the *trend* the rich sim produces — without this the HUD only
+  // ever showed stocks, so the market/morale/specialization systems were
+  // invisible. Both numbers come from real state deltas (see useGameLoop).
+  const moneyRate = flowRates.moneyPerMin
+  const gasRate   = flowRates.gasPerMin
+  const fmtMoneyRate = (n: number) => {
+    const sign = n > 0 ? '+' : n < 0 ? '−' : ''
+    const abs = Math.abs(n)
+    const v = abs >= 1000 ? `${(abs / 1000).toFixed(1)}k` : `${abs}`
+    return `${sign}$${v}`
+  }
+  const flowState: 'profit' | 'loss' | 'idle' =
+    gasRate <= 0 && moneyRate === 0 ? 'idle' : moneyRate >= 0 ? 'profit' : 'loss'
+  const flowStateLabel =
+    flowState === 'profit' ? t(text.hud.flowProfit)
+    : flowState === 'loss' ? t(text.hud.flowLoss)
+    : t(text.hud.flowIdle)
+
+  const refineryTitle = t(getRefineryTitle(game.refineryLevel))
 
   // Combo hint cells — tiles that would complete an undiscovered combo
   const comboHintCells = hoveredBuildingKey && pickerCell !== null
@@ -346,18 +371,18 @@ export default function RefineryScreen() {
   }).length
 
   const FAB_ITEMS: FabNavItem[] = [
-    { route: '/game',             icon: '🏭', label: 'Factory' },
-    { route: '/game/contracts',   icon: '📋', label: 'Contracts', badge: contractsReady || undefined },
-    { route: '/game/supply',      icon: '🛢',  label: 'Supply',    badge: standaloneReady || undefined },
-    { route: '/game/recruit',     icon: '👥', label: 'Recruit' },
-    { route: '/game/company',     icon: '🏢', label: 'Company',   badge: (staffReady + researchReady) || undefined },
+    { route: '/game',             icon: '🏭', label: t(text.nav.factory) },
+    { route: '/game/contracts',   icon: '📋', label: t(text.nav.contracts), badge: contractsReady || undefined },
+    { route: '/game/supply',      icon: '🛢',  label: t(text.nav.supply),    badge: standaloneReady || undefined },
+    { route: '/game/recruit',     icon: '👥', label: t(text.nav.recruit) },
+    { route: '/game/company',     icon: '🏢', label: t(text.nav.company),   badge: (staffReady + researchReady) || undefined },
   ]
   const secondaryStats = [
-    { label: 'Feedstock',   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
-    { label: 'ESG',         value: `${Math.round(game.esgScore)}` },
-    { label: 'Reputation',  value: `${Math.floor(game.reputation).toLocaleString()}` },
-    { label: 'Season',      value: `${seasonLabel.en} · ${seasonPct}%` },
-    { label: 'Era',         value: derived.currentEra.name.en },
+    { label: t(text.hud.feedstock),   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
+    { label: t(text.hud.esg),         value: `${Math.round(game.esgScore)}` },
+    { label: t(text.hud.reputation),  value: `${Math.floor(game.reputation).toLocaleString()}` },
+    { label: t(text.hud.season),      value: `${t(seasonLabel)} · ${seasonPct}%` },
+    { label: t(text.hud.era),         value: t(derived.currentEra.name) },
   ]
 
   const handleCellPress = (index: number) => {
@@ -501,38 +526,38 @@ export default function RefineryScreen() {
           <View style={styles.dockStat}>
             <Text style={styles.dockIcon}>💰</Text>
             <Text style={styles.dockVal}>${(game.money >= 1000 ? `${(game.money/1000).toFixed(1)}k` : Math.floor(game.money).toString())}</Text>
-            <Text style={styles.dockLabel}>Money</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <Text style={styles.dockIcon}>🛢</Text>
             <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
-            <Text style={styles.dockLabel}>Crude</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.crude)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <Text style={styles.dockIcon}>⛽</Text>
             <Text style={styles.dockVal}>{game.gasoline}</Text>
-            <Text style={styles.dockLabel}>Gas</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <Text style={styles.dockIcon}>🌿</Text>
             <Text style={styles.dockVal}>{Math.round(game.esgScore)}</Text>
-            <Text style={styles.dockLabel}>ESG</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.esg)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <Text style={styles.dockIcon}>{game.staffMorale >= 75 ? '😊' : game.staffMorale < 40 ? '😟' : '😐'}</Text>
             <Text style={styles.dockVal}>{Math.round(game.staffMorale)}</Text>
-            <Text style={styles.dockLabel}>Morale</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.morale)}</Text>
           </View>
           {game.specialization && (
             <>
               <View style={styles.dockDivider} />
               <View style={styles.dockStat}>
                 <Text style={styles.dockIcon}>{game.specialization === 'green' ? '🌿' : '🏭'}</Text>
-                <Text style={styles.dockLabel}>{game.specialization === 'green' ? 'Green' : 'Industrial'}</Text>
+                <Text style={styles.dockLabel}>{game.specialization === 'green' ? t(text.hud.green) : t(text.hud.industrial)}</Text>
               </View>
             </>
           )}
@@ -540,8 +565,28 @@ export default function RefineryScreen() {
           <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
             <Text style={styles.dockIcon}>⭐</Text>
             <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
-            <Text style={styles.dockLabel}>Rep</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.rep)}</Text>
           </Pressable>
+        </View>
+
+        {/* Flow-rate strip — net $/min + output/min, the "is my factory
+            working / profitable" glance the stock-only dock never gave. */}
+        <View style={[styles.flowStrip, { top: flowTop }]}>
+          <View style={styles.flowItem}>
+            <View style={[styles.flowDot, flowState === 'profit' ? styles.flowDotProfit : flowState === 'loss' ? styles.flowDotLoss : styles.flowDotIdle]} />
+            <Text style={styles.flowState} numberOfLines={1}>{flowStateLabel}</Text>
+          </View>
+          <View style={styles.flowItem}>
+            <Text style={[styles.flowVal, moneyRate > 0 ? styles.flowValUp : moneyRate < 0 ? styles.flowValDown : styles.flowValFlat]}>
+              {fmtMoneyRate(moneyRate)}
+            </Text>
+            <Text style={styles.flowUnit}>{t(text.hud.net)}{t(text.hud.perMin)}</Text>
+          </View>
+          <View style={styles.flowItem}>
+            <Text style={styles.flowIcon}>⛽</Text>
+            <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
+            <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
+          </View>
         </View>
 
         {/* Goal banner — slim, sits just inside yard */}
@@ -551,7 +596,7 @@ export default function RefineryScreen() {
             onPress={() => router.push('/achievements')}
           >
             <Text style={styles.goalBannerText} numberOfLines={1}>
-              🎯 {nextGoal.name.en}
+              🎯 {t(nextGoal.name)}
             </Text>
             {nextGoal.progress ? (
               <Text style={styles.goalBannerProgress}>
@@ -866,7 +911,7 @@ export default function RefineryScreen() {
                       {/* Info */}
                       <View style={styles.buildCardBody}>
                         <Text style={[styles.buildCardName, locked && styles.buildCardNameLocked]} numberOfLines={2}>
-                          {b.name.en}
+                          {t(b.name)}
                         </Text>
 
                         {/* Status tag */}
@@ -905,7 +950,7 @@ export default function RefineryScreen() {
       {/* ── Building info ─────────────────────────────────────────────────── */}
       <Sheet
         visible={infoCell !== null}
-        title={infoCell !== null && game.grid[infoCell] ? BUILDINGS[game.grid[infoCell]!].name.en : 'Info'}
+        title={infoCell !== null && game.grid[infoCell] ? t(BUILDINGS[game.grid[infoCell]!].name) : t(text.hud.info)}
         onClose={() => setInfoCell(null)}
       >
         {(() => {
@@ -922,7 +967,8 @@ export default function RefineryScreen() {
           const canAffordUpgrade = game.money >= upgradeCost
           const plant           = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
           const specialistType  = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker
-          const specialistName  = specialistType ? WORKERS.find((w) => w.key === specialistType)?.name.en ?? specialistType : null
+          const specialistWorker = specialistType ? WORKERS.find((w) => w.key === specialistType) : undefined
+          const specialistName  = specialistWorker ? t(specialistWorker.name) : specialistType ?? null
           const assignedEmployee  = specialistType ? getEmployeeAssignedToCell(game, infoCell) : null
           const eligibleEmployees = specialistType ? game.employees.filter((e) => e.type === specialistType && getCellAssignedToEmployee(game, e.id) === null) : []
           const category   = BUILDING_CATEGORY_BY_TYPE[cell]
@@ -979,7 +1025,7 @@ export default function RefineryScreen() {
               </View>
 
               {/* Description */}
-              <Text style={styles.infoDescription}>{config.description.en}</Text>
+              <Text style={styles.infoDescription}>{t(config.description)}</Text>
 
               {/* ── Current stats ── */}
               <Text style={styles.infoSectionTitle}>Current stats</Text>
@@ -1650,6 +1696,58 @@ const styles = StyleSheet.create({
     width: 1,
     height: 28,
     backgroundColor: '#2E3D50',
+  },
+  // Flow-rate strip — slim translucent bar under the resource dock
+  // top set dynamically (= flowTop)
+  flowStrip: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    height: FLOW_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(28,38,52,0.62)',
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    zIndex: 20,
+  },
+  flowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  flowDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  flowDotProfit: { backgroundColor: colors.green },
+  flowDotLoss:   { backgroundColor: colors.orange },
+  flowDotIdle:   { backgroundColor: '#6B8099' },
+  flowState: {
+    fontSize: 10,
+    fontFamily: fonts.heading,
+    color: 'rgba(255,255,255,0.82)',
+  },
+  flowIcon: {
+    fontSize: 11,
+  },
+  flowVal: {
+    fontSize: 11,
+    fontFamily: fonts.heading,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  flowValUp:   { color: colors.green },
+  flowValDown: { color: colors.orange },
+  flowValFlat: { color: 'rgba(255,255,255,0.7)' },
+  flowUnit: {
+    fontSize: 8,
+    fontFamily: fonts.body,
+    color: '#6B8099',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   // Goal banner — slim dark strip inside yard
   // top set dynamically (= goalTop)
