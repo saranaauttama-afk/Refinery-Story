@@ -36,7 +36,7 @@ import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { useSound } from '../../../src/hooks/useSound'
-import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, radii, spacing, fonts, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
@@ -1454,8 +1454,8 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   companyName: {
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 16,
+    fontFamily: fonts.display,
     color: '#FFFFFF',
     textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1464,7 +1464,7 @@ const styles = StyleSheet.create({
   },
   companyTitle: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: fonts.body,
     color: 'rgba(255,255,255,0.65)',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
@@ -1486,7 +1486,7 @@ const styles = StyleSheet.create({
   lvBadgeText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: fonts.heading,
     letterSpacing: 0.3,
   },
   topRightHud: {
@@ -1570,7 +1570,7 @@ const styles = StyleSheet.create({
   },
   dockVal: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: fonts.heading,
     color: '#FFFFFF',
     letterSpacing: 0.2,
   },
@@ -1579,6 +1579,7 @@ const styles = StyleSheet.create({
   },
   dockLabel: {
     fontSize: 7,
+    fontFamily: fonts.body,
     color: '#6B8099',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1605,7 +1606,7 @@ const styles = StyleSheet.create({
   },
   goalBannerText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: fonts.heading,
     color: 'rgba(255,255,255,0.90)',
     flex: 1,
   },

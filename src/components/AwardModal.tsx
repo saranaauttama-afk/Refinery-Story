@@ -1,6 +1,6 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { AwardRecord } from '../game/types'
-import { colors, radii, spacing } from '../theme'
+import { colors, fonts, radii, spacing } from '../theme'
 
 const GRADE_COLORS: Record<string, string> = {
   S: colors.gold,
@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 19,
+    fontFamily: fonts.display,
     color: colors.ink,
     marginBottom: spacing.sm,
   },
@@ -94,8 +94,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   gradeText: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 26,
+    fontFamily: fonts.display,
     color: colors.ink,
   },
   row: {

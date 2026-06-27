@@ -30,6 +30,19 @@ export const colors = {
   red: '#C0392B',
 } as const
 
+// Custom display font (Baloo 2 -- friendly, rounded, readable) loaded at app
+// start in app/_layout.tsx. Until the font finishes loading these family
+// names fall back to the system font. Applied to the game's "hero" text
+// (company name, resource dock, headlines, celebration modals) to give the
+// UI a cozy game identity instead of the default system typeface. Roll out
+// to more screens by swapping a style's fontWeight for one of these.
+export const fonts = {
+  display: 'Baloo2_800ExtraBold', // big celebratory titles
+  heading: 'Baloo2_700Bold', // section headers, badges, values
+  body: 'Baloo2_500Medium', // labels, body copy
+  regular: 'Baloo2_400Regular',
+} as const
+
 export const spacing = {
   xs: 4,
   sm: 8,

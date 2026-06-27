@@ -1,6 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { GameState } from '../game/types'
-import { colors, radii, spacing } from '../theme'
+import { colors, fonts, radii, spacing } from '../theme'
 
 type WinCelebrationModalProps = {
   visible: boolean
@@ -62,8 +62,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontFamily: fonts.display,
     color: colors.ink,
     textAlign: 'center',
   },

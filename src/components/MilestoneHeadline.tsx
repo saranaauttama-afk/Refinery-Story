@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay } from 'react-native-reanimated'
-import { colors, radii, spacing } from '../theme'
+import { colors, fonts, radii, spacing } from '../theme'
 
 export type HeadlineData = {
   icon: string
@@ -87,6 +87,6 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 28 },
   text: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '900', color: colors.gold, letterSpacing: 0.2 },
-  body: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2, lineHeight: 16 },
+  title: { fontSize: 15, fontFamily: fonts.display, color: colors.gold, letterSpacing: 0.2 },
+  body: { fontSize: 11, fontFamily: fonts.body, color: 'rgba(255,255,255,0.7)', marginTop: 2, lineHeight: 16 },
 })
