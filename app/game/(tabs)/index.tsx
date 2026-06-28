@@ -41,6 +41,7 @@ import { useSound } from '../../../src/hooks/useSound'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, fonts, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import GameIcon from '../../../src/components/GameIcon'
+import HistoryGraph from '../../../src/components/HistoryGraph'
 import SaturationBars from '../../../src/components/SaturationBars'
 import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
@@ -241,7 +242,7 @@ export default function RefineryScreen() {
     claimHiddenEvent, upgradeBuilding, upgradeRefinery,
     autoTrade, updateAutoTrade, activateBoost,
     adjustFeedstockPriority, assignEmployeeToCell, unassignCell,
-    speed, cycleSpeed, flowRates,
+    speed, cycleSpeed, flowRates, moneyHistory,
   } = useGame()
   const { fixCrisis, ignoreCrisis } = useGame()
   const { t } = useLang()
@@ -342,10 +343,16 @@ export default function RefineryScreen() {
   }
   const flowState: 'profit' | 'loss' | 'idle' =
     gasRate <= 0 && moneyRate === 0 ? 'idle' : moneyRate >= 0 ? 'profit' : 'loss'
+  // When idle, say *why* the primary loop stalled instead of a vague "Idle" —
+  // the two real gasoline bottlenecks are no crude to process or a full tank.
+  const idleReason =
+    game.crudeOil <= 0 ? t(text.hud.idleNoCrude)
+    : game.gasoline >= derived.maxGasolineStorage ? t(text.hud.idleTankFull)
+    : t(text.hud.flowIdle)
   const flowStateLabel =
     flowState === 'profit' ? t(text.hud.flowProfit)
     : flowState === 'loss' ? t(text.hud.flowLoss)
-    : t(text.hud.flowIdle)
+    : idleReason
 
   const refineryTitle = t(getRefineryTitle(game.refineryLevel))
 
@@ -794,6 +801,8 @@ export default function RefineryScreen() {
             <Text style={styles.infoStatValue}>{stat.value}</Text>
           </View>
         ))}
+        <Text style={[styles.tradeSectionTitle, { marginTop: spacing.md }]}>{t(text.hud.cashOverTime)}</Text>
+        <HistoryGraph data={moneyHistory} width={width - spacing.lg * 2} height={90} />
       </Sheet>
 
       {/* ── Events sheet ─────────────────────────────────────────────────── */}

@@ -43,6 +43,7 @@ import {
   getTotalCellOutput,
   getWasteGeneratedPerTick,
   getWasteOverflowEsgPenalty,
+  getCellSynergy,
   getNewlyDiscoveredCombos,
   getNewlyUnlockedHiddenEvents,
   getProductSellPrice,
@@ -118,6 +119,11 @@ const RATE_WINDOW_TICKS = 150
 const RATE_REFRESH_TICKS = 5
 // 1 tick = TICK_MS (200ms) → 300 ticks per real minute at 1x speed.
 const TICKS_PER_MINUTE = 60000 / 200
+
+// Session cash-history sampling for the growth chart: one point every ~6s of
+// play, keeping the most recent ~80 (≈ the last 8 minutes at 1x).
+const HISTORY_SAMPLE_TICKS = 30
+const HISTORY_MAX_POINTS = 80
 
 export type FlowRates = {
   moneyPerMin: number
@@ -729,6 +735,9 @@ export function useGameLoop() {
   const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
   const [pendingLegendCelebration, setPendingLegendCelebration] = useState(false)
   const [pendingComboDiscovery, setPendingComboDiscovery] = useState<HiddenComboConfig | null>(null)
+  // Bumps each time a placement forms a positive adjacency pair — drives a
+  // transient "Synergy!" toast (reinforces the green grid auras).
+  const [synergyToastKey, setSynergyToastKey] = useState(0)
   // Hidden Event banner: which difficulty just unlocked (for the toast's
   // styling/copy only -- never the actual reward, since the design
   // requires a separate tap-to-claim step on the relevant tab to reveal
@@ -745,6 +754,8 @@ export function useGameLoop() {
   // system. Keyed on tickCount, so the window freezes when the game is paused.
   const [flowRates, setFlowRates] = useState<FlowRates>({ moneyPerMin: 0, gasPerMin: 0 })
   const flowSamplesRef = useRef<{ tick: number; money: number; gas: number }[]>([])
+  // Cash-over-time series for the growth chart (More Info sheet).
+  const [moneyHistory, setMoneyHistory] = useState<number[]>([])
 
   // Shows a choice event (if none is currently pending) and stamps
   // lastChoiceEventTick so the fallback timer restarts from "now".
@@ -922,6 +933,14 @@ export function useGameLoop() {
           }
         }
 
+        // Cash-history sampling for the growth chart.
+        if (next.tickCount % HISTORY_SAMPLE_TICKS === 0) {
+          setMoneyHistory((h) => {
+            const nh = [...h, Math.round(next.money)]
+            return nh.length > HISTORY_MAX_POINTS ? nh.slice(nh.length - HISTORY_MAX_POINTS) : nh
+          })
+        }
+
         gameRef.current = next
         return next
       })
@@ -1088,6 +1107,12 @@ export function useGameLoop() {
         }
         if (newlyFound.length > 0) {
           setPendingComboDiscovery(newlyFound[0])
+        }
+
+        // Positive adjacency feedback: if the just-placed building forms a
+        // synergy pair with a neighbour, pop a brief "Synergy!" toast.
+        if (getCellSynergy(next.grid, cellIndex) === 'bonus') {
+          setSynergyToastKey((k) => k + 1)
         }
 
         return next
@@ -1695,6 +1720,7 @@ export function useGameLoop() {
     setHasSave(false)
     flowSamplesRef.current = []
     setFlowRates({ moneyPerMin: 0, gasPerMin: 0 })
+    setMoneyHistory([])
   }, [])
 
   // Cycles 1x → 2x → 3x → ⏸(0) → 1x. The factory screen's speed button calls
@@ -1712,6 +1738,7 @@ export function useGameLoop() {
     autoTrade,
     updateAutoTrade,
     flowRates,
+    moneyHistory,
     derived: game ? calculateDerivedStats(game) : null,
     pendingChoiceEvent,
     pendingAward,
@@ -1720,6 +1747,7 @@ export function useGameLoop() {
     pendingWinCelebration,
     pendingLegendCelebration,
     pendingComboDiscovery,
+    synergyToastKey,
     pendingHiddenEventUnlock,
     buyCrude,
     sellGasoline,

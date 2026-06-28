@@ -172,6 +172,10 @@ export const text = {
       'ผลิตจากโรงผลิตปิโตรเคมี ผลิตภัณฑ์มูลค่าสูงสุด',
     ),
   },
+  synergyToast: {
+    title: bilingual('✨ Synergy!', '✨ ซินเนอร์ยี!'),
+    body: bilingual('Adjacent buildings boost each other', 'อาคารที่อยู่ติดกันเสริมกัน'),
+  },
   plantInfo: {
     staffBoost: (pct: number) =>
       bilingual(
@@ -197,6 +201,8 @@ export const text = {
     flowProfit: bilingual('Profitable', 'กำไร'),
     flowLoss: bilingual('Losing money', 'ขาดทุน'),
     flowIdle: bilingual('Idle', 'ว่าง'),
+    idleNoCrude: bilingual('Out of crude', 'น้ำมันดิบหมด'),
+    idleTankFull: bilingual('Gas tank full', 'ถังแก๊สเต็ม'),
     feedstock: bilingual('Feedstock', 'วัตถุดิบ'),
     reputation: bilingual('Reputation', 'ชื่อเสียง'),
     season: bilingual('Season', 'ฤดูกาล'),
@@ -204,6 +210,7 @@ export const text = {
     info: bilingual('Info', 'ข้อมูล'),
     moreInfo: bilingual('More Info', 'ข้อมูลเพิ่มเติม'),
     demandTitle: bilingual('Demand (sell price level)', 'อุปสงค์ (ระดับราคาขาย)'),
+    cashOverTime: bilingual('Cash over time', 'เงินสดตามเวลา'),
     specialization: bilingual('Specialization', 'แนวทาง'),
     specNone: bilingual('Not chosen', 'ยังไม่เลือก'),
   },

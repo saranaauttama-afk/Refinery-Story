@@ -13,6 +13,7 @@ import {
 import AwardModal from '../src/components/AwardModal'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
 import ComboDiscoveryBanner from '../src/components/ComboDiscoveryBanner'
+import SynergyToast from '../src/components/SynergyToast'
 import Confetti from '../src/components/Confetti'
 import EraBanner from '../src/components/EraBanner'
 import MilestoneHeadline from '../src/components/MilestoneHeadline'
@@ -35,6 +36,7 @@ function GlobalOverlays() {
     pendingWinCelebration,
     pendingLegendCelebration,
     pendingComboDiscovery,
+    synergyToastKey,
     pendingHiddenEventUnlock,
     chooseEventOption,
     dismissAward,
@@ -123,6 +125,7 @@ function GlobalOverlays() {
       <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} />
       <MilestoneHeadline headline={pendingMilestoneHeadline} onDismiss={dismissMilestoneHeadline} />
       <ComboDiscoveryBanner combo={pendingComboDiscovery} onDismiss={dismissComboDiscovery} />
+      <SynergyToast triggerKey={synergyToastKey} />
       <HiddenEventBanner event={pendingHiddenEventUnlock} onDismiss={dismissHiddenEventUnlock} />
       <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />
       <AwardModal record={pendingAward} onDismiss={dismissAward} />
