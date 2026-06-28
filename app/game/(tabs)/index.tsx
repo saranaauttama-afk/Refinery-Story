@@ -51,6 +51,7 @@ import {
   CRUDE_COST,
   getBuildingEffectLines,
   getCellAssignedToEmployee,
+  getCellStaffBonus,
   getContractProgress,
   getComboHintCells,
   getEmployeeAssignedToCell,
@@ -966,6 +967,7 @@ export default function RefineryScreen() {
           const specialistWorker = specialistType ? WORKERS.find((w) => w.key === specialistType) : undefined
           const specialistName  = specialistWorker ? t(specialistWorker.name) : specialistType ?? null
           const assignedEmployee  = specialistType ? getEmployeeAssignedToCell(game, infoCell) : null
+          const staffBonus        = getCellStaffBonus(game, infoCell)
           const eligibleEmployees = specialistType ? game.employees.filter((e) => e.type === specialistType && getCellAssignedToEmployee(game, e.id) === null) : []
           const category   = BUILDING_CATEGORY_BY_TYPE[cell]
           const accent     = BUILDING_CATEGORY_ACCENT[category]
@@ -1083,13 +1085,18 @@ export default function RefineryScreen() {
                 <>
                   <Text style={styles.infoSectionTitle}>{specialistName} assigned to this plant</Text>
                   {assignedEmployee ? (
-                    <ListRow
-                      title={assignedEmployee.name}
-                      subtitle={`Lv${assignedEmployee.level}${assignedEmployee.trait === 'veteran' ? ' · Veteran' : ''}`}
-                      badge="ASSIGNED"
-                      actionLabel="Unassign"
-                      onPress={() => unassignCell(infoCell)}
-                    />
+                    <>
+                      <ListRow
+                        title={assignedEmployee.name}
+                        subtitle={`Lv${assignedEmployee.level}${assignedEmployee.trait === 'veteran' ? ' · Veteran' : ''}`}
+                        badge={t(text.plantInfo.assignedBadge)}
+                        actionLabel={t(text.plantInfo.unassign)}
+                        onPress={() => unassignCell(infoCell)}
+                      />
+                      {staffBonus && staffBonus.bonusPct > 0 && (
+                        <Text style={styles.staffBoostLine}>{t(text.plantInfo.staffBoost(staffBonus.bonusPct))}</Text>
+                      )}
+                    </>
                   ) : (
                     <Text style={styles.infoHint}>
                       No one assigned — pick a {specialistName} below to boost THIS plant's output.
@@ -1105,7 +1112,7 @@ export default function RefineryScreen() {
                       key={employee.id}
                       title={employee.name}
                       subtitle={`Lv${employee.level}${employee.trait === 'veteran' ? ' · Veteran' : ''}`}
-                      actionLabel="Assign"
+                      actionLabel={t(text.plantInfo.assign)}
                       onPress={() => assignEmployeeToCell(employee.id, infoCell)}
                     />
                   ))}
@@ -2046,6 +2053,13 @@ const styles = StyleSheet.create({
   infoHint: {
     color: colors.inkMuted,
     fontSize: 12,
+    marginBottom: spacing.sm,
+  },
+  staffBoostLine: {
+    color: colors.green,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
     marginBottom: spacing.sm,
   },
 

@@ -8,7 +8,9 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
+import { cellAcceptsSpecialist, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
+import GameIcon from './GameIcon'
 
 // Categories whose plants visibly "work" (puff smoke/steam) while running.
 // Storage/research/support buildings don't process anything, so they stay
@@ -47,6 +49,7 @@ const LEVEL_BADGE_MIN_WIDTH = 24 * TILE_SCALE
 const LEVEL_BADGE_PADDING_X = 5 * TILE_SCALE
 const LEVEL_BADGE_PADDING_Y = 2 * TILE_SCALE
 const LEVEL_FONT_SIZE = 8 * TILE_SCALE
+const STAFF_BADGE_ICON = 22 * TILE_SCALE
 const DEBUG_FONT_SIZE = 7 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
 const ACTIVE_ROW_BIAS = 0
@@ -373,6 +376,9 @@ function FactoryDiamondGroundView({
             const level = gridLevels[activeIndex] ?? 1
             const plantImage = getPlantImageSpec(cell, level)
             const plantImageHeight = plantImage ? PLANT_IMAGE_WIDTH / plantImage.aspectRatio : 0
+            // Staffed indicator: a worker badge on plants that have a specialist
+            // assigned, so you can tell staffed from idle plants at a glance.
+            const assignedWorker = cellAcceptsSpecialist(cell) ? getEmployeeAssignedToCell(game, activeIndex) : null
 
             // "Working" smoke: only for processing categories, and only when
             // the plant has no blocking/idle/full status this tick (a null
@@ -427,6 +433,11 @@ function FactoryDiamondGroundView({
                 {!plantImage ? (
                   <View style={styles.levelBadge}>
                     <Text style={styles.levelText}>L{level}</Text>
+                  </View>
+                ) : null}
+                {assignedWorker ? (
+                  <View style={styles.staffBadge}>
+                    <GameIcon name={`worker-${assignedWorker.type}`} size={STAFF_BADGE_ICON} />
                   </View>
                 ) : null}
               </Pressable>
@@ -501,6 +512,17 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: LEVEL_FONT_SIZE,
     fontWeight: '800',
+  },
+  staffBadge: {
+    position: 'absolute',
+    top: LEVEL_BADGE_TOP,
+    left: 6 * TILE_SCALE,
+    borderRadius: radii.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
   },
 })
 

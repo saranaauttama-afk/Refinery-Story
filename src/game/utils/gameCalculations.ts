@@ -463,6 +463,39 @@ export function getSpecialistMultiplierForCell(
 
 }
 
+// The three plants that take a specialist, and the bonus each grants. Mirrors
+// the rates wired into PLANT_PRODUCTION / the polymer plant so the UI can show
+// the exact bonus an assigned specialist is contributing.
+const CELL_SPECIALIST: Partial<Record<BuildingType, { worker: WorkerType; rate: number; productKey: ProductKey }>> = {
+  jetFuelPlant: { worker: 'aviationSpecialist', rate: BONUS_BALANCE.aviationSpecialistJetFuelBonusRate, productKey: 'jetFuel' },
+  petrochemicalPlant: { worker: 'chemicalEngineer', rate: BONUS_BALANCE.chemicalEngineerPetrochemicalsBonusRate, productKey: 'petrochemicals' },
+  polymerPlant: { worker: 'polymerEngineer', rate: BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate, productKey: 'plasticPellets' },
+}
+
+// Whether the cell can take a specialist at all (drives the staffed badge on
+// the factory grid + the assignment UI).
+export function cellAcceptsSpecialist(cell: BuildingType): boolean {
+  return cell in CELL_SPECIALIST
+}
+
+// For the building info sheet: the output bonus the *currently assigned*
+// specialist is adding to this specific plant. Returns null when the cell takes
+// no specialist or none is assigned. Numeric only (lang-agnostic) — the UI
+// formats the bilingual string.
+export function getCellStaffBonus(
+  game: GameState,
+  cellIndex: number,
+): { employee: Employee; bonusPct: number; productKey: ProductKey } | null {
+  const cell = game.grid[cellIndex]
+  if (!cell) return null
+  const spec = CELL_SPECIALIST[cell]
+  if (!spec) return null
+  const employee = getEmployeeAssignedToCell(game, cellIndex)
+  if (!employee || employee.type !== spec.worker) return null
+  const mult = getSpecialistMultiplierForCell(game, cellIndex, spec.worker, spec.rate)
+  return { employee, bonusPct: Math.round((mult - 1) * 100), productKey: spec.productKey }
+}
+
 // One line of "what does this tile do right now" info, for the Building
 // Info sheet (tap any built tile). `bonus` is rendered in green -- the
 // extra amount coming from upgrades (next level preview) or assigned

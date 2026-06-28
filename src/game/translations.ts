@@ -172,6 +172,16 @@ export const text = {
       'ผลิตจากโรงผลิตปิโตรเคมี ผลิตภัณฑ์มูลค่าสูงสุด',
     ),
   },
+  plantInfo: {
+    staffBoost: (pct: number) =>
+      bilingual(
+        `⚡ This specialist is boosting output +${pct}%`,
+        `⚡ สเปเชียลิสต์คนนี้เพิ่มผลผลิต +${pct}%`,
+      ),
+    assignedBadge: bilingual('ASSIGNED', 'ประจำการ'),
+    unassign: bilingual('Unassign', 'ปลด'),
+    assign: bilingual('Assign', 'มอบหมาย'),
+  },
   hud: {
     money: bilingual('Money', 'เงิน'),
     crude: bilingual('Crude', 'น้ำมันดิบ'),
