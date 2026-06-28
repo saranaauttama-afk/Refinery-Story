@@ -56,6 +56,11 @@ fork off `devMobile`.
 - **`src/components/`** — UI components (diamond grid view, banners, modals,
   HUD pieces, BottomNav, PlantSmoke, DeliveryTruck, Confetti, ...).
 - **`src/theme.ts`** — palette, spacing, radii, `fonts`, layout constants.
+- **Art slots** — `ArtSlot` + `src/art/registry.ts` render a labelled
+  placeholder wherever raster art belongs but isn't drawn yet; registering the
+  image in `registry.ts` swaps it in with no screen-code change. The spec for
+  every needed image lives in `ASSETS_NEEDED.md`. (Code-drawn graphics — the
+  isometric scene, smoke, trucks — are NOT art slots.)
 
 ## Conventions & gotchas
 

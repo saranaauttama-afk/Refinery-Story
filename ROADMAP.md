@@ -4,9 +4,38 @@ Living plan for the game's design + balance direction. Status markers:
 `✅ done` · `🚧 in progress` · `⏳ planned`. Newest work is tracked here;
 deep implementation notes still live in `README.md`.
 
-Working branch for this initiative: `claude/claude-md-docs-2iep7n` (off `devMobile`).
 Verify every change with `npx tsc --noEmit`. There is no automated test suite;
 isolated `node -e` sims + the web-export screenshot loop are the verification tools.
+
+---
+
+## Recently shipped (UI legibility + cleanup pass)
+
+Merged to `devMobile` via PR #3. All `tsc`-clean + screenshot-verified (EN/TH).
+
+- ✅ **Flow-rate HUD bar** — a strip under the resource dock shows **net $/min**
+  and **output/min** with a profit/loss/idle dot, derived from real state deltas
+  over a rolling ~30s tick window (`useGameLoop`) so it reflects every system
+  (market / morale / specialization) and freezes on pause.
+- ✅ **Full bilingual (EN/TH)** — every gameplay tab (factory + contracts /
+  supply / recruit / research / company) now goes through `useLang()`'s `t()`;
+  new string blocks in `translations.ts` (`hud`, `nav`, per-screen blocks,
+  `eventsSheet`, `hiddenEventBanner`). (Event-log content still mixed.)
+- ✅ **HUD declutter** — dock trimmed to 4 core stats (money / crude / gas /
+  rep); ESG / morale / specialization / feedstock / season / era moved into the
+  "More Info" sheet, with an alert dot when ESG or morale drops low.
+- ✅ **Dedicated R&D tab** — Research + Perks pulled out of the Company hub into
+  their own `research.tsx` tab (🔬), one tap from the bottom nav.
+- ✅ **Shared `ScreenHeader`** + a guiding empty state on Contracts; fixed the
+  hidden-event banner/nav that pointed at the removed Business/Staff tabs.
+- ✅ **Dead-code removal (~3.7k lines)** — five unregistered legacy screens, two
+  unused factory-view components, and the two dev prototype routes.
+- ✅ **Event-system consolidation** — cut 12 trivial auto-apply random events
+  (free resources / no decision); kept the four real incidents as an ESG-gated,
+  safety-officer-mitigated managed risk. Decisions now live in the choice pool.
+- ✅ **Art-slot pipeline** — `ArtSlot` + `src/art/registry.ts` render labelled
+  placeholders for raster art that can't be code-drawn; `ASSETS_NEEDED.md` is the
+  artist's spec sheet. Drop a PNG in `assets/art/` + register one line to swap in.
 
 ---
 
