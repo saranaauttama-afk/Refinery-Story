@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
+import GameIcon from '../../../src/components/GameIcon'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
@@ -116,6 +117,7 @@ export default function RecruitScreen() {
       {selectedCandidate && selectedTc && (
         <View style={[styles.infoPanel, { borderTopColor: selectedTc.borderColor }]}>
           <View style={styles.infoTop}>
+            <View style={styles.infoRoleIcon}><GameIcon name={`worker-${selectedCandidate.type}`} size={40} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.infoName}>{selectedCandidate.name}</Text>
               <Text style={styles.infoRole}>{selectedWorker ? t(selectedWorker.name) : selectedCandidate.type}{selectedCandidate.isVeteran ? t(rs.veteran) : ''}</Text>
@@ -165,7 +167,8 @@ const styles = StyleSheet.create({
   sceneSignText: { fontSize: 9, fontWeight: '800', color: colors.ink },
   candidatesStage: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 20, paddingHorizontal: 20 },
   infoPanel: { backgroundColor: '#1C2634', borderTopWidth: 2, padding: spacing.md, paddingBottom: spacing.sm, flexShrink: 0 },
-  infoTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
+  infoTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  infoRoleIcon: { marginRight: spacing.sm },
   infoName: { fontSize: 17, fontWeight: '900', color: '#fff' },
   infoRole: { fontSize: 11, color: '#6B8099', marginTop: 2 },
   tierBadge: { borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },

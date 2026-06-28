@@ -17,6 +17,7 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import ArtSlot from '../../../src/components/ArtSlot'
+import GameIcon from '../../../src/components/GameIcon'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { text } from '../../../src/game/translations'
@@ -203,6 +204,7 @@ export default function CompanyScreen() {
             return (
               <View key={employee.id} style={[styles.empCard, nearRetire && styles.empCardRetiring]}>
                 <View style={styles.empTop}>
+                  <View style={styles.empRoleIcon}><GameIcon name={`worker-${employee.type}`} size={34} /></View>
                   <View style={styles.empNameBlock}>
                     <Text style={styles.empName}>{employee.name}{employee.trait === 'veteran' ? ' ⭐' : ''}{nearRetire ? ' 🕰' : ''}</Text>
                     <Text style={styles.empRole}>{w ? t(w.name) : employee.type}</Text>
@@ -395,6 +397,7 @@ const styles = StyleSheet.create({
   empCard: { backgroundColor: colors.white, borderRadius: radii.md, borderWidth: 2, borderColor: colors.creamBorder, padding: spacing.sm },
   empCardRetiring: { borderColor: colors.orange, backgroundColor: '#FFF8F0' },
   empTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  empRoleIcon: { marginRight: spacing.sm },
   empNameBlock: { flex: 1, marginRight: spacing.sm },
   empName: { fontSize: 14, fontWeight: '800', color: colors.ink },
   empRole: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },

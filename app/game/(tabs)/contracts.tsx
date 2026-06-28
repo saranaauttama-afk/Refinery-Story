@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
 import ArtSlot from '../../../src/components/ArtSlot'
+import GameIcon from '../../../src/components/GameIcon'
 import ListRow from '../../../src/components/ListRow'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -36,12 +37,14 @@ const PRODUCT_EMOJI: Record<ProductKey, string> = {
 // Collapsible section component
 function Section({
   title,
+  iconName,
   count,
   readyCount,
   defaultOpen = true,
   children,
 }: {
   title: string
+  iconName?: string
   count: number
   readyCount?: number
   defaultOpen?: boolean
@@ -53,6 +56,7 @@ function Section({
   return (
     <View style={sectionStyles.wrap}>
       <Pressable style={sectionStyles.header} onPress={() => setOpen((v) => !v)}>
+        {iconName ? <View style={sectionStyles.titleIcon}><GameIcon name={iconName} size={22} /></View> : null}
         <Text style={sectionStyles.title}>{title}</Text>
         <View style={sectionStyles.right}>
           {readyCount !== undefined && readyCount > 0 && (
@@ -76,6 +80,7 @@ const sectionStyles = StyleSheet.create({
     backgroundColor: '#1C2634', borderRadius: radii.md,
     paddingHorizontal: spacing.md, paddingVertical: 10,
   },
+  titleIcon: { marginRight: 8 },
   title: { fontSize: 13, fontWeight: '800', color: '#fff', flex: 1 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   readyBadge: { backgroundColor: colors.green, borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 3 },
@@ -177,6 +182,7 @@ export default function ContractsScreen() {
             <Section
               key={group.key}
               title={t(sc.groups[group.key])}
+              iconName={`product-${group.key}`}
               count={groupContracts.length}
               readyCount={readyInGroup}
               defaultOpen={readyInGroup > 0}
