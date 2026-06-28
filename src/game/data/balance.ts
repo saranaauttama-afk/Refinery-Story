@@ -162,9 +162,10 @@ export const ECONOMY_BALANCE = {
   jetFuelPrice: 90,
   petrochemicalsPrice: 150,
   recycledMaterialPrice: 25,
-  // Production Complexity Expansion Phase 3: ~2x petrochemicals per unit --
-  // the "process further" incentive (sell petrochemicals raw at 150, or
-  // feed them into the Polymer Plant for plasticPellets at 300).
+  // Production Complexity Expansion Phase 3: 2x the petrochemicals price -- the
+  // "process further" incentive (sell petrochemicals raw at 150, or feed 6 into
+  // the Polymer Plant for 5 plasticPellets at 300 = $900 -> $1,500, see
+  // POLYMER_PLANT_BALANCE.petrochemicalsPerCycle / B3 fix).
   plasticPelletsPrice: 300,
   crudeCost: 10,
   // Mobile rebalance: refinery-level upgrades were nearly free under the
@@ -683,7 +684,11 @@ export const POLYMER_PLANT_BALANCE = {
   unlockLevel: 20,
   cost: 25000,
   intervalTicks: 25,
-  petrochemicalsPerCycle: 10,
+  // Economy Pass 3 (B3): was 10 petrochem -> 5 pellets, i.e. $1,500 of input for
+  // $1,500 of output -- the top-tier $25k plant added ZERO sell value (pellets
+  // are 2x the price but you got half as many). Cut the input to 6 so processing
+  // is a real value-add: 6 petrochem ($900) -> 5 pellets ($1,500) = +$600/cycle.
+  petrochemicalsPerCycle: 6,
   plasticPelletsPerCycle: 5,
   maxPlasticPelletsStorage: 200,
   // Production Complexity Expansion Phase 2/3 (completed): electricity
