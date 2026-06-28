@@ -1,6 +1,14 @@
+import { useEffect } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated'
 import type { AwardRecord } from '../game/types'
-import { colors, radii, spacing } from '../theme'
+import { colors, fonts, radii, spacing } from '../theme'
 
 const GRADE_COLORS: Record<string, string> = {
   S: colors.gold,
@@ -15,23 +23,58 @@ type AwardModalProps = {
 }
 
 function AwardModal({ record, onDismiss }: AwardModalProps) {
+  // Ceremony entrance: the card springs up, then the grade badge pops in with
+  // a little overshoot a beat later -- a reveal moment rather than a static
+  // dialog. Driven off `record` becoming non-null (the modal stays mounted in
+  // GlobalOverlays, so we key on the prop, not mount).
+  const cardScale = useSharedValue(0.85)
+  const cardOpacity = useSharedValue(0)
+  const badgeScale = useSharedValue(0)
+
+  useEffect(() => {
+    if (!record) return
+    cardScale.value = 0.85
+    cardOpacity.value = 0
+    badgeScale.value = 0
+    cardOpacity.value = withTiming(1, { duration: 200 })
+    cardScale.value = withSpring(1, { damping: 14, stiffness: 180 })
+    badgeScale.value = withDelay(260, withSpring(1, { damping: 9, stiffness: 200 }))
+  }, [record, cardScale, cardOpacity, badgeScale])
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{ scale: cardScale.value }],
+  }))
+  const badgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: badgeScale.value }],
+  }))
+
   if (!record) return null
 
   return (
     <Modal visible transparent animationType="fade">
       <View style={styles.backdrop}>
-        <View style={styles.card}>
+        <Animated.View style={[styles.card, cardStyle]}>
           <Text style={styles.title}>Year {record.year} Results</Text>
-          <View style={[styles.gradeBadge, { backgroundColor: GRADE_COLORS[record.grade] ?? colors.steelMid }]}>
+          <Animated.View style={[styles.gradeBadge, badgeStyle, { backgroundColor: GRADE_COLORS[record.grade] ?? colors.steelMid }]}>
             <Text style={styles.gradeText}>{record.grade}</Text>
-          </View>
+          </Animated.View>
           <Text style={styles.row}>Score: {record.score}</Text>
           <Text style={styles.row}>Money earned: ${record.moneyEarned.toLocaleString()}</Text>
           <Text style={styles.row}>Payroll: ${record.payroll.toLocaleString()}</Text>
+          {record.maintenance ? (
+            <Text style={styles.row}>Maintenance: ${record.maintenance.toLocaleString()}</Text>
+          ) : null}
           <Text style={styles.row}>Net profit: ${record.netProfit.toLocaleString()}</Text>
           <Text style={styles.row}>Cash bonus: +${record.cashReward.toLocaleString()}</Text>
           <Text style={styles.row}>Gasoline produced: {record.gasolineProduced.toLocaleString()}</Text>
           <Text style={styles.row}>Contracts completed: {record.contractsCompleted}</Text>
+          {typeof record.morale === 'number' && (
+            <Text style={styles.row}>
+              Staff morale: {record.morale}%{' '}
+              {record.morale >= 75 ? '😊' : record.morale < 40 ? '😟' : '😐'}
+            </Text>
+          )}
           {record.couldNotAfford && (
             <Text style={styles.warning}>⚠️ Payroll exceeded cash on hand -- reputation took a small hit.</Text>
           )}
@@ -53,7 +96,7 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
           <Pressable style={styles.dismissButton} onPress={onDismiss}>
             <Text style={styles.dismissLabel}>Continue</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   )
@@ -77,8 +120,8 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 19,
+    fontFamily: fonts.display,
     color: colors.ink,
     marginBottom: spacing.sm,
   },
@@ -94,8 +137,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   gradeText: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 26,
+    fontFamily: fonts.display,
     color: colors.ink,
   },
   row: {

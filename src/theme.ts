@@ -30,6 +30,19 @@ export const colors = {
   red: '#C0392B',
 } as const
 
+// Custom display font (Baloo 2 -- friendly, rounded, readable) loaded at app
+// start in app/_layout.tsx. Until the font finishes loading these family
+// names fall back to the system font. Applied to the game's "hero" text
+// (company name, resource dock, headlines, celebration modals) to give the
+// UI a cozy game identity instead of the default system typeface. Roll out
+// to more screens by swapping a style's fontWeight for one of these.
+export const fonts = {
+  display: 'Baloo2_800ExtraBold', // big celebratory titles
+  heading: 'Baloo2_700Bold', // section headers, badges, values
+  body: 'Baloo2_500Medium', // labels, body copy
+  regular: 'Baloo2_400Regular',
+} as const
+
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -44,6 +57,13 @@ export const radii = {
   lg: 18,
   pill: 999,
 } as const
+
+// Vertical clearance (px from screen top) for transient overlay banners
+// (hidden-event / era / combo / milestone). Kept below the persistent top HUD
+// + resource dock on the factory screen so a banner never covers the player's
+// money/crude/gas read-out. Global overlays render outside the SafeAreaView,
+// so this also accounts for the status bar / notch area.
+export const OVERLAY_BANNER_TOP = 132
 
 // The floating bottom tab bar (app/game/(tabs)/_layout.tsx) is
 // position: 'absolute' with its own height + bottom margin, so React

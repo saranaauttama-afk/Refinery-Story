@@ -16,7 +16,7 @@ import type {
 } from '../types'
 import { text } from '../translations'
 import { createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
-import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, PLANT_PRODUCTION } from '../data/balance'
+import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, MORALE_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../data/hiddenEvents'
 import { BUILDINGS } from '../data/buildings'
@@ -94,15 +94,26 @@ function getSafeGridLevels(value: unknown, length: number): number[] {
   return result
 }
 
+// Migration: arrivesAt used to be a wall-clock timestamp (Date.now()+delayMs,
+// ~1.7e12). It is now a tickCount (well under ~1e7 even after long sessions).
+// Any value that large is a pre-migration save -- rebase it to 0 so the
+// crude the player already paid for is delivered on the next tick instead of
+// being stuck forever.
+const WALLCLOCK_ARRIVES_AT_THRESHOLD = 1_000_000_000
+
 function getSafePendingShipments(value: unknown): PendingShipment[] {
   if (!Array.isArray(value)) return []
-  return value.filter(
-    (item): item is PendingShipment =>
-      isRecord(item) &&
-      typeof item.id === 'number' &&
-      typeof item.amount === 'number' &&
-      typeof item.arrivesAt === 'number',
-  )
+  return value
+    .filter(
+      (item): item is PendingShipment =>
+        isRecord(item) &&
+        typeof item.id === 'number' &&
+        typeof item.amount === 'number' &&
+        typeof item.arrivesAt === 'number',
+    )
+    .map((item) =>
+      item.arrivesAt >= WALLCLOCK_ARRIVES_AT_THRESHOLD ? { ...item, arrivesAt: 0 } : item,
+    )
 }
 
 function getSafeWorkerCounts(value: unknown, fallback: WorkerCounts) {
@@ -545,12 +556,23 @@ export function sanitizeLoadedGameState(value: unknown) {
     gridLevels: getSafeGridLevels(value.gridLevels, grid.length),
     gridExpansionLevel: getSafeNumber(value.gridExpansionLevel, fallback.gridExpansionLevel),
     prototypeCompleted: getSafeBoolean(value.prototypeCompleted, fallback.prototypeCompleted),
+    legendAchieved: getSafeBoolean(value.legendAchieved, fallback.legendAchieved),
     everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
     refineryName: getSafeString(value.refineryName, DEFAULT_REFINERY_NAME).trim().slice(0, 40) || DEFAULT_REFINERY_NAME,
     pendingShipments: getSafePendingShipments(value.pendingShipments),
     standingOrderCooldowns: getSafeStandingOrderCooldowns(value.standingOrderCooldowns),
     feedstockPriority: getSafeFeedstockPriority(value),
+    productMarket: getSafeProductMarket(value),
+    specialization: (value.specialization === 'green' || value.specialization === 'industrial') ? value.specialization as GameState['specialization'] : null,
+    staffMorale: Math.max(
+      MORALE_BALANCE.minMorale,
+      Math.min(MORALE_BALANCE.maxMorale, getSafeNumber(value.staffMorale, MORALE_BALANCE.startingMorale)),
+    ),
+    lastStaffEventTick: getSafeNumber(
+      value.lastStaffEventTick,
+      getSafeNumber(value.tickCount, fallback.tickCount),
+    ),
     // productInventory is now live gameplay state for all secondary products.
     // gasoline mirrors value.gasoline (source of truth for the primary product).
     // Previously asphalt/jetFuel/lubricants/petrochemicals were reset to 0 on
@@ -609,6 +631,22 @@ function getSafeStandingOrderCooldowns(
 // (created before this feature) have no feedstockPriority at all, so
 // every plant defaults to 100% -- identical to the proportional-sharing
 // behavior they already had.
+// Dynamic Market saturation levels. Old saves have none -> {} (every product
+// at full price). Each entry is clamped to (0, 1].
+function getSafeProductMarket(value: unknown): GameState['productMarket'] {
+  const raw = isRecord(value) ? value.productMarket : undefined
+  const result: GameState['productMarket'] = {}
+  if (isRecord(raw)) {
+    for (const key of Object.keys(raw) as (keyof GameState['productMarket'])[]) {
+      const entry = raw[key]
+      if (typeof entry === 'number' && Number.isFinite(entry) && entry > 0 && entry <= 1) {
+        result[key] = entry
+      }
+    }
+  }
+  return result
+}
+
 function getSafeFeedstockPriority(value: unknown): GameState['feedstockPriority'] {
   const raw = isRecord(value) ? value.feedstockPriority : undefined
   const result: GameState['feedstockPriority'] = {

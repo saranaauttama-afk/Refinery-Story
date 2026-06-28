@@ -4,10 +4,27 @@ import Svg, { Polygon } from 'react-native-svg'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 
-import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE } from '../buildingIdentity'
+import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE, getTileStatusBadge } from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
+import PlantSmoke from './PlantSmoke'
+
+// Categories whose plants visibly "work" (puff smoke/steam) while running.
+// Storage/research/support buildings don't process anything, so they stay
+// still. Power burns crude (sootier tint); production/waste give off pale
+// steam.
+// Per-tile row,col coordinate labels were a development aid for tuning the
+// isometric grid. Off for normal play -- flip to true if you need to debug
+// tile placement again.
+const SHOW_DEBUG_LABELS = false
+
+const SMOKING_CATEGORIES = new Set(['production', 'power', 'waste'])
+const SMOKE_COLOR_BY_CATEGORY: Record<string, string> = {
+  production: 'rgba(214, 206, 196, 1)',
+  power: 'rgba(120, 116, 110, 1)',
+  waste: 'rgba(208, 224, 220, 1)',
+}
 
 const TILE_SCALE = 1.5
 const TILE_WIDTH = 84 * TILE_SCALE
@@ -187,6 +204,8 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function FactoryDiamondGroundView({
+  game,
+  derived,
   grid,
   gridLevels,
   containerWidth,
@@ -194,6 +213,7 @@ function FactoryDiamondGroundView({
   displayGridSize,
   anchorGridSize,
   onCellPress,
+  isActive = true,
   comboHintCells = [],
 }: FactoryDiamondGroundViewProps) {
   const activeCols = Math.round(Math.sqrt(grid.length))
@@ -318,7 +338,7 @@ function FactoryDiamondGroundView({
                       strokeWidth={0.8}
                     />
                   </Svg>
-                  <Text style={styles.debugLabelDisabled}>{debugLabel}</Text>
+                  {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabelDisabled}>{debugLabel}</Text> : null}
                 </View>
               )
             }
@@ -341,7 +361,7 @@ function FactoryDiamondGroundView({
                     />
                   </Svg>
                   <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
-                  <Text style={styles.debugLabel}>{debugLabel}</Text>
+                  {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
                 </Pressable>
               )
             }
@@ -353,6 +373,16 @@ function FactoryDiamondGroundView({
             const level = gridLevels[activeIndex] ?? 1
             const plantImage = getPlantImageSpec(cell, level)
             const plantImageHeight = plantImage ? PLANT_IMAGE_WIDTH / plantImage.aspectRatio : 0
+
+            // "Working" smoke: only for processing categories, and only when
+            // the plant has no blocking/idle/full status this tick (a null
+            // badge means it's genuinely humming). Gated on isActive so an
+            // out-of-crude refinery falls silent. Ties the cosmetic directly
+            // to real production state -- fix the shortage, smoke returns.
+            const isSmoking =
+              isActive &&
+              SMOKING_CATEGORIES.has(category) &&
+              getTileStatusBadge(cell, activeIndex, game, derived) === null
 
             return (
               <Pressable
@@ -386,7 +416,14 @@ function FactoryDiamondGroundView({
                 ) : (
                   <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
                 )}
-                {!plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+                {isSmoking ? (
+                  <PlantSmoke
+                    width={TILE_WIDTH}
+                    topY={TILE_HEIGHT - (plantImage ? plantImageHeight : TILE_HEIGHT) + 8 * TILE_SCALE}
+                    color={SMOKE_COLOR_BY_CATEGORY[category] ?? SMOKE_COLOR_BY_CATEGORY.production}
+                  />
+                ) : null}
+                {SHOW_DEBUG_LABELS && !plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
                 {!plantImage ? (
                   <View style={styles.levelBadge}>
                     <Text style={styles.levelText}>L{level}</Text>

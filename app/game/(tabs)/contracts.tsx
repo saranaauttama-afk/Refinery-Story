@@ -3,24 +3,28 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
+import ArtSlot from '../../../src/components/ArtSlot'
 import ListRow from '../../../src/components/ListRow'
+import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
+import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { getContractProgress } from '../../../src/game/utils/gameCalculations'
+import { text } from '../../../src/game/translations'
 import type { ActiveContract } from '../../../src/game/types'
 
 // Product group config
 type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
 
-const PRODUCT_GROUPS: { key: ProductKey; label: string; icon: string; field: keyof ActiveContract }[] = [
-  { key: 'gasoline',         label: 'Gasoline',         icon: 'gasoline',        field: 'gasolineRequired' },
-  { key: 'asphalt',          label: 'Asphalt',          icon: 'asphalt',         field: 'asphaltRequired' },
-  { key: 'jetFuel',          label: 'Jet Fuel',         icon: 'jetFuel',         field: 'jetFuelRequired' },
-  { key: 'lubricants',       label: 'Lubricants',       icon: 'lubricants',      field: 'lubricantsRequired' },
-  { key: 'petrochemicals',   label: 'Petrochemicals',   icon: 'petrochemicals',  field: 'petrochemicalsRequired' },
-  { key: 'recycledMaterial', label: 'Recycled Material',icon: 'recycledMaterial',field: 'recycledMaterialRequired' },
-  { key: 'plasticPellets',   label: 'Plastic Pellets',  icon: 'plasticPellets',  field: 'plasticPelletsRequired' },
+const PRODUCT_GROUPS: { key: ProductKey; icon: string; field: keyof ActiveContract }[] = [
+  { key: 'gasoline',         icon: 'gasoline',        field: 'gasolineRequired' },
+  { key: 'asphalt',          icon: 'asphalt',         field: 'asphaltRequired' },
+  { key: 'jetFuel',          icon: 'jetFuel',         field: 'jetFuelRequired' },
+  { key: 'lubricants',       icon: 'lubricants',      field: 'lubricantsRequired' },
+  { key: 'petrochemicals',   icon: 'petrochemicals',  field: 'petrochemicalsRequired' },
+  { key: 'recycledMaterial', icon: 'recycledMaterial',field: 'recycledMaterialRequired' },
+  { key: 'plasticPellets',   icon: 'plasticPellets',  field: 'plasticPelletsRequired' },
 ]
 
 const PRODUCT_EMOJI: Record<ProductKey, string> = {
@@ -43,6 +47,7 @@ function Section({
   defaultOpen?: boolean
   children: React.ReactNode
 }) {
+  const { t } = useLang()
   const [open, setOpen] = useState(defaultOpen)
   if (count === 0) return null
   return (
@@ -52,7 +57,7 @@ function Section({
         <View style={sectionStyles.right}>
           {readyCount !== undefined && readyCount > 0 && (
             <View style={sectionStyles.readyBadge}>
-              <Text style={sectionStyles.readyBadgeText}>{readyCount} ready</Text>
+              <Text style={sectionStyles.readyBadgeText}>{t(text.contracts.screen.ready(readyCount))}</Text>
             </View>
           )}
           <Text style={sectionStyles.count}>{count}</Text>
@@ -114,6 +119,8 @@ const subStyles = StyleSheet.create({
 export default function ContractsScreen() {
   const router = useRouter()
   const { game, loaded, derived, completeContract, claimHiddenEvent, autoTrade } = useGame()
+  const { t } = useLang()
+  const sc = text.contracts.screen
 
   if (!loaded || !game || !derived) {
     return <SafeAreaView style={styles.loadingScreen}><ActivityIndicator color={colors.orange} size="large" /></SafeAreaView>
@@ -125,23 +132,33 @@ export default function ContractsScreen() {
     const { have, need } = getContractProgress(c, game)
     return have >= need
   }).length
+  const mysteryEvents = HIDDEN_EVENTS.filter(
+    (e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked',
+  )
+  const hasAnyContent = mysteryEvents.length > 0 || unlockedContracts.length > 0
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable style={styles.closeBtn} onPress={() => router.back()}>
-          <Text style={styles.closeBtnText}>X</Text>
-        </Pressable>
-        <Text style={styles.title}>Contracts</Text>
-        {totalReady > 0 && (
-          <View style={styles.badge}><Text style={styles.badgeText}>{totalReady} ready</Text></View>
-        )}
-      </View>
+      <ScreenHeader
+        title={t(sc.title)}
+        badge={totalReady > 0 ? t(sc.ready(totalReady)) : undefined}
+        onClose={() => router.back()}
+      />
 
       <ScrollView contentContainerStyle={styles.list}>
+        <ArtSlot id="contracts_header" width="100%" height={84} spec="1080×260" caption="Loading dock / cargo trucks banner" />
+
+        {!hasAnyContent && (
+          <View style={styles.emptyState}>
+            <ArtSlot id="contracts_empty" width={140} height={140} spec="480×480" radius={70} caption="Empty clipboard / no orders" />
+            <Text style={styles.emptyTitle}>{t(sc.emptyTitle)}</Text>
+            <Text style={styles.emptyHint}>{t(sc.emptyHint)}</Text>
+          </View>
+        )}
+
         {/* Mystery contracts */}
-        {HIDDEN_EVENTS.filter((e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked').map((event) => (
-          <ListRow key={event.key} title="??? Mystery Contract" subtitle="Something unusual happened." badge="???" actionLabel="Reveal" onPress={() => claimHiddenEvent(event.key)} />
+        {mysteryEvents.map((event) => (
+          <ListRow key={event.key} title={t(sc.mysteryTitle)} subtitle={t(sc.mysterySubtitle)} badge="???" actionLabel={t(sc.reveal)} onPress={() => claimHiddenEvent(event.key)} />
         ))}
 
         {/* Product groups */}
@@ -159,7 +176,7 @@ export default function ContractsScreen() {
           return (
             <Section
               key={group.key}
-              title={group.label}
+              title={t(sc.groups[group.key])}
               count={groupContracts.length}
               readyCount={readyInGroup}
               defaultOpen={readyInGroup > 0}
@@ -178,7 +195,7 @@ export default function ContractsScreen() {
                 // to avoid cards jumping around as inventory fluctuates
                 const sortedVisible = [...visibleContracts].sort((a, b) => a.id - b.id)
                 return (
-                  <SubSection label={"Active (Tier " + activeTier + ")"} count={visibleContracts.length} defaultOpen>
+                  <SubSection label={t(sc.activeTier(activeTier ?? 1))} count={visibleContracts.length} defaultOpen>
                     {sortedVisible.map((contract) => {
                       const { have, need, unit } = getContractProgress(contract, game)
                       const ready = have >= need
@@ -186,16 +203,16 @@ export default function ContractsScreen() {
                       return (
                         <View key={contract.id}>
                           <ListRow
-                            title={contract.name.en}
+                            title={t(contract.name)}
                             subtitle={have + "/" + need + " " + unit + " +$" + contract.currentReward.toLocaleString() + " +" + contract.currentRpReward + "RP"}
-                            actionLabel="Complete"
+                            actionLabel={t(sc.complete)}
                             disabled={!ready}
-                            badge={ready ? 'OK' : contract.unlockLevel === game.refineryLevel ? 'NEW' : undefined}
+                            badge={ready ? t(sc.ok) : contract.unlockLevel === game.refineryLevel ? t(sc.newBadge) : undefined}
                             onPress={() => { if (ready) completeContract(contract) }}
                           />
                           {showAutoTradeHint && (
                             <Text style={styles.autoTradeHint}>
-                              Auto-trade is selling your stock — pause it in Supply to accumulate
+                              {t(sc.autoTradeHint)}
                             </Text>
                           )}
                         </View>
@@ -203,22 +220,22 @@ export default function ContractsScreen() {
                     })}
                     {hiddenCount > 0 && (
                       <Text style={styles.lockedHint}>
-                        + {hiddenCount} higher-tier contract{hiddenCount > 1 ? 's' : ''} unlock after completing this tier
+                        {t(sc.higherTierHint(hiddenCount))}
                       </Text>
                     )}
                   </SubSection>
                 )
               })()}
 
-              <SubSection label="Completed" count={completedContracts.length} defaultOpen={false}>
+              <SubSection label={t(sc.completed)} count={completedContracts.length} defaultOpen={false}>
                 {completedContracts.map((contract) => {
                   const { have, need, unit } = getContractProgress(contract, game)
                   return (
                     <ListRow
                       key={contract.id}
-                      title={contract.name.en}
+                      title={t(contract.name)}
                       subtitle={have + "/" + need + " " + unit}
-                      actionLabel="Done"
+                      actionLabel={t(sc.done)}
                       done
                       onPress={() => {}}
                     />
@@ -236,16 +253,11 @@ export default function ContractsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    backgroundColor: '#1C2634', flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm,
-  },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  closeBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-  title: { flex: 1, fontSize: 20, fontWeight: '900', color: '#fff' },
-  badge: { backgroundColor: colors.green, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
+  emptyState: { alignItems: 'center', paddingTop: 56, paddingHorizontal: spacing.lg, gap: 10 },
+  emptyIcon: { fontSize: 44 },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.ink },
+  emptyHint: { fontSize: 13, color: colors.inkMuted, textAlign: 'center', lineHeight: 19 },
   autoTradeHint: {
     fontSize: 10,
     color: colors.orange,

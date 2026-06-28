@@ -157,6 +157,9 @@ export type GameState = {
   // CONTRACTS so claimed hidden contracts show up and are completable
   // exactly like normal ones, just sourced from here instead.
   hiddenContracts: Contract[]
+  // Specialization (Roadmap feature 2): permanent strategic choice, null until
+  // the player picks at Level 5.
+  specialization: SpecializationPath | null
   // System 2: Refinery Upgrade Perk Tree
   upgradePoints: number
   unlockedPerks: PerkKey[]
@@ -171,6 +174,9 @@ export type GameState = {
   gridLevels: number[]
   gridExpansionLevel: number
   prototypeCompleted: boolean
+  // Endgame spine: set once every ENDGAME_GOALS objective is complete (the
+  // permanent "Industry Legend" status). Triggers a one-time celebration.
+  legendAchieved: boolean
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
   // Player-chosen name for their refinery, shown in the hero panel alongside
@@ -188,6 +194,18 @@ export type GameState = {
   // feedstock availability). Has no effect when feedstock supply covers
   // total demand -- every plant still gets its normal full output then.
   feedstockPriority: Record<'lubricantPlant' | 'jetFuelPlant' | 'petrochemicalPlant', number>
+  // Dynamic Market: per-product demand-saturation level (1.0 = full price).
+  // Selling a product lowers its level; it recovers toward 1 over time, so
+  // flooding the market with one product crashes its own price. A missing
+  // entry means 1.0 (full price). Keyed by ProductKey. See MARKET_BALANCE and
+  // getProductMarketLevel.
+  productMarket: Partial<Record<ProductKey, number>>
+  // People/morale layer (Roadmap feature 4): 0-100, drifts toward equilibrium
+  // each tick. High morale boosts worker effectiveness; low morale penalizes
+  // it. Reacts to level-ups, hires, retirements, wage payments, year-end
+  // grade, and staff choice events.
+  staffMorale: number
+  lastStaffEventTick: number
 }
 
 export type BuildingConfig = {
@@ -304,6 +322,11 @@ export type Employee = {
   hiredOnYear?: number
 }
 
+// --- Specialization (Roadmap feature 2) ---
+// Permanent one-time choice at Level 5. Each path grants exclusive bonuses and a
+// trade-off, forcing a strategic direction. See SPECIALIZATION_BALANCE.
+export type SpecializationPath = 'green' | 'industrial'
+
 // --- System 2: Refinery Upgrade Perk Tree ---
 // Spend upgradePoints (earned on refinery level-up) on perks across 3 branches.
 export type PerkBranch = 'efficiency' | 'capacity' | 'quality'
@@ -372,11 +395,15 @@ export type AwardRecord = {
   score: number
   cashReward: number
   payroll: number
+  // Annual building upkeep deducted this year (Economy audit money sink). 0 for
+  // records saved before this field existed.
+  maintenance?: number
   netProfit: number
   // True if cash on hand couldn't fully cover payroll this year (a small
   // reputation penalty was applied). Surfaced in the ceremony so the player
   // understands why reputation dropped — previously computed but discarded.
   couldNotAfford: boolean
+  morale?: number
   // Annual Ranking (Charm Pass follow-up): 3 fictional rivals + the player's
   // rank among all 4. Empty array for records saved before this feature —
   // the ceremony hides the ranking section in that case.
@@ -400,23 +427,17 @@ export type ActiveWorkerItem = WorkerConfig & {
   count: number
 }
 
+// Random events are now purely *incidents* — small setbacks gated by ESG
+// (getIncidentChance) and softened by safety officers (eventPenaltyMultiplier),
+// so the random layer is a managed risk rather than a stream of free bonuses.
+// The old trivial positive/freebie events were cut; their decision-flavored
+// equivalents already live in the choice-event pool (equipmentEmergency,
+// qualityAlert, supplyChainDelay, communityComplaint, ...).
 export type RandomEventKey =
-  | 'crudeDiscount'
-  | 'machineTuneUp'
   | 'minorLeak'
-  | 'qualityBonus'
-  | 'marketDemandSpike'
-  | 'safetyInspection'
   | 'equipmentWear'
-  | 'efficientBatch'
-  | 'localNewsCoverage'
-  | 'supplierDiscount'
-  | 'equipmentInspection'
-  | 'workerSuggestion'
   | 'storageContamination'
-  | 'communityVisit'
   | 'distillationHiccup'
-  | 'feedstockSurplus'
 
 export type RandomEvent = {
   key: RandomEventKey
@@ -462,6 +483,11 @@ export type ChoiceEventKey =
   | 'trainingRequest'
   | 'communityComplaint'
   | 'rushOrder'
+  | 'standoutHire'
+  | 'teamFeud'
+  | 'raiseRequest'
+  | 'teamOuting'
+  | 'specializationChoice'
 
 export type ChoiceEvent = {
   key: ChoiceEventKey
@@ -481,6 +507,8 @@ export type ShipmentKey =
 export type PendingShipment = {
   id: number
   amount: number
+  // tickCount at which this shipment arrives (NOT a wall-clock timestamp) --
+  // so deliveries pause with the rest of the sim when the app is closed.
   arrivesAt: number
 }
 
@@ -675,6 +703,9 @@ export type DerivedStats = {
   productionRate: number
   progressPercent: number
   sellPrice: number
+  // Current crude spot price (Dynamic Market wave). Bulk shipments ignore this.
+  crudePrice: number
+  moraleMultiplier: number
   seasonalGasolineMultiplier: number
   gameClock: GameClock
   sellPriceMultiplier: number

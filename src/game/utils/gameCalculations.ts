@@ -25,10 +25,16 @@ import {
   STARTING_BALANCE,
   STORAGE_BALANCE,
   TANK_FARM_BALANCE,
+  LAYOUT_BALANCE,
+  MAINTENANCE_BALANCE,
+  MARKET_BALANCE,
+  MORALE_BALANCE,
+  SPECIALIZATION_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
 } from '../data/balance'
+import { BUILDINGS } from '../data/buildings'
 import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
 import { getCurrentEra, getNextEra } from '../data/eras'
@@ -40,10 +46,11 @@ import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
+import { areAllEndgameGoalsComplete } from '../data/endgameGoals'
 import { getStaffName } from '../data/staffNames'
 import { generateRecruitmentPool, RECRUITMENT_BALANCE } from '../data/recruitment'
 import { WORKERS } from '../data/workers'
-import { serializeBilingualText, text } from '../translations'
+import { bilingual, serializeBilingualText, text } from '../translations'
 import type {
   ActiveWorkerItem,
   AwardGrade,
@@ -68,6 +75,7 @@ import type {
   MilestoneProgress,
   PendingShipment,
   PerkKey,
+  ProductKey,
   RandomEvent,
   ReputationTier,
   WorkerCounts,
@@ -196,6 +204,7 @@ export function createInitialGameState(): GameState {
     gridLevels: Array(EXPANSION_BALANCE[0].cells).fill(1),
     gridExpansionLevel: 0,
     prototypeCompleted: false,
+    legendAchieved: false,
     everBoughtCrude: false,
     starterGuideDismissed: false,
     refineryName: DEFAULT_REFINERY_NAME,
@@ -206,6 +215,10 @@ export function createInitialGameState(): GameState {
       jetFuelPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
       petrochemicalPlant: FEEDSTOCK_PRIORITY_BALANCE.default,
     },
+    productMarket: {},
+    specialization: null,
+    staffMorale: MORALE_BALANCE.startingMorale,
+    lastStaffEventTick: 0,
     productInventory: {
       gasoline: 0,
       asphalt: 0,
@@ -263,19 +276,20 @@ export function addLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, CORE_BALANCE.maxLogItems)
 }
 
-export function getRandomEvent(game: GameState) {
+// Rolls whether an incident fires this cycle, and which one. Returns null when
+// nothing happens — the roll is ESG-gated (getIncidentChance: lower ESG → more
+// incidents), so a clean operation genuinely sees fewer setbacks. With the
+// trivial freebie events removed, the random layer is now purely this managed
+// risk rather than a steady drip of free resources every ~30s.
+export function getRandomEvent(game: GameState): RandomEvent | null {
+  if (Math.random() >= getIncidentChance(game.esgScore)) return null
   const hasDistillationChain =
     calculateDerivedStats(game).maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage
   const eligible = RANDOM_EVENTS.filter(
     (event) => !event.requiresFeedstockChain || hasDistillationChain,
   )
-  const incidentEvents = eligible.filter((event) => event.isIncident)
-  const otherEvents = eligible.filter((event) => !event.isIncident)
-  const pickIncident =
-    incidentEvents.length > 0 && Math.random() < getIncidentChance(game.esgScore)
-  const pool = pickIncident || otherEvents.length === 0 ? incidentEvents : otherEvents
-  const randomIndex = Math.floor(Math.random() * pool.length)
-  return pool[randomIndex]
+  if (eligible.length === 0) return null
+  return eligible[Math.floor(Math.random() * eligible.length)]
 }
 
 function getEmptyBuildingCounts(): BuildingCounts {
@@ -692,12 +706,19 @@ export function getBuildingEffectLines(
     case 'laboratory': {
       const rate = BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[1] ?? 0.1
       const count = derived.buildingCounts.laboratory
+      const polluted = hasPollutingNeighbor(game.grid, cellIndex)
       return [
         {
           label: 'Research points from contracts',
           value: `+${Math.round(rate * 100)}%`,
           bonus: count > 1 ? `(x${count} labs = +${Math.round(rate * 100 * count)}% total)` : undefined,
         },
+        ...(polluted
+          ? [{
+              label: '⚠️ Next to a polluting plant',
+              value: `−${Math.round(LAYOUT_BALANCE.dirtyPenaltyRate * 100)}% bonus`,
+            }]
+          : []),
       ]
     }
     case 'maintenanceWorkshop': {
@@ -716,12 +737,19 @@ export function getBuildingEffectLines(
     case 'salesOffice': {
       const rate = BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[1] ?? 0.1
       const count = derived.buildingCounts.salesOffice
+      const polluted = hasPollutingNeighbor(game.grid, cellIndex)
       return [
         {
           label: 'Contract rewards',
           value: `+${Math.round(rate * 100)}%`,
           bonus: count > 1 ? `(x${count} offices = +${Math.round(rate * 100 * count)}% total)` : undefined,
         },
+        ...(polluted
+          ? [{
+              label: '⚠️ Next to a polluting plant',
+              value: `−${Math.round(LAYOUT_BALANCE.dirtyPenaltyRate * 100)}% bonus`,
+            }]
+          : []),
       ]
     }
     default:
@@ -863,10 +891,11 @@ export function shouldRetire(employee: { hiredOnYear?: number }, businessYear: n
 export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {
   const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
   const safetyEffectiveSum = getEffectiveWorkerSum(game.employees, 'safetyOfficer')
-  return (
-    safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick -
-    dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick
-  )
+  const regen = safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick *
+    (game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.esgRegenMultiplier : 1)
+  const decay = dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick *
+    (game.specialization === 'industrial' ? SPECIALIZATION_BALANCE.industrial.esgDecayMultiplier : 1)
+  return regen - decay
 }
 
 // --- Production Complexity Expansion Phase 1: waste byproduct ---
@@ -995,6 +1024,57 @@ export function getProductSellPrice(
   return Math.round(base * productSellMultiplier * demandMultiplier)
 }
 
+// --- Dynamic Market (Roadmap feature 1) ---
+
+// Crude spot-price multiplier: a deterministic wave from tickCount (replayable,
+// no stored RNG). Oscillates around 1.0 by +/- crudeAmplitude.
+export function getCrudeMarketMultiplier(tickCount: number): number {
+  return 1 + MARKET_BALANCE.crudeAmplitude * Math.sin((2 * Math.PI * tickCount) / MARKET_BALANCE.crudePeriodTicks)
+}
+
+// Current crude spot price (what buyCrude / auto-trade pay per unit). Bulk
+// shipments keep their own fixed pre-negotiated prices.
+export function getCrudePrice(tickCount: number): number {
+  return Math.max(1, Math.round(ECONOMY_BALANCE.crudeCost * getCrudeMarketMultiplier(tickCount)))
+}
+
+// A product's current demand-saturation level (1.0 = full price), clamped to
+// [saturationFloor, 1]. Missing entry = 1.0.
+export function getProductMarketLevel(game: GameState, productKey: ProductKey): number {
+  const raw = game.productMarket[productKey] ?? 1
+  return Math.max(MARKET_BALANCE.saturationFloor, Math.min(1, raw))
+}
+
+// Pure: apply a sale of `units` of `productKey`, pushing its saturation down
+// (floored). Returns a new productMarket map.
+export function applyProductSaturation(
+  productMarket: GameState['productMarket'],
+  productKey: ProductKey,
+  units: number,
+): GameState['productMarket'] {
+  if (units <= 0) return productMarket
+  const current = productMarket[productKey] ?? 1
+  const next = Math.max(
+    MARKET_BALANCE.saturationFloor,
+    current - units * MARKET_BALANCE.saturationPerUnitSold,
+  )
+  return { ...productMarket, [productKey]: next }
+}
+
+// Pure: recover every below-1 product toward 1.0 by one tick's worth. Returns
+// the same reference when nothing changed (cheap no-op for the common case).
+export function recoverProductMarket(productMarket: GameState['productMarket']): GameState['productMarket'] {
+  let changed = false
+  const next: GameState['productMarket'] = { ...productMarket }
+  for (const key of Object.keys(next) as ProductKey[]) {
+    const level = next[key]
+    if (level === undefined || level >= 1) continue
+    next[key] = Math.min(1, level + MARKET_BALANCE.saturationRecoveryPerTick)
+    changed = true
+  }
+  return changed ? next : productMarket
+}
+
 function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem[] {
   const safeCounts = {
     ...getEmptyWorkerCounts(),
@@ -1005,6 +1085,22 @@ function getActiveWorkers(workerCounts: Partial<WorkerCounts>): ActiveWorkerItem
     ...worker,
     count: safeCounts[worker.key],
   }))
+}
+
+// Layout depth (feature 3): true if the cell at `cellIndex` is orthogonally
+// adjacent to a heavy polluting plant. Used to penalize sensitive buildings
+// (lab / sales office) placed next to the dirty production core.
+export function hasPollutingNeighbor(grid: GridCell[], cellIndex: number): boolean {
+  const cols = Math.round(Math.sqrt(grid.length))
+  const row = Math.floor(cellIndex / cols)
+  const col = cellIndex % cols
+  const neighbors: (GridCell | null)[] = [
+    col > 0 ? grid[cellIndex - 1] : null,
+    col < cols - 1 ? grid[cellIndex + 1] : null,
+    row > 0 ? grid[cellIndex - cols] : null,
+    row < cols - 1 ? grid[cellIndex + cols] : null,
+  ]
+  return neighbors.some((n) => n !== null && LAYOUT_BALANCE.pollutingBuildings.includes(n))
 }
 
 function getComboStats(grid: GridCell[]): ComboStats {
@@ -1255,6 +1351,31 @@ function getNextReputationTier(reputation: number) {
   return REPUTATION_TIERS.find((tier) => tier.minimumReputation > reputation)
 }
 
+export function getMoraleMultiplier(morale: number): number {
+  if (morale < MORALE_BALANCE.lowMoraleThreshold) return MORALE_BALANCE.lowMoralePenalty
+  if (morale > MORALE_BALANCE.highMoraleThreshold) {
+    const range = MORALE_BALANCE.maxMorale - MORALE_BALANCE.highMoraleThreshold
+    const above = morale - MORALE_BALANCE.highMoraleThreshold
+    return 1 + (MORALE_BALANCE.highMoraleBonus - 1) * (above / range)
+  }
+  return 1
+}
+
+export function applyMoraleDrift(morale: number): number {
+  const { equilibrium, driftPerTick, minMorale, maxMorale } = MORALE_BALANCE
+  if (morale > equilibrium) {
+    return Math.max(equilibrium, morale - driftPerTick)
+  }
+  if (morale < equilibrium) {
+    return Math.min(equilibrium, morale + driftPerTick)
+  }
+  return morale
+}
+
+export function clampMorale(morale: number): number {
+  return Math.max(MORALE_BALANCE.minMorale, Math.min(MORALE_BALANCE.maxMorale, morale))
+}
+
 export function calculateDerivedStats(game: GameState): DerivedStats {
   const buildingCounts = countBuildings(game.grid)
   const comboStats = getComboStats(game.grid)
@@ -1302,6 +1423,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     perkSellPriceBonusRate += effect.sellPrice ?? 0
   }
 
+  // --- Specialization bonuses (Roadmap feature 2) ---
+  const isGreen = game.specialization === 'green'
+  const isIndustrial = game.specialization === 'industrial'
+
   // --- System 3: Tech Era bonuses ---
   const currentEra = getCurrentEra(game.unlockedResearchCount, game.refineryLevel)
   const nextEra = getNextEra(currentEra.index)
@@ -1326,14 +1451,17 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       distillationUpgradeBonusRate +=
         BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel[level] ?? 0
     } else if (cell === 'laboratory') {
+      // Layout depth: a lab next to a polluting plant loses part of its bonus.
+      const penalty = hasPollutingNeighbor(game.grid, i) ? 1 - LAYOUT_BALANCE.dirtyPenaltyRate : 1
       laboratoryRpBonusTotal +=
-        BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[level] ?? 0.1
+        (BUILDING_UPGRADE_BALANCE.laboratoryRpBonusRateByLevel[level] ?? 0.1) * penalty
     } else if (cell === 'maintenanceWorkshop') {
       workshopPenaltyMultiplier *=
         BUILDING_UPGRADE_BALANCE.maintenanceWorkshopPenaltyRateByLevel[level] ?? 0.5
     } else if (cell === 'salesOffice') {
+      const penalty = hasPollutingNeighbor(game.grid, i) ? 1 - LAYOUT_BALANCE.dirtyPenaltyRate : 1
       salesOfficeContractBonusTotal +=
-        BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1
+        (BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1) * penalty
     }
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
@@ -1416,8 +1544,9 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   )
   // Perk capacity branch adds a multiplicative storage bonus on top of base+combo.
   const perkStorageMultiplier = 1 + perkStorageBonusRate
+  const specCrudeStorageMultiplier = isIndustrial ? 1 + SPECIALIZATION_BALANCE.industrial.crudeStorageBonusRate : 1
   const maxCrudeStorage =
-    Math.round(baseCrudeStorage * storageMultiplier * perkStorageMultiplier) +
+    Math.round(baseCrudeStorage * storageMultiplier * perkStorageMultiplier * specCrudeStorageMultiplier) +
     researchStorageBonus +
     workerStorageBonus
   const maxGasolineStorage =
@@ -1436,8 +1565,12 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       ? 1 + BONUS_BALANCE.advancedDistillationBonusRate
       : 1) *
     (hasAdvancedProcessing ? 1 + BONUS_BALANCE.advancedProcessingBonusRate : 1)
+  const moraleMultiplier = getMoraleMultiplier(game.staffMorale)
+  const specProductionMultiplier = isIndustrial
+    ? 1 + SPECIALIZATION_BALANCE.industrial.productionOutputBonus
+    : isGreen ? 1 - SPECIALIZATION_BALANCE.green.productionSpeedPenalty : 1
   const workerProductionMultiplier =
-    1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
@@ -1467,11 +1600,13 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     game.esgScore >= ESG_BALANCE.premiumThreshold
       ? 1 + ESG_BALANCE.premiumContractRewardBonusRate
       : 1
+  const specContractMultiplier = isIndustrial ? 1 + SPECIALIZATION_BALANCE.industrial.contractCashBonusRate : 1
   const contractRewardMultiplier =
     reputationContractRewardMultiplier *
     researchContractRewardMultiplier *
     specialBuildingContractRewardMultiplier *
-    esgContractRewardMultiplier
+    esgContractRewardMultiplier *
+    specContractMultiplier
   const specialBuildingRpRewardMultiplier =
     1 + laboratoryRpBonusTotal
   const chemistRpMultiplier = 1 + chemistCount * BONUS_BALANCE.chemistRpBonusRate
@@ -1493,11 +1628,13 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // Global product sell multiplier — Sales Agents (now %), quality perks, and the
   // current tech era. Applies to EVERY product, not just gasoline, so the player's
   // sell-side investments lift their whole catalogue consistently.
+  const specSellPriceBonusRate = isGreen ? SPECIALIZATION_BALANCE.green.sellPriceBonusRate : 0
   const productSellMultiplier =
     1 +
     salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonusRate +
     perkSellPriceBonusRate +
-    eraSellPriceBonusRate
+    eraSellPriceBonusRate +
+    specSellPriceBonusRate
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
   // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier
@@ -1511,6 +1648,9 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     game.tickCount,
     game.yearStartTick,
   )
+  // Dynamic Market: gasoline saturates like every other product -- dumping a
+  // lot depresses its price until demand recovers.
+  const gasolineMarketLevel = getProductMarketLevel(game, 'gasoline')
   const sellPrice =
     Math.round(
       ECONOMY_BALANCE.gasolinePrice *
@@ -1518,9 +1658,12 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
         fuelSpecialistSellPriceMultiplier *
         productSellMultiplier *
         game.gasolineDemandMultiplier *
-        seasonalGasolineMultiplier,
+        seasonalGasolineMultiplier *
+        gasolineMarketLevel,
     ) +
     researchSellPriceBonus
+  // Current crude spot price (wave) -- surfaced for the trade UI.
+  const crudePrice = getCrudePrice(game.tickCount)
   const upgradeCost = getUpgradeCost(game.refineryLevel)
   const availableSpace = game.grid.filter((cell) => cell === null).length
   // Hidden Event 'contract' rewards are appended to game.hiddenContracts
@@ -1620,6 +1763,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     productionRate,
     progressPercent,
     sellPrice,
+    crudePrice,
+    moraleMultiplier,
     seasonalGasolineMultiplier,
     gameClock: getGameClock(game.tickCount),
     sellPriceMultiplier,
@@ -1646,6 +1791,21 @@ export function applyWinGoal(game: GameState): GameState {
     activityLog: addLog(
       game.activityLog,
       serializeBilingualText(text.goal.completionLog),
+    ),
+  }
+}
+
+// Endgame spine (feature 5): once every ENDGAME_GOALS objective is met, award
+// the permanent "Industry Legend" status. Idempotent -- a no-op once achieved.
+export function applyLegendGoal(game: GameState): GameState {
+  if (game.legendAchieved) return game
+  if (!areAllEndgameGoalsComplete(game)) return game
+  return {
+    ...game,
+    legendAchieved: true,
+    activityLog: addLog(
+      game.activityLog,
+      serializeBilingualText(bilingual('🏆 INDUSTRY LEGEND — every legacy goal complete!', '🏆 ตำนานวงการ — พิชิตเป้าหมายปลายเกมครบทุกข้อ!')),
     ),
   }
 }
@@ -1946,9 +2106,11 @@ export function applyMilestones(game: GameState) {
 export function applyStaffXp(game: GameState): {
   employees: Employee[]
   levelUpLog: string | null
+  moraleDelta: number
 } {
   let employees = game.employees
   let levelUpLog: string | null = null
+  let moraleDelta = 0
 
   for (const worker of WORKERS) {
     const type = worker.key
@@ -1965,7 +2127,7 @@ export function applyStaffXp(game: GameState): {
     let updated: Employee
     if (newXp >= threshold) {
       updated = { ...target, level: target.level + 1, xp: newXp - threshold }
-      // Only surface the most recent level-up in the log to avoid spam.
+      moraleDelta += MORALE_BALANCE.levelUpBoost
       levelUpLog = serializeBilingualText(
         text.logs.staffLevelUp(target.name, worker.name, updated.level),
       )
@@ -1976,7 +2138,7 @@ export function applyStaffXp(game: GameState): {
     employees = employees.map((employee) => (employee.id === target.id ? updated : employee))
   }
 
-  return { employees, levelUpLog }
+  return { employees, levelUpLog, moraleDelta }
 }
 
 // Cost to instantly train an employee to their next level.
@@ -2000,7 +2162,20 @@ export function getYearlyPayroll(game: GameState): number {
     const levelFactor = 1 + (employee.level - 1) * WAGE_BALANCE.levelWageRate
     total += wage * levelFactor
   }
-  return Math.round(total)
+  const specDiscount = game.specialization === 'green' ? 1 - SPECIALIZATION_BALANCE.green.wageCostReduction : 1
+  return Math.round(total * specDiscount)
+}
+
+// Annual building upkeep (Economy audit money sink): flat fee + a fraction of
+// each built tile's purchase price. Deducted at year-end alongside payroll.
+export function getYearlyMaintenance(game: GameState): number {
+  let total = 0
+  for (const cell of game.grid) {
+    if (!cell) continue
+    total += MAINTENANCE_BALANCE.flatPerBuilding + BUILDINGS[cell].cost * MAINTENANCE_BALANCE.costRate
+  }
+  const specDiscount = game.specialization === 'industrial' ? 1 - SPECIALIZATION_BALANCE.industrial.maintenanceCostReduction : 1
+  return Math.round(total * specDiscount)
 }
 
 // Award score uses NET profit (revenue − payroll) for the money component, so
@@ -2054,20 +2229,26 @@ export function closeBusinessYear(game: GameState): {
 } {
   const stats = game.yearStats
   const payroll = getYearlyPayroll(game)
-  const netProfit = stats.moneyEarned - payroll
+  const maintenance = getYearlyMaintenance(game)
+  // Score still uses payroll only (the over-hiring lever). Maintenance is a
+  // flat cost of doing business, deducted from cash but not graded.
+  const netProfit = stats.moneyEarned - payroll - maintenance
   const score = getAwardScore(stats, payroll)
   const grade = getAwardGrade(score)
   const cashReward = AWARDS_BALANCE.cashByGrade[grade]
   const reputationReward = AWARDS_BALANCE.reputationByGrade[grade]
 
-  // Pay wages out of cash. If short, pay what's available and take a small
-  // reputation hit (no hard bankruptcy in this prototype).
-  const moneyAfterPayroll = game.money - payroll
+  // Pay wages + building upkeep out of cash. If short, pay what's available and
+  // take a small reputation hit (no hard bankruptcy in this prototype).
+  const totalCosts = payroll + maintenance
+  const moneyAfterPayroll = game.money - totalCosts
   const couldNotAfford = moneyAfterPayroll < 0
   const moneyAfterWages = Math.max(0, moneyAfterPayroll)
+  const greenReputationBonus = game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.yearEndReputationBonus : 0
   const reputationAfter =
     game.reputation +
-    reputationReward -
+    reputationReward +
+    greenReputationBonus -
     (couldNotAfford ? WAGE_BALANCE.unpaidReputationPenalty : 0)
 
   const rivals = getRivalResults(game.businessYear)
@@ -2079,6 +2260,7 @@ export function closeBusinessYear(game: GameState): {
     score,
     cashReward,
     payroll,
+    maintenance,
     netProfit,
     couldNotAfford,
     rivals,
@@ -2144,48 +2326,37 @@ export function closeBusinessYear(game: GameState): {
     )
   }
 
+  let moraleDelta = 0
+  if (grade === 'S' || grade === 'A') moraleDelta += MORALE_BALANCE.goodYearBoost
+  if (grade === 'C') moraleDelta += MORALE_BALANCE.badYearDrop
+  if (couldNotAfford) moraleDelta += MORALE_BALANCE.unpaidWageDrop
+  moraleDelta += retirees.length * MORALE_BALANCE.retirementDrop
+  const nextMorale = clampMorale(game.staffMorale + moraleDelta)
+
+  const recordWithMorale: AwardRecord = { ...record, morale: Math.round(nextMorale) }
+
   return {
     game: {
       ...game,
       money: moneyAfterWages + cashReward + severancePay,
       reputation: Math.max(0, reputationAfter),
+      staffMorale: nextMorale,
       businessYear: nextBusinessYear,
       yearStartTick: game.tickCount,
       yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },
-      awardHistory: [record, ...game.awardHistory].slice(0, 12),
+      awardHistory: [recordWithMorale, ...game.awardHistory].slice(0, 12),
       activityLog: addLog(retirementLog, message),
       employees: survivingEmployees,
       workerCounts: nextWorkerCounts,
       assignments: nextAssignments,
       mentorXpBonus: nextMentorXpBonus,
     },
-    record,
+    record: recordWithMorale,
   }
 }
 
 export function applyRandomEvent(game: GameState, event: RandomEvent) {
   const stats = calculateDerivedStats(game)
-
-  if (event.key === 'crudeDiscount') {
-    return {
-      ...game,
-      crudeOil: Math.min(
-        stats.maxCrudeStorage,
-        game.crudeOil + EVENT_BALANCE.crudeDiscountAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'machineTuneUp') {
-    return {
-      ...game,
-      money: game.money + EVENT_BALANCE.machineTuneUpMoneyReward,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
 
   if (event.key === 'minorLeak') {
     const crudeLoss = Math.floor(
@@ -2200,104 +2371,10 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     }
   }
 
-  if (event.key === 'qualityBonus') {
-    return {
-      ...game,
-      gasoline: Math.min(
-        stats.maxGasolineStorage,
-        game.gasoline + EVENT_BALANCE.qualityBonusGasolineAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'marketDemandSpike') {
-    return {
-      ...game,
-      money: game.money + EVENT_BALANCE.marketDemandSpikeMoneyReward,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'safetyInspection') {
-    const passed = game.reputation >= EVENT_BALANCE.safetyInspectionReputationThreshold
-    const message = passed
-      ? serializeBilingualText(text.data.events.safetyInspection.message)
-      : serializeBilingualText(text.data.safetyInspectionFailMessage)
-    if (passed) {
-      return {
-        ...game,
-        reputation: game.reputation + EVENT_BALANCE.safetyInspectionPassReputationReward,
-        lastEventMessage: message,
-        activityLog: addLog(game.activityLog, message),
-      }
-    }
-    return {
-      ...game,
-      money: Math.max(0, game.money - EVENT_BALANCE.safetyInspectionFailMoneyPenalty),
-      lastEventMessage: message,
-      activityLog: addLog(game.activityLog, message),
-    }
-  }
-
   if (event.key === 'equipmentWear') {
     return {
       ...game,
       gasoline: Math.max(0, game.gasoline - EVENT_BALANCE.equipmentWearGasolineLoss),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'efficientBatch') {
-    return {
-      ...game,
-      gasoline: Math.min(
-        stats.maxGasolineStorage,
-        game.gasoline + EVENT_BALANCE.efficientBatchGasolineAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'localNewsCoverage') {
-    return {
-      ...game,
-      reputation: game.reputation + EVENT_BALANCE.localNewsCoverageReputationGain,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'supplierDiscount') {
-    return {
-      ...game,
-      crudeOil: Math.min(
-        stats.maxCrudeStorage,
-        game.crudeOil + EVENT_BALANCE.supplierDiscountCrudeAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'equipmentInspection') {
-    return {
-      ...game,
-      money: Math.max(0, game.money - EVENT_BALANCE.equipmentInspectionMoneyCost),
-      reputation: game.reputation + EVENT_BALANCE.equipmentInspectionReputationGain,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'workerSuggestion') {
-    return {
-      ...game,
-      researchPoints: game.researchPoints + EVENT_BALANCE.workerSuggestionRpGain,
       lastEventMessage: event.message,
       activityLog: addLog(game.activityLog, event.message),
     }
@@ -2327,38 +2404,23 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     }
   }
 
-  if (event.key === 'feedstockSurplus') {
-    const converted = Math.min(game.feedstock, EVENT_BALANCE.feedstockSurplusConvertAmount)
-    return {
-      ...game,
-      feedstock: game.feedstock - converted,
-      money: game.money + converted * EVENT_BALANCE.feedstockSurplusCashPerUnit,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  // communityVisit
-  return {
-    ...game,
-    money: Math.max(0, game.money - EVENT_BALANCE.communityVisitMoneyCost),
-    reputation: game.reputation + EVENT_BALANCE.communityVisitReputationGain,
-    lastEventMessage: event.message,
-    activityLog: addLog(game.activityLog, event.message),
-  }
+  // Defensive fallback — `event` is always one of the four incidents above.
+  return game
 }
 
 export function orderShipment(
   game: GameState,
   option: ShipmentOption,
-  now: number,
 ): GameState {
   if (game.money < option.cost) return game
 
   const shipment: PendingShipment = {
-    id: now,
+    // Unique-enough key; arrival is tick-based below. tickCount alone could
+    // collide if two orders landed on the same tick, so offset by the queue
+    // length.
+    id: game.tickCount * 1000 + game.pendingShipments.length,
     amount: option.amount,
-    arrivesAt: now + option.delayMs,
+    arrivesAt: game.tickCount + option.delayTicks,
   }
 
   const delaySecs = option.delayMs / 1000
@@ -2377,11 +2439,11 @@ export function orderShipment(
   }
 }
 
-export function applyShipmentArrivals(game: GameState, now: number): GameState {
-  const arrived = game.pendingShipments.filter((s) => s.arrivesAt <= now)
+export function applyShipmentArrivals(game: GameState): GameState {
+  const arrived = game.pendingShipments.filter((s) => s.arrivesAt <= game.tickCount)
   if (arrived.length === 0) return game
 
-  const remaining = game.pendingShipments.filter((s) => s.arrivesAt > now)
+  const remaining = game.pendingShipments.filter((s) => s.arrivesAt > game.tickCount)
   let nextGame: GameState = { ...game, pendingShipments: remaining }
 
   for (const shipment of arrived) {
@@ -2607,18 +2669,95 @@ export function applyChoiceEventOption(
     }
   }
 
-  // rushOrder
-  if (option === 'A') {
+  if (event.key === 'rushOrder') {
+    if (option === 'A') {
+      return {
+        ...game,
+        gasoline: Math.max(0, game.gasoline - 30),
+        money: game.money + 800,
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
     return {
       ...game,
-      gasoline: Math.max(0, game.gasoline - 30),
-      money: game.money + 800,
+      reputation: game.reputation + 10,
       activityLog: addLog(game.activityLog, logMessage),
     }
   }
+
+  if (event.key === 'standoutHire') {
+    if (option === 'A') {
+      return applyMilestones({
+        ...game,
+        money: Math.max(0, game.money - 800),
+        staffMorale: clampMorale(game.staffMorale + 5),
+        totalWorkersHired: game.totalWorkersHired + 1,
+        workerCounts: { ...game.workerCounts, operator: game.workerCounts.operator + 1 },
+        employees: [
+          ...game.employees,
+          { ...createNewEmployee(game.employees, 'operator'), trait: 'veteran' as const },
+        ],
+        activityLog: addLog(game.activityLog, logMessage),
+      })
+    }
+    return {
+      ...game,
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'teamFeud') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 300),
+        staffMorale: clampMorale(game.staffMorale + 8),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      staffMorale: clampMorale(game.staffMorale - 6),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'raiseRequest') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 500),
+        staffMorale: clampMorale(game.staffMorale + 8),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      staffMorale: clampMorale(game.staffMorale - 8),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  if (event.key === 'teamOuting') {
+    if (option === 'A') {
+      return {
+        ...game,
+        money: Math.max(0, game.money - 600),
+        staffMorale: clampMorale(game.staffMorale + 12),
+        activityLog: addLog(game.activityLog, logMessage),
+      }
+    }
+    return {
+      ...game,
+      staffMorale: clampMorale(game.staffMorale - 3),
+      activityLog: addLog(game.activityLog, logMessage),
+    }
+  }
+
+  // specializationChoice — permanent strategic direction
   return {
     ...game,
-    reputation: game.reputation + 10,
+    specialization: option === 'A' ? 'green' : 'industrial',
     activityLog: addLog(game.activityLog, logMessage),
   }
 }

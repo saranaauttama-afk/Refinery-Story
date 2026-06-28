@@ -19,11 +19,14 @@ import type {
 import {
   applyChoiceEventOption,
   applyMilestones,
+  applyMoraleDrift,
   applyRandomEvent,
   applyShipmentArrivals,
   applyStaffXp,
   applyWinGoal,
+  applyLegendGoal,
   calculateDerivedStats,
+  clampMorale,
   closeBusinessYear,
   getMaxHireCount,
   CRUDE_COST,
@@ -43,6 +46,10 @@ import {
   getNewlyDiscoveredCombos,
   getNewlyUnlockedHiddenEvents,
   getProductSellPrice,
+  getCrudePrice,
+  getProductMarketLevel,
+  applyProductSaturation,
+  recoverProductMarket,
   getRandomEvent,
   getSpecialistMultiplierForCell,
   getTrainingCost,
@@ -78,7 +85,9 @@ import {
   WASTE_TREATMENT_PLANT_BALANCE,
   POLYMER_PLANT_BALANCE,
   BONUS_BALANCE,
+  MORALE_BALANCE,
   STAFF_LEVEL_BALANCE,
+  SPECIALIZATION_BALANCE,
   STANDING_ORDER_BALANCE,
   MAX_REFINERY_LEVEL,
   type PaidExpansionEntry,
@@ -89,7 +98,7 @@ import { MILESTONE_HEADLINES } from '../components/MilestoneHeadline'
 import { shouldSpawnCrisis, spawnCrisis, applyCrisisPenalty } from '../game/data/crisisEvents'
 import { BUILDINGS } from '../game/data/buildings'
 import { SELLABLE_PRODUCTS, type SellableProductKey } from '../game/data/products'
-import { getRandomChoiceEvent } from '../game/data/choiceEvents'
+import { CHOICE_EVENTS, getRandomChoiceEvent, getRandomStaffEvent } from '../game/data/choiceEvents'
 import type { HiddenComboConfig } from '../game/data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../game/data/hiddenEvents'
 import {
@@ -100,6 +109,20 @@ import {
 } from '../game/data/recruitment'
 
 const SAVE_INTERVAL_MS = 5000
+
+// Flow-rate tracker tuning. The window is long enough (~150 ticks ≈ 30s of play
+// at 1x) that one-off jumps (a manual crude buy, a contract payout) are diluted
+// into a stable trend rather than spiking the readout, and we only recompute the
+// displayed rate every few ticks to avoid re-rendering the HUD every single tick.
+const RATE_WINDOW_TICKS = 150
+const RATE_REFRESH_TICKS = 5
+// 1 tick = TICK_MS (200ms) → 300 ticks per real minute at 1x speed.
+const TICKS_PER_MINUTE = 60000 / 200
+
+export type FlowRates = {
+  moneyPerMin: number
+  gasPerMin: number
+}
 
 // --- Auto-trade (QoL feature, mobile-only) ---
 //
@@ -185,9 +208,9 @@ const PRODUCT_MAX_STORAGE_KEY: Record<SellableProductKey, (stats: DerivedStats) 
 // Pure, exported for testing. Runs after the main tick: top up crude toward
 // buyThreshold% (limited by cash + storage), then sell gasoline down to
 // sellThreshold% if it's currently above that.
-export function applyAutoTrade(current: GameState, settings: AutoTradeSettings): GameState {
+export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, precomputedStats?: DerivedStats): GameState {
   if (!settings.enabled) return current
-  const stats = calculateDerivedStats(current)
+  const stats = precomputedStats ?? calculateDerivedStats(current)
   let next = current
 
   if (stats.maxCrudeStorage > 0) {
@@ -199,13 +222,15 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
       const targetPct = Math.min(100, settings.buyThreshold + AUTO_TRADE_BUFFER_PERCENT)
       const targetCrude = Math.floor((targetPct / 100) * stats.maxCrudeStorage)
       const needed = Math.max(0, targetCrude - next.crudeOil)
-      const affordable = Math.floor(next.money / CRUDE_COST)
+      // Dynamic Market: auto-buy at the current spot price (no timing edge --
+      // manual buying when crude is cheap can still beat auto-trade).
+      const affordable = Math.floor(next.money / stats.crudePrice)
       const space = stats.maxCrudeStorage - next.crudeOil
       const amount = Math.min(needed, affordable, space)
       if (amount > 0) {
         next = {
           ...next,
-          money: next.money - amount * CRUDE_COST,
+          money: next.money - amount * stats.crudePrice,
           crudeOil: next.crudeOil + amount,
           everBoughtCrude: true,
         }
@@ -223,7 +248,12 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
       const targetGasoline = Math.floor((targetPct / 100) * stats.maxGasolineStorage)
       const excess = Math.max(0, next.gasoline - targetGasoline)
       if (excess > 0) {
-        next = { ...next, gasoline: next.gasoline - excess, money: next.money + excess * stats.sellPrice }
+        next = {
+          ...next,
+          gasoline: next.gasoline - excess,
+          money: next.money + excess * stats.sellPrice,
+          productMarket: applyProductSaturation(next.productMarket, 'gasoline', excess),
+        }
       }
     }
   }
@@ -253,12 +283,18 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings):
     const excess = Math.max(0, have - targetAmount)
     if (excess <= 0) continue
     const demandMultiplier = product.key === 'petrochemicals' ? next.petrochemicalsDemandMultiplier : 1
-    const price = getProductSellPrice(product.key, stats.productSellMultiplier, demandMultiplier)
+    // Dynamic Market: effective price includes this product's saturation, and
+    // the auto-sell pushes that saturation down further.
+    const price = Math.round(
+      getProductSellPrice(product.key, stats.productSellMultiplier, demandMultiplier) *
+        getProductMarketLevel(next, product.key),
+    )
     if (price <= 0) continue
     next = {
       ...next,
       productInventory: { ...next.productInventory, [product.key]: have - excess },
       money: next.money + excess * price,
+      productMarket: applyProductSaturation(next.productMarket, product.key, excess),
     }
   }
 
@@ -650,6 +686,10 @@ export function tick(current: GameState): GameState {
     current.petrochemicalsDemandMultiplier + petrochemicalsDelta,
   )
 
+  // Dynamic Market: product demand-saturation recovers toward full price each
+  // tick (selling pushes it down, see the sell handlers / auto-trade).
+  const productMarket = recoverProductMarket(current.productMarket)
+
   return applyMilestones({
     ...current,
     tickCount: nextTick,
@@ -665,6 +705,7 @@ export function tick(current: GameState): GameState {
     esgScore,
     gasolineDemandMultiplier,
     petrochemicalsDemandMultiplier,
+    productMarket,
   })
 }
 
@@ -673,6 +714,11 @@ export function useGameLoop() {
   const gameRef = useRef<GameState | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [hasSave, setHasSave] = useState(false)
+  // Game speed (Kairosoft-style): 0 = paused, 1/2/3 = fast-forward. Drives the
+  // tick interval period below -- a pure pause model, so nothing advances
+  // while paused and everything (production, calendar, shipments) scales
+  // together when sped up. Session-only; resets to 1x on reload.
+  const [speed, setSpeed] = useState(1)
   const [autoTrade, setAutoTrade] = useState<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const autoTradeRef = useRef<AutoTradeSettings>(DEFAULT_AUTO_TRADE)
   const [pendingChoiceEvent, setPendingChoiceEvent] = useState<ChoiceEvent | null>(null)
@@ -681,6 +727,7 @@ export function useGameLoop() {
   const [pendingEraBanner, setPendingEraBanner] = useState<EraConfig | null>(null)
   const [pendingMilestoneHeadline, setPendingMilestoneHeadline] = useState<{ icon: string; title: string; body: string } | null>(null)
   const [pendingWinCelebration, setPendingWinCelebration] = useState(false)
+  const [pendingLegendCelebration, setPendingLegendCelebration] = useState(false)
   const [pendingComboDiscovery, setPendingComboDiscovery] = useState<HiddenComboConfig | null>(null)
   // Hidden Event banner: which difficulty just unlocked (for the toast's
   // styling/copy only -- never the actual reward, since the design
@@ -688,6 +735,16 @@ export function useGameLoop() {
   // it). Distinct from pendingComboDiscovery's combo (which IS revealed
   // immediately, no separate claim step) -- different UX on purpose.
   const [pendingHiddenEventUnlock, setPendingHiddenEventUnlock] = useState<HiddenEventConfig | null>(null)
+
+  // --- Flow-rate tracker (UI legibility) ---
+  // The sim is rich (production, auto-trade, market, morale, specialization) but
+  // the HUD only ever showed *stocks*, never *flows* -- a player couldn't tell if
+  // the factory was net-profitable or how fast it was producing. We derive rates
+  // from real state deltas over a rolling tick window (rather than re-deriving the
+  // tick math, which would drift), so the numbers automatically reflect every
+  // system. Keyed on tickCount, so the window freezes when the game is paused.
+  const [flowRates, setFlowRates] = useState<FlowRates>({ moneyPerMin: 0, gasPerMin: 0 })
+  const flowSamplesRef = useRef<{ tick: number; money: number; gas: number }[]>([])
 
   // Shows a choice event (if none is currently pending) and stamps
   // lastChoiceEventTick so the fallback timer restarts from "now".
@@ -699,6 +756,14 @@ export function useGameLoop() {
     pendingChoiceEventRef.current = event
     setPendingChoiceEvent(event)
     return { ...next, lastChoiceEventTick: next.tickCount }
+  }, [])
+
+  const triggerStaffEvent = useCallback((next: GameState): GameState => {
+    if (pendingChoiceEventRef.current) return next
+    const event = getRandomStaffEvent()
+    pendingChoiceEventRef.current = event
+    setPendingChoiceEvent(event)
+    return { ...next, lastStaffEventTick: next.tickCount, lastChoiceEventTick: next.tickCount }
   }, [])
 
   useEffect(() => {
@@ -718,17 +783,24 @@ export function useGameLoop() {
       .catch(() => {})
   }, [])
 
-  // Main production tick (200ms): production + ESG/demand drift + staff XP +
-  // era-advance detection + year-end award close.
+  // Main production tick: production + ESG/demand drift + staff XP +
+  // era-advance detection + year-end award close. Runs every TICK_MS / speed,
+  // so 2x/3x fast-forward shortens the period and "paused" (speed 0) tears the
+  // interval down entirely -- the whole sim freezes, no catch-up on resume.
   useEffect(() => {
-    if (!loaded) return
+    if (!loaded || speed <= 0) return
+    const period = TICK_MS / speed
     const interval = setInterval(() => {
       setGame((current) => {
         if (!current) return current
         let next = tick(current)
 
-        const { employees, levelUpLog } = applyStaffXp(next)
-        next = { ...next, employees }
+        const { employees, levelUpLog, moraleDelta } = applyStaffXp(next)
+        next = {
+          ...next,
+          employees,
+          staffMorale: clampMorale(applyMoraleDrift(next.staffMorale) + moraleDelta),
+        }
         if (levelUpLog) {
           next = { ...next, activityLog: addLog(next.activityLog, levelUpLog) }
         }
@@ -791,11 +863,22 @@ export function useGameLoop() {
           setPendingAward(record)
         }
 
-        next = applyAutoTrade(next, autoTradeRef.current)
+        next = applyAutoTrade(next, autoTradeRef.current, derivedForTick)
         next = applyRecruitmentRefresh(next)
 
+        // Crude shipments now arrive on the game clock (tick-based), so they
+        // advance and pause together with production -- a consistent pause
+        // model. Checked here in the main tick instead of a separate
+        // wall-clock timer.
+        if (next.pendingShipments.length > 0) {
+          next = applyShipmentArrivals(next)
+        }
+
         if (shouldFireRandomEvent(next)) {
-          next = applyRandomEvent(next, getRandomEvent(next))
+          // getRandomEvent now rolls the ESG-gated incident chance and may
+          // return null (no incident this cycle) — only apply when one fires.
+          const incident = getRandomEvent(next)
+          if (incident) next = applyRandomEvent(next, incident)
         }
 
         if (hasNewMilestone(current, next)) {
@@ -804,26 +887,47 @@ export function useGameLoop() {
           next = triggerChoiceEvent(next)
         }
 
-        gameRef.current = next
-        return next
-      })
-    }, TICK_MS)
-    return () => clearInterval(interval)
-  }, [loaded, triggerChoiceEvent])
+        if (
+          next.employees.length >= MORALE_BALANCE.staffEventMinEmployees &&
+          next.tickCount - next.lastStaffEventTick >= MORALE_BALANCE.staffEventCooldownTicks &&
+          !pendingChoiceEventRef.current
+        ) {
+          next = triggerStaffEvent(next)
+        }
 
-  // Crude shipment arrivals (real-time delay, checked every second).
-  useEffect(() => {
-    if (!loaded) return
-    const interval = setInterval(() => {
-      setGame((current) => {
-        if (!current || current.pendingShipments.length === 0) return current
-        const next = applyShipmentArrivals(current, Date.now())
+        // Endgame: catch tick-driven completions (money via auto-trade/sells,
+        // an S-grade year from the award close above).
+        next = applyLegendGoal(next)
+        if (!current.legendAchieved && next.legendAchieved) {
+          setPendingLegendCelebration(true)
+        }
+
+        // Flow-rate sampling: record (tick, money, lifetime gasoline), drop
+        // anything older than the window, and every RATE_REFRESH_TICKS recompute
+        // the $/min and gas/min trend from the oldest surviving sample.
+        const samples = flowSamplesRef.current
+        samples.push({ tick: next.tickCount, money: next.money, gas: next.totalGasolineProduced })
+        while (samples.length > 1 && next.tickCount - samples[0].tick > RATE_WINDOW_TICKS) {
+          samples.shift()
+        }
+        if (next.tickCount % RATE_REFRESH_TICKS === 0) {
+          const oldest = samples[0]
+          const elapsed = next.tickCount - oldest.tick
+          if (elapsed > 0) {
+            const scale = TICKS_PER_MINUTE / elapsed
+            setFlowRates({
+              moneyPerMin: Math.round((next.money - oldest.money) * scale),
+              gasPerMin: Math.round((next.totalGasolineProduced - oldest.gas) * scale),
+            })
+          }
+        }
+
         gameRef.current = next
         return next
       })
-    }, 1000)
+    }, period)
     return () => clearInterval(interval)
-  }, [loaded])
+  }, [loaded, triggerChoiceEvent, triggerStaffEvent, speed])
 
   useEffect(() => {
     if (!loaded) return
@@ -843,6 +947,13 @@ export function useGameLoop() {
       if (!current.prototypeCompleted && next.prototypeCompleted) {
         setPendingWinCelebration(true)
       }
+      // Endgame: catch action-driven completions (upgrade to Lv20, research,
+      // grid expansion). Tick-driven ones (money, awards) are caught in the
+      // main tick loop.
+      next = applyLegendGoal(next)
+      if (!current.legendAchieved && next.legendAchieved) {
+        setPendingLegendCelebration(true)
+      }
       gameRef.current = next
       return next
     })
@@ -853,13 +964,15 @@ export function useGameLoop() {
     (amount: number) =>
       update((current) => {
         const stats = calculateDerivedStats(current)
-        const canAfford = Math.floor(current.money / CRUDE_COST)
+        // Dynamic Market: crude is bought at the current spot price (wave).
+        const crudePrice = stats.crudePrice
+        const canAfford = Math.floor(current.money / crudePrice)
         const space = stats.maxCrudeStorage - current.crudeOil
         const actual = Math.min(amount, canAfford, space)
         if (actual <= 0) return current
         return {
           ...current,
-          money: current.money - actual * CRUDE_COST,
+          money: current.money - actual * crudePrice,
           crudeOil: current.crudeOil + actual,
           everBoughtCrude: true,
         }
@@ -873,10 +986,13 @@ export function useGameLoop() {
         const stats = calculateDerivedStats(current)
         const actual = Math.min(amount, current.gasoline)
         if (actual <= 0) return current
+        // stats.sellPrice already factors gasoline's market saturation; the
+        // sale then pushes that saturation down a bit further.
         return {
           ...current,
           gasoline: current.gasoline - actual,
           money: current.money + actual * stats.sellPrice,
+          productMarket: applyProductSaturation(current.productMarket, 'gasoline', actual),
         }
       }),
     [update],
@@ -890,12 +1006,18 @@ export function useGameLoop() {
         const actual = Math.min(amount, have)
         if (actual <= 0) return current
         const demandMultiplier = key === 'petrochemicals' ? current.petrochemicalsDemandMultiplier : 1
-        const price = getProductSellPrice(key, stats.productSellMultiplier, demandMultiplier)
+        // Dynamic Market: effective price = base * sell multipliers * this
+        // product's saturation level. Selling then lowers that level.
+        const price = Math.round(
+          getProductSellPrice(key, stats.productSellMultiplier, demandMultiplier) *
+            getProductMarketLevel(current, key),
+        )
         if (price <= 0) return current
         return {
           ...current,
           productInventory: { ...current.productInventory, [key]: have - actual },
           money: current.money + price * actual,
+          productMarket: applyProductSaturation(current.productMarket, key, actual),
         }
       }),
     [update],
@@ -1156,7 +1278,14 @@ export function useGameLoop() {
               xp: 0,
               trait: 'veteran',
             }
-            next = { ...next, employees: [...next.employees, employee] }
+            next = {
+              ...next,
+              employees: [...next.employees, employee],
+              workerCounts: {
+                ...next.workerCounts,
+                [workerType]: next.workerCounts[workerType] + 1,
+              },
+            }
             break
           }
         }
@@ -1217,12 +1346,22 @@ export function useGameLoop() {
         if (current.totalGasolineProduced < requiredProduction) return current
         if (current.reputation < requiredReputation) return current
         if (current.unlockedResearchIds.length < requiredResearch) return current
-        return applyWinGoal({
+        const next = applyWinGoal({
           ...current,
           money: current.money - cost,
           refineryLevel: current.refineryLevel + 1,
           upgradePoints: current.upgradePoints + 1,
         })
+        if (
+          next.refineryLevel >= SPECIALIZATION_BALANCE.unlockLevel &&
+          !next.specialization &&
+          !pendingChoiceEventRef.current
+        ) {
+          const event = CHOICE_EVENTS.specializationChoice
+          pendingChoiceEventRef.current = event
+          setPendingChoiceEvent(event)
+        }
+        return next
       }),
     [update],
   )
@@ -1302,6 +1441,7 @@ export function useGameLoop() {
         return applyMilestones({
           ...current,
           money: current.money - worker.cost,
+          staffMorale: clampMorale(current.staffMorale + MORALE_BALANCE.hireBoost),
           totalWorkersHired: current.totalWorkersHired + 1,
           workerCounts: {
             ...current.workerCounts,
@@ -1344,6 +1484,7 @@ export function useGameLoop() {
         return applyMilestones({
           ...current,
           money: current.money - candidate.cost,
+          staffMorale: clampMorale(current.staffMorale + MORALE_BALANCE.hireBoost),
           totalWorkersHired: current.totalWorkersHired + 1,
           workerCounts: {
             ...current.workerCounts,
@@ -1514,7 +1655,7 @@ export function useGameLoop() {
   )
 
   const buyShipment = useCallback(
-    (option: ShipmentOption) => update((current) => orderShipmentFn(current, option, Date.now())),
+    (option: ShipmentOption) => update((current) => orderShipmentFn(current, option)),
     [update],
   )
 
@@ -1552,20 +1693,32 @@ export function useGameLoop() {
     gameRef.current = fresh
     setGame(fresh)
     setHasSave(false)
+    flowSamplesRef.current = []
+    setFlowRates({ moneyPerMin: 0, gasPerMin: 0 })
+  }, [])
+
+  // Cycles 1x → 2x → 3x → ⏸(0) → 1x. The factory screen's speed button calls
+  // this; the label reads `speed` to show the current state.
+  const cycleSpeed = useCallback(() => {
+    setSpeed((s) => (s >= 3 ? 0 : s + 1))
   }, [])
 
   return {
     game,
     loaded,
     hasSave,
+    speed,
+    cycleSpeed,
     autoTrade,
     updateAutoTrade,
+    flowRates,
     derived: game ? calculateDerivedStats(game) : null,
     pendingChoiceEvent,
     pendingAward,
     pendingEraBanner,
     pendingMilestoneHeadline,
     pendingWinCelebration,
+    pendingLegendCelebration,
     pendingComboDiscovery,
     pendingHiddenEventUnlock,
     buyCrude,
@@ -1598,42 +1751,35 @@ export function useGameLoop() {
         if (current.refineryLevel < contract.unlockLevel) return current
         if (current.completedContractIds.includes(contract.id)) return current
 
-        const isPetro = (contract.petrochemicalsRequired ?? 0) > 0
-        const isLube = !isPetro && (contract.lubricantsRequired ?? 0) > 0
-        const isJet = !isPetro && !isLube && (contract.jetFuelRequired ?? 0) > 0
-        const isAsphalt = !isPetro && !isLube && !isJet && (contract.asphaltRequired ?? 0) > 0
-        const isRecycled = !isPetro && !isLube && !isJet && !isAsphalt && (contract.recycledMaterialRequired ?? 0) > 0
-        const isPellets = !isPetro && !isLube && !isJet && !isAsphalt && !isRecycled && (contract.plasticPelletsRequired ?? 0) > 0
+        type ProductCost = { key: keyof typeof current.productInventory; need: number }
+        const allCosts: ProductCost[] = [
+          { key: 'petrochemicals', need: contract.petrochemicalsRequired ?? 0 },
+          { key: 'lubricants', need: contract.lubricantsRequired ?? 0 },
+          { key: 'jetFuel', need: contract.jetFuelRequired ?? 0 },
+          { key: 'asphalt', need: contract.asphaltRequired ?? 0 },
+          { key: 'recycledMaterial', need: contract.recycledMaterialRequired ?? 0 },
+          { key: 'plasticPellets', need: contract.plasticPelletsRequired ?? 0 },
+        ]
+        const costs = allCosts.filter((c): c is ProductCost => c.need > 0)
 
-        if (isPetro && current.productInventory.petrochemicals < (contract.petrochemicalsRequired ?? 0)) return current
-        if (isLube && current.productInventory.lubricants < (contract.lubricantsRequired ?? 0)) return current
-        if (isJet && current.productInventory.jetFuel < (contract.jetFuelRequired ?? 0)) return current
-        if (isAsphalt && current.productInventory.asphalt < (contract.asphaltRequired ?? 0)) return current
-        if (isRecycled && current.productInventory.recycledMaterial < (contract.recycledMaterialRequired ?? 0)) return current
-        if (isPellets && current.productInventory.plasticPellets < (contract.plasticPelletsRequired ?? 0)) return current
-        if (!isPetro && !isLube && !isJet && !isAsphalt && current.gasoline < contract.gasolineRequired) return current
+        for (const c of costs) {
+          if (current.productInventory[c.key] < c.need) return current
+        }
+        const isProductContract = costs.length > 0
+        if (!isProductContract && current.gasoline < contract.gasolineRequired) return current
 
         const stats = calculateDerivedStats(current)
         const reward = Math.round(contract.reward * stats.contractRewardMultiplier)
         const rpReward = Math.round(contract.rpReward * stats.contractRpRewardMultiplier)
 
-        const productInventory = isPetro
-          ? { ...current.productInventory, petrochemicals: current.productInventory.petrochemicals - (contract.petrochemicalsRequired ?? 0) }
-          : isLube
-            ? { ...current.productInventory, lubricants: current.productInventory.lubricants - (contract.lubricantsRequired ?? 0) }
-            : isJet
-              ? { ...current.productInventory, jetFuel: current.productInventory.jetFuel - (contract.jetFuelRequired ?? 0) }
-              : isAsphalt
-                ? { ...current.productInventory, asphalt: current.productInventory.asphalt - (contract.asphaltRequired ?? 0) }
-                : isRecycled
-                  ? { ...current.productInventory, recycledMaterial: current.productInventory.recycledMaterial - (contract.recycledMaterialRequired ?? 0) }
-                  : isPellets
-                    ? { ...current.productInventory, plasticPellets: current.productInventory.plasticPellets - (contract.plasticPelletsRequired ?? 0) }
-                    : current.productInventory
+        const productInventory = { ...current.productInventory }
+        for (const c of costs) {
+          productInventory[c.key] -= c.need
+        }
 
         return applyWinGoal(applyMilestones({
           ...current,
-          gasoline: isPetro || isLube || isJet || isAsphalt || isRecycled || isPellets ? current.gasoline : current.gasoline - contract.gasolineRequired,
+          gasoline: isProductContract ? current.gasoline : current.gasoline - contract.gasolineRequired,
           productInventory,
           money: current.money + reward,
           researchPoints: current.researchPoints + rpReward,
@@ -1666,6 +1812,7 @@ export function useGameLoop() {
         return applyCrisisPenalty(current)
       }),
     dismissWinCelebration: () => setPendingWinCelebration(false),
+    dismissLegendCelebration: () => setPendingLegendCelebration(false),
     dismissComboDiscovery: () => setPendingComboDiscovery(null),
     dismissHiddenEventUnlock: () => setPendingHiddenEventUnlock(null),
   }

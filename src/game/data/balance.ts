@@ -129,6 +129,25 @@ export const STARTING_BALANCE = {
   reputation: 0,
 } as const
 
+// --- Dynamic Market (Roadmap feature 1) ---
+// Crude spot price swings on a deterministic wave (replayable, derived from
+// tickCount) so buying is a timing decision: stockpile when cheap. Each
+// product also has a demand-saturation level (1.0 = full price): selling
+// pushes it down and it recovers over time, so dumping a lot of one product
+// crashes its own price -- the structural fix for "petrochem obsoletes
+// everything" (over-producing one product tanks its margin, rewarding a
+// diversified catalogue). See getCrudePrice / getProductMarketLevel and the
+// productMarket field on GameState.
+export const MARKET_BALANCE = {
+  // Crude price wave around ECONOMY_BALANCE.crudeCost.
+  crudeAmplitude: 0.35, // +/-35% -> roughly $6.5 .. $13.5 at base 10
+  crudePeriodTicks: 2700, // ~1.5 in-game days per full cycle
+  // Per-product demand saturation.
+  saturationFloor: 0.45, // price never falls below 45% of base
+  saturationPerUnitSold: 0.004, // each unit sold drops the level by this
+  saturationRecoveryPerTick: 0.0015, // recovery toward 1.0 each tick
+} as const
+
 export const ECONOMY_BALANCE = {
   gasolinePrice: 18,
   lubricantPrice: 45,
@@ -217,30 +236,16 @@ export const BONUS_BALANCE = {
   polymerEngineerPlasticPelletsBonusRate: 0.20,
 } as const
 
+// Random incidents only (the trivial freebie events were removed — see
+// events.ts / applyRandomEvent). Each value is the raw setback before the
+// safety-officer eventPenaltyMultiplier is applied.
 export const EVENT_BALANCE = {
-  crudeDiscountAmount: 10,
-  machineTuneUpMoneyReward: 200,
   minorLeakCrudeLoss: 20,
-  qualityBonusGasolineAmount: 20,
-  marketDemandSpikeMoneyReward: 750,
-  safetyInspectionPassReputationReward: 10,
-  safetyInspectionFailMoneyPenalty: 200,
-  safetyInspectionReputationThreshold: 50,
   equipmentWearGasolineLoss: 10,
-  efficientBatchGasolineAmount: 30,
-  localNewsCoverageReputationGain: 15,
-  supplierDiscountCrudeAmount: 15,
-  equipmentInspectionMoneyCost: 120,
-  equipmentInspectionReputationGain: 10,
-  workerSuggestionRpGain: 3,
   storageContaminationGasolineLoss: 15,
-  communityVisitMoneyCost: 150,
-  communityVisitReputationGain: 20,
-  // Feedstock-chain events (Charm Pass) — only fire once the player has built
+  // Feedstock-chain incident — only fires once the player has built
   // distillation (maxFeedstockStorage > baseFeedstockStorage).
   distillationHiccupFeedstockLoss: 8,
-  feedstockSurplusConvertAmount: 12,
-  feedstockSurplusCashPerUnit: 15,
 } as const
 
 export const MILESTONE_BALANCE = {
@@ -284,7 +289,9 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 20,
-    reward: 300,
+    // Economy audit: tier-1 contracts must clearly beat spot-selling
+    // gasoline ($18/unit) to feel worth doing. 20 gas -> $440 = $22/unit.
+    reward: 440,
     rpReward: 2,
     reputationReward: 3,
   },
@@ -293,7 +300,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 50,
-    reward: 900,
+    reward: 1150,
     rpReward: 5,
     reputationReward: 6,
   },
@@ -302,7 +309,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 100,
-    reward: 2200,
+    reward: 2400,
     rpReward: 10,
     reputationReward: 12,
   },
@@ -348,7 +355,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 30,
-    reward: 480,
+    reward: 690,
     rpReward: 3,
     reputationReward: 4,
   },
@@ -357,7 +364,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 65,
-    reward: 1150,
+    reward: 1500,
     rpReward: 6,
     reputationReward: 8,
   },
@@ -366,7 +373,7 @@ export const CONTRACT_BALANCE = [
     tier: 1,
     unlockLevel: 1,
     gasolineRequired: 120,
-    reward: 2700,
+    reward: 2900,
     rpReward: 12,
     reputationReward: 14,
   },
@@ -811,12 +818,17 @@ export const STANDING_ORDER_BALANCE = [
 
 export type StandingOrderConfig = (typeof STANDING_ORDER_BALANCE)[number]
 
+// delayTicks (not wall-clock) is the source of truth for arrival timing, so
+// shipments advance on the same game clock as production and pause when the
+// app is backgrounded -- a pure pause model (see useGameLoop tick loop).
+// delayTicks = delaySeconds * 5 (5 ticks/sec at 200ms). delayMs is kept only
+// for the "~Ns" display copy in the Supply UI.
 export const SHIPMENT_BALANCE = [
-  { key: 'miniDelivery' as const, amount: 50, cost: 450, delayMs: 15_000 },
-  { key: 'localTruck' as const, amount: 100, cost: 900, delayMs: 30_000 },
-  { key: 'coastalTanker' as const, amount: 500, cost: 4000, delayMs: 90_000 },
-  { key: 'importedShip' as const, amount: 1500, cost: 10500, delayMs: 180_000 },
-  { key: 'tankerConvoy' as const, amount: 3000, cost: 20000, delayMs: 300_000 },
+  { key: 'miniDelivery' as const, amount: 50, cost: 450, delayMs: 15_000, delayTicks: 75 },
+  { key: 'localTruck' as const, amount: 100, cost: 900, delayMs: 30_000, delayTicks: 150 },
+  { key: 'coastalTanker' as const, amount: 500, cost: 4000, delayMs: 90_000, delayTicks: 450 },
+  { key: 'importedShip' as const, amount: 1500, cost: 10500, delayMs: 180_000, delayTicks: 900 },
+  { key: 'tankerConvoy' as const, amount: 3000, cost: 20000, delayMs: 300_000, delayTicks: 1500 },
 ]
 
 export type ShipmentOption = (typeof SHIPMENT_BALANCE)[number]
@@ -945,6 +957,66 @@ export const WAGE_BALANCE = {
   // If cash can't cover payroll, the player pays what they can and takes this
   // reputation hit (gentle — no hard bankruptcy in this prototype).
   unpaidReputationPenalty: 10,
+} as const
+
+// --- Building maintenance (Economy audit: ongoing money sink) ---
+// Deducted each business year in closeBusinessYear, alongside payroll. Every
+// built tile costs a flat upkeep plus a fraction of its purchase price, so a
+// sprawling factory has real running costs and "build one of everything" is no
+// longer free. Kept modest on purpose -- the heavier late-game money pressure
+// comes from the Dynamic Market (fluctuating crude cost), not from upkeep
+// alone. A full 36-tile factory lands around a few thousand $/year.
+export const MAINTENANCE_BALANCE = {
+  flatPerBuilding: 40,
+  costRate: 0.05,
+} as const
+
+// --- Specialization (Roadmap feature 2) ---
+// Permanent one-time choice at Level 5. Each path grants exclusive bonuses
+// and a trade-off, forcing a strategic direction. The existing perk tree
+// and Dynamic Market supply the tactical layer; this supplies the strategic
+// identity that shapes the rest of the run.
+export const SPECIALIZATION_BALANCE = {
+  unlockLevel: 5,
+  green: {
+    esgRegenMultiplier: 1.5,
+    sellPriceBonusRate: 0.10,
+    yearEndReputationBonus: 15,
+    wageCostReduction: 0.20,
+    productionSpeedPenalty: 0.10,
+  },
+  industrial: {
+    productionOutputBonus: 0.15,
+    crudeStorageBonusRate: 0.25,
+    contractCashBonusRate: 0.20,
+    maintenanceCostReduction: 0.25,
+    esgDecayMultiplier: 1.3,
+  },
+} as const
+
+// --- People / Morale layer (Roadmap feature 4) ---
+// Global morale (0-100) drifts toward equilibrium each tick. High morale
+// boosts worker effectiveness; low morale penalizes it. Reacts to staff
+// events, level-ups, hires, retirements, wage payment status, and year-end
+// grade. Kairosoft-style recurring soft decisions.
+export const MORALE_BALANCE = {
+  startingMorale: 70,
+  minMorale: 10,
+  maxMorale: 100,
+  equilibrium: 60,
+  driftPerTick: 0.003,
+  levelUpBoost: 3,
+  hireBoost: 2,
+  retirementDrop: -5,
+  unpaidWageDrop: -15,
+  goodYearBoost: 8,
+  badYearDrop: -5,
+  lowMoraleThreshold: 40,
+  highMoraleThreshold: 75,
+  lowMoralePenalty: 0.85,
+  highMoraleBonus: 1.10,
+  staffEventCooldownTicks: 1800,
+  staffEventMinEmployees: 3,
 } as const
 
 // --- Refinery Process Chain: feedstock layer ---
@@ -1076,6 +1148,26 @@ export const ESG_DIRTY_BUILDINGS: BuildingType[] = [
   'jetFuelPlant',
   'petrochemicalPlant',
 ]
+
+// --- Layout depth (Roadmap feature 3): negative adjacency ---
+// A "sensitive" building (research / sales) loses dirtyPenaltyRate of its bonus
+// if it sits orthogonally adjacent to a heavy "polluting" plant -- a real
+// reason to keep those buildings away from the dirty production core, turning
+// tile placement into a tradeoff rather than "fill every cell". Distinct from
+// ESG_DIRTY_BUILDINGS (storage tanks aren't "polluting" for layout purposes).
+export const LAYOUT_BALANCE = {
+  dirtyPenaltyRate: 0.5,
+  sensitiveBuildings: ['laboratory', 'salesOffice'] as BuildingType[],
+  pollutingBuildings: [
+    'distillationUnit',
+    'lubricantPlant',
+    'jetFuelPlant',
+    'petrochemicalPlant',
+    'powerPlant',
+    'wasteTreatmentPlant',
+    'polymerPlant',
+  ] as BuildingType[],
+} as const
 
 // --- Production Complexity Expansion Phase 1: waste byproduct ---
 // Every "dirty" production building (reuses ESG_DIRTY_BUILDINGS) emits a

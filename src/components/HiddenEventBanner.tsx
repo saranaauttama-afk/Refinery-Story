@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text } from 'react-native'
 import type { HiddenEventConfig } from '../game/types'
-import { colors, radii, spacing } from '../theme'
+import { colors, radii, spacing, OVERLAY_BANNER_TOP } from '../theme'
+import { useLang } from '../hooks/SettingsContext'
+import { text } from '../game/translations'
 
 type HiddenEventBannerProps = {
   event: HiddenEventConfig | null
@@ -14,6 +16,9 @@ type HiddenEventBannerProps = {
 // contracts, the build picker for buildings, Staff for staff) and tap it
 // to reveal what happened. This banner is just a "go look" nudge.
 function HiddenEventBanner({ event, onDismiss }: HiddenEventBannerProps) {
+  const { t } = useLang()
+  const tb = text.hiddenEventBanner
+
   useEffect(() => {
     if (!event) return
     const timeout = setTimeout(onDismiss, 6000)
@@ -22,17 +27,20 @@ function HiddenEventBanner({ event, onDismiss }: HiddenEventBannerProps) {
 
   if (!event) return null
 
+  // Points at the *current* tabs — the build picker lives on the Factory,
+  // contracts on the Contracts tab, staff on Recruit (the old "Business" /
+  // "Staff" tabs this used to name no longer exist).
   const where =
     event.reward.kind === 'contract'
-      ? 'Business tab'
+      ? tb.whereContract
       : event.reward.kind === 'building'
-        ? 'Build menu'
-        : 'Staff tab'
+        ? tb.whereBuilding
+        : tb.whereStaff
 
   return (
     <Pressable style={styles.banner} onPress={onDismiss}>
-      <Text style={styles.title}>✨ Something happened...</Text>
-      <Text style={styles.message}>Check the {where} for a mystery "???" entry.</Text>
+      <Text style={styles.title}>{t(tb.title)}</Text>
+      <Text style={styles.message}>{t(tb.message(where))}</Text>
     </Pressable>
   )
 }
@@ -40,7 +48,7 @@ function HiddenEventBanner({ event, onDismiss }: HiddenEventBannerProps) {
 const styles = StyleSheet.create({
   banner: {
     position: 'absolute',
-    top: 50,
+    top: OVERLAY_BANNER_TOP,
     left: spacing.lg,
     right: spacing.lg,
     backgroundColor: colors.purple,

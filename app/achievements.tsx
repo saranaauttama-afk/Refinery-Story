@@ -3,9 +3,11 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGame } from '../src/hooks/GameContext'
+import ArtSlot from '../src/components/ArtSlot'
 import ProgressBar from '../src/components/ProgressBar'
 import { colors, radii, spacing } from '../src/theme'
 import { HIDDEN_COMBOS } from '../src/game/data/hiddenCombos'
+import { ENDGAME_GOALS } from '../src/game/data/endgameGoals'
 import type { ActiveMilestone } from '../src/game/types'
 
 function MilestoneRow({ milestone }: { milestone: ActiveMilestone }) {
@@ -59,6 +61,9 @@ export default function AchievementsScreen() {
         </Pressable>
         <Text style={styles.title}>🏆 Achievements</Text>
       </View>
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+        <ArtSlot id="achievements_hero" width="100%" height={72} spec="1080×240" caption="Trophy shelf / podium banner" />
+      </View>
       <Text style={styles.summary}>
         {completedCount} / {milestones.length} completed
       </Text>
@@ -68,6 +73,31 @@ export default function AchievementsScreen() {
           <Text style={styles.winBannerText}>🏁 Prototype Complete -- all major goals achieved!</Text>
         </View>
       )}
+
+      {/* Endgame spine: Industry Legend goal ladder */}
+      <View style={[styles.comboCard, { borderColor: colors.gold }]}>
+        <Text style={styles.comboTitle}>
+          {game.legendAchieved ? '👑 INDUSTRY LEGEND — all legacy goals complete!' :
+            `👑 Endgame: ${ENDGAME_GOALS.filter((gl) => gl.isComplete(game)).length} / ${ENDGAME_GOALS.length} legacy goals`}
+        </Text>
+        {ENDGAME_GOALS.map((goal) => {
+          const done = goal.isComplete(game)
+          const p = goal.progress(game)
+          return (
+            <View key={goal.key} style={styles.legendRow}>
+              <Text style={[styles.legendName, done && styles.legendNameDone]} numberOfLines={1}>
+                {done ? '✅' : '⬜'} {goal.name.en}
+                <Text style={styles.legendDesc}>  {goal.description.en}</Text>
+              </Text>
+              {!done && (
+                <View style={styles.legendProgress}>
+                  <ProgressBar current={p.current} target={p.target} />
+                </View>
+              )}
+            </View>
+          )
+        })}
+      </View>
 
       <View style={styles.comboCard}>
         <Text style={styles.comboTitle}>
@@ -156,6 +186,25 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 12,
     marginTop: 2,
+  },
+  legendRow: {
+    marginTop: 4,
+  },
+  legendName: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  legendNameDone: {
+    color: colors.ink,
+  },
+  legendDesc: {
+    color: colors.inkMuted,
+    fontSize: 11,
+    fontWeight: '400',
+  },
+  legendProgress: {
+    marginTop: 3,
   },
   comboHint: {
     color: colors.inkMuted,
