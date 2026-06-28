@@ -47,7 +47,7 @@ import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, STANDING_ORDER_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, STANDING_ORDER_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
 import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -402,6 +402,9 @@ export default function RefineryScreen() {
     { label: t(text.hud.feedstock),      value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
     { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}%` },
     { label: t(text.hud.era),            value: t(derived.currentEra.name) },
+    ...(game.prestigeLevel > 0
+      ? [{ label: t(text.hud.prestige), value: `Lv${game.prestigeLevel} · +${Math.round(game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel * 100)}%` }]
+      : []),
   ]
   // Nudge dot on the More Info toggle when a hidden meter needs attention.
   const secondaryAlert = game.esgScore < 40 || game.staffMorale < 40

@@ -211,6 +211,7 @@ export const text = {
     moreInfo: bilingual('More Info', 'ข้อมูลเพิ่มเติม'),
     demandTitle: bilingual('Demand (sell price level)', 'อุปสงค์ (ระดับราคาขาย)'),
     cashOverTime: bilingual('Cash over time', 'เงินสดตามเวลา'),
+    prestige: bilingual('Prestige', 'เพรสทีจ'),
     specialization: bilingual('Specialization', 'แนวทาง'),
     specNone: bilingual('Not chosen', 'ยังไม่เลือก'),
   },
@@ -392,6 +393,24 @@ export const text = {
     mainMenu: bilingual('Main Menu', 'เมนูหลัก'),
     mainMenuSub: bilingual('Return to front menu', 'กลับสู่เมนูหน้าแรก'),
     go: bilingual('Go', 'ไป'),
+    prestigeHeader: bilingual('New Game+', 'เริ่มใหม่+'),
+    prestigeTitle: (lvl: number) => bilingual(`Prestige (Lv${lvl})`, `เพรสทีจ (เลเวล ${lvl})`),
+    prestigeSub: (pct: number) =>
+      bilingual(
+        `Restart fresh — keep a permanent +${pct}% production. Each prestige adds more.`,
+        `เริ่มใหม่ทั้งหมด — คงโบนัสผลิตถาวร +${pct}% เพรสทีจแต่ละครั้งเพิ่มขึ้นอีก`,
+      ),
+    prestigeLockedSub: bilingual(
+      'Reach Industry Legend (all legacy goals) to unlock New Game+.',
+      'พิชิต Industry Legend (เป้าหมายปลายเกมครบ) เพื่อปลดล็อก New Game+',
+    ),
+    prestigeAction: bilingual('Prestige', 'เพรสทีจ'),
+    prestigeLocked: bilingual('Locked', 'ล็อกอยู่'),
+    prestigeConfirmTitle: bilingual('Prestige now?', 'เพรสทีจตอนนี้?'),
+    prestigeConfirmBody: bilingual(
+      'This restarts the whole game from scratch but keeps your permanent production bonus.',
+      'จะเริ่มเกมใหม่ทั้งหมด แต่คงโบนัสผลิตถาวรไว้',
+    ),
     dangerZone: bilingual('Danger Zone', 'พื้นที่อันตราย'),
     resetSave: bilingual('Reset save', 'รีเซ็ตเซฟ'),
     resetSaveSub: bilingual('Deletes all progress after confirmation.', 'ลบความคืบหน้าทั้งหมดหลังยืนยัน'),

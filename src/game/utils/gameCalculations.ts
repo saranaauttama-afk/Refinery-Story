@@ -29,6 +29,7 @@ import {
   MAINTENANCE_BALANCE,
   MARKET_BALANCE,
   MORALE_BALANCE,
+  PRESTIGE_BALANCE,
   SPECIALIZATION_BALANCE,
   WAGE_BALANCE,
   WASTE_BALANCE,
@@ -205,6 +206,7 @@ export function createInitialGameState(): GameState {
     gridExpansionLevel: 0,
     prototypeCompleted: false,
     legendAchieved: false,
+    prestigeLevel: 0,
     everBoughtCrude: false,
     starterGuideDismissed: false,
     refineryName: DEFAULT_REFINERY_NAME,
@@ -229,6 +231,13 @@ export function createInitialGameState(): GameState {
       plasticPellets: 0,
     },
   }
+}
+
+// Prestige / New Game+: a completely fresh run that keeps only the prestige
+// level (bumped by one), which grants a permanent production bonus. Only
+// meaningful once the player has reached Industry Legend.
+export function prestigeGame(game: GameState): GameState {
+  return { ...createInitialGameState(), prestigeLevel: game.prestigeLevel + 1 }
 }
 
 export function getUpgradeCost(level: number) {
@@ -1637,8 +1646,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const specProductionMultiplier = isIndustrial
     ? 1 + SPECIALIZATION_BALANCE.industrial.productionOutputBonus
     : isGreen ? 1 - SPECIALIZATION_BALANCE.green.productionSpeedPenalty : 1
+  // Prestige: a permanent stacking production bonus carried across New Game+.
+  const prestigeMultiplier = 1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel
   const workerProductionMultiplier =
-    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * prestigeMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.

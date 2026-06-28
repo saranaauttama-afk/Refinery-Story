@@ -36,6 +36,7 @@ import {
   AUTO_TRADE_BUFFER_PERCENT,
   addLog,
   createInitialGameState,
+  prestigeGame,
   createNewEmployee,
   getDemandShiftDelta,
   getEsgDrift,
@@ -1723,6 +1724,19 @@ export function useGameLoop() {
     setMoneyHistory([])
   }, [])
 
+  // Prestige / New Game+: fresh run keeping the (bumped) prestige level for a
+  // permanent production bonus. Only offered once Industry Legend is reached.
+  const prestige = useCallback(() => {
+    setGame((current) => {
+      const next = current ? prestigeGame(current) : createInitialGameState()
+      gameRef.current = next
+      return next
+    })
+    flowSamplesRef.current = []
+    setFlowRates({ moneyPerMin: 0, gasPerMin: 0 })
+    setMoneyHistory([])
+  }, [])
+
   // Cycles 1x → 2x → 3x → ⏸(0) → 1x. The factory screen's speed button calls
   // this; the label reads `speed` to show the current state.
   const cycleSpeed = useCallback(() => {
@@ -1824,6 +1838,7 @@ export function useGameLoop() {
     renameRefinery,
     manualSave,
     resetGame,
+    prestige,
     dismissAward: () => setPendingAward(null),
     dismissEraBanner: () => setPendingEraBanner(null),
     dismissMilestoneHeadline: () => setPendingMilestoneHeadline(null),

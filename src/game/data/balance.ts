@@ -976,6 +976,14 @@ export const MAINTENANCE_BALANCE = {
 // and a trade-off, forcing a strategic direction. The existing perk tree
 // and Dynamic Market supply the tactical layer; this supplies the strategic
 // identity that shapes the rest of the run.
+// --- Prestige / New Game+ ---
+// Unlocked once Industry Legend is reached. Restarting "prestiges": the run
+// resets but prestigeLevel carries forward, granting a permanent stacking
+// production bonus so each replay starts meaningfully stronger.
+export const PRESTIGE_BALANCE = {
+  bonusPerLevel: 0.1, // +10% production per prestige level
+} as const
+
 export const SPECIALIZATION_BALANCE = {
   unlockLevel: 5,
   green: {

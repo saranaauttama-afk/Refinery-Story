@@ -24,7 +24,7 @@ import { text } from '../../../src/game/translations'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
-import { EXPANSION_BALANCE, STAFF_LEVEL_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
+import { EXPANSION_BALANCE, PRESTIGE_BALANCE, STAFF_LEVEL_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import {
@@ -94,7 +94,7 @@ const statStyles = StyleSheet.create({
 
 export default function CompanyScreen() {
   const router = useRouter()
-  const { game, loaded, derived, trainEmployee, assignEmployeeToCell, unassignCell, expandGrid, renameRefinery, manualSave, resetGame } = useGame()
+  const { game, loaded, derived, trainEmployee, assignEmployeeToCell, unassignCell, expandGrid, renameRefinery, manualSave, resetGame, prestige } = useGame()
   const { t } = useLang()
   const cs = text.companyScreen
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
@@ -344,6 +344,27 @@ export default function CompanyScreen() {
           <ListRow title={t(cs.settingsRow)} subtitle={t(cs.settingsRowSub)} actionLabel={t(cs.open)} onPress={() => router.push('/settings')} />
           <ListRow title={t(cs.store)} subtitle={t(cs.storeSub)} actionLabel={t(cs.open)} onPress={() => router.push('/store')} />
           <ListRow title={t(cs.mainMenu)} subtitle={t(cs.mainMenuSub)} actionLabel={t(cs.go)} onPress={() => router.replace('/')} />
+
+          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.prestigeHeader)}</Text>
+          {game.legendAchieved ? (
+            <ListRow
+              title={t(cs.prestigeTitle(game.prestigeLevel + 1))}
+              subtitle={t(cs.prestigeSub(Math.round((game.prestigeLevel + 1) * PRESTIGE_BALANCE.bonusPerLevel * 100)))}
+              actionLabel={t(cs.prestigeAction)}
+              onPress={() => Alert.alert(t(cs.prestigeConfirmTitle), t(cs.prestigeConfirmBody), [
+                { text: t(cs.cancel), style: 'cancel' },
+                { text: t(cs.prestigeAction), onPress: () => { prestige(); router.replace('/game') } },
+              ])}
+            />
+          ) : (
+            <ListRow
+              title={t(cs.prestigeTitle(game.prestigeLevel + 1))}
+              subtitle={t(cs.prestigeLockedSub)}
+              actionLabel={t(cs.prestigeLocked)}
+              disabled
+              onPress={() => {}}
+            />
+          )}
 
           <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.dangerZone)}</Text>
           <ListRow

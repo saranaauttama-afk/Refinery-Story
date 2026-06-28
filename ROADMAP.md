@@ -122,7 +122,9 @@ A ladder of 6 "legacy goals" (`ENDGAME_GOALS`: max level, $1M, all research,
 max grid, an S-grade year, 100k lifetime gasoline) shown on the Achievements
 screen with progress bars. Completing all flips `legendAchieved` → the
 "Industry Legend" celebration (modal + confetti). Closes the post-Lv20 loop.
-Follow-up: a New Game+ / prestige that carries something forward.
+Follow-up: ✅ **New Game+ / Prestige** — once Industry Legend is reached, the
+Company › Settings tab offers Prestige: a fresh run that carries a permanent
+stacking +10%/level production bonus (`PRESTIGE_BALANCE`, `prestigeGame`).
 
 ---
 

@@ -177,6 +177,10 @@ export type GameState = {
   // Endgame spine: set once every ENDGAME_GOALS objective is complete (the
   // permanent "Industry Legend" status). Triggers a one-time celebration.
   legendAchieved: boolean
+  // Prestige / New Game+: how many times the player has restarted after reaching
+  // Industry Legend. Carries forward across the reset and grants a permanent
+  // production bonus (PRESTIGE_BALANCE.bonusPerLevel each).
+  prestigeLevel: number
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
   // Player-chosen name for their refinery, shown in the hero panel alongside
