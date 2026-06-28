@@ -262,6 +262,10 @@ export const text = {
     shipmentSub: (cost: string, secs: number) =>
       bilingual(`$${cost} arrives in ${secs}s`, `$${cost} มาถึงใน ${secs} วิ`),
     order: bilingual('Order', 'สั่งซื้อ'),
+    marketTitle: bilingual('Crude Market', 'ตลาดน้ำมันดิบ'),
+    now: bilingual('now', 'ตอนนี้'),
+    buyHintCheap: bilingual('Price is low — a good time to buy', 'ราคาต่ำ — เหมาะจะซื้อ'),
+    buyHintHigh: bilingual('Price is high — the dashed line shows the dip ahead', 'ราคาสูง — เส้นประบอกช่วงที่ราคาจะลง'),
     standingOrders: bilingual('Standing Orders', 'คำสั่งซื้อประจำ'),
     cooldown: (secs: number) => bilingual(`Cooldown ${secs}s`, `รอ ${secs} วิ`),
     fulfill: bilingual('Fulfill', 'ส่งมอบ'),
