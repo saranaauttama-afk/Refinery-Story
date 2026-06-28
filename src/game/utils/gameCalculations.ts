@@ -862,7 +862,11 @@ export function getTotalCellOutput(
     )
     total += baseOutputPerCycle * levelMultiplier * specialistMultiplier
   }
-  return total
+  // Prestige / New Game+ is a flat output bonus on every downstream plant
+  // (mirrors the gasoline yield-per-batch bonus). It lives here rather than in
+  // the gasoline speed multiplier because that one floors at minProductionMs,
+  // which silently wasted the prestige bonus past mid-game.
+  return total * (1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel)
 }
 
 
@@ -1661,11 +1665,14 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     ? 1 + SPECIALIZATION_BALANCE.industrial.productionOutputBonus
     : isGreen ? 1 - SPECIALIZATION_BALANCE.green.productionSpeedPenalty : 1
   // Prestige: a permanent stacking production bonus carried across New Game+.
-  const prestigeMultiplier = 1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel
+  // Applied as a flat OUTPUT bonus (gasoline yield-per-batch + downstream plant
+  // output), NOT as a speed multiplier -- gasoline speed floors at
+  // minProductionMs by mid-game, which silently wasted the bonus there.
+  const prestigeOutputMultiplier = 1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel
   // Power-plant adjacency combo: a downstream plant next to a power plant runs hotter.
   const powerAdjacencyMultiplier = 1 + comboStats.powerToPlant * BONUS_BALANCE.adjacencyBonusRate
   const workerProductionMultiplier =
-    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * prestigeMultiplier * powerAdjacencyMultiplier
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * powerAdjacencyMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
@@ -1835,6 +1842,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     specialBuildingContractRewardMultiplier,
     specialBuildingRpRewardMultiplier,
     workerProductionMultiplier,
+    prestigeOutputMultiplier,
     productSellMultiplier,
     workerStorageBonus,
     perkProductionBonusRate,

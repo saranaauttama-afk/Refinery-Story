@@ -177,15 +177,19 @@ hr('5. Progression: production rate, sell price, gross/sec, upgrade gates')
 // ===========================================================================
 // 6. Prestige & power-adjacency effect on worker production multiplier
 // ===========================================================================
-hr('6. Prestige (New Game+) production multiplier')
+hr('6. Prestige (New Game+) is now a flat OUTPUT bonus (yield, not speed)')
 {
   const grid = buildGrid({ distillationUnit: 4, lubricantPlant: 2, powerPlant: 1 })
   const workers = { operator: 6, salesAgent: 2 }
   for (let p = 0; p <= 3; p++) {
     const d = calculateDerivedStats(mkState({ level: 6, grid, workers, prestige: p }))
+    // gasoline/sec = batches/sec × yield-per-batch (perk + prestige). No perks here,
+    // so the yield multiplier is exactly prestigeOutputMultiplier.
+    const gasPerSec = d.productionRate * d.prestigeOutputMultiplier
+    const grossPerSec = gasPerSec * d.sellPrice
     console.log(
-      `prestige ${p}        : workerMult ${r2(d.workerProductionMultiplier)}  ` +
-        `prod/s ${r2(d.productionRate)}  sell ${money(d.sellPrice)}`,
+      `prestige ${p}        : outputMult ${r2(d.prestigeOutputMultiplier)}  ` +
+        `prod/s ${r2(d.productionRate)} (capped)  gas/s ${r2(gasPerSec)}  gross/s ${money(grossPerSec)}`,
     )
   }
 }

@@ -677,6 +677,8 @@ export type DerivedStats = {
   specialBuildingContractRewardMultiplier: number
   specialBuildingRpRewardMultiplier: number
   workerProductionMultiplier: number
+  // Prestige / New Game+ flat output bonus (gasoline yield + downstream plants).
+  prestigeOutputMultiplier: number
   // Global product sell multiplier (Sales Agents % + quality perks + era).
   // Applies to every product's sell price.
   productSellMultiplier: number
