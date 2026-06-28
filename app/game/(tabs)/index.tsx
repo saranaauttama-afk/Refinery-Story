@@ -378,13 +378,22 @@ export default function RefineryScreen() {
     { route: '/game/research',    icon: '🔬', label: t(text.nav.research),  badge: researchReady || undefined },
     { route: '/game/company',     icon: '🏢', label: t(text.nav.company) },
   ]
+  // The slow-moving meters live in the "More Info" sheet (one tap on the Rep
+  // stat) so the always-on dock can stay focused on the core economic loop.
+  // Their *effect* is still visible at a glance via the flow-rate bar.
+  const specValue = game.specialization
+    ? (game.specialization === 'green' ? t(text.hud.green) : t(text.hud.industrial))
+    : t(text.hud.specNone)
   const secondaryStats = [
-    { label: t(text.hud.feedstock),   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
-    { label: t(text.hud.esg),         value: `${Math.round(game.esgScore)}` },
-    { label: t(text.hud.reputation),  value: `${Math.floor(game.reputation).toLocaleString()}` },
-    { label: t(text.hud.season),      value: `${t(seasonLabel)} · ${seasonPct}%` },
-    { label: t(text.hud.era),         value: t(derived.currentEra.name) },
+    { label: t(text.hud.esg),            value: `${Math.round(game.esgScore)}/100` },
+    { label: t(text.hud.morale),         value: `${Math.round(game.staffMorale)}/100` },
+    { label: t(text.hud.specialization), value: specValue },
+    { label: t(text.hud.feedstock),      value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
+    { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}%` },
+    { label: t(text.hud.era),            value: t(derived.currentEra.name) },
   ]
+  // Nudge dot on the More Info toggle when a hidden meter needs attention.
+  const secondaryAlert = game.esgScore < 40 || game.staffMorale < 40
 
   const handleCellPress = (index: number) => {
     if (gridEditMode) {
@@ -542,31 +551,16 @@ export default function RefineryScreen() {
             <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
           </View>
           <View style={styles.dockDivider} />
-          <View style={styles.dockStat}>
-            <Text style={styles.dockIcon}>🌿</Text>
-            <Text style={styles.dockVal}>{Math.round(game.esgScore)}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.esg)}</Text>
-          </View>
-          <View style={styles.dockDivider} />
-          <View style={styles.dockStat}>
-            <Text style={styles.dockIcon}>{game.staffMorale >= 75 ? '😊' : game.staffMorale < 40 ? '😟' : '😐'}</Text>
-            <Text style={styles.dockVal}>{Math.round(game.staffMorale)}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.morale)}</Text>
-          </View>
-          {game.specialization && (
-            <>
-              <View style={styles.dockDivider} />
-              <View style={styles.dockStat}>
-                <Text style={styles.dockIcon}>{game.specialization === 'green' ? '🌿' : '🏭'}</Text>
-                <Text style={styles.dockLabel}>{game.specialization === 'green' ? t(text.hud.green) : t(text.hud.industrial)}</Text>
-              </View>
-            </>
-          )}
-          <View style={styles.dockDivider} />
+          {/* Rep doubles as the "More Info" toggle — ESG / Morale / Specialization
+              and the rest of the slow meters live one tap away to keep the dock
+              focused on the core loop. Alert dot flags a meter that needs eyes. */}
           <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
-            <Text style={styles.dockIcon}>⭐</Text>
+            <View style={styles.dockToggleIconWrap}>
+              <Text style={styles.dockIcon}>⭐</Text>
+              {secondaryAlert && <View style={styles.dockAlertDot} />}
+            </View>
             <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.rep)}</Text>
+            <Text style={styles.dockLabel}>{t(text.hud.rep)} ⋯</Text>
           </Pressable>
         </View>
 
@@ -775,7 +769,7 @@ export default function RefineryScreen() {
       </View>{/* end scene */}
 
       {/* ── More Info sheet ──────────────────────────────────────────────── */}
-      <Sheet visible={secondaryOpen} title="More Info" onClose={() => setSecondaryOpen(false)}>
+      <Sheet visible={secondaryOpen} title={t(text.hud.moreInfo)} onClose={() => setSecondaryOpen(false)}>
         {secondaryStats.map((stat) => (
           <View key={stat.label} style={styles.infoStatRow}>
             <Text style={styles.infoStatLabel}>{stat.label}</Text>
@@ -785,31 +779,31 @@ export default function RefineryScreen() {
       </Sheet>
 
       {/* ── Events sheet ─────────────────────────────────────────────────── */}
-      <Sheet visible={eventModalOpen} title="Events" onClose={() => setEventModalOpen(false)}>
+      <Sheet visible={eventModalOpen} title={t(text.eventsSheet.title)} onClose={() => setEventModalOpen(false)}>
         {claimableHiddenEvents.length === 0 ? (
           <Text style={styles.eventEmpty}>
-            No claimable surprises right now. Keep building and checking the clock.
+            {t(text.eventsSheet.empty)}
           </Text>
         ) : (
           claimableHiddenEvents.map((event) => {
             const isBuildingReward = event.reward.kind === 'building'
             const actionLabel =
-              event.reward.kind === 'staff'    ? 'Open Staff'     :
-              event.reward.kind === 'contract' ? 'Open Business'  : 'Open Build'
+              event.reward.kind === 'staff'    ? t(text.eventsSheet.openRecruit)   :
+              event.reward.kind === 'contract' ? t(text.eventsSheet.openContracts) : t(text.eventsSheet.openBuild)
             const subtitle =
               event.reward.kind === 'staff'
-                ? 'Claimable staff event. Opens the Staff tab.'
+                ? t(text.eventsSheet.subStaff)
                 : event.reward.kind === 'contract'
-                  ? 'Claimable contract event. Opens the Business tab.'
+                  ? t(text.eventsSheet.subContract)
                   : firstEmptyCellIndex >= 0
-                    ? 'Claimable building event. Opens Build on the first empty tile.'
-                    : 'Needs an empty tile before the build reward can be claimed.'
+                    ? t(text.eventsSheet.subBuilding)
+                    : t(text.eventsSheet.subBuildingNeedTile)
             return (
               <ListRow
                 key={event.key}
                 title={
-                  event.reward.kind === 'staff'    ? 'Mystery Applicant' :
-                  event.reward.kind === 'contract' ? 'Mystery Contract'  : 'Mystery Delivery'
+                  event.reward.kind === 'staff'    ? t(text.eventsSheet.mysteryApplicant) :
+                  event.reward.kind === 'contract' ? t(text.eventsSheet.mysteryContract)  : t(text.eventsSheet.mysteryDelivery)
                 }
                 subtitle={subtitle}
                 badge="???"
@@ -1674,11 +1668,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 1,
   },
+  dockToggleIconWrap: {
+    position: 'relative',
+  },
+  dockAlertDot: {
+    position: 'absolute',
+    top: -1,
+    right: -6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.orange,
+    borderWidth: 1,
+    borderColor: '#1C2634',
+  },
   dockIcon: {
-    fontSize: 14,
+    // Dock trimmed to 4 core stats (Money/Crude/Gas/Rep), so each gets more
+    // room — bumped a touch over the cramped 7-stat layout.
+    fontSize: 15,
   },
   dockVal: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: fonts.heading,
     color: '#FFFFFF',
     letterSpacing: 0.2,
