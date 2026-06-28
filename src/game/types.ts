@@ -679,6 +679,10 @@ export type DerivedStats = {
   workerProductionMultiplier: number
   // Prestige / New Game+ flat output bonus (gasoline yield + downstream plants).
   prestigeOutputMultiplier: number
+  // Speed-branch overflow recovered as gasoline yield-per-batch: 1.0 until the
+  // productionInterval hits minProductionMs, then >1 so operators/morale/research/
+  // spec/power-adjacency keep paying off past the speed floor (as crude-efficiency).
+  speedOverflowYieldMultiplier: number
   // Global product sell multiplier (Sales Agents % + quality perks + era).
   // Applies to every product's sell price.
   productSellMultiplier: number

@@ -650,7 +650,8 @@ export function tick(current: GameState): GameState {
     )
 
     if (batchesProduced >= 1) {
-      const perkYieldMultiplier = (1 + stats.perkProductionBonusRate) * stats.prestigeOutputMultiplier
+      const perkYieldMultiplier =
+        (1 + stats.perkProductionBonusRate) * stats.prestigeOutputMultiplier * stats.speedOverflowYieldMultiplier
       const rawYield = batchesProduced * perkYieldMultiplier + gasolineYieldCarry
       const produced = Math.min(Math.floor(rawYield), storageRoom)
       gasolineYieldCarry = produced === Math.floor(rawYield) ? rawYield - produced : 0

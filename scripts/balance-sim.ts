@@ -34,6 +34,14 @@ const hr = (label: string) => console.log(`\n=== ${label} ===`)
 const r2 = (n: number) => Math.round(n * 100) / 100
 const money = (n: number) => '$' + Math.round(n).toLocaleString('en-US')
 
+// Effective gasoline/sec = batches/sec × yield-per-batch. productionRate alone
+// (batches/sec) understates output once the speed floor recovers as yield.
+const effGasPerSec = (d: ReturnType<typeof calculateDerivedStats>) =>
+  d.productionRate *
+  (1 + d.perkProductionBonusRate) *
+  d.prestigeOutputMultiplier *
+  d.speedOverflowYieldMultiplier
+
 // ---------------------------------------------------------------------------
 // helpers to fabricate representative game states
 // ---------------------------------------------------------------------------
@@ -156,14 +164,16 @@ hr('5. Progression: production rate, sell price, gross/sec, upgrade gates')
     { level: 6, grid: buildGrid({ distillationUnit: 4, lubricantPlant: 2, jetFuelPlant: 1, powerPlant: 1 }), workers: { operator: 6, salesAgent: 2, mechanic: 1 } },
     { level: 10, grid: buildGrid({ distillationUnit: 6, lubricantPlant: 3, jetFuelPlant: 2, petrochemicalPlant: 2, powerPlant: 2 }), workers: { operator: 10, salesAgent: 4, mechanic: 2, fuelSpecialist: 2 } },
   ]
-  console.log('lvl | prod/s | sell$  | gross/s | crudeStore | upgrade$  | prodReq | repReq')
+  console.log('lvl | prod/s | gas/s | sell$  | gross/s | crudeStore | upgrade$  | prodReq | repReq')
   for (const s of stages) {
     const g = mkState(s)
     const d = calculateDerivedStats(g)
-    const grossPerSec = d.productionRate * d.sellPrice
+    const gasPerSec = effGasPerSec(d)
+    const grossPerSec = gasPerSec * d.sellPrice
     console.log(
       `${String(s.level).padStart(3)} | ` +
         `${r2(d.productionRate).toFixed(2).padStart(6)} | ` +
+        `${r2(gasPerSec).toFixed(2).padStart(5)} | ` +
         `${String(d.sellPrice).padStart(5)} | ` +
         `${money(grossPerSec).padStart(7)} | ` +
         `${String(d.maxCrudeStorage).padStart(10)} | ` +
@@ -183,13 +193,28 @@ hr('6. Prestige (New Game+) is now a flat OUTPUT bonus (yield, not speed)')
   const workers = { operator: 6, salesAgent: 2 }
   for (let p = 0; p <= 3; p++) {
     const d = calculateDerivedStats(mkState({ level: 6, grid, workers, prestige: p }))
-    // gasoline/sec = batches/sec × yield-per-batch (perk + prestige). No perks here,
-    // so the yield multiplier is exactly prestigeOutputMultiplier.
-    const gasPerSec = d.productionRate * d.prestigeOutputMultiplier
-    const grossPerSec = gasPerSec * d.sellPrice
+    const gasPerSec = effGasPerSec(d)
     console.log(
       `prestige ${p}        : outputMult ${r2(d.prestigeOutputMultiplier)}  ` +
-        `prod/s ${r2(d.productionRate)} (capped)  gas/s ${r2(gasPerSec)}  gross/s ${money(grossPerSec)}`,
+        `prod/s ${r2(d.productionRate)} (capped)  gas/s ${r2(gasPerSec)}  gross/s ${money(gasPerSec * d.sellPrice)}`,
+    )
+  }
+}
+
+// ===========================================================================
+// 7. Speed-floor recovery — operators now matter past the cap (via yield)
+// ===========================================================================
+hr('7. Speed-floor recovery: operators past the cap (was a dead stat)')
+{
+  const grid = buildGrid({ distillationUnit: 4 })
+  for (const lvl of [3, 4, 6]) {
+    const a = calculateDerivedStats(mkState({ level: lvl, grid, workers: { operator: 0 } }))
+    const b = calculateDerivedStats(mkState({ level: lvl, grid, workers: { operator: 12 } }))
+    const floored = b.productionRate <= a.productionRate + 1e-6
+    console.log(
+      `lvl ${lvl}: prod/s ${r2(a.productionRate)}→${r2(b.productionRate)} ${floored ? '(speed capped)' : ''}  ` +
+        `gas/s 0op ${r2(effGasPerSec(a))} → 12op ${r2(effGasPerSec(b))}  ` +
+        `overflowYield@12op ${r2(b.speedOverflowYieldMultiplier)}`,
     )
   }
 }

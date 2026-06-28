@@ -1676,14 +1676,21 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
-  const productionInterval = Math.max(
-    PRODUCTION_BALANCE.minProductionMs,
+  const unclampedInterval =
     baseProductionInterval /
-      productionMultiplier /
-      researchProductionMultiplier /
-      workerProductionMultiplier /
-      distillationUpgradeProductionMultiplier,
-  )
+    productionMultiplier /
+    researchProductionMultiplier /
+    workerProductionMultiplier /
+    distillationUpgradeProductionMultiplier
+  const productionInterval = Math.max(PRODUCTION_BALANCE.minProductionMs, unclampedInterval)
+  // The speed branch (operators, morale, production research, refinery-upgrade
+  // and distillation speed, industrial spec, power-plant adjacency) floors at
+  // minProductionMs by ~refinery level 4 -- past that, any further speed
+  // multiplier was silently wasted on gasoline (the same trap that already led
+  // perks + prestige to feed yield instead). Recover the clamped-away portion as
+  // a gasoline yield-per-batch bonus: it's exactly 1.0 (no-op) until the floor is
+  // hit, then grows so those investments keep paying off as crude-efficiency.
+  const speedOverflowYieldMultiplier = productionInterval / unclampedInterval
   const productionRate = 1000 / productionInterval
   const sellPriceMultiplier =
     1 + comboStats.distillationToProduct * BONUS_BALANCE.adjacencyBonusRate
@@ -1843,6 +1850,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     specialBuildingRpRewardMultiplier,
     workerProductionMultiplier,
     prestigeOutputMultiplier,
+    speedOverflowYieldMultiplier,
     productSellMultiplier,
     workerStorageBonus,
     perkProductionBonusRate,
