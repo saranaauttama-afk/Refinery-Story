@@ -125,10 +125,16 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
 
   if (stats.maxGasolineStorage > 0) {
     const gasolinePct = (next.gasoline / stats.maxGasolineStorage) * 100
-    // Saturation-aware (see autoSellTargetPct): hold when gasoline's price is
-    // depressed, but still dump to avoid overflow; undershoot to target - buffer
-    // so it visibly refills before the next sell-off.
-    const targetPct = autoSellTargetPct(gasolinePct, settings.sellThreshold, getProductMarketLevel(next, 'gasoline'))
+    // B2: gasoline is the high-volume COMMODITY line — overproduced ~4x vs what
+    // the market absorbs, and its margin is thin (downstream carries the profit).
+    // The saturation-aware HOLD (used for the high-value products below) just
+    // stalls gasoline production against a full tank, starving the lifetime-
+    // gasoline endgame goal and contract supply — and an earlier sim showed
+    // dumping gasoline nets *more* than holding under overproduction anyway. So
+    // keep gasoline flowing: plain sell-down-to-threshold, throughput over price.
+    const targetPct = gasolinePct > settings.sellThreshold
+      ? Math.max(0, settings.sellThreshold - AUTO_TRADE_BUFFER_PERCENT)
+      : null
     if (targetPct !== null) {
       const targetGasoline = Math.floor((targetPct / 100) * stats.maxGasolineStorage)
       const excess = Math.max(0, next.gasoline - targetGasoline)

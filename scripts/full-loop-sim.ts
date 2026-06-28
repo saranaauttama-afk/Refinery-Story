@@ -67,7 +67,10 @@ function targetLoadout(level: number): Partial<Record<BuildingType, number>> {
     crudeTank: 3,
     productTank: 2,
   }
-  if (level >= (BUILDINGS.powerPlant.unlockLevel ?? 99)) t.powerPlant = level >= 12 ? 2 : 1
+  // Power must cover downstream electricity demand AND leave headroom for the
+  // electricity-gated gasoline line — under-provisioning silently starves
+  // gasoline (each power plant = 12/cycle; downstream eats 3/4/5/6 each).
+  if (level >= (BUILDINGS.powerPlant.unlockLevel ?? 99)) t.powerPlant = level >= 15 ? 5 : level >= 10 ? 3 : 2
   if (level >= (BUILDINGS.laboratory.unlockLevel ?? 99)) t.laboratory = 1
   if (level >= (BUILDINGS.salesOffice.unlockLevel ?? 99)) t.salesOffice = 1
   if (level >= (BUILDINGS.maintenanceWorkshop.unlockLevel ?? 99)) t.maintenanceWorkshop = 1
