@@ -252,6 +252,40 @@ export const text = {
   common: {
     close: bilingual('Close', 'ปิด'),
   },
+  onboarding: {
+    skip: bilingual('Skip', 'ข้าม'),
+    next: bilingual('Next →', 'ถัดไป →'),
+    start: bilingual("Let's go! 🚀", 'ลุยเลย! 🚀'),
+    steps: [
+      {
+        icon: '🛢',
+        title: bilingual('Buy Crude Oil', 'ซื้อน้ำมันดิบ'),
+        body: bilingual(
+          'Open the Supply tab to order your first crude shipment. No crude = no production.',
+          'เปิดแท็บ "จัดหา" เพื่อสั่งน้ำมันดิบล็อตแรก ไม่มีน้ำมันดิบ = ผลิตไม่ได้',
+        ),
+        highlight: bilingual('Supply tab', 'แท็บจัดหา'),
+      },
+      {
+        icon: '🏭',
+        title: bilingual('Build Your First Plants', 'สร้างโรงงานแรก'),
+        body: bilingual(
+          'Tap an empty tile on the factory grid to build. Start with a Crude Tank + Distillation Unit.',
+          'แตะช่องว่างบนผังโรงงานเพื่อสร้าง เริ่มด้วยถังน้ำมันดิบ + หน่วยกลั่น',
+        ),
+        highlight: bilingual('Tap empty tile', 'แตะช่องว่าง'),
+      },
+      {
+        icon: '💰',
+        title: bilingual('Sell Gasoline', 'ขายน้ำมันเบนซิน'),
+        body: bilingual(
+          'Once gasoline fills up, tap Trade in the action bar to sell. Complete contracts for bonus rewards.',
+          'พอเบนซินเต็ม แตะปุ่ม Trade ในแถบล่างเพื่อขาย ทำสัญญาให้สำเร็จเพื่อรับโบนัส',
+        ),
+        highlight: bilingual('Trade button', 'ปุ่ม Trade'),
+      },
+    ],
+  },
   achievementsScreen: {
     back: bilingual('‹ Back', '‹ กลับ'),
     title: bilingual('🏆 Achievements', '🏆 ความสำเร็จ'),

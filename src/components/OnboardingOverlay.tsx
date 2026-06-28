@@ -1,34 +1,17 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated'
 import { colors, radii, spacing } from '../theme'
+import { useLang } from '../hooks/SettingsContext'
+import { text } from '../game/translations'
 
-const STEPS = [
-  {
-    icon: '🛢',
-    title: 'Buy Crude Oil',
-    body: 'Go to Business → Supply to order your first crude oil shipment. No crude = no production.',
-    highlight: 'Business tab',
-  },
-  {
-    icon: '🏭',
-    title: 'Build Your First Plants',
-    body: 'Tap an empty tile on the factory grid to build. Start with a Crude Tank + Distillation Unit.',
-    highlight: 'Tap empty tile',
-  },
-  {
-    icon: '💰',
-    title: 'Sell Gasoline',
-    body: 'Once gasoline fills up, tap Trade in the action bar to sell. Complete contracts for bonus rewards.',
-    highlight: 'Trade button',
-  },
-]
+const STEPS = text.onboarding.steps
 
 type Props = {
   onDismiss: () => void
 }
 
 export default function OnboardingOverlay({ onDismiss }: Props) {
+  const { t } = useLang()
   const [step, setStep] = useState(0)
   const current = STEPS[step]
 
@@ -52,22 +35,22 @@ export default function OnboardingOverlay({ onDismiss }: Props) {
 
         {/* Content */}
         <Text style={styles.icon}>{current.icon}</Text>
-        <Text style={styles.title}>{current.title}</Text>
-        <Text style={styles.body}>{current.body}</Text>
+        <Text style={styles.title}>{t(current.title)}</Text>
+        <Text style={styles.body}>{t(current.body)}</Text>
 
         {/* Highlight pill */}
         <View style={styles.highlightPill}>
-          <Text style={styles.highlightText}>👆 {current.highlight}</Text>
+          <Text style={styles.highlightText}>👆 {t(current.highlight)}</Text>
         </View>
 
         {/* Actions */}
         <View style={styles.actions}>
           <Pressable style={styles.skipBtn} onPress={onDismiss}>
-            <Text style={styles.skipLabel}>Skip</Text>
+            <Text style={styles.skipLabel}>{t(text.onboarding.skip)}</Text>
           </Pressable>
           <Pressable style={styles.nextBtn} onPress={handleNext}>
             <Text style={styles.nextLabel}>
-              {step < STEPS.length - 1 ? 'Next →' : "Let's go! 🚀"}
+              {step < STEPS.length - 1 ? t(text.onboarding.next) : t(text.onboarding.start)}
             </Text>
           </Pressable>
         </View>
