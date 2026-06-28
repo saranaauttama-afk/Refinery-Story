@@ -20,7 +20,7 @@ import ArtSlot from '../../../src/components/ArtSlot'
 import GameIcon from '../../../src/components/GameIcon'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
-import { text } from '../../../src/game/translations'
+import { parseBilingualText, text } from '../../../src/game/translations'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
@@ -95,7 +95,7 @@ const statStyles = StyleSheet.create({
 export default function CompanyScreen() {
   const router = useRouter()
   const { game, loaded, derived, trainEmployee, assignEmployeeToCell, unassignCell, expandGrid, renameRefinery, manualSave, resetGame, prestige } = useGame()
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const cs = text.companyScreen
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
@@ -300,9 +300,14 @@ export default function CompanyScreen() {
           <View style={styles.card}>
             {game.activityLog.length === 0
               ? <Text style={styles.emptyNote}>{t(cs.nothingLogged)}</Text>
-              : game.activityLog.slice(0, 10).map((entry, i) => (
-                  <Text key={i} style={styles.logEntry}>{entry}</Text>
-                ))}
+              : game.activityLog.slice(0, 10).map((entry, i) => {
+                  // Entries are stored as serialized bilingual text (EN|||TH|||TH);
+                  // pick the active language, falling back to EN for older/plain ones.
+                  const parsed = parseBilingualText(entry)
+                  return (
+                    <Text key={i} style={styles.logEntry}>{lang === 'th' && parsed.th ? parsed.th : parsed.en}</Text>
+                  )
+                })}
           </View>
           <Pressable style={styles.linkBtn} onPress={() => router.push('/achievements')}>
             <Text style={styles.linkBtnLabel}>{t(cs.viewMilestones)}</Text>
