@@ -346,6 +346,24 @@ export const text = {
         ),
         highlight: bilingual('Trade button', 'ปุ่ม Trade'),
       },
+      {
+        icon: '🧭',
+        title: bilingual('Explore the Tabs', 'สำรวจแท็บต่าง ๆ'),
+        body: bilingual(
+          'Use the bottom bar: Contracts to deliver products, Recruit to hire specialists, R&D for research & perks, and Company for your team.',
+          'ใช้แถบล่าง: สัญญา (ส่งมอบสินค้า), จ้างงาน (จ้างผู้เชี่ยวชาญ), วิจัย (งานวิจัย & เพิร์ก), และบริษัท (ทีมงาน)',
+        ),
+        highlight: bilingual('Bottom navigation', 'แถบเมนูล่าง'),
+      },
+      {
+        icon: '📈',
+        title: bilingual('Grow & Specialize', 'เติบโต & เลือกแนวทาง'),
+        body: bilingual(
+          'Level up your refinery to unlock more. At Level 5 you pick a permanent path (Green or Industrial); reach Industry Legend to unlock Prestige for permanent bonuses.',
+          'อัปเกรดโรงกลั่นเพื่อปลดล็อกเพิ่ม พอเลเวล 5 เลือกแนวทางถาวร (สีเขียว/อุตสาหกรรม) พิชิต Industry Legend เพื่อปลดล็อก Prestige รับโบนัสถาวร',
+        ),
+        highlight: bilingual("What's ahead", 'สิ่งที่รออยู่'),
+      },
     ],
   },
   achievementsScreen: {
