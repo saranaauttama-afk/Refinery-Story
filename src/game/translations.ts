@@ -203,6 +203,7 @@ export const text = {
     era: bilingual('Era', 'ยุค'),
     info: bilingual('Info', 'ข้อมูล'),
     moreInfo: bilingual('More Info', 'ข้อมูลเพิ่มเติม'),
+    demandTitle: bilingual('Demand (sell price level)', 'อุปสงค์ (ระดับราคาขาย)'),
     specialization: bilingual('Specialization', 'แนวทาง'),
     specNone: bilingual('Not chosen', 'ยังไม่เลือก'),
   },

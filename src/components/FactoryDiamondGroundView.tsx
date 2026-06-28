@@ -8,7 +8,7 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
-import { cellAcceptsSpecialist, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
+import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
 
@@ -379,6 +379,8 @@ function FactoryDiamondGroundView({
             // Staffed indicator: a worker badge on plants that have a specialist
             // assigned, so you can tell staffed from idle plants at a glance.
             const assignedWorker = cellAcceptsSpecialist(cell) ? getEmployeeAssignedToCell(game, activeIndex) : null
+            // Synergy aura: green = positive adjacency pair, orange = layout penalty.
+            const synergy = getCellSynergy(grid, activeIndex)
 
             // "Working" smoke: only for processing categories, and only when
             // the plant has no blocking/idle/full status this tick (a null
@@ -417,6 +419,17 @@ function FactoryDiamondGroundView({
                     />
                   </Svg>
                 )}
+                {synergy ? (
+                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT} style={styles.auraSvg}>
+                    <Polygon
+                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
+                      fill={synergy === 'bonus' ? 'rgba(124,179,66,0.22)' : 'rgba(232,131,58,0.22)'}
+                      stroke={synergy === 'bonus' ? '#7CB342' : '#E8833A'}
+                      strokeWidth={2.5}
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                ) : null}
                 {plantImage ? (
                   <Image source={plantImage.source} style={[styles.plantImage, { height: plantImageHeight }]} resizeMode="contain" />
                 ) : (
@@ -512,6 +525,11 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: LEVEL_FONT_SIZE,
     fontWeight: '800',
+  },
+  auraSvg: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
   staffBadge: {
     position: 'absolute',

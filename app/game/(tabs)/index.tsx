@@ -41,6 +41,7 @@ import { useSound } from '../../../src/hooks/useSound'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, fonts, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import GameIcon from '../../../src/components/GameIcon'
+import SaturationBars from '../../../src/components/SaturationBars'
 import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
@@ -55,6 +56,7 @@ import {
   getContractProgress,
   getComboHintCells,
   getEmployeeAssignedToCell,
+  getProductMarketLevel,
   getProductSellPrice,
   formatGameClockTime,
   getSeasonLabel,
@@ -695,6 +697,20 @@ export default function RefineryScreen() {
                   <Text style={styles.tradeActionSub}>${derived.sellPrice}/unit</Text>
                 </AnimatedPressable>
               </View>
+
+              <View style={styles.tradeDivider} />
+
+              {/* Demand saturation — which products are flooded (low = dumping
+                  it further just tanks its own price). */}
+              <Text style={styles.tradeSectionTitle}>{t(text.hud.demandTitle)}</Text>
+              <SaturationBars
+                rows={[
+                  { label: 'Gasoline', level: getProductMarketLevel(game, 'gasoline') },
+                  ...products
+                    .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+                    .map((p) => ({ label: p.label, level: getProductMarketLevel(game, p.key) })),
+                ]}
+              />
 
               <View style={styles.tradeDivider} />
 
@@ -1970,6 +1986,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.ink,
     fontSize: 13,
+  },
+  tradeSectionTitle: {
+    fontWeight: '800',
+    color: colors.inkMuted,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
   },
 
   // ── More Info sheet rows ──────────────────────────────────────────────────

@@ -1136,6 +1136,41 @@ export function hasPollutingNeighbor(grid: GridCell[], cellIndex: number): boole
   return neighbors.some((n) => n !== null && LAYOUT_BALANCE.pollutingBuildings.includes(n))
 }
 
+// Orthogonally-adjacent building pairs that grant a positive adjacency bonus
+// (mirrors getComboStats). Used to draw synergy auras on the factory grid.
+const SYNERGY_PAIRS: [BuildingType, BuildingType][] = [
+  ['crudeTank', 'distillationUnit'],
+  ['distillationUnit', 'productTank'],
+  ['crudeTank', 'productTank'],
+]
+
+function isSynergyPair(a: BuildingType, b: BuildingType): boolean {
+  return SYNERGY_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x))
+}
+
+// The adjacency status of a built cell, for the factory-grid synergy aura:
+// 'penalty' when a sensitive building (lab / sales office) sits next to a
+// polluter (loses bonus), 'bonus' when it forms a positive adjacency pair,
+// else null. Penalty wins if both somehow apply.
+export function getCellSynergy(grid: GridCell[], cellIndex: number): 'bonus' | 'penalty' | null {
+  const cell = grid[cellIndex]
+  if (!cell) return null
+  if (LAYOUT_BALANCE.sensitiveBuildings.includes(cell) && hasPollutingNeighbor(grid, cellIndex)) {
+    return 'penalty'
+  }
+  const cols = Math.round(Math.sqrt(grid.length))
+  const row = Math.floor(cellIndex / cols)
+  const col = cellIndex % cols
+  const neighbors: (GridCell | null)[] = [
+    col > 0 ? grid[cellIndex - 1] : null,
+    col < cols - 1 ? grid[cellIndex + 1] : null,
+    row > 0 ? grid[cellIndex - cols] : null,
+    row < cols - 1 ? grid[cellIndex + cols] : null,
+  ]
+  if (neighbors.some((n) => n !== null && isSynergyPair(cell, n))) return 'bonus'
+  return null
+}
+
 function getComboStats(grid: GridCell[]): ComboStats {
   const combos: ComboStats = {
     crudeToDistillation: 0,
