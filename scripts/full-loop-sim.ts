@@ -162,6 +162,7 @@ function decide(g: GameState): GameState {
 // --- run ---
 let g = createInitialGameState()
 const goalTick: Record<string, number> = {}
+const yearScores: { year: number; score: number; grade: string }[] = []
 const DECISION_EVERY = 25
 const MAX_TICKS = 1_500_000 // ~83h cap
 
@@ -185,7 +186,9 @@ for (let step = 0; step < MAX_TICKS; step++) {
 
   // year-end close (awards / S-grade / reputation)
   if (g.tickCount > 0 && g.tickCount % YEAR_TICKS === 0) {
-    g = closeBusinessYear(g).game
+    const closed = closeBusinessYear(g)
+    yearScores.push({ year: g.businessYear, score: closed.record.score, grade: closed.record.grade })
+    g = closed.game
   }
 
   // record goal completion ticks
@@ -211,3 +214,9 @@ for (const goal of ENDGAME_GOALS) {
   console.log(`  ${goal.key.padEnd(18)}: ${tk !== undefined ? fmtTime(tk) : `NOT MET (${Math.round(p.current).toLocaleString()}/${p.target.toLocaleString()})`}`)
 }
 console.log(`\n  ${'INDUSTRY LEGEND'.padEnd(18)}: ${goalTick['LEGEND'] !== undefined ? fmtTime(goalTick['LEGEND']) : 'NOT REACHED within cap'}`)
+
+console.log('\nannual award score by year (calibrating S/A/B thresholds):')
+for (const y of [1, 2, 3, 5, 8, 12, 20]) {
+  const rec = yearScores.find((r) => r.year === y)
+  if (rec) console.log(`  year ${String(y).padStart(2)}: score ${rec.score.toLocaleString().padStart(8)}  grade ${rec.grade}`)
+}

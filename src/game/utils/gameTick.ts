@@ -137,6 +137,10 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
           ...next,
           gasoline: next.gasoline - excess,
           money: next.money + excess * stats.sellPrice,
+          // Credit production sales to the annual award's "money earned" (it
+          // previously counted only contracts/standing orders -- the core sell
+          // loop was invisible to the award score).
+          yearStats: { ...next.yearStats, moneyEarned: next.yearStats.moneyEarned + excess * stats.sellPrice },
           productMarket: applyProductSaturation(next.productMarket, 'gasoline', excess),
         }
       }
@@ -181,6 +185,7 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
       ...next,
       productInventory: { ...next.productInventory, [product.key]: have - excess },
       money: next.money + excess * price,
+      yearStats: { ...next.yearStats, moneyEarned: next.yearStats.moneyEarned + excess * price },
       productMarket: applyProductSaturation(next.productMarket, product.key, excess),
     }
   }
@@ -446,6 +451,10 @@ export function tick(current: GameState): GameState {
   let productionProgress = nextProgress
   let gasolineYieldCarry = current.gasolineYieldCarry
   let totalGasolineProduced = current.totalGasolineProduced
+  // Per-year gasoline output for the annual award. This was declared, weighted
+  // (AWARDS_BALANCE.weights.perGasoline) and read in getAwardScore, but never
+  // incremented anywhere -- so the gasoline term of the award was always 0.
+  let yearGasolineProduced = current.yearStats.gasolineProduced
 
   if (nextProgress >= interval) {
     const storageRoom = stats.maxGasolineStorage - gasoline
@@ -481,6 +490,7 @@ export function tick(current: GameState): GameState {
       }
       gasoline += produced
       totalGasolineProduced += produced
+      yearGasolineProduced += produced
 
       productionProgress =
         crudeOil > 0 && gasoline < stats.maxGasolineStorage && electricityRemaining > 0
@@ -528,6 +538,7 @@ export function tick(current: GameState): GameState {
     productionProgress,
     gasolineYieldCarry,
     totalGasolineProduced,
+    yearStats: { ...current.yearStats, gasolineProduced: yearGasolineProduced },
     esgScore,
     gasolineDemandMultiplier,
     petrochemicalsDemandMultiplier,

@@ -542,6 +542,7 @@ export function useGameLoop() {
           ...current,
           gasoline: current.gasoline - actual,
           money: current.money + actual * stats.sellPrice,
+          yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + actual * stats.sellPrice },
           productMarket: applyProductSaturation(current.productMarket, 'gasoline', actual),
         }
       }),
@@ -567,6 +568,7 @@ export function useGameLoop() {
           ...current,
           productInventory: { ...current.productInventory, [key]: have - actual },
           money: current.money + price * actual,
+          yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + price * actual },
           productMarket: applyProductSaturation(current.productMarket, key, actual),
         }
       }),

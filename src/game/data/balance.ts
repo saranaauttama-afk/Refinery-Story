@@ -909,7 +909,12 @@ export const AWARDS_BALANCE = {
   // shift) without a generic "rising score bar" stacking on top.
   // (Previously had a dead `thresholdGrowthPerYear` field that
   // `getAwardGrade` never read -- removed 2026-06-13, see TECH_DEBT.)
-  gradeThresholds: { S: 1400, A: 850, B: 400, C: 0 },
+  // Recalibrated in Economy Pass 3 after fixing the award inputs (gasoline
+  // produced was never counted; production sales weren't credited to "money
+  // earned" — see gameTick). With both now feeding the score, a strong year
+  // lands ~5-6k and an ok year ~1.5k, so S is a genuine "flawless year", A a
+  // good one, B a steady one. (Was S:1400 when the inputs were broken.)
+  gradeThresholds: { S: 5000, A: 2800, B: 1400, C: 0 },
   // Cash reward by grade.
   cashByGrade: { S: 12000, A: 6000, B: 3000, C: 1000 },
   // Reputation reward by grade.
