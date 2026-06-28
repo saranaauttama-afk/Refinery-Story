@@ -427,23 +427,17 @@ export type ActiveWorkerItem = WorkerConfig & {
   count: number
 }
 
+// Random events are now purely *incidents* — small setbacks gated by ESG
+// (getIncidentChance) and softened by safety officers (eventPenaltyMultiplier),
+// so the random layer is a managed risk rather than a stream of free bonuses.
+// The old trivial positive/freebie events were cut; their decision-flavored
+// equivalents already live in the choice-event pool (equipmentEmergency,
+// qualityAlert, supplyChainDelay, communityComplaint, ...).
 export type RandomEventKey =
-  | 'crudeDiscount'
-  | 'machineTuneUp'
   | 'minorLeak'
-  | 'qualityBonus'
-  | 'marketDemandSpike'
-  | 'safetyInspection'
   | 'equipmentWear'
-  | 'efficientBatch'
-  | 'localNewsCoverage'
-  | 'supplierDiscount'
-  | 'equipmentInspection'
-  | 'workerSuggestion'
   | 'storageContamination'
-  | 'communityVisit'
   | 'distillationHiccup'
-  | 'feedstockSurplus'
 
 export type RandomEvent = {
   key: RandomEventKey

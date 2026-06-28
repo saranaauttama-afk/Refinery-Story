@@ -875,7 +875,10 @@ export function useGameLoop() {
         }
 
         if (shouldFireRandomEvent(next)) {
-          next = applyRandomEvent(next, getRandomEvent(next))
+          // getRandomEvent now rolls the ESG-gated incident chance and may
+          // return null (no incident this cycle) — only apply when one fires.
+          const incident = getRandomEvent(next)
+          if (incident) next = applyRandomEvent(next, incident)
         }
 
         if (hasNewMilestone(current, next)) {

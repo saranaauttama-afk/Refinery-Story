@@ -236,30 +236,16 @@ export const BONUS_BALANCE = {
   polymerEngineerPlasticPelletsBonusRate: 0.20,
 } as const
 
+// Random incidents only (the trivial freebie events were removed — see
+// events.ts / applyRandomEvent). Each value is the raw setback before the
+// safety-officer eventPenaltyMultiplier is applied.
 export const EVENT_BALANCE = {
-  crudeDiscountAmount: 10,
-  machineTuneUpMoneyReward: 200,
   minorLeakCrudeLoss: 20,
-  qualityBonusGasolineAmount: 20,
-  marketDemandSpikeMoneyReward: 750,
-  safetyInspectionPassReputationReward: 10,
-  safetyInspectionFailMoneyPenalty: 200,
-  safetyInspectionReputationThreshold: 50,
   equipmentWearGasolineLoss: 10,
-  efficientBatchGasolineAmount: 30,
-  localNewsCoverageReputationGain: 15,
-  supplierDiscountCrudeAmount: 15,
-  equipmentInspectionMoneyCost: 120,
-  equipmentInspectionReputationGain: 10,
-  workerSuggestionRpGain: 3,
   storageContaminationGasolineLoss: 15,
-  communityVisitMoneyCost: 150,
-  communityVisitReputationGain: 20,
-  // Feedstock-chain events (Charm Pass) — only fire once the player has built
+  // Feedstock-chain incident — only fires once the player has built
   // distillation (maxFeedstockStorage > baseFeedstockStorage).
   distillationHiccupFeedstockLoss: 8,
-  feedstockSurplusConvertAmount: 12,
-  feedstockSurplusCashPerUnit: 15,
 } as const
 
 export const MILESTONE_BALANCE = {

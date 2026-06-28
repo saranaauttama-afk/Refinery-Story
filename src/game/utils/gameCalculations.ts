@@ -276,19 +276,20 @@ export function addLog(logs: string[], message: string) {
   return [message, ...logs].slice(0, CORE_BALANCE.maxLogItems)
 }
 
-export function getRandomEvent(game: GameState) {
+// Rolls whether an incident fires this cycle, and which one. Returns null when
+// nothing happens — the roll is ESG-gated (getIncidentChance: lower ESG → more
+// incidents), so a clean operation genuinely sees fewer setbacks. With the
+// trivial freebie events removed, the random layer is now purely this managed
+// risk rather than a steady drip of free resources every ~30s.
+export function getRandomEvent(game: GameState): RandomEvent | null {
+  if (Math.random() >= getIncidentChance(game.esgScore)) return null
   const hasDistillationChain =
     calculateDerivedStats(game).maxFeedstockStorage > FEEDSTOCK_BALANCE.baseFeedstockStorage
   const eligible = RANDOM_EVENTS.filter(
     (event) => !event.requiresFeedstockChain || hasDistillationChain,
   )
-  const incidentEvents = eligible.filter((event) => event.isIncident)
-  const otherEvents = eligible.filter((event) => !event.isIncident)
-  const pickIncident =
-    incidentEvents.length > 0 && Math.random() < getIncidentChance(game.esgScore)
-  const pool = pickIncident || otherEvents.length === 0 ? incidentEvents : otherEvents
-  const randomIndex = Math.floor(Math.random() * pool.length)
-  return pool[randomIndex]
+  if (eligible.length === 0) return null
+  return eligible[Math.floor(Math.random() * eligible.length)]
 }
 
 function getEmptyBuildingCounts(): BuildingCounts {
@@ -2357,27 +2358,6 @@ export function closeBusinessYear(game: GameState): {
 export function applyRandomEvent(game: GameState, event: RandomEvent) {
   const stats = calculateDerivedStats(game)
 
-  if (event.key === 'crudeDiscount') {
-    return {
-      ...game,
-      crudeOil: Math.min(
-        stats.maxCrudeStorage,
-        game.crudeOil + EVENT_BALANCE.crudeDiscountAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'machineTuneUp') {
-    return {
-      ...game,
-      money: game.money + EVENT_BALANCE.machineTuneUpMoneyReward,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
   if (event.key === 'minorLeak') {
     const crudeLoss = Math.floor(
       EVENT_BALANCE.minorLeakCrudeLoss * stats.eventPenaltyMultiplier,
@@ -2391,104 +2371,10 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     }
   }
 
-  if (event.key === 'qualityBonus') {
-    return {
-      ...game,
-      gasoline: Math.min(
-        stats.maxGasolineStorage,
-        game.gasoline + EVENT_BALANCE.qualityBonusGasolineAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'marketDemandSpike') {
-    return {
-      ...game,
-      money: game.money + EVENT_BALANCE.marketDemandSpikeMoneyReward,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'safetyInspection') {
-    const passed = game.reputation >= EVENT_BALANCE.safetyInspectionReputationThreshold
-    const message = passed
-      ? serializeBilingualText(text.data.events.safetyInspection.message)
-      : serializeBilingualText(text.data.safetyInspectionFailMessage)
-    if (passed) {
-      return {
-        ...game,
-        reputation: game.reputation + EVENT_BALANCE.safetyInspectionPassReputationReward,
-        lastEventMessage: message,
-        activityLog: addLog(game.activityLog, message),
-      }
-    }
-    return {
-      ...game,
-      money: Math.max(0, game.money - EVENT_BALANCE.safetyInspectionFailMoneyPenalty),
-      lastEventMessage: message,
-      activityLog: addLog(game.activityLog, message),
-    }
-  }
-
   if (event.key === 'equipmentWear') {
     return {
       ...game,
       gasoline: Math.max(0, game.gasoline - EVENT_BALANCE.equipmentWearGasolineLoss),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'efficientBatch') {
-    return {
-      ...game,
-      gasoline: Math.min(
-        stats.maxGasolineStorage,
-        game.gasoline + EVENT_BALANCE.efficientBatchGasolineAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'localNewsCoverage') {
-    return {
-      ...game,
-      reputation: game.reputation + EVENT_BALANCE.localNewsCoverageReputationGain,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'supplierDiscount') {
-    return {
-      ...game,
-      crudeOil: Math.min(
-        stats.maxCrudeStorage,
-        game.crudeOil + EVENT_BALANCE.supplierDiscountCrudeAmount,
-      ),
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'equipmentInspection') {
-    return {
-      ...game,
-      money: Math.max(0, game.money - EVENT_BALANCE.equipmentInspectionMoneyCost),
-      reputation: game.reputation + EVENT_BALANCE.equipmentInspectionReputationGain,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  if (event.key === 'workerSuggestion') {
-    return {
-      ...game,
-      researchPoints: game.researchPoints + EVENT_BALANCE.workerSuggestionRpGain,
       lastEventMessage: event.message,
       activityLog: addLog(game.activityLog, event.message),
     }
@@ -2518,25 +2404,8 @@ export function applyRandomEvent(game: GameState, event: RandomEvent) {
     }
   }
 
-  if (event.key === 'feedstockSurplus') {
-    const converted = Math.min(game.feedstock, EVENT_BALANCE.feedstockSurplusConvertAmount)
-    return {
-      ...game,
-      feedstock: game.feedstock - converted,
-      money: game.money + converted * EVENT_BALANCE.feedstockSurplusCashPerUnit,
-      lastEventMessage: event.message,
-      activityLog: addLog(game.activityLog, event.message),
-    }
-  }
-
-  // communityVisit
-  return {
-    ...game,
-    money: Math.max(0, game.money - EVENT_BALANCE.communityVisitMoneyCost),
-    reputation: game.reputation + EVENT_BALANCE.communityVisitReputationGain,
-    lastEventMessage: event.message,
-    activityLog: addLog(game.activityLog, event.message),
-  }
+  // Defensive fallback — `event` is always one of the four incidents above.
+  return game
 }
 
 export function orderShipment(

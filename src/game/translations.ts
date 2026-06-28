@@ -1628,46 +1628,11 @@ export const text = {
       { name: BilingualTextValue; requirement: BilingualTextValue; reward: string }
     >,
     events: {
-      crudeDiscount: {
-        name: bilingual('Crude Discount', 'ส่วนลดน้ำมันดิบ'),
-        message: bilingual(
-          'Supplier offered discounted crude. Crude +10.',
-          'ซัพพลายเออร์เสนอส่วนลดน้ำมันดิบ น้ำมันดิบ +10',
-        ),
-      },
-      machineTuneUp: {
-        name: bilingual('Machine Tune-up', 'ปรับแต่งเครื่องจักร'),
-        message: bilingual(
-          'Maintenance team improved efficiency. Money +$200.',
-          'ทีมซ่อมบำรุงช่วยเพิ่มประสิทธิภาพ เงิน +$200',
-        ),
-      },
       minorLeak: {
         name: bilingual('Minor Leak', 'การรั่วเล็กน้อย'),
         message: bilingual(
           'Minor leak detected. Crude -20.',
           'ตรวจพบการรั่วเล็กน้อย น้ำมันดิบ -20',
-        ),
-      },
-      qualityBonus: {
-        name: bilingual('Quality Bonus', 'โบนัสคุณภาพ'),
-        message: bilingual(
-          'Quality batch completed. Gasoline +20.',
-          'ได้ล็อตคุณภาพสูง เบนซิน +20',
-        ),
-      },
-      marketDemandSpike: {
-        name: bilingual('Market Demand Spike', 'ความต้องการตลาดพุ่งสูง'),
-        message: bilingual(
-          'Market demand increased. Money +$750.',
-          'ความต้องการในตลาดเพิ่มขึ้น เงิน +$750',
-        ),
-      },
-      safetyInspection: {
-        name: bilingual('Safety Inspection', 'การตรวจความปลอดภัย'),
-        message: bilingual(
-          'Safety inspection passed. Reputation +10.',
-          'ผ่านการตรวจความปลอดภัย ชื่อเสียง +10',
         ),
       },
       equipmentWear: {
@@ -1677,53 +1642,11 @@ export const text = {
           'อุปกรณ์สึกหรอทำให้ผลผลิตลดลง เบนซิน -10',
         ),
       },
-      efficientBatch: {
-        name: bilingual('Efficient Batch', 'ล็อตประสิทธิภาพสูง'),
-        message: bilingual(
-          'Efficient production run. Gasoline +30.',
-          'กระบวนการผลิตมีประสิทธิภาพสูง เบนซิน +30',
-        ),
-      },
-      localNewsCoverage: {
-        name: bilingual('Local News Coverage', 'สื่อท้องถิ่นรายงานข่าว'),
-        message: bilingual(
-          'Local news featured your refinery positively. Reputation +15.',
-          'สื่อท้องถิ่นรายงานข่าวโรงกลั่นของคุณในแง่บวก ชื่อเสียง +15',
-        ),
-      },
-      supplierDiscount: {
-        name: bilingual('Supplier Discount', 'ส่วนลดจากซัพพลายเออร์'),
-        message: bilingual(
-          'Supplier sent a bonus crude shipment. Crude +15.',
-          'ซัพพลายเออร์ส่งน้ำมันดิบโบนัสมาให้ น้ำมันดิบ +15',
-        ),
-      },
-      equipmentInspection: {
-        name: bilingual('Equipment Inspection', 'การตรวจสอบอุปกรณ์'),
-        message: bilingual(
-          'Scheduled inspection passed. Money −$150, Reputation +10.',
-          'ผ่านการตรวจสอบตามกำหนด เงิน −$150, ชื่อเสียง +10',
-        ),
-      },
-      workerSuggestion: {
-        name: bilingual('Worker Suggestion', 'ข้อเสนอแนะจากพนักงาน'),
-        message: bilingual(
-          'A worker submitted a process improvement idea. Research Points +3.',
-          'พนักงานเสนอแนวทางปรับปรุงกระบวนการผลิต คะแนนวิจัย +3',
-        ),
-      },
       storageContamination: {
         name: bilingual('Storage Contamination', 'การปนเปื้อนในถังเก็บ'),
         message: bilingual(
           'Contamination detected in a storage tank. Gasoline −15.',
           'ตรวจพบการปนเปื้อนในถังเก็บผลิตภัณฑ์ เบนซิน −15',
-        ),
-      },
-      communityVisit: {
-        name: bilingual('Community Visit', 'กิจกรรมชุมชน'),
-        message: bilingual(
-          'Community open day hosted. Money −$200, Reputation +20.',
-          'จัดวันเปิดบ้านให้ชุมชน เงิน −$200, ชื่อเสียง +20',
         ),
       },
       distillationHiccup: {
@@ -1733,21 +1656,10 @@ export const text = {
           'หน่วยกลั่นทำงานสะดุดชั่วครู่ วัตถุดิบกลั่น −8',
         ),
       },
-      feedstockSurplus: {
-        name: bilingual('Feedstock Surplus', 'วัตถุดิบกลั่นล้นสต็อก'),
-        message: bilingual(
-          'Sold off surplus feedstock to a neighboring plant for a quick bonus.',
-          'ขายวัตถุดิบกลั่นส่วนเกินให้โรงงานข้างเคียง ได้โบนัสด่วน',
-        ),
-      },
     } satisfies Record<
       RandomEventKey,
       { name: BilingualTextValue; message: BilingualTextValue }
     >,
-    safetyInspectionFailMessage: bilingual(
-      'Safety inspection failed. Money -$300.',
-      'ไม่ผ่านการตรวจความปลอดภัย เงิน -$300',
-    ),
   },
   choiceEvents: {
     kicker: bilingual('Decision', 'การตัดสินใจ'),
