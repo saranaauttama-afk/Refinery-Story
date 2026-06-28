@@ -25,10 +25,11 @@ import {
   getUpgradeReputationRequirement,
   applyProductSaturation,
   recoverProductMarket,
+  getProductMarketLevel,
   countBuildings,
   getYearlyPayroll,
 } from '../src/game/utils/gameCalculations'
-import { MARKET_BALANCE, WAGE_BALANCE, AWARDS_BALANCE, CORE_BALANCE } from '../src/game/data/balance'
+import { MARKET_BALANCE, WAGE_BALANCE, AWARDS_BALANCE, CORE_BALANCE, ECONOMY_BALANCE } from '../src/game/data/balance'
 import type { BuildingType, GameState, GridCell, WorkerType } from '../src/game/types'
 
 const hr = (label: string) => console.log(`\n=== ${label} ===`)
@@ -298,6 +299,75 @@ hr('9. Early-game payroll vs income (sanity: not brutal)')
     const grossYr = effGasPerSec(d) * d.sellPrice * YEAR_S
     const pay = getYearlyPayroll(mkState(s))
     console.log(`lvl ${s.level}: annual gross ${money(grossYr)}  payroll ${money(pay)}  (${r2((pay / grossYr) * 100)}% of gross)`)
+  }
+}
+
+// ===========================================================================
+// 10. Auto-trade saturation guard — dump-to-threshold vs floor-aware
+// ===========================================================================
+hr('10. Auto-trade gasoline: dump vs floor-only vs smart (hold, but dump to avoid overflow)')
+{
+  const TICKS = AWARDS_BALANCE.yearLengthTicks
+  const STORAGE = 200
+  const SELL_THRESHOLD = 80
+  const BUFFER = 5
+  const OVERFLOW_GUARD = MARKET_BALANCE.autoSellOverflowGuardPct // below floor, still dump if tank this full
+  const BASE_PRICE = ECONOMY_BALANCE.gasolinePrice
+  const FLOOR = MARKET_BALANCE.autoSellMarketFloor
+
+  const lvlOf = (market: GameState['productMarket']) =>
+    getProductMarketLevel({ productMarket: market } as GameState, 'gasoline')
+
+  type Mode = 'dump' | 'floor' | 'smart'
+  const run = (mode: Mode, gasPerTick: number) => {
+    let stock = 0
+    let market: GameState['productMarket'] = { gasoline: 1 }
+    let revenue = 0
+    let sold = 0
+    let lost = 0
+    for (let t = 0; t < TICKS; t++) {
+      const room = STORAGE - stock
+      const add = Math.min(gasPerTick, room)
+      lost += gasPerTick - add
+      stock += add
+      market = recoverProductMarket(market)
+      const lvl = lvlOf(market)
+      const pct = (stock / STORAGE) * 100
+      const healthy = lvl >= FLOOR
+      // target % to sell DOWN to (null = don't sell this tick)
+      let targetPct: number | null = null
+      if (pct > SELL_THRESHOLD) {
+        if (mode === 'dump') targetPct = SELL_THRESHOLD - BUFFER
+        else if (mode === 'floor') targetPct = healthy ? SELL_THRESHOLD - BUFFER : null
+        else {
+          // smart: sell to threshold when price is healthy; otherwise hold for
+          // recovery, but still dump down to the overflow guard so production
+          // isn't wasted to a full tank.
+          if (healthy) targetPct = SELL_THRESHOLD - BUFFER
+          else if (pct > OVERFLOW_GUARD) targetPct = OVERFLOW_GUARD - BUFFER
+        }
+      }
+      if (targetPct !== null) {
+        const excess = Math.max(0, stock - Math.floor((targetPct / 100) * STORAGE))
+        if (excess > 0) {
+          revenue += excess * Math.round(BASE_PRICE * lvl)
+          sold += excess
+          stock -= excess
+          market = applyProductSaturation(market, 'gasoline', excess)
+        }
+      }
+    }
+    return { revenue, sold, lost, avgPrice: sold > 0 ? revenue / sold : 0, endLvl: lvlOf(market) }
+  }
+
+  const fmt = (r: ReturnType<typeof run>, name: string) =>
+    `  ${name.padEnd(12)}: revenue ${money(r.revenue).padStart(8)}  avg price ${money(r.avgPrice)}  ` +
+    `mkt end ${r2(r.endLvl)}  lostProd ${Math.round(r.lost)}`
+  for (const [label, rate] of [['OVERPRODUCE 1.6/tick (~level 8)', 1.6], ['MIDDLE 0.6/tick', 0.6], ['MIDDLE 0.45/tick', 0.45], ['LIGHT 0.3/tick (early / lots of storage)', 0.3]] as const) {
+    console.log(`\n ${label}:`)
+    console.log(fmt(run('dump', rate), 'dump (old)'))
+    console.log(fmt(run('floor', rate), 'floor-only'))
+    console.log(fmt(run('smart', rate), 'smart'))
   }
 }
 

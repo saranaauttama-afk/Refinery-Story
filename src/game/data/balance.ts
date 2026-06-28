@@ -146,6 +146,14 @@ export const MARKET_BALANCE = {
   saturationFloor: 0.45, // price never falls below 45% of base
   saturationPerUnitSold: 0.004, // each unit sold drops the level by this
   saturationRecoveryPerTick: 0.0015, // recovery toward 1.0 each tick
+  // Auto-trade only: while a product's price is already pushed below this level,
+  // auto-sell HOLDS for recovery instead of dumping to the saturationFloor...
+  autoSellMarketFloor: 0.85,
+  // ...EXCEPT it still sells once the tank is this full, so production is never
+  // wasted to a full tank just to wait for a better price (a balance sim showed
+  // a naive "always hold below floor" rule loses ~54% when you overproduce).
+  // Manual selling and standing orders are unaffected by both.
+  autoSellOverflowGuardPct: 95,
 } as const
 
 export const ECONOMY_BALANCE = {

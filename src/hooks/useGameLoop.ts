@@ -91,6 +91,7 @@ import {
   STAFF_LEVEL_BALANCE,
   SPECIALIZATION_BALANCE,
   STANDING_ORDER_BALANCE,
+  MARKET_BALANCE,
   MAX_REFINERY_LEVEL,
   type PaidExpansionEntry,
   type ShipmentOption,
@@ -212,6 +213,23 @@ const PRODUCT_MAX_STORAGE_KEY: Record<SellableProductKey, (stats: DerivedStats) 
   plasticPellets: (stats) => stats.maxPlasticPelletsStorage,
 }
 
+// Saturation-aware auto-sell target. Returns the storage % to sell DOWN to, or
+// null to hold this tick. When the market is healthy, sell to the threshold as
+// before; when the price is already depressed, HOLD for recovery — but still
+// dump down to the overflow guard once the tank is nearly full, so production is
+// never wasted to a full tank (a balance sim showed pure "hold below floor"
+// loses ~54% under overproduction). Shared by gasoline and every secondary product.
+function autoSellTargetPct(stockPct: number, sellThreshold: number, marketLevel: number): number | null {
+  if (stockPct <= sellThreshold) return null
+  if (marketLevel >= MARKET_BALANCE.autoSellMarketFloor) {
+    return Math.max(0, sellThreshold - AUTO_TRADE_BUFFER_PERCENT)
+  }
+  if (stockPct > MARKET_BALANCE.autoSellOverflowGuardPct) {
+    return Math.max(0, MARKET_BALANCE.autoSellOverflowGuardPct - AUTO_TRADE_BUFFER_PERCENT)
+  }
+  return null
+}
+
 // Pure, exported for testing. Runs after the main tick: top up crude toward
 // buyThreshold% (limited by cash + storage), then sell gasoline down to
 // sellThreshold% if it's currently above that.
@@ -247,11 +265,11 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
 
   if (stats.maxGasolineStorage > 0) {
     const gasolinePct = (next.gasoline / stats.maxGasolineStorage) * 100
-    if (gasolinePct > settings.sellThreshold) {
-      // Undershoot to threshold - buffer so gasoline visibly refills via
-      // production before the next sell-off, instead of being corrected to
-      // the same number every tick.
-      const targetPct = Math.max(0, settings.sellThreshold - AUTO_TRADE_BUFFER_PERCENT)
+    // Saturation-aware (see autoSellTargetPct): hold when gasoline's price is
+    // depressed, but still dump to avoid overflow; undershoot to target - buffer
+    // so it visibly refills before the next sell-off.
+    const targetPct = autoSellTargetPct(gasolinePct, settings.sellThreshold, getProductMarketLevel(next, 'gasoline'))
+    if (targetPct !== null) {
       const targetGasoline = Math.floor((targetPct / 100) * stats.maxGasolineStorage)
       const excess = Math.max(0, next.gasoline - targetGasoline)
       if (excess > 0) {
@@ -284,8 +302,10 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
     const threshold = settings.productSellThresholds[product.key] ?? DEFAULT_PRODUCT_SELL_THRESHOLD
     const have = next.productInventory[product.key]
     const pct = (have / maxStorage) * 100
-    if (pct <= threshold) continue
-    const targetPct = Math.max(0, threshold - AUTO_TRADE_BUFFER_PERCENT)
+    // Saturation-aware (same rule as gasoline): hold for recovery while the
+    // price is depressed, but still dump to avoid overflow.
+    const targetPct = autoSellTargetPct(pct, threshold, getProductMarketLevel(next, product.key))
+    if (targetPct === null) continue
     const targetAmount = Math.floor((targetPct / 100) * maxStorage)
     const excess = Math.max(0, have - targetAmount)
     if (excess <= 0) continue
