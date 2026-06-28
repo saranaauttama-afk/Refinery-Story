@@ -40,6 +40,7 @@ import { useHaptics } from '../../../src/hooks/useHaptics'
 import { useSound } from '../../../src/hooks/useSound'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, fonts, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import GameIcon from '../../../src/components/GameIcon'
 import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
@@ -534,19 +535,19 @@ export default function RefineryScreen() {
         {/* Resource dock — dark card straddling sky/yard boundary */}
         <View style={[styles.resourceDock, { top: resourceTop }]}>
           <View style={styles.dockStat}>
-            <Text style={styles.dockIcon}>💰</Text>
+            <GameIcon name="money" size={22} />
             <Text style={styles.dockVal}>${(game.money >= 1000 ? `${(game.money/1000).toFixed(1)}k` : Math.floor(game.money).toString())}</Text>
             <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
-            <Text style={styles.dockIcon}>🛢</Text>
+            <GameIcon name="crude" size={22} />
             <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
             <Text style={styles.dockLabel}>{t(text.hud.crude)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
-            <Text style={styles.dockIcon}>⛽</Text>
+            <GameIcon name="gas" size={22} />
             <Text style={styles.dockVal}>{game.gasoline}</Text>
             <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
           </View>
@@ -556,7 +557,7 @@ export default function RefineryScreen() {
               focused on the core loop. Alert dot flags a meter that needs eyes. */}
           <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
             <View style={styles.dockToggleIconWrap}>
-              <Text style={styles.dockIcon}>⭐</Text>
+              <GameIcon name="reputation" size={22} />
               {secondaryAlert && <View style={styles.dockAlertDot} />}
             </View>
             <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
@@ -578,7 +579,7 @@ export default function RefineryScreen() {
             <Text style={styles.flowUnit}>{t(text.hud.net)}{t(text.hud.perMin)}</Text>
           </View>
           <View style={styles.flowItem}>
-            <Text style={styles.flowIcon}>⛽</Text>
+            <GameIcon name="gas" size={15} />
             <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
             <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
           </View>
