@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Animated, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -15,6 +15,7 @@ const SPLASH_DURATION_MS = 1200
 
 function Splash() {
   const fade = useRef(new Animated.Value(0)).current
+  const { width, height } = useWindowDimensions()
 
   useEffect(() => {
     Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }).start()
@@ -22,7 +23,7 @@ function Splash() {
 
   return (
     <Animated.View style={[styles.fill, { opacity: fade }]}>
-      <ImageBackground source={MENU_BG} resizeMode="cover" style={styles.fill} />
+      <Image source={MENU_BG} resizeMode="cover" style={[styles.bg, { width, height }]} />
     </Animated.View>
   )
 }
@@ -33,6 +34,7 @@ export default function MenuScreen() {
   const { game, loaded, hasSave, resetGame } = useGame()
   const { settings } = useSettingsContext()
   const { t } = useLang()
+  const { width, height } = useWindowDimensions()
 
   useEffect(() => {
     const timeout = setTimeout(() => setShowSplash(false), SPLASH_DURATION_MS)
@@ -49,7 +51,8 @@ export default function MenuScreen() {
   }
 
   return (
-    <ImageBackground source={MENU_BG} resizeMode="cover" style={styles.fill}>
+    <View style={styles.fill}>
+      <Image source={MENU_BG} resizeMode="cover" style={[styles.bg, { width, height }]} />
       <SafeAreaView style={styles.safe}>
         <View style={styles.bottomContent}>
           {hasSave && (
@@ -84,7 +87,7 @@ export default function MenuScreen() {
           <Text style={styles.version}>v0.1.0 · {t({ en: 'English', th: 'ภาษาไทย' })}</Text>
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   )
 }
 
@@ -92,6 +95,11 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
     backgroundColor: '#4FA8E8', // sky-blue fallback while the image loads
+  },
+  bg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   safe: {
     flex: 1,

@@ -138,8 +138,9 @@ function GlobalOverlays() {
 
 function AppShell() {
   const pathname = usePathname()
-  const showGlobalOverlays =
-    pathname !== '/diamond-ground-prototype' && pathname !== '/factory-scene-prototype'
+  // Game banners/modals belong to the gameplay screens only — not the menu,
+  // settings, or store.
+  const showGlobalOverlays = pathname.startsWith('/game')
 
   return (
     <>
