@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import ArtSlot from '../src/components/ArtSlot'
 import { useGame } from '../src/hooks/GameContext'
 import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
 import { colors, radii, spacing } from '../src/theme'
@@ -53,10 +54,15 @@ export default function MenuScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
-        <View style={styles.logoBoxSmall}>
-          <Text style={styles.logoEmojiSmall}>🛢️</Text>
-        </View>
-        <Text style={styles.title}>Refinery Story</Text>
+        <ArtSlot
+          id="menu_hero"
+          width="100%"
+          height={190}
+          spec="1080×600"
+          caption="Refinery skyline at sunrise"
+          imageStyle={styles.heroImage}
+        />
+        <Text style={[styles.title, { marginTop: spacing.md }]}>Refinery Story</Text>
         <Text style={styles.subtitle}>build · refine · grow</Text>
 
         <View style={styles.menu}>
@@ -138,19 +144,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  logoBoxSmall: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.lg,
-    backgroundColor: colors.gold,
-    borderWidth: 3,
-    borderColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  logoEmojiSmall: {
-    fontSize: 32,
+  heroImage: {
+    borderWidth: 2,
+    borderColor: colors.creamBorder,
   },
   title: {
     fontSize: 26,
