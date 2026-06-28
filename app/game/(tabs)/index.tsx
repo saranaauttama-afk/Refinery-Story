@@ -817,8 +817,8 @@ export default function RefineryScreen() {
                 disabled={isBuildingReward && firstEmptyCellIndex < 0}
                 onPress={() => {
                   setEventModalOpen(false)
-                  if (event.reward.kind === 'staff')    { router.push('/game/staff');    return }
-                  if (event.reward.kind === 'contract') { router.push('/game/business'); return }
+                  if (event.reward.kind === 'staff')    { router.push('/game/recruit');   return }
+                  if (event.reward.kind === 'contract') { router.push('/game/contracts'); return }
                   if (firstEmptyCellIndex >= 0)         setPickerCell(firstEmptyCellIndex)
                 }}
               />
