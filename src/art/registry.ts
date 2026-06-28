@@ -18,12 +18,10 @@ export const ART: Partial<Record<string, ImageSourcePropType>> = {
   // ── Front menu ──
   // menu_hero: require('../../assets/art/menu_hero.png'),
 
-  // ── Gameplay tab headers ──
+  // ── Gameplay tab header banners ──
   // contracts_header: require('../../assets/art/contracts_header.png'),
   // supply_header: require('../../assets/art/supply_header.png'),
-  // recruit_header: require('../../assets/art/recruit_header.png'),
   // research_header: require('../../assets/art/research_header.png'),
-  // company_header: require('../../assets/art/company_header.png'),
 
   // ── Empty-state illustrations ──
   // contracts_empty: require('../../assets/art/contracts_empty.png'),

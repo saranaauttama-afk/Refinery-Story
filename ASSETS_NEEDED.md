@@ -33,11 +33,25 @@ add the real file, it swaps in automatically.
 
 | id | Used on | Size (px) | Aspect | Notes |
 |----|---------|-----------|--------|-------|
-| `menu_hero` | Front menu (`app/index.tsx`) | 1080×600 | 9:5 | Full-bleed hero banner above the title — the refinery skyline at sunrise. |
+| `menu_hero` | Front menu (`app/index.tsx`) | 1080×600 | 9:5 | Full-bleed hero above the title — refinery skyline at sunrise. |
+| `contracts_header` | Contracts tab | 1080×260 | ~4:1 | Thin banner — loading dock / cargo trucks. |
+| `contracts_empty` | Contracts tab (empty state) | 480×480 | 1:1 | Round illustration — empty clipboard / "no orders". |
+| `supply_header` | Supply tab | 1080×260 | ~4:1 | Thin banner — crude tanker / pipeline. |
+| `research_header` | R&D tab | 1080×260 | ~4:1 | Thin banner — lab beakers & blueprints. |
+| `team_empty` | Company › Team (empty state) | 480×480 | 1:1 | Round illustration — empty desks / hiring sign. |
+| `achievements_hero` | Achievements (`app/achievements.tsx`) | 1080×240 | ~4.5:1 | Thin banner — trophy shelf / podium. |
 
-_(More rows are appended as each screen gets its slots — see commits.)_
+### Pages intentionally without art slots
+
+- **Factory home** — already fully visual (code-drawn isometric scene: ground,
+  sky, plant sprites in `assets/plants/`, smoke, trucks). No new art needed.
+- **Recruit tab** — already has a code-drawn "hiring office" scene + candidate
+  figures. No new art needed.
+- **Settings / Store** — plain utility screens; text-only by design.
 
 ## Status
 
 - ✅ Art-slot system live (`ArtSlot` + `src/art/registry.ts`).
-- ⏳ Slots being added screen by screen; this table grows with each.
+- ✅ Slots placed on: front menu, Contracts, Supply, R&D, Company (team empty),
+  Achievements.
+- ⏳ Waiting on generated PNGs → drop into `assets/art/` + register.

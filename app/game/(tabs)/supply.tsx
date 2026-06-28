@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
+import ArtSlot from '../../../src/components/ArtSlot'
 import ListRow from '../../../src/components/ListRow'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -39,6 +40,8 @@ export default function SupplyScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.list}>
+        <ArtSlot id="supply_header" width="100%" height={84} spec="1080×260" caption="Crude tanker / pipeline banner" />
+
         {game.pendingShipments.length > 0 && (
           <View style={styles.pendingBox}>
             <Text style={styles.pendingTitle}>{t(ss.incoming)}</Text>

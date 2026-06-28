@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
+import ArtSlot from '../../../src/components/ArtSlot'
 import ListRow from '../../../src/components/ListRow'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -145,9 +146,11 @@ export default function ContractsScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.list}>
+        <ArtSlot id="contracts_header" width="100%" height={84} spec="1080×260" caption="Loading dock / cargo trucks banner" />
+
         {!hasAnyContent && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <ArtSlot id="contracts_empty" width={140} height={140} spec="480×480" radius={70} caption="Empty clipboard / no orders" />
             <Text style={styles.emptyTitle}>{t(sc.emptyTitle)}</Text>
             <Text style={styles.emptyHint}>{t(sc.emptyHint)}</Text>
           </View>

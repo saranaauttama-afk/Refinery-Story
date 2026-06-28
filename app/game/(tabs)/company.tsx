@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
+import ArtSlot from '../../../src/components/ArtSlot'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { text } from '../../../src/game/translations'
@@ -175,7 +176,7 @@ export default function CompanyScreen() {
         <ScrollView contentContainerStyle={styles.list}>
           {game.employees.length === 0 && (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>👥</Text>
+              <ArtSlot id="team_empty" width={140} height={140} spec="480×480" radius={70} caption="Empty desks / hiring sign" />
               <Text style={styles.emptyTitle}>{t(cs.noEmployees)}</Text>
               <Text style={styles.emptyHint}>{t(cs.hireHint)}</Text>
             </View>

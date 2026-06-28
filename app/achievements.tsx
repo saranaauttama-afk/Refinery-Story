@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGame } from '../src/hooks/GameContext'
+import ArtSlot from '../src/components/ArtSlot'
 import ProgressBar from '../src/components/ProgressBar'
 import { colors, radii, spacing } from '../src/theme'
 import { HIDDEN_COMBOS } from '../src/game/data/hiddenCombos'
@@ -59,6 +60,9 @@ export default function AchievementsScreen() {
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
         <Text style={styles.title}>🏆 Achievements</Text>
+      </View>
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+        <ArtSlot id="achievements_hero" width="100%" height={72} spec="1080×240" caption="Trophy shelf / podium banner" />
       </View>
       <Text style={styles.summary}>
         {completedCount} / {milestones.length} completed

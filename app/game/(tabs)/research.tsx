@@ -2,6 +2,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
+import ArtSlot from '../../../src/components/ArtSlot'
 import ListRow from '../../../src/components/ListRow'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
@@ -30,6 +31,8 @@ export default function ResearchScreen() {
       <ScreenHeader title={t(rs.title)} onClose={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.list}>
+        <ArtSlot id="research_header" width="100%" height={84} spec="1080×260" caption="Lab / beakers & blueprints banner" />
+
         {/* Research */}
         <Text style={styles.sectionLabel}>{t(cs.researchHeader(Math.floor(game.researchPoints)))}</Text>
         {derived.activeResearchItems.map((item) => (
