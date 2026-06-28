@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import ArtSlot from '../src/components/ArtSlot'
 import { useGame } from '../src/hooks/GameContext'
 import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
 import { colors, radii, spacing } from '../src/theme'
 
+// Full-bleed title art (logo + refinery scene baked in), used for both the
+// splash and the menu background — the menu just lays its buttons over the
+// lower third.
+const MENU_BG = require('../assets/bg/menu_bg.png')
 const SPLASH_DURATION_MS = 1200
 
 function Splash() {
@@ -18,15 +21,9 @@ function Splash() {
   }, [fade])
 
   return (
-    <View style={styles.splashScreen}>
-      <Animated.View style={{ opacity: fade, alignItems: 'center' }}>
-        <View style={styles.logoBox}>
-          <Text style={styles.logoEmoji}>🛢️</Text>
-        </View>
-        <Text style={styles.logoTitle}>Refinery Story</Text>
-        <Text style={styles.logoSubtitle}>build · refine · grow</Text>
-      </Animated.View>
-    </View>
+    <Animated.View style={[styles.fill, { opacity: fade }]}>
+      <ImageBackground source={MENU_BG} resizeMode="cover" style={styles.fill} />
+    </Animated.View>
   )
 }
 
@@ -52,20 +49,9 @@ export default function MenuScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.content}>
-        <ArtSlot
-          id="menu_hero"
-          width="100%"
-          height={190}
-          spec="1080×600"
-          caption="Refinery skyline at sunrise"
-          imageStyle={styles.heroImage}
-        />
-        <Text style={[styles.title, { marginTop: spacing.md }]}>Refinery Story</Text>
-        <Text style={styles.subtitle}>build · refine · grow</Text>
-
-        <View style={styles.menu}>
+    <ImageBackground source={MENU_BG} resizeMode="cover" style={styles.fill}>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.bottomContent}>
           {hasSave && (
             <View style={styles.saveCard}>
               <Text style={styles.saveCardTitle}>{game?.refineryName}</Text>
@@ -94,80 +80,32 @@ export default function MenuScreen() {
               {settings.adsRemoved ? '✓ Ads removed -- Store' : '🛍️ Remove Ads / Store'}
             </Text>
           </Pressable>
-        </View>
 
-        <Text style={styles.version}>v0.1.0 · {t({ en: 'English', th: 'ภาษาไทย' })}</Text>
-      </View>
-    </SafeAreaView>
+          <Text style={styles.version}>v0.1.0 · {t({ en: 'English', th: 'ภาษาไทย' })}</Text>
+        </View>
+      </SafeAreaView>
+    </ImageBackground>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  fill: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: '#4FA8E8', // sky-blue fallback while the image loads
   },
-  splashScreen: {
+  safe: {
     flex: 1,
-    backgroundColor: colors.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
   },
-  logoBox: {
-    width: 96,
-    height: 96,
-    borderRadius: radii.lg,
-    backgroundColor: colors.gold,
-    borderWidth: 3,
-    borderColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoEmoji: {
-    fontSize: 48,
-  },
-  logoTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.ink,
-  },
-  logoSubtitle: {
-    fontSize: 13,
-    color: colors.inkMuted,
-    marginTop: 4,
-    letterSpacing: 1,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  bottomContent: {
     paddingHorizontal: spacing.xl,
-  },
-  heroImage: {
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.inkMuted,
-    marginTop: 2,
-    marginBottom: spacing.xl,
-    letterSpacing: 1,
-  },
-  menu: {
-    width: '100%',
+    paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
   saveCard: {
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 2,
-    borderColor: colors.creamBorder,
+    borderColor: colors.ink,
     borderRadius: radii.md,
     padding: spacing.md,
     alignItems: 'center',
@@ -189,6 +127,12 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     paddingVertical: spacing.md,
     alignItems: 'center',
+    // lift the buttons off the art a touch
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   primaryButton: {
     backgroundColor: colors.green,
@@ -199,7 +143,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   secondaryButton: {
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.95)',
   },
   secondaryButtonLabel: {
     fontWeight: '700',
@@ -207,8 +151,11 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   version: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
     fontSize: 11,
-    color: colors.inkMuted,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowRadius: 3,
   },
 })

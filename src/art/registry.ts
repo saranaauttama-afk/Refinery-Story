@@ -15,8 +15,7 @@ import type { ImageSourcePropType } from 'react-native'
 // Metro requires a *static* require() string, which is why each asset needs its
 // own literal line here rather than a path built at runtime.
 export const ART: Partial<Record<string, ImageSourcePropType>> = {
-  // ── Front menu ──
-  // menu_hero: require('../../assets/art/menu_hero.png'),
+  // (Front menu uses a full-bleed background instead — assets/bg/menu_bg.png.)
 
   // ── Gameplay tab header banners ──
   // contracts_header: require('../../assets/art/contracts_header.png'),

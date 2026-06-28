@@ -33,7 +33,6 @@ add the real file, it swaps in automatically.
 
 | id | Used on | Size (px) | Aspect | Notes |
 |----|---------|-----------|--------|-------|
-| `menu_hero` | Front menu (`app/index.tsx`) | 1080×600 | 9:5 | Full-bleed hero above the title — refinery skyline at sunrise. |
 | `contracts_header` | Contracts tab | 1080×260 | ~4:1 | Thin banner — loading dock / cargo trucks. |
 | `contracts_empty` | Contracts tab (empty state) | 480×480 | 1:1 | Round illustration — empty clipboard / "no orders". |
 | `supply_header` | Supply tab | 1080×260 | ~4:1 | Thin banner — crude tanker / pipeline. |
@@ -43,6 +42,8 @@ add the real file, it swaps in automatically.
 
 ### Pages intentionally without art slots
 
+- **Front menu** — now uses a full-bleed title background (`assets/bg/menu_bg.png`,
+  logo + scene baked in); buttons overlay the lower third. No slot needed.
 - **Factory home** — already fully visual (code-drawn isometric scene: ground,
   sky, plant sprites in `assets/plants/`, smoke, trucks). No new art needed.
 - **Recruit tab** — already has a code-drawn "hiring office" scene + candidate
