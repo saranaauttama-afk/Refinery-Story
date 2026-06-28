@@ -1,5 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { colors, radii, spacing } from '../theme'
+import { useLang } from '../hooks/SettingsContext'
+import { text } from '../game/translations'
 
 type SheetProps = {
   visible: boolean
@@ -9,6 +11,7 @@ type SheetProps = {
 }
 
 function Sheet({ visible, title, onClose, children }: SheetProps) {
+  const { t } = useLang()
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
@@ -16,7 +19,7 @@ function Sheet({ visible, title, onClose, children }: SheetProps) {
         <View style={styles.handleRow}>
           <Text style={styles.title}>{title}</Text>
           <Pressable onPress={onClose}>
-            <Text style={styles.close}>Close</Text>
+            <Text style={styles.close}>{t(text.common.close)}</Text>
           </Pressable>
         </View>
         <ScrollView style={styles.body}>{children}</ScrollView>

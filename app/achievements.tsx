@@ -3,23 +3,26 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGame } from '../src/hooks/GameContext'
+import { useLang } from '../src/hooks/SettingsContext'
 import ArtSlot from '../src/components/ArtSlot'
 import ProgressBar from '../src/components/ProgressBar'
 import { colors, radii, spacing } from '../src/theme'
+import { text } from '../src/game/translations'
 import { HIDDEN_COMBOS } from '../src/game/data/hiddenCombos'
 import { ENDGAME_GOALS } from '../src/game/data/endgameGoals'
 import type { ActiveMilestone } from '../src/game/types'
 
 function MilestoneRow({ milestone }: { milestone: ActiveMilestone }) {
+  const { t } = useLang()
   return (
     <View style={[styles.card, milestone.isCompleted ? styles.cardCompleted : styles.cardLocked]}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardIcon}>{milestone.isCompleted ? '🏆' : '🔒'}</Text>
         <View style={styles.cardTitleWrap}>
           <Text style={[styles.cardName, milestone.isCompleted && styles.cardNameCompleted]}>
-            {milestone.name.en}
+            {t(milestone.name)}
           </Text>
-          <Text style={styles.cardRequirement}>{milestone.requirement.en}</Text>
+          <Text style={styles.cardRequirement}>{t(milestone.requirement)}</Text>
         </View>
         <Text style={[styles.cardReward, milestone.isCompleted && styles.cardRewardCompleted]}>
           {milestone.reward}
@@ -40,6 +43,8 @@ function MilestoneRow({ milestone }: { milestone: ActiveMilestone }) {
 export default function AchievementsScreen() {
   const router = useRouter()
   const { loaded, game, derived } = useGame()
+  const { t } = useLang()
+  const as = text.achievementsScreen
 
   if (!loaded || !game || !derived) {
     return (
@@ -57,28 +62,28 @@ export default function AchievementsScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Back</Text>
+          <Text style={styles.back}>{t(as.back)}</Text>
         </Pressable>
-        <Text style={styles.title}>🏆 Achievements</Text>
+        <Text style={styles.title}>{t(as.title)}</Text>
       </View>
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
         <ArtSlot id="achievements_hero" width="100%" height={72} spec="1080×240" caption="Trophy shelf / podium banner" />
       </View>
       <Text style={styles.summary}>
-        {completedCount} / {milestones.length} completed
+        {t(as.completed(completedCount, milestones.length))}
       </Text>
 
       {game.prototypeCompleted && (
         <View style={styles.winBanner}>
-          <Text style={styles.winBannerText}>🏁 Prototype Complete -- all major goals achieved!</Text>
+          <Text style={styles.winBannerText}>{t(as.prototypeComplete)}</Text>
         </View>
       )}
 
       {/* Endgame spine: Industry Legend goal ladder */}
       <View style={[styles.comboCard, { borderColor: colors.gold }]}>
         <Text style={styles.comboTitle}>
-          {game.legendAchieved ? '👑 INDUSTRY LEGEND — all legacy goals complete!' :
-            `👑 Endgame: ${ENDGAME_GOALS.filter((gl) => gl.isComplete(game)).length} / ${ENDGAME_GOALS.length} legacy goals`}
+          {game.legendAchieved ? t(as.legendComplete) :
+            t(as.endgameProgress(ENDGAME_GOALS.filter((gl) => gl.isComplete(game)).length, ENDGAME_GOALS.length))}
         </Text>
         {ENDGAME_GOALS.map((goal) => {
           const done = goal.isComplete(game)
@@ -86,8 +91,8 @@ export default function AchievementsScreen() {
           return (
             <View key={goal.key} style={styles.legendRow}>
               <Text style={[styles.legendName, done && styles.legendNameDone]} numberOfLines={1}>
-                {done ? '✅' : '⬜'} {goal.name.en}
-                <Text style={styles.legendDesc}>  {goal.description.en}</Text>
+                {done ? '✅' : '⬜'} {t(goal.name)}
+                <Text style={styles.legendDesc}>  {t(goal.description)}</Text>
               </Text>
               {!done && (
                 <View style={styles.legendProgress}>
@@ -101,15 +106,15 @@ export default function AchievementsScreen() {
 
       <View style={styles.comboCard}>
         <Text style={styles.comboTitle}>
-          🧩 Hidden Combos: {discoveredCombos.length} / {HIDDEN_COMBOS.length} discovered
+          {t(as.hiddenCombos(discoveredCombos.length, HIDDEN_COMBOS.length))}
         </Text>
         {discoveredCombos.length > 0 ? (
           discoveredCombos.map((combo) => (
-            <Text key={combo.key} style={styles.comboName}>• {combo.name.en}</Text>
+            <Text key={combo.key} style={styles.comboName}>• {t(combo.name)}</Text>
           ))
         ) : (
           <Text style={styles.comboHint}>
-            Try arranging buildings in a row or column -- some layouts hide bonus rewards.
+            {t(as.comboHint)}
           </Text>
         )}
       </View>

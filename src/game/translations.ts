@@ -248,6 +248,22 @@ export const text = {
       'สะสมแต้มวิจัยจากการผลิตและทำสัญญา แล้วนำมาใช้ที่นี่',
     ),
   },
+  common: {
+    close: bilingual('Close', 'ปิด'),
+  },
+  achievementsScreen: {
+    back: bilingual('‹ Back', '‹ กลับ'),
+    title: bilingual('🏆 Achievements', '🏆 ความสำเร็จ'),
+    completed: (done: number, total: number) => bilingual(`${done} / ${total} completed`, `${done} / ${total} สำเร็จ`),
+    prototypeComplete: bilingual('🏁 Prototype Complete — all major goals achieved!', '🏁 ต้นแบบสำเร็จ — บรรลุเป้าหมายหลักครบ!'),
+    legendComplete: bilingual('👑 INDUSTRY LEGEND — all legacy goals complete!', '👑 ตำนานวงการ — พิชิตเป้าหมายปลายเกมครบทุกข้อ!'),
+    endgameProgress: (done: number, total: number) => bilingual(`👑 Endgame: ${done} / ${total} legacy goals`, `👑 ปลายเกม: ${done} / ${total} เป้าหมายปลายเกม`),
+    hiddenCombos: (done: number, total: number) => bilingual(`🧩 Hidden Combos: ${done} / ${total} discovered`, `🧩 คอมโบลับ: ${done} / ${total} ค้นพบแล้ว`),
+    comboHint: bilingual(
+      'Try arranging buildings in a row or column — some layouts hide bonus rewards.',
+      'ลองจัดอาคารเรียงแถวหรือคอลัมน์ — บางผังซ่อนรางวัลโบนัสไว้',
+    ),
+  },
   hiddenEventBanner: {
     title: bilingual('✨ Something happened...', '✨ มีบางอย่างเกิดขึ้น...'),
     message: (where: BilingualTextValue) =>
