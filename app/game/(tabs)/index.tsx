@@ -47,7 +47,7 @@ import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, STANDING_ORDER_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, STANDING_ORDER_BALANCE, PRODUCTION_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
 import type { BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -343,11 +343,22 @@ export default function RefineryScreen() {
   }
   const flowState: 'profit' | 'loss' | 'idle' =
     gasRate <= 0 && moneyRate === 0 ? 'idle' : moneyRate >= 0 ? 'profit' : 'loss'
+  // Gasoline batches are electricity-gated once a Power Plant exists, and the
+  // downstream plants draw electricity first — so an under-built power grid
+  // silently starves the gasoline line (and the lifetime-gasoline goal) with no
+  // feedback. Flag it: gasoline *could* run (crude + tank room) but there isn't
+  // even one batch of electricity left.
+  const gasPowerStarved =
+    derived.buildingCounts.powerPlant > 0 &&
+    game.electricity < PRODUCTION_BALANCE.electricityPerGasolineBatch &&
+    game.crudeOil > 0 &&
+    game.gasoline < derived.maxGasolineStorage
   // When idle, say *why* the primary loop stalled instead of a vague "Idle" —
-  // the two real gasoline bottlenecks are no crude to process or a full tank.
+  // the real gasoline bottlenecks are no crude, a full tank, or no electricity.
   const idleReason =
     game.crudeOil <= 0 ? t(text.hud.idleNoCrude)
     : game.gasoline >= derived.maxGasolineStorage ? t(text.hud.idleTankFull)
+    : gasPowerStarved ? t(text.hud.idleNoPower)
     : t(text.hud.flowIdle)
   const flowStateLabel =
     flowState === 'profit' ? t(text.hud.flowProfit)
@@ -593,8 +604,14 @@ export default function RefineryScreen() {
           </View>
           <View style={styles.flowItem}>
             <GameIcon name="gas" size={15} />
-            <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
-            <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
+            {gasPowerStarved ? (
+              <Text style={styles.flowWarn} numberOfLines={1}>⚡ {t(text.hud.lowPower)}</Text>
+            ) : (
+              <>
+                <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
+                <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -1791,6 +1808,12 @@ const styles = StyleSheet.create({
   flowValUp:   { color: colors.green },
   flowValDown: { color: colors.orange },
   flowValFlat: { color: 'rgba(255,255,255,0.7)' },
+  flowWarn: {
+    fontSize: 10.5,
+    fontFamily: fonts.heading,
+    color: colors.gold,
+    letterSpacing: 0.2,
+  },
   flowUnit: {
     fontSize: 8.5,
     fontFamily: fonts.body,

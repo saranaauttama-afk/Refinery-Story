@@ -203,6 +203,8 @@ export const text = {
     flowIdle: bilingual('Idle', 'ว่าง'),
     idleNoCrude: bilingual('Out of crude', 'น้ำมันดิบหมด'),
     idleTankFull: bilingual('Gas tank full', 'ถังแก๊สเต็ม'),
+    idleNoPower: bilingual('No power for gas', 'ไฟไม่พอผลิตแก๊ส'),
+    lowPower: bilingual('Low power', 'ไฟไม่พอ'),
     feedstock: bilingual('Feedstock', 'วัตถุดิบ'),
     reputation: bilingual('Reputation', 'ชื่อเสียง'),
     season: bilingual('Season', 'ฤดูกาล'),
