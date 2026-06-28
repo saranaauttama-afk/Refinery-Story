@@ -105,7 +105,12 @@ Save-safe (old saves default to no specialization).
 - ✅ **Negative adjacency** — a lab / sales office adjacent to a heavy
   polluting plant loses 50% of its bonus (`LAYOUT_BALANCE`), surfaced as a
   warning line in the tile info sheet. Makes placement a tradeoff.
-- ⏳ Follow-ups: visible synergy auras on the map, more positive combo types.
+- ✅ **Synergy auras** — each built tile shows a colored diamond aura (green =
+  positive adjacency pair, orange = layout penalty), plus a "✨ Synergy!" toast
+  on placement (`getCellSynergy` / `SynergyToast`).
+- ✅ **New combo type** — Power Plant next to a downstream production plant
+  (`powerToPlant`) grants a stacking output bonus, surfaced by the green aura.
+- ⏳ Follow-ups: more positive combo types still welcome.
 
 ### 4. People / morale layer (`✅ shipped`)
 Global `staffMorale` (0–100) drifts toward equilibrium each tick. High morale

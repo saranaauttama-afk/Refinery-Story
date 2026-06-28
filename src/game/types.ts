@@ -224,6 +224,8 @@ export type ComboStats = {
   crudeToDistillation: number
   distillationToProduct: number
   crudeToProduct: number
+  // Power Plant next to a downstream production plant — local power boosts output.
+  powerToPlant: number
 }
 
 export type Contract = {

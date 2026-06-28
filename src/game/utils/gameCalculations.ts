@@ -1151,6 +1151,11 @@ const SYNERGY_PAIRS: [BuildingType, BuildingType][] = [
   ['crudeTank', 'distillationUnit'],
   ['distillationUnit', 'productTank'],
   ['crudeTank', 'productTank'],
+  // Power plant next to a downstream production plant (local-power output combo).
+  ['powerPlant', 'lubricantPlant'],
+  ['powerPlant', 'jetFuelPlant'],
+  ['powerPlant', 'petrochemicalPlant'],
+  ['powerPlant', 'polymerPlant'],
 ]
 
 function isSynergyPair(a: BuildingType, b: BuildingType): boolean {
@@ -1185,7 +1190,9 @@ function getComboStats(grid: GridCell[]): ComboStats {
     crudeToDistillation: 0,
     distillationToProduct: 0,
     crudeToProduct: 0,
+    powerToPlant: 0,
   }
+  const PRODUCTION_PLANTS: GridCell[] = ['lubricantPlant', 'jetFuelPlant', 'petrochemicalPlant', 'polymerPlant']
 
   const cols = Math.round(Math.sqrt(grid.length))
 
@@ -1222,6 +1229,13 @@ function getComboStats(grid: GridCell[]): ComboStats {
         (cell === 'productTank' && neighbor === 'crudeTank')
       ) {
         combos.crudeToProduct += 1
+      }
+
+      if (
+        (cell === 'powerPlant' && PRODUCTION_PLANTS.includes(neighbor)) ||
+        (PRODUCTION_PLANTS.includes(cell) && neighbor === 'powerPlant')
+      ) {
+        combos.powerToPlant += 1
       }
     })
   })
@@ -1648,8 +1662,10 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     : isGreen ? 1 - SPECIALIZATION_BALANCE.green.productionSpeedPenalty : 1
   // Prestige: a permanent stacking production bonus carried across New Game+.
   const prestigeMultiplier = 1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel
+  // Power-plant adjacency combo: a downstream plant next to a power plant runs hotter.
+  const powerAdjacencyMultiplier = 1 + comboStats.powerToPlant * BONUS_BALANCE.adjacencyBonusRate
   const workerProductionMultiplier =
-    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * prestigeMultiplier
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * prestigeMultiplier * powerAdjacencyMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
