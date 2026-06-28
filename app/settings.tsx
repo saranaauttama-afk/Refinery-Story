@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGame } from '../src/hooks/GameContext'
-import { useSettingsContext } from '../src/hooks/SettingsContext'
+import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
 import { colors, radii, spacing } from '../src/theme'
+import { text } from '../src/game/translations'
 
 function Row({
   label,
@@ -41,18 +42,20 @@ export default function SettingsScreen() {
   const router = useRouter()
   const { settings, update } = useSettingsContext()
   const { resetGame } = useGame()
+  const { t } = useLang()
+  const ss = text.settingsScreen
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Back</Text>
+          <Text style={styles.back}>{t(text.common.back)}</Text>
         </Pressable>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t(ss.title)}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
-        <Section title="Language">
+        <Section title={t(ss.language)}>
           <View style={styles.langRow}>
             <Pressable
               style={[styles.langButton, settings.language === 'en' && styles.langButtonActive]}
@@ -75,48 +78,42 @@ export default function SettingsScreen() {
               </Text>
             </Pressable>
           </View>
-          <Text style={styles.note}>
-            Applies to menu screens. The main game screens are English-only for now.
-          </Text>
+          <Text style={styles.note}>{t(ss.languageNote)}</Text>
         </Section>
 
-        <Section title="Audio">
+        <Section title={t(ss.audio)}>
           <Row
-            label="Sound effects"
-            description="Button taps, sales, and notifications"
+            label={t(ss.soundLabel)}
+            description={t(ss.soundDesc)}
             value={settings.soundEnabled}
             onChange={(v) => update('soundEnabled', v)}
           />
           <Row
-            label="Music"
-            description="Background music while playing"
+            label={t(ss.musicLabel)}
+            description={t(ss.musicDesc)}
             value={settings.musicEnabled}
             onChange={(v) => update('musicEnabled', v)}
           />
-          <Text style={styles.note}>
-            Demo toggles -- this build has no audio assets yet, so "Sound effects" doesn't play
-            anything audible, but it does control haptic feedback (taps, purchases, milestones).
-            "Music" doesn't change anything yet.
-          </Text>
+          <Text style={styles.note}>{t(ss.audioNote)}</Text>
         </Section>
 
-        <Section title="Store">
+        <Section title={t(ss.store)}>
           <Pressable style={styles.linkRow} onPress={() => router.push('/store')}>
             <Text style={styles.linkLabel}>
-              {settings.adsRemoved ? '✓ Ads removed' : 'Remove Ads / Purchases'}
+              {settings.adsRemoved ? t(ss.adsRemoved) : t(ss.removeAds)}
             </Text>
             <Text style={styles.linkChevron}>›</Text>
           </Pressable>
         </Section>
 
-        <Section title="Save data">
+        <Section title={t(ss.saveData)}>
           <Pressable
             style={styles.dangerRow}
             onPress={() =>
-              Alert.alert('Reset save?', 'This deletes all progress and starts a new refinery.', [
-                { text: 'Cancel', style: 'cancel' },
+              Alert.alert(t(ss.resetConfirmTitle), t(ss.resetConfirmBody), [
+                { text: t(text.common.cancel), style: 'cancel' },
                 {
-                  text: 'Reset',
+                  text: t(text.common.reset),
                   style: 'destructive',
                   onPress: () => {
                     resetGame()
@@ -126,13 +123,13 @@ export default function SettingsScreen() {
               ])
             }
           >
-            <Text style={styles.dangerLabel}>Reset save</Text>
+            <Text style={styles.dangerLabel}>{t(ss.resetSave)}</Text>
           </Pressable>
         </Section>
 
-        <Section title="About">
+        <Section title={t(ss.about)}>
           <Text style={styles.note}>Refinery Story · v0.1.0</Text>
-          <Text style={styles.note}>A Kairosoft-style refinery management game.</Text>
+          <Text style={styles.note}>{t(ss.aboutTagline)}</Text>
         </Section>
       </ScrollView>
     </SafeAreaView>

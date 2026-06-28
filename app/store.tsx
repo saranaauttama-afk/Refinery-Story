@@ -3,8 +3,11 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { useSettingsContext } from '../src/hooks/SettingsContext'
+import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
 import { colors, radii, spacing } from '../src/theme'
+import { text } from '../src/game/translations'
+
+type ProductKey = keyof typeof text.storeScreen.products
 
 type Product = {
   id: string
@@ -72,16 +75,20 @@ const CONSUMABLES: Product[] = [
 export default function StoreScreen() {
   const router = useRouter()
   const { settings, update } = useSettingsContext()
+  const { t } = useLang()
+  const sp = text.storeScreen
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const pName = (id: string) => t(sp.products[id as ProductKey].title)
+  const pDesc = (id: string) => t(sp.products[id as ProductKey].description)
 
   const handlePurchase = (product: Product) => {
     Alert.alert(
-      `Buy ${product.title}?`,
-      `${product.description}\n\nPrice: ${product.price}\n\n(This is a demo -- no real payment will be made.)`,
+      t(sp.buyTitle(pName(product.id))),
+      t(sp.buyBody(pDesc(product.id), product.price)),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t(text.common.cancel), style: 'cancel' },
         {
-          text: 'Buy',
+          text: t(sp.buy),
           onPress: () => {
             setPurchasing(product.id)
             setTimeout(() => {
@@ -89,7 +96,7 @@ export default function StoreScreen() {
                 update('adsRemoved', true)
               }
               setPurchasing(null)
-              Alert.alert('Purchase complete', `Thanks for supporting Refinery Story! (${product.title})`)
+              Alert.alert(t(sp.purchaseComplete), t(sp.purchaseThanks(pName(product.id))))
             }, 600)
           },
         },
@@ -98,29 +105,29 @@ export default function StoreScreen() {
   }
 
   const handleRestore = () => {
-    Alert.alert('Restore purchases', 'No previous purchases found on this device.', [{ text: 'OK' }])
+    Alert.alert(t(sp.restoreTitle), t(sp.restoreBody), [{ text: 'OK' }])
   }
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Back</Text>
+          <Text style={styles.back}>{t(text.common.back)}</Text>
         </Pressable>
-        <Text style={styles.title}>Store</Text>
+        <Text style={styles.title}>{t(sp.title)}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Remove Ads</Text>
+          <Text style={styles.sectionTitle}>{t(sp.removeAdsSection)}</Text>
           <View style={styles.card}>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{REMOVE_ADS.title}</Text>
-              <Text style={styles.cardDescription}>{REMOVE_ADS.description}</Text>
+              <Text style={styles.cardTitle}>{pName(REMOVE_ADS.id)}</Text>
+              <Text style={styles.cardDescription}>{pDesc(REMOVE_ADS.id)}</Text>
             </View>
             {settings.adsRemoved ? (
               <View style={styles.ownedBadge}>
-                <Text style={styles.ownedLabel}>Owned</Text>
+                <Text style={styles.ownedLabel}>{t(sp.owned)}</Text>
               </View>
             ) : (
               <Pressable
@@ -135,32 +142,32 @@ export default function StoreScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rewarded Ads</Text>
-          <Text style={styles.note}>Coming soon -- watch a short video ad to earn these rewards for free.</Text>
+          <Text style={styles.sectionTitle}>{t(sp.rewardedSection)}</Text>
+          <Text style={styles.note}>{t(sp.rewardedNote)}</Text>
           {REWARDED_ADS.map((ad) => (
             <View key={ad.id} style={styles.card}>
               <View style={styles.cardText}>
                 <Text style={styles.cardTitle}>
-                  {ad.title} ({ad.reward})
+                  {pName(ad.id)} ({ad.reward})
                 </Text>
-                <Text style={styles.cardDescription}>{ad.description}</Text>
+                <Text style={styles.cardDescription}>{pDesc(ad.id)}</Text>
               </View>
               <View style={styles.soonBadge}>
-                <Text style={styles.soonLabel}>Soon</Text>
+                <Text style={styles.soonLabel}>{t(sp.soon)}</Text>
               </View>
             </View>
           ))}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Boosts</Text>
+          <Text style={styles.sectionTitle}>{t(sp.boostsSection)}</Text>
           {CONSUMABLES.map((product) => (
             <View key={product.id} style={styles.card}>
               <View style={styles.cardText}>
                 <Text style={styles.cardTitle}>
-                  {product.title} {product.reward ? `(${product.reward})` : ''}
+                  {pName(product.id)} {product.reward ? `(${product.reward})` : ''}
                 </Text>
-                <Text style={styles.cardDescription}>{product.description}</Text>
+                <Text style={styles.cardDescription}>{pDesc(product.id)}</Text>
               </View>
               <Pressable
                 style={styles.buyButton}
@@ -174,13 +181,10 @@ export default function StoreScreen() {
         </View>
 
         <Pressable style={styles.restoreButton} onPress={handleRestore}>
-          <Text style={styles.restoreLabel}>Restore Purchases</Text>
+          <Text style={styles.restoreLabel}>{t(sp.restore)}</Text>
         </Pressable>
 
-        <Text style={styles.note}>
-          Demo store -- no real payment processor is connected. "Remove Ads" persists locally; the cash/RP boosts
-          above are for illustration only and don't currently grant rewards.
-        </Text>
+        <Text style={styles.note}>{t(sp.demoNote)}</Text>
       </ScrollView>
     </SafeAreaView>
   )
