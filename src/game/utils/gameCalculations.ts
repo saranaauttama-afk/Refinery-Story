@@ -1496,12 +1496,19 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // At uniform level this equals the old count*multiplier(sharedLevel); now
   // it rises smoothly as individuals level up one at a time.
   const effectiveWorkers = (type: WorkerType) => getEffectiveWorkerSum(game.employees, type)
-  const operatorCount = effectiveWorkers('operator')
-  const mechanicCount = effectiveWorkers('mechanic')
-  const salesAgentCount = effectiveWorkers('salesAgent')
-  const chemistCount = effectiveWorkers('chemist')
+  // Diminishing returns on STACKING the same type: the effective count feeding a
+  // linear additive bonus is count^exponent (1st hire full, each extra worth less),
+  // so spreading roles competes with stacking one. exponent 1.0 == old behaviour.
+  const diminishStack = (effectiveSum: number) =>
+    effectiveSum <= 0 ? 0 : Math.pow(effectiveSum, BONUS_BALANCE.workerStackDiminishingExponent)
+  const operatorCount = diminishStack(effectiveWorkers('operator'))
+  const mechanicCount = diminishStack(effectiveWorkers('mechanic'))
+  const salesAgentCount = diminishStack(effectiveWorkers('salesAgent'))
+  const chemistCount = diminishStack(effectiveWorkers('chemist'))
+  // Safety officers already diminish multiplicatively (Math.pow of a <1 rate), so
+  // they keep their raw effective count.
   const safetyOfficerCount = effectiveWorkers('safetyOfficer')
-  const fuelSpecialistCount = effectiveWorkers('fuelSpecialist')
+  const fuelSpecialistCount = diminishStack(effectiveWorkers('fuelSpecialist'))
 
   // --- System 2: Refinery Perk Tree bonuses ---
   const unlockedPerks = game.unlockedPerks ?? []

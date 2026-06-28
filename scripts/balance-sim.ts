@@ -270,6 +270,35 @@ hr('8. Gasoline unit economics & staff ROI (sustained, level 8)')
         (type === 'salesAgent' ? '  (also lifts downstream — understated)' : ''),
     )
   }
+
+  // Stack curve: value of the Nth operator on top of (N-1). Diminishing returns
+  // should make the 4th much weaker than the 1st — that's the stack-vs-spread
+  // decision the cap used to lack.
+  console.log('\noperator stack curve (Nth operator, gross/yr it adds):')
+  let prevNet = annual(calculateDerivedStats(mkState({ level: 8, grid: grid8, workers: { operator: 0 } }))).net
+  for (let n = 1; n <= 4; n++) {
+    const net = annual(calculateDerivedStats(mkState({ level: 8, grid: grid8, workers: { operator: n } }))).net
+    console.log(`  operator #${n}: +${money(net - prevNet)}/yr` + (n === 1 ? ' (full)' : ` (${r2((net - prevNet) / 1)}…)`))
+    prevNet = net
+  }
+}
+
+// ===========================================================================
+// 9. Early-game affordability — wages shouldn't crush a fresh save
+// ===========================================================================
+hr('9. Early-game payroll vs income (sanity: not brutal)')
+{
+  const YEAR_S = (AWARDS_BALANCE.yearLengthTicks * CORE_BALANCE.tickMs) / 1000
+  const earlies = [
+    { level: 1, grid: buildGrid({ distillationUnit: 1 }), workers: { operator: 2 } },
+    { level: 3, grid: buildGrid({ distillationUnit: 2, powerPlant: 1 }), workers: { operator: 3 } },
+  ]
+  for (const s of earlies) {
+    const d = calculateDerivedStats(mkState(s))
+    const grossYr = effGasPerSec(d) * d.sellPrice * YEAR_S
+    const pay = getYearlyPayroll(mkState(s))
+    console.log(`lvl ${s.level}: annual gross ${money(grossYr)}  payroll ${money(pay)}  (${r2((pay / grossYr) * 100)}% of gross)`)
+  }
 }
 
 console.log('\n(done)')

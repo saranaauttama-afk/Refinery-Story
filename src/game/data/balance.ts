@@ -234,6 +234,15 @@ export const BONUS_BALANCE = {
   aviationSpecialistJetFuelBonusRate: 0.20,
   chemicalEngineerPetrochemicalsBonusRate: 0.20,
   polymerEngineerPlasticPelletsBonusRate: 0.20,
+  // Diminishing returns when STACKING the same worker type. The linear additive
+  // bonuses (operator yield, sales-agent/fuel-specialist sell price, chemist RP,
+  // mechanic storage) used to scale 1:1 with headcount, so the only optimal play
+  // was "fill every bench slot to the cap" — no decision. The effective count
+  // feeding those bonuses is now count^this exponent: the 1st hire is full value,
+  // each additional one of the SAME type is worth progressively less, so spreading
+  // across roles competes with stacking one. 1.0 = old linear behavior.
+  // 4 stacked: 4^0.7 = 2.64 effective (vs 4); marginal 3rd→4th ≈ 0.48.
+  workerStackDiminishingExponent: 0.7,
 } as const
 
 // Random incidents only (the trivial freebie events were removed — see
@@ -908,9 +917,10 @@ export const AWARDS_BALANCE = {
 
 // --- Staff wages / payroll (Economy Pass) ---
 // Annual wage per worker by type (deducted each business year, see
-// closeBusinessYear). Roughly 15% of hire cost, so a worker "pays rent" but
-// still earns out over several years. Leveled crews cost more (see levelWageRate),
-// tying the leveling system to ongoing upkeep — the missing hiring tension.
+// closeBusinessYear). Each worker "pays rent" yet still earns out; leveled crews
+// cost more (see levelWageRate), tying leveling to ongoing upkeep. Doubled in
+// Economy Pass 2 so a full bench is a visible recurring line item (see perWorker
+// note) — the original wages were ~0.6% of gross and created no hiring tension.
 // Hiring cap + retirement (Phase 5 of Individual Staff system).
 // Per-type cap scales with refinery level so early game stays small and
 // late game allows a full bench. Formula: floor(BASE + refineryLevel / STEP).
@@ -940,16 +950,21 @@ export const HIRING_BALANCE = {
 } as const
 
 export const WAGE_BALANCE = {
+  // Economy Pass 2 (staff tension): wages were ~0.6% of gross at mid-game, so
+  // "fill every bench slot" had no recurring cost. Roughly doubled the
+  // production/sell roles so a full crew is a visible annual line item that the
+  // diminishing-returns curve (workerStackDiminishingExponent) makes you weigh
+  // before stacking a 3rd/4th of the same type.
   perWorker: {
-    operator: 80,
-    mechanic: 120,
-    salesAgent: 150,
-    safetyOfficer: 180,
-    chemist: 220,
-    logisticsCoordinator: 300,
-    fuelSpecialist: 220,
-    aviationSpecialist: 450,
-    chemicalEngineer: 700,
+    operator: 160,
+    mechanic: 220,
+    salesAgent: 300,
+    safetyOfficer: 320,
+    chemist: 400,
+    logisticsCoordinator: 520,
+    fuelSpecialist: 400,
+    aviationSpecialist: 700,
+    chemicalEngineer: 1000,
   } as Record<string, number>,
   // Each crew level above 1 adds this fraction to that type's wage.
   // Level 5 crew costs 1 + 4*0.1 = 1.4x wage.
