@@ -26,8 +26,9 @@ import {
   applyProductSaturation,
   recoverProductMarket,
   countBuildings,
+  getYearlyPayroll,
 } from '../src/game/utils/gameCalculations'
-import { MARKET_BALANCE } from '../src/game/data/balance'
+import { MARKET_BALANCE, WAGE_BALANCE, AWARDS_BALANCE, CORE_BALANCE } from '../src/game/data/balance'
 import type { BuildingType, GameState, GridCell, WorkerType } from '../src/game/types'
 
 const hr = (label: string) => console.log(`\n=== ${label} ===`)
@@ -84,6 +85,12 @@ function mkState(opts: {
   }
   return g
 }
+
+const annualPayroll = (
+  level: number,
+  grid: GridCell[],
+  workers: Partial<Record<WorkerType, number>>,
+) => getYearlyPayroll(mkState({ level, grid, workers }))
 
 // ===========================================================================
 // 1. Crude price wave (Dynamic Market)
@@ -215,6 +222,52 @@ hr('7. Speed-floor recovery: operators past the cap (was a dead stat)')
       `lvl ${lvl}: prod/s ${r2(a.productionRate)}→${r2(b.productionRate)} ${floored ? '(speed capped)' : ''}  ` +
         `gas/s 0op ${r2(effGasPerSec(a))} → 12op ${r2(effGasPerSec(b))}  ` +
         `overflowYield@12op ${r2(b.speedOverflowYieldMultiplier)}`,
+    )
+  }
+}
+
+// ===========================================================================
+// 8. Gasoline unit economics + staff ROI (is hiring still worth it?)
+// ===========================================================================
+hr('8. Gasoline unit economics & staff ROI (sustained, level 8)')
+{
+  const YEAR_S = (AWARDS_BALANCE.yearLengthTicks * CORE_BALANCE.tickMs) / 1000
+  const grid8 = buildGrid({ distillationUnit: 6, lubricantPlant: 3, jetFuelPlant: 2, powerPlant: 2 })
+  const base = { operator: 3, salesAgent: 2, fuelSpecialist: 1 }
+
+  // Sustained annual gasoline economy. Throughput is the floored batch rate
+  // (productionRate); we assume crude is kept stocked and product sold, so this
+  // is a fair steady-state baseline (an upper bound when crude/storage bind).
+  const annual = (d: ReturnType<typeof calculateDerivedStats>) => {
+    const batchesPerSec = d.productionRate
+    const gasPerSec = effGasPerSec(d)
+    return {
+      gasPerSec,
+      grossRev: gasPerSec * d.sellPrice * YEAR_S,
+      crudeCost: batchesPerSec * d.crudePrice * YEAR_S,
+      net: (gasPerSec * d.sellPrice - batchesPerSec * d.crudePrice) * YEAR_S,
+    }
+  }
+
+  const d8 = calculateDerivedStats(mkState({ level: 8, grid: grid8, workers: base }))
+  const a = annual(d8)
+  const yieldPerBatch = effGasPerSec(d8) / d8.productionRate
+  console.log(`business year     : ${AWARDS_BALANCE.yearLengthTicks} ticks (${YEAR_S}s real)`)
+  console.log(`gasoline/sec      : ${r2(a.gasPerSec)}   sell ${money(d8.sellPrice)}   crude ${money(d8.crudePrice)}`)
+  console.log(`margin per crude  : ${money(d8.sellPrice * yieldPerBatch - d8.crudePrice)}  (sell×${r2(yieldPerBatch)} yield − crude)`)
+  console.log(`annual gross      : ${money(a.grossRev)}   crude cost ${money(a.crudeCost)}   net ${money(a.net)}`)
+  console.log(`annual payroll    : ${money(annualPayroll(8, grid8, base))} (whole crew) — ${r2((annualPayroll(8, grid8, base) / a.grossRev) * 100)}% of gross`)
+
+  console.log('\nmarginal hire ROI (one more, gasoline-line effect only):')
+  for (const type of ['operator', 'salesAgent', 'fuelSpecialist'] as const) {
+    const d1 = calculateDerivedStats(
+      mkState({ level: 8, grid: grid8, workers: { ...base, [type]: (base[type] ?? 0) + 1 } }),
+    )
+    const dNet = annual(d1).net - a.net
+    const wage = WAGE_BALANCE.perWorker[type]
+    console.log(
+      `+1 ${type.padEnd(14)}: +${money(dNet)}/yr  vs wage ${money(wage)}/yr  → ROI ${r2(dNet / wage)}x` +
+        (type === 'salesAgent' ? '  (also lifts downstream — understated)' : ''),
     )
   }
 }
