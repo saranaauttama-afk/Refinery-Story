@@ -374,8 +374,9 @@ export default function RefineryScreen() {
     { route: '/game',             icon: '🏭', label: t(text.nav.factory) },
     { route: '/game/contracts',   icon: '📋', label: t(text.nav.contracts), badge: contractsReady || undefined },
     { route: '/game/supply',      icon: '🛢',  label: t(text.nav.supply),    badge: standaloneReady || undefined },
-    { route: '/game/recruit',     icon: '👥', label: t(text.nav.recruit) },
-    { route: '/game/company',     icon: '🏢', label: t(text.nav.company),   badge: (staffReady + researchReady) || undefined },
+    { route: '/game/recruit',     icon: '👥', label: t(text.nav.recruit),   badge: staffReady || undefined },
+    { route: '/game/research',    icon: '🔬', label: t(text.nav.research),  badge: researchReady || undefined },
+    { route: '/game/company',     icon: '🏢', label: t(text.nav.company) },
   ]
   const secondaryStats = [
     { label: t(text.hud.feedstock),   value: `${game.feedstock}/${derived.maxFeedstockStorage}` },

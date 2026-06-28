@@ -22,7 +22,6 @@ import { text } from '../../../src/game/translations'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
-import { PERKS } from '../../../src/game/data/perks'
 import { EXPANSION_BALANCE, STAFF_LEVEL_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDINGS } from '../../../src/game/data/buildings'
@@ -93,7 +92,7 @@ const statStyles = StyleSheet.create({
 
 export default function CompanyScreen() {
   const router = useRouter()
-  const { game, loaded, derived, trainEmployee, assignEmployeeToCell, unassignCell, unlockResearch, installPerk, expandGrid, renameRefinery, manualSave, resetGame } = useGame()
+  const { game, loaded, derived, trainEmployee, assignEmployeeToCell, unassignCell, expandGrid, renameRefinery, manualSave, resetGame } = useGame()
   const { t } = useLang()
   const cs = text.companyScreen
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
@@ -122,11 +121,10 @@ export default function CompanyScreen() {
   const nextExpansion = EXPANSION_BALANCE[game.gridExpansionLevel + 1] as PaidExpansionEntry | undefined
   const currentSize = EXPANSION_BALANCE[game.gridExpansionLevel].size
   const retiringCount = game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length
-  const researchReady = derived.activeResearchItems.filter((i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost).length
 
   const TABS: { key: CompanyTab; label: string; badge?: number }[] = [
     { key: 'team',     label: t(cs.tabs.team),     badge: retiringCount || undefined },
-    { key: 'grow',     label: t(cs.tabs.grow),     badge: researchReady || undefined },
+    { key: 'grow',     label: t(cs.tabs.grow) },
     { key: 'settings', label: t(cs.tabs.settings) },
   ]
 
@@ -292,42 +290,7 @@ export default function CompanyScreen() {
             ) : <Text style={styles.emptyNote}>{t(cs.maxSizeReached)}</Text>}
           </View>
 
-          {/* Research */}
-          <Text style={styles.sectionLabel}>{t(cs.researchHeader(Math.floor(game.researchPoints)))}</Text>
-          {derived.activeResearchItems.map((item) => (
-            <ListRow
-              key={item.key}
-              title={t(item.name)}
-              subtitle={item.isUnlocked ? t(item.description) : item.prerequisiteName ? t(cs.requiresResearch(t(item.prerequisiteName), item.cost)) : t(cs.descWithRp(t(item.description), item.cost))}
-              actionLabel={t(cs.unlock)}
-              disabled={!item.isVisible || game.researchPoints < item.cost}
-              done={item.isUnlocked}
-              onPress={() => unlockResearch(item)}
-            />
-          ))}
-
-          {/* Perks */}
-          <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.perksHeader(game.upgradePoints))}</Text>
-          {(['efficiency', 'market', 'safety'] as const).map((branch) => (
-            <View key={branch}>
-              <Text style={styles.branchLabel}>{t(cs.branches[branch])}</Text>
-              {PERKS.filter((p) => p.branch === branch).map((perk) => {
-                const unlocked = game.unlockedPerks.includes(perk.key)
-                const prereqMet = !perk.prerequisite || game.unlockedPerks.includes(perk.prerequisite)
-                return (
-                  <ListRow
-                    key={perk.key}
-                    title={t(cs.perkTitle(t(perk.name), perk.tier))}
-                    subtitle={unlocked ? t(perk.description) : !prereqMet ? t(cs.requiresPrevTier) : t(cs.descWithPts(t(perk.description), perk.cost))}
-                    actionLabel={t(cs.unlock)}
-                    disabled={!prereqMet || game.upgradePoints < perk.cost}
-                    done={unlocked}
-                    onPress={() => installPerk(perk)}
-                  />
-                )
-              })}
-            </View>
-          ))}
+          {/* Research & Perks now live on the dedicated R&D tab (/game/research). */}
 
           {/* Activity log */}
           <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.activityLog)}</Text>

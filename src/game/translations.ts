@@ -198,7 +198,17 @@ export const text = {
     contracts: bilingual('Contracts', 'สัญญา'),
     supply: bilingual('Supply', 'จัดหา'),
     recruit: bilingual('Recruit', 'จ้างงาน'),
+    research: bilingual('R&D', 'วิจัย'),
     company: bilingual('Company', 'บริษัท'),
+  },
+  researchScreen: {
+    title: bilingual('Research & Perks', 'วิจัยและเพิร์ก'),
+    researchSection: bilingual('Research', 'งานวิจัย'),
+    perksSection: bilingual('Perks', 'เพิร์ก'),
+    emptyHint: bilingual(
+      'Earn Research Points by producing and completing contracts, then spend them here.',
+      'สะสมแต้มวิจัยจากการผลิตและทำสัญญา แล้วนำมาใช้ที่นี่',
+    ),
   },
   hiddenEventBanner: {
     title: bilingual('✨ Something happened...', '✨ มีบางอย่างเกิดขึ้น...'),

@@ -29,9 +29,10 @@ fork off `devMobile`.
 
 - **`app/`** — Expo Router screens. `app/game/(tabs)/` holds the gameplay
   screens; `index.tsx` is the factory home (the big full-bleed scene). The
-  other tabs (contracts/supply/recruit/company/business/staff/...) are pushed
-  screens with a close button (hub model), navigated via the persistent
-  `BottomNav`.
+  other tabs (contracts/supply/recruit/research/company) are pushed screens
+  with a close button (hub model), navigated via the persistent `BottomNav`.
+  `research.tsx` is the R&D tab (Research + Perks, pulled out of the Company
+  hub so progression is one tap away); Company still holds team/grow/settings.
 - **`app/_layout.tsx`** — root: loads the font, wraps `SettingsProvider` →
   `GameProvider`, and renders `GlobalOverlays` (banners, modals, confetti).
 - **`src/hooks/useGameLoop.ts`** — the heart. Owns all game state, the main
@@ -77,7 +78,9 @@ fork off `devMobile`.
   loop pauses when backgrounded and when `speed === 0`. Do NOT introduce
   wall-clock (`Date.now()`) into game logic; shipments were migrated off it.
 - **Bilingual text** — UI strings are `{ en, th }` (`src/game/translations`).
-  The 4 main tabs still read `.en` directly in places; menus use `useLang()`.
+  All gameplay tabs (factory + contracts/supply/recruit/research/company) now
+  go through `useLang()`'s `t()`; add new strings to `translations.ts` and read
+  them with `t(...)` rather than `.en`. (Event-log content is still mixed.)
 - **Transient banners** sit below the HUD via `OVERLAY_BANNER_TOP` so they never
   cover the resource bar.
 - **`calculateDerivedStats` is hot** — it runs every tick and render. Pass a
