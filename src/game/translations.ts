@@ -205,6 +205,7 @@ export const text = {
     idleTankFull: bilingual('Gas tank full', 'ถังแก๊สเต็ม'),
     idleNoPower: bilingual('No power for gas', 'ไฟไม่พอผลิตแก๊ส'),
     lowPower: bilingual('Low power', 'ไฟไม่พอ'),
+    power: bilingual('Power', 'ไฟฟ้า'),
     feedstock: bilingual('Feedstock', 'วัตถุดิบ'),
     reputation: bilingual('Reputation', 'ชื่อเสียง'),
     season: bilingual('Season', 'ฤดูกาล'),

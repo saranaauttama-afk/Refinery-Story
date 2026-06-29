@@ -45,10 +45,11 @@ import HistoryGraph from '../../../src/components/HistoryGraph'
 import SaturationBars from '../../../src/components/SaturationBars'
 import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
+import { ENDGAME_GOALS } from '../../../src/game/data/endgameGoals'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, STANDING_ORDER_BALANCE, PRODUCTION_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
-import type { BuildingType, DerivedStats } from '../../../src/game/types'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, STANDING_ORDER_BALANCE, PRODUCTION_BALANCE, POWER_PLANT_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
+import type { BilingualTextValue, BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
   getBuildingEffectLines,
@@ -411,6 +412,19 @@ export default function RefineryScreen() {
     { label: t(text.hud.morale),         value: `${Math.round(game.staffMorale)}/100` },
     { label: t(text.hud.specialization), value: specValue },
     { label: t(text.hud.feedstock),      value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
+    // Power balance: generation vs downstream demand per cycle. Surplus feeds the
+    // gasoline line; a deficit means gasoline (and maybe plants) are starved — the
+    // hidden trap behind a stalled gasoline goal. Only shown once a Power Plant exists.
+    ...(derived.buildingCounts.powerPlant > 0
+      ? [{
+          label: t(text.hud.power),
+          value: (() => {
+            const gen = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
+            const use = derived.electricityDemandPerCycle
+            return `${gen}⚡/${use} per cyc${gen <= use ? ' ⚠️' : ` · +${gen - use} free`}`
+          })(),
+        }]
+      : []),
     { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}%` },
     { label: t(text.hud.era),            value: t(derived.currentEra.name) },
     ...(game.prestigeLevel > 0
@@ -438,7 +452,16 @@ export default function RefineryScreen() {
   const upgradeBlockers            = getUpgradeBlockers(game)
   const isMaxLevel                 = game.refineryLevel >= MAX_REFINERY_LEVEL
   const canUpgrade                 = !isMaxLevel && upgradeBlockers.length === 0
-  const nextGoal                   = derived.activeMilestones.find((m) => !m.isCompleted)
+  // Progression nudge: show the next unmet MILESTONE while any remain; once the
+  // milestone ladder is exhausted (late game) fall back to the next unmet
+  // ENDGAME goal so the player always knows what's left toward Industry Legend
+  // instead of the banner just vanishing.
+  const activeMilestone            = derived.activeMilestones.find((m) => !m.isCompleted)
+  const nextEndgameGoal            = !activeMilestone && !game.legendAchieved
+    ? ENDGAME_GOALS.find((gl) => !gl.isComplete(game))
+    : undefined
+  const nextGoal: { name: BilingualTextValue; progress?: { current: number; target: number } | null } | undefined =
+    activeMilestone ?? (nextEndgameGoal ? { name: nextEndgameGoal.name, progress: nextEndgameGoal.progress(game) } : undefined)
 
   const products: {
     key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
@@ -721,7 +744,12 @@ export default function RefineryScreen() {
                   }}
                 >
                   <Text style={styles.tradeActionLabel}>Sell 10 Gas</Text>
-                  <Text style={styles.tradeActionSub}>${derived.sellPrice}/unit</Text>
+                  <Text style={styles.tradeActionSub}>
+                    ${derived.sellPrice}/unit{' '}
+                    {getProductMarketLevel(game, 'gasoline') < 0.9 ? (
+                      <Text style={styles.pricePricey}>↓ low</Text>
+                    ) : null}
+                  </Text>
                 </AnimatedPressable>
               </View>
 
