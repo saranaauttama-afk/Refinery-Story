@@ -33,7 +33,8 @@ import {
 } from '../src/game/utils/gameCalculations'
 import { BUILDINGS } from '../src/game/data/buildings'
 import { RESEARCH_ITEMS } from '../src/game/data/research'
-import { AWARDS_BALANCE, CORE_BALANCE, EXPANSION_BALANCE, MAX_REFINERY_LEVEL } from '../src/game/data/balance'
+import { CONTRACTS } from '../src/game/data/contracts'
+import { AWARDS_BALANCE, CORE_BALANCE, EXPANSION_BALANCE, MAX_REFINERY_LEVEL, STANDING_ORDER_BALANCE } from '../src/game/data/balance'
 import { areAllEndgameGoalsComplete, ENDGAME_GOALS } from '../src/game/data/endgameGoals'
 import type { BuildingType, GameState, WorkerType } from '../src/game/types'
 
@@ -47,11 +48,71 @@ const fmtTime = (ticks: number) => {
   return `${h}h ${m}m  (${ticks.toLocaleString()} ticks)`
 }
 
-// --- assumed contract drip (see header) ---
-const CONTRACT_INTERVAL = 600 // ~2 min of play between contract payouts
-const CONTRACT_CASH = 1500
-const CONTRACT_RP = 8
-const CONTRACT_REP = 8
+// Faithful income: complete real one-time contracts + fulfill real repeatable
+// standing orders (the actual RP/reputation/cash engine), instead of a fake drip.
+type ProductKey = keyof GameState['productInventory']
+const CONTRACT_PRODUCT_FIELDS: [keyof (typeof CONTRACTS)[number], ProductKey][] = [
+  ['petrochemicalsRequired', 'petrochemicals'],
+  ['lubricantsRequired', 'lubricants'],
+  ['jetFuelRequired', 'jetFuel'],
+  ['asphaltRequired', 'asphalt'],
+  ['recycledMaterialRequired', 'recycledMaterial'],
+  ['plasticPelletsRequired', 'plasticPellets'],
+]
+
+// Work every available order/contract the player currently can. Mirrors the real
+// completeContract / fulfillStandingOrder handlers (consumes inventory, applies
+// the contract reward/RP multipliers, marks one-time contracts done, sets
+// standing-order cooldowns).
+function workOrders(g: GameState): GameState {
+  let next = g
+  const d = calculateDerivedStats(next)
+
+  // Repeatable standing orders (the endgame engine).
+  for (const order of STANDING_ORDER_BALANCE) {
+    if (next.refineryLevel < order.unlockLevel) continue
+    const cd = next.standingOrderCooldowns[order.key]
+    if (cd !== undefined && cd > next.tickCount) continue
+    if (next.productInventory[order.productKey] < order.required) continue
+    next = {
+      ...next,
+      money: next.money + order.reward,
+      researchPoints: next.researchPoints + order.rpReward,
+      reputation: next.reputation + order.reputationReward,
+      productInventory: { ...next.productInventory, [order.productKey]: next.productInventory[order.productKey] - order.required },
+      standingOrderCooldowns: { ...next.standingOrderCooldowns, [order.key]: next.tickCount + order.cooldownTicks },
+      yearStats: { ...next.yearStats, moneyEarned: next.yearStats.moneyEarned + order.reward },
+    }
+  }
+
+  // One-time contracts.
+  for (const c of CONTRACTS) {
+    if (next.completedContractIds.includes(c.id) || next.refineryLevel < c.unlockLevel) continue
+    const costs = CONTRACT_PRODUCT_FIELDS
+      .map(([field, key]) => ({ key, need: (c[field] as number | undefined) ?? 0 }))
+      .filter((x) => x.need > 0)
+    const isProduct = costs.length > 0
+    if (isProduct) {
+      if (costs.some((x) => next.productInventory[x.key] < x.need)) continue
+    } else if (next.gasoline < c.gasolineRequired) continue
+    const inv = { ...next.productInventory }
+    for (const x of costs) inv[x.key] -= x.need
+    const reward = Math.round(c.reward * d.contractRewardMultiplier)
+    const rp = Math.round(c.rpReward * d.contractRpRewardMultiplier)
+    next = {
+      ...next,
+      gasoline: isProduct ? next.gasoline : next.gasoline - c.gasolineRequired,
+      productInventory: inv,
+      money: next.money + reward,
+      researchPoints: next.researchPoints + rp,
+      reputation: next.reputation + c.reputationReward,
+      completedContractCount: next.completedContractCount + 1,
+      completedContractIds: [...next.completedContractIds, c.id],
+      yearStats: { ...next.yearStats, moneyEarned: next.yearStats.moneyEarned + reward, contractsCompleted: next.yearStats.contractsCompleted + 1 },
+    }
+  }
+  return next
+}
 
 const autoTrade: AutoTradeSettings = {
   enabled: true,
@@ -171,19 +232,10 @@ const MAX_TICKS = 1_500_000 // ~83h cap
 
 for (let step = 0; step < MAX_TICKS; step++) {
   g = tick(g)
+  // Work real orders BEFORE auto-trade so contracts/standing orders get first
+  // claim on inventory (a player who works the boards), then sell the rest.
+  if (g.tickCount % 5 === 0) g = workOrders(g)
   g = applyAutoTrade(g, autoTrade)
-
-  // assumed contract drip
-  if (g.tickCount % CONTRACT_INTERVAL === 0) {
-    g = {
-      ...g,
-      money: g.money + CONTRACT_CASH,
-      researchPoints: g.researchPoints + CONTRACT_RP,
-      reputation: g.reputation + CONTRACT_REP,
-      completedContractCount: g.completedContractCount + 1,
-      yearStats: { ...g.yearStats, contractsCompleted: g.yearStats.contractsCompleted + 1, moneyEarned: g.yearStats.moneyEarned + CONTRACT_CASH },
-    }
-  }
 
   if (g.tickCount % DECISION_EVERY === 0) g = decide(g)
 
