@@ -219,9 +219,11 @@ export default function CompanyScreen() {
                   </View>
                 </View>
                 <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
-                {nearRetire && yearsLeft !== null && (
+                {nearRetire && yearsLeft !== null ? (
                   <Text style={styles.retireWarn}>{t(cs.retiresIn(yearsLeft))}</Text>
-                )}
+                ) : employee.hiredOnYear !== undefined ? (
+                  <Text style={styles.empTenure}>🕰 {t(cs.tenure(Math.max(0, game.businessYear - employee.hiredOnYear)))}</Text>
+                ) : null}
                 <View style={styles.empActions}>
                   <AnimatedPressable
                     disabled={!canTrain}
@@ -437,6 +439,7 @@ const styles = StyleSheet.create({
   lvBadgeMax: { backgroundColor: colors.gold },
   lvBadgeText: { fontSize: 11, fontWeight: '900', color: '#fff' },
   retireWarn: { fontSize: 11, color: colors.orange, fontWeight: '700', marginTop: 4 },
+  empTenure: { fontSize: 10.5, color: colors.inkMuted, marginTop: 4 },
   empActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
   actBtn: { borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: 6 },
   actBtnTrain: { backgroundColor: colors.blue },

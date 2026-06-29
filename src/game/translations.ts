@@ -452,6 +452,7 @@ export const text = {
     noEmployees: bilingual('No employees yet', 'ยังไม่มีพนักงาน'),
     hireHint: bilingual('Go to Recruit to hire your first staff.', 'ไปที่หน้าจ้างงานเพื่อจ้างพนักงานคนแรก'),
     retiresIn: (n: number) => bilingual(`Retires in ${n} year${n !== 1 ? 's' : ''}`, `เกษียณในอีก ${n} ปี`),
+    tenure: (n: number) => bilingual(`${n} yr${n !== 1 ? 's' : ''} with you`, `อยู่กับเรามา ${n} ปี`),
     maxLevel: bilingual('Max Level', 'เลเวลสูงสุด'),
     train: (money: string, rp: number) => bilingual(`Train $${money} · ${rp}RP`, `ฝึก $${money} · ${rp}RP`),
     assigned: bilingual('Assigned', 'มอบหมายแล้ว'),
@@ -2395,6 +2396,21 @@ export const text = {
       bilingual(
         `${employeeName} (${typeName.en}) reached Level ${level}!`,
         `${employeeName} (${typeName.th}) เลื่อนเป็นระดับ ${level} แล้ว!`,
+      ),
+    staffMastered: (employeeName: string, typeName: BilingualTextValue, traitName: BilingualTextValue) =>
+      bilingual(
+        `✨ ${employeeName} mastered the craft — a true ${traitName.en} (${typeName.en}).`,
+        `✨ ${employeeName} ชำนาญงานเต็มขั้น — ${traitName.th}ตัวจริง (${typeName.th})`,
+      ),
+    staffRetired: (employeeName: string, typeName: BilingualTextValue, years: number, severance: number) =>
+      bilingual(
+        `${employeeName} (${typeName.en}) retired after ${years} year${years === 1 ? '' : 's'} of service. Severance $${severance.toLocaleString()}.`,
+        `${employeeName} (${typeName.th}) เกษียณหลังทำงาน ${years} ปี เงินชดเชย $${severance.toLocaleString()}`,
+      ),
+    staffRetiredLegacy: (employeeName: string, typeName: BilingualTextValue, years: number, severance: number, mentorXp: number) =>
+      bilingual(
+        `${employeeName} (${typeName.en}) retired after ${years} year${years === 1 ? '' : 's'} — passing the torch (+${mentorXp} XP for the next hire). Severance $${severance.toLocaleString()}.`,
+        `${employeeName} (${typeName.th}) เกษียณหลังทำงาน ${years} ปี — ส่งต่อความรู้ (+${mentorXp} XP ให้คนถัดไป) เงินชดเชย $${severance.toLocaleString()}`,
       ),
     staffTrained: (employeeName: string, typeName: BilingualTextValue, level: number) =>
       bilingual(

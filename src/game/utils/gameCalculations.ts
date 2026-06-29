@@ -2247,8 +2247,13 @@ export function applyStaffXp(game: GameState): {
     if (newXp >= threshold) {
       updated = { ...target, level: target.level + 1, xp: newXp - threshold }
       moraleDelta += MORALE_BALANCE.levelUpBoost
+      // Reaching max level is a career-defining moment — celebrate it with the
+      // employee's personality, otherwise a normal level-up line.
+      const masteryTrait = updated.level >= STAFF_LEVEL_BALANCE.maxLevel ? getStaffTrait(target.trait) : undefined
       levelUpLog = serializeBilingualText(
-        text.logs.staffLevelUp(target.name, worker.name, updated.level),
+        masteryTrait
+          ? text.logs.staffMastered(target.name, worker.name, masteryTrait.name)
+          : text.logs.staffLevelUp(target.name, worker.name, updated.level),
       )
     } else {
       updated = { ...target, xp: newXp }
@@ -2432,17 +2437,23 @@ export function closeBusinessYear(game: GameState): {
     }
   }
 
-  // Build retirement log entries
+  // Build retirement send-offs: a personalised, trait- and tenure-aware farewell
+  // (a high-level retiree "passes the torch" with their mentor XP legacy) so a
+  // departure reads as a moment, not a line-item.
   let retirementLog = game.activityLog
   for (const retiree of retirees) {
     const annualWage = WAGE_BALANCE.perWorker[retiree.type] ?? 0
     const sev = Math.round(annualWage * retiree.level * HIRING_BALANCE.severanceWageMultiplier)
-    const mentorNote = retiree.level >= HIRING_BALANCE.mentorMinLevel
-      ? ` Left Lv${retiree.level * HIRING_BALANCE.mentorXpPerLevel} XP bonus for successor.`
-      : ''
-    retirementLog = addLog(retirementLog,
-      `${retiree.name} (${retiree.type} Lv${retiree.level}) retired. Severance: $${sev.toLocaleString()}.${mentorNote}`,
-    )
+    const roleName = WORKERS.find((w) => w.key === retiree.type)?.name ?? { en: retiree.type, th: retiree.type }
+    const trait = getStaffTrait(retiree.trait)
+    const displayName = trait ? `${trait.badge} ${retiree.name}` : retiree.name
+    const years = retiree.hiredOnYear !== undefined
+      ? Math.max(1, nextBusinessYear - retiree.hiredOnYear)
+      : HIRING_BALANCE.retirementAfterYears
+    const msg = retiree.level >= HIRING_BALANCE.mentorMinLevel
+      ? text.logs.staffRetiredLegacy(displayName, roleName, years, sev, retiree.level * HIRING_BALANCE.mentorXpPerLevel)
+      : text.logs.staffRetired(displayName, roleName, years, sev)
+    retirementLog = addLog(retirementLog, serializeBilingualText(msg))
   }
 
   let moraleDelta = 0
