@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/baloo-2'
 
 import AwardModal from '../src/components/AwardModal'
+import ErrorBoundary from '../src/components/ErrorBoundary'
 import ChoiceEventModal from '../src/components/ChoiceEventModal'
 import ComboDiscoveryBanner from '../src/components/ComboDiscoveryBanner'
 import SynergyToast from '../src/components/SynergyToast'
@@ -169,11 +170,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SettingsProvider>
-        <GameProvider>
-          <AppShell />
-        </GameProvider>
-      </SettingsProvider>
+      <ErrorBoundary>
+        <SettingsProvider>
+          <GameProvider>
+            <AppShell />
+          </GameProvider>
+        </SettingsProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   )
 }

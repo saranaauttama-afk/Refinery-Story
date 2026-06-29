@@ -1245,6 +1245,20 @@ export function useGameLoop() {
     })
   }, [])
 
+  // Clear every queued overlay/banner so nothing from the previous run leaks
+  // into a fresh game (e.g. a year-end Award modal popping up on New Game).
+  const clearPendingOverlays = useCallback(() => {
+    setPendingAward(null)
+    setPendingChoiceEvent(null)
+    pendingChoiceEventRef.current = null
+    setPendingEraBanner(null)
+    setPendingMilestoneHeadline(null)
+    setPendingWinCelebration(false)
+    setPendingLegendCelebration(false)
+    setPendingComboDiscovery(null)
+    setPendingHiddenEventUnlock(null)
+  }, [])
+
   const resetGame = useCallback(() => {
     clearStoredGameState()
     const fresh = createInitialGameState()
@@ -1254,7 +1268,8 @@ export function useGameLoop() {
     flowSamplesRef.current = []
     setFlowRates({ moneyPerMin: 0, gasPerMin: 0 })
     setMoneyHistory([])
-  }, [])
+    clearPendingOverlays()
+  }, [clearPendingOverlays])
 
   // Prestige / New Game+: fresh run keeping the (bumped) prestige level for a
   // permanent production bonus. Only offered once Industry Legend is reached.
@@ -1267,7 +1282,8 @@ export function useGameLoop() {
     flowSamplesRef.current = []
     setFlowRates({ moneyPerMin: 0, gasPerMin: 0 })
     setMoneyHistory([])
-  }, [])
+    clearPendingOverlays()
+  }, [clearPendingOverlays])
 
   // Cycles 1x → 2x → 3x → ⏸(0) → 1x. The factory screen's speed button calls
   // this; the label reads `speed` to show the current state.

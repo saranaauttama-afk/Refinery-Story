@@ -85,12 +85,12 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
             <Text style={styles.warning}>⚠️ Payroll exceeded cash on hand -- reputation took a small hit.</Text>
           )}
 
-          {record.rivals.length > 0 && (() => {
+          {(record.rivals?.length ?? 0) > 0 && (() => {
             // Combined leaderboard, sorted by score — the player is one of the
             // four. Highlight the player's row + medals + a rank-movement line.
             const board = [
               { key: '__you', name: t(text.award.you), score: record.score, isPlayer: true },
-              ...record.rivals.map((r) => ({ key: r.key, name: t(r.name), score: r.score, isPlayer: false })),
+              ...(record.rivals ?? []).map((r) => ({ key: r.key, name: t(r.name), score: r.score, isPlayer: false })),
             ].sort((a, b) => b.score - a.score)
             const myIndex = board.findIndex((e) => e.isPlayer)
             const rank = record.playerRank
