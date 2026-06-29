@@ -9,6 +9,9 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { AwardRecord } from '../game/types'
 import { colors, fonts, radii, spacing } from '../theme'
+import { useLang } from '../hooks/SettingsContext'
+import { text } from '../game/translations'
+import { getRivalConfig } from '../game/data/rivals'
 
 const GRADE_COLORS: Record<string, string> = {
   S: colors.gold,
@@ -22,7 +25,10 @@ type AwardModalProps = {
   onDismiss: () => void
 }
 
+const MEDALS = ['🥇', '🥈', '🥉']
+
 function AwardModal({ record, onDismiss }: AwardModalProps) {
+  const { t } = useLang()
   // Ceremony entrance: the card springs up, then the grade badge pops in with
   // a little overshoot a beat later -- a reveal moment rather than a static
   // dialog. Driven off `record` becoming non-null (the modal stays mounted in
@@ -79,19 +85,57 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
             <Text style={styles.warning}>⚠️ Payroll exceeded cash on hand -- reputation took a small hit.</Text>
           )}
 
-          {record.rivals.length > 0 && (
-            <View style={styles.rivalsBox}>
-              <Text style={styles.rivalsTitle}>Annual Ranking (#{record.playerRank} of {record.rivals.length + 1})</Text>
-              <ScrollView style={styles.rivalsList}>
-                <Text style={styles.rivalRow}>You · {record.score} ({record.grade})</Text>
-                {record.rivals.map((r) => (
-                  <Text key={r.key} style={styles.rivalRow}>
-                    {r.name.en} · {r.score} ({r.grade})
-                  </Text>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          {record.rivals.length > 0 && (() => {
+            // Combined leaderboard, sorted by score — the player is one of the
+            // four. Highlight the player's row + medals + a rank-movement line.
+            const board = [
+              { key: '__you', name: t(text.award.you), score: record.score, isPlayer: true },
+              ...record.rivals.map((r) => ({ key: r.key, name: t(r.name), score: r.score, isPlayer: false })),
+            ].sort((a, b) => b.score - a.score)
+            const myIndex = board.findIndex((e) => e.isPlayer)
+            const rank = record.playerRank
+            const prev = record.previousRank
+            // Rank movement (lower rank number = better).
+            const move =
+              rank === 1 ? t(text.award.rankTop)
+              : prev === undefined ? t(text.award.rankHeld(rank))
+              : rank < prev ? t(text.award.rankClimbed(rank))
+              : rank > prev ? t(text.award.rankSlipped(rank))
+              : t(text.award.rankHeld(rank))
+            const moveColor = rank === 1 ? colors.gold : prev !== undefined && rank < prev ? colors.green : prev !== undefined && rank > prev ? colors.orange : colors.steelMid
+            // Rivalry beat: the rival directly above you taunts; if you're #1 the
+            // runner-up concedes; otherwise nudge the player to catch the target.
+            const target = myIndex > 0 ? board[myIndex - 1] : null
+            const targetCfg = target && !target.isPlayer ? getRivalConfig(target.key) : null
+            const runnerUp = rank === 1 ? board[1] : null
+            const runnerUpCfg = runnerUp ? getRivalConfig(runnerUp.key) : null
+            const beat = runnerUpCfg ? t(runnerUpCfg.concede)
+              : targetCfg ? t(targetCfg.taunt)
+              : null
+            const beatNudge = rank === 1 ? t(text.award.defendLead)
+              : target ? t(text.award.catchThem(target.name)) : null
+
+            return (
+              <View style={styles.rivalsBox}>
+                <View style={styles.rankHeader}>
+                  <Text style={styles.rivalsTitle}>{t(text.award.annualRanking)}</Text>
+                  <Text style={[styles.rankMove, { color: moveColor }]}>{move}</Text>
+                </View>
+                <ScrollView style={styles.rivalsList}>
+                  {board.map((e, i) => (
+                    <View key={e.key} style={[styles.rivalRowBox, e.isPlayer && styles.rivalRowYou]}>
+                      <Text style={[styles.rivalRow, e.isPlayer && styles.rivalRowYouText]}>
+                        {i < 3 ? MEDALS[i] : `#${i + 1}`} {e.name}
+                      </Text>
+                      <Text style={[styles.rivalScore, e.isPlayer && styles.rivalRowYouText]}>{e.score.toLocaleString()}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                {beat && <Text style={styles.rivalTaunt}>{beat}</Text>}
+                {beatNudge && <Text style={styles.rivalNudge}>{beatNudge}</Text>}
+              </View>
+            )
+          })()}
 
           <Pressable style={styles.dismissButton} onPress={onDismiss}>
             <Text style={styles.dismissLabel}>Continue</Text>
@@ -163,12 +207,54 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   rivalsList: {
-    maxHeight: 100,
+    maxHeight: 130,
+  },
+  rankHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  rankMove: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  rivalRowBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: radii.sm,
+  },
+  rivalRowYou: {
+    backgroundColor: 'rgba(242,193,46,0.18)',
+    borderWidth: 1,
+    borderColor: colors.gold,
   },
   rivalRow: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: colors.inkMuted,
-    paddingVertical: 1,
+  },
+  rivalScore: {
+    fontSize: 12.5,
+    color: colors.inkMuted,
+    fontWeight: '700',
+  },
+  rivalRowYouText: {
+    color: colors.ink,
+    fontWeight: '800',
+  },
+  rivalTaunt: {
+    fontSize: 12,
+    color: colors.ink,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
+  },
+  rivalNudge: {
+    fontSize: 12,
+    color: colors.blue,
+    fontWeight: '800',
+    marginTop: 2,
   },
   dismissButton: {
     marginTop: spacing.md,

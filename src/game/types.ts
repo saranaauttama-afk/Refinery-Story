@@ -428,6 +428,9 @@ export type AwardRecord = {
   // the ceremony hides the ranking section in that case.
   rivals: RivalResult[]
   playerRank: number
+  // Player's rank last year, so the ceremony can show ▲/▼ movement. Undefined
+  // for the first year / records saved before this field.
+  previousRank?: number
   gasolineProduced: number
   moneyEarned: number
   contractsCompleted: number

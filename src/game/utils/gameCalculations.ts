@@ -2377,6 +2377,7 @@ export function closeBusinessYear(game: GameState): {
 
   const rivals = getRivalResults(game.businessYear)
   const playerRank = getPlayerRank(score, rivals)
+  const previousRank = game.awardHistory[0]?.playerRank
 
   const record: AwardRecord = {
     year: game.businessYear,
@@ -2389,6 +2390,7 @@ export function closeBusinessYear(game: GameState): {
     couldNotAfford,
     rivals,
     playerRank,
+    previousRank,
     gasolineProduced: stats.gasolineProduced,
     moneyEarned: stats.moneyEarned,
     contractsCompleted: stats.contractsCompleted,

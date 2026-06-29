@@ -2236,6 +2236,16 @@ export const text = {
         `[Dev] ตั้งระดับโรงกลั่นเป็น ${level}`,
       ),
   },
+  award: {
+    annualRanking: bilingual('Annual Ranking', 'อันดับประจำปี'),
+    you: bilingual('You', 'คุณ'),
+    rankClimbed: (n: number) => bilingual(`▲ Climbed to #${n}!`, `▲ ขึ้นมาอันดับ #${n}!`),
+    rankSlipped: (n: number) => bilingual(`▼ Slipped to #${n}`, `▼ ตกไปอันดับ #${n}`),
+    rankHeld: (n: number) => bilingual(`Held #${n}`, `รักษาอันดับ #${n}`),
+    rankTop: bilingual('👑 #1 in the industry!', '👑 อันดับ 1 ของวงการ!'),
+    catchThem: (name: string) => bilingual(`Catch ${name}!`, `ไล่ ${name} ให้ทัน!`),
+    defendLead: bilingual('Defend your lead!', 'รักษาตำแหน่งจ่าฝูงไว้!'),
+  },
   logs: {
     refineryOnline: bilingual(
       'Refinery online. Place buildings to expand storage and output.',
