@@ -8,6 +8,7 @@
 // comes with the Veteran trait.
 
 import type { Employee, RecruitmentCandidate, RecruitmentTier, WorkerType } from '../types'
+import { rollStaffTrait, rollStarTrait } from './staffTraits'
 import { STAFF_LEVEL_BALANCE } from './balance'
 import { WORKERS } from './workers'
 import { getStaffName } from './staffNames'
@@ -73,7 +74,8 @@ export function generateCandidate(refineryLevel: number, nameIndex: number): Rec
   const unlockedTypes = getUnlockedWorkerTypes(refineryLevel)
   const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)]
   const tier = rollTier(refineryLevel)
-  const isVeteran = tier === 'star' || Math.random() < STAFF_LEVEL_BALANCE.veteranHireChance
+  // Every candidate has a personality; star recruits get a standout one.
+  const trait = tier === 'star' ? rollStarTrait() : rollStaffTrait()
   return {
     id: `candidate-${nameIndex}-${type}`,
     type,
@@ -81,7 +83,8 @@ export function generateCandidate(refineryLevel: number, nameIndex: number): Rec
     tier,
     startingLevel: RECRUITMENT_BALANCE.tiers[tier].startingLevel,
     cost: getCandidateCost(type, tier),
-    isVeteran,
+    isVeteran: trait === 'veteran',
+    trait,
   }
 }
 
@@ -116,6 +119,6 @@ export function hireCandidateEmployee(employees: Employee[], candidate: Recruitm
     name: candidate.name,
     level: candidate.startingLevel,
     xp: 0,
-    ...(candidate.isVeteran ? { trait: 'veteran' as const } : {}),
+    ...(candidate.trait ? { trait: candidate.trait } : {}),
   }
 }

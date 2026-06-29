@@ -38,6 +38,7 @@ import {
 import { BUILDINGS } from '../data/buildings'
 import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
+import { getStaffTrait, rollStaffTrait } from '../data/staffTraits'
 import { getCurrentEra, getNextEra } from '../data/eras'
 import { RANDOM_EVENTS } from '../data/events'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
@@ -377,8 +378,8 @@ export function getWorkerLevelMultiplier(level: number): number {
 // An employee's full personal effectiveness multiplier: level multiplier
 // plus a flat veteranBonusRate if they have the 'veteran' trait (Phase 4).
 export function getEmployeeMultiplier(employee: Employee): number {
-  const veteranBonus = employee.trait === 'veteran' ? STAFF_LEVEL_BALANCE.veteranBonusRate : 0
-  return getWorkerLevelMultiplier(employee.level) + veteranBonus
+  const traitBonus = getStaffTrait(employee.trait)?.productivityBonus ?? 0
+  return getWorkerLevelMultiplier(employee.level) + traitBonus
 }
 
 // Sum of getEmployeeMultiplier across all employees of a type — replaces
@@ -393,7 +394,7 @@ export function getEffectiveWorkerSum(employees: Employee[], type: WorkerType): 
 
 // Phase 4: roll whether a new hire is a Veteran (rare, permanent bonus).
 export function rollVeteranTrait(): Employee['trait'] {
-  return Math.random() < STAFF_LEVEL_BALANCE.veteranHireChance ? 'veteran' : undefined
+  return rollStaffTrait()
 }
 
 // Builds a new hire: next name from the pool (cycled by current headcount of

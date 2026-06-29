@@ -15,6 +15,7 @@ import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing } from '../../../src/theme'
 import { text } from '../../../src/game/translations'
 import { WORKERS } from '../../../src/game/data/workers'
+import { getStaffTrait } from '../../../src/game/data/staffTraits'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
 import { TICK_MS, getMaxHireCount } from '../../../src/game/utils/gameCalculations'
@@ -39,7 +40,7 @@ function CandidateFigure({ candidate, selected, onPress }: { candidate: Recruitm
   return (
     <Pressable onPress={onPress}>
       <Animated.View style={[figStyles.wrap, animStyle]}>
-        <View style={figStyles.bubble}><Text style={figStyles.bubbleName} numberOfLines={1}>{candidate.name}</Text>{candidate.isVeteran && <Text>*</Text>}</View>
+        <View style={figStyles.bubble}><Text style={figStyles.bubbleName} numberOfLines={1}>{candidate.name}</Text>{getStaffTrait(candidate.trait) ? <Text style={figStyles.bubbleBadge}>{getStaffTrait(candidate.trait)!.badge}</Text> : null}</View>
         <View style={[figStyles.head, { backgroundColor: tc.headColor }]} />
         <View style={[figStyles.body, { backgroundColor: tc.bodyColor }]} />
         <View style={figStyles.legs}><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /></View>
@@ -53,6 +54,7 @@ const figStyles = StyleSheet.create({
   wrap: { alignItems: 'center', paddingBottom: 8, paddingTop: 28, paddingHorizontal: 4, position: 'relative' },
   bubble: { position: 'absolute', top: 4, flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(28,38,52,0.88)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3 },
   bubbleName: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  bubbleBadge: { fontSize: 9 },
   head: { width: 22, height: 22, borderRadius: 11, marginBottom: -2, zIndex: 2 },
   body: { width: 20, height: 30, borderRadius: 4, zIndex: 2 },
   legs: { flexDirection: 'row', gap: 3, marginTop: 1 },
@@ -81,6 +83,7 @@ export default function RecruitScreen() {
   const selectedCandidate = game.recruitmentPool[selectedSlot]
   const selectedWorker = selectedCandidate ? WORKERS.find((w) => w.key === selectedCandidate.type) : null
   const selectedTc = selectedCandidate ? TIER_CONFIG[selectedCandidate.tier] : null
+  const selectedTrait = selectedCandidate ? getStaffTrait(selectedCandidate.trait) : undefined
   const atCap = selectedCandidate ? game.workerCounts[selectedCandidate.type] >= cap : false
   const affordable = selectedCandidate ? game.money >= selectedCandidate.cost : false
   const canHire = affordable && !atCap
@@ -119,8 +122,9 @@ export default function RecruitScreen() {
           <View style={styles.infoTop}>
             <View style={styles.infoRoleIcon}><GameIcon name={`worker-${selectedCandidate.type}`} size={40} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.infoName}>{selectedCandidate.name}</Text>
-              <Text style={styles.infoRole}>{selectedWorker ? t(selectedWorker.name) : selectedCandidate.type}{selectedCandidate.isVeteran ? t(rs.veteran) : ''}</Text>
+              <Text style={styles.infoName}>{selectedCandidate.name}{selectedTrait ? ` ${selectedTrait.badge}` : ''}</Text>
+              <Text style={styles.infoRole}>{selectedWorker ? t(selectedWorker.name) : selectedCandidate.type}{selectedTrait ? ` · ${t(selectedTrait.name)}` : ''}</Text>
+              {selectedTrait ? <Text style={styles.infoFlavor}>{t(selectedTrait.flavor)}</Text> : null}
             </View>
             <View style={[styles.tierBadge, { backgroundColor: selectedTc.borderColor }]}>
               <Text style={styles.tierBadgeText}>{t(rs.tiers[selectedCandidate.tier])}</Text>
@@ -171,6 +175,7 @@ const styles = StyleSheet.create({
   infoRoleIcon: { marginRight: spacing.sm },
   infoName: { fontSize: 17, fontWeight: '900', color: '#fff' },
   infoRole: { fontSize: 11, color: '#6B8099', marginTop: 2 },
+  infoFlavor: { fontSize: 11, color: '#9FB3C8', fontStyle: 'italic', marginTop: 3 },
   tierBadge: { borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   tierBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
   infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: radii.sm, padding: spacing.sm, marginBottom: spacing.sm },

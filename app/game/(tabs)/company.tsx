@@ -26,6 +26,7 @@ import { useHaptics } from '../../../src/hooks/useHaptics'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { EXPANSION_BALANCE, PRESTIGE_BALANCE, STAFF_LEVEL_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
 import { WORKERS } from '../../../src/game/data/workers'
+import { getStaffTrait } from '../../../src/game/data/staffTraits'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import {
   getCellAssignedToEmployee,
@@ -200,14 +201,18 @@ export default function CompanyScreen() {
             const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
             const nearRetire = isNearRetirement(employee, game.businessYear)
             const yearsLeft = employee.hiredOnYear !== undefined ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear) : null
+            const trait = getStaffTrait(employee.trait)
 
             return (
               <View key={employee.id} style={[styles.empCard, nearRetire && styles.empCardRetiring]}>
                 <View style={styles.empTop}>
                   <View style={styles.empRoleIcon}><GameIcon name={`worker-${employee.type}`} size={34} /></View>
                   <View style={styles.empNameBlock}>
-                    <Text style={styles.empName}>{employee.name}{employee.trait === 'veteran' ? ' ⭐' : ''}{nearRetire ? ' 🕰' : ''}</Text>
-                    <Text style={styles.empRole}>{w ? t(w.name) : employee.type}</Text>
+                    <Text style={styles.empName}>{employee.name}{trait ? ` ${trait.badge}` : ''}{nearRetire ? ' 🕰' : ''}</Text>
+                    <Text style={styles.empRole}>
+                      {w ? t(w.name) : employee.type}{trait ? ` · ${t(trait.name)}` : ''}
+                    </Text>
+                    {trait ? <Text style={styles.empFlavor} numberOfLines={1}>{t(trait.flavor)}</Text> : null}
                   </View>
                   <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
                     <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
@@ -427,6 +432,7 @@ const styles = StyleSheet.create({
   empNameBlock: { flex: 1, marginRight: spacing.sm },
   empName: { fontSize: 14, fontWeight: '800', color: colors.ink },
   empRole: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
+  empFlavor: { fontSize: 10.5, color: colors.inkMuted, fontStyle: 'italic', marginTop: 1 },
   lvBadge: { backgroundColor: colors.blue, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   lvBadgeMax: { backgroundColor: colors.gold },
   lvBadgeText: { fontSize: 11, fontWeight: '900', color: '#fff' },

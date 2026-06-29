@@ -14,6 +14,8 @@ export type RecruitmentCandidate = {
   startingLevel: number
   cost: number
   isVeteran: boolean
+  // Personality trait the hired employee will carry (see data/staffTraits).
+  trait?: StaffTraitKey
 }
 
 // Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
@@ -313,16 +315,27 @@ export type WorkerCounts = Record<WorkerType, number>
 // Level multiplies that employee's bonus effectiveness (see
 // getWorkerLevelMultiplier). XP accrues passively via "concentrated
 // training" (see applyStaffXp) or can be bought instantly for one employee.
+export type StaffTraitKey =
+  | 'greenhorn'
+  | 'steady'
+  | 'easygoing'
+  | 'diligent'
+  | 'bythebook'
+  | 'meticulous'
+  | 'prodigy'
+  | 'veteran'
+
 export type Employee = {
   id: string
   type: WorkerType
   name: string
   level: number
   xp: number
-  // Phase 4: rare permanent trait rolled at hire time. 'veteran' adds a flat
-  // bonus to this employee's effectiveness multiplier (see
-  // getEmployeeMultiplier). Extensible for future traits.
-  trait?: 'veteran'
+  // Permanent personality trait rolled at hire time. Adds a small bonus (or
+  // penalty) to this employee's effectiveness multiplier (see
+  // getEmployeeMultiplier) and gives them character on the staff card. The
+  // trait table + roll logic lives in data/staffTraits.ts.
+  trait?: StaffTraitKey
   // Phase 5: business year this employee was hired. Used to determine
   // retirement eligibility (see HIRING_BALANCE.retirementAfterYears).
   hiredOnYear?: number
