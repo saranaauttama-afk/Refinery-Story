@@ -223,55 +223,68 @@ function decide(g: GameState): GameState {
   return next
 }
 
-// --- run ---
-let g = createInitialGameState()
-const goalTick: Record<string, number> = {}
-const yearScores: { year: number; score: number; grade: string }[] = []
 const DECISION_EVERY = 25
 const MAX_TICKS = 1_500_000 // ~83h cap
 
-for (let step = 0; step < MAX_TICKS; step++) {
-  g = tick(g)
-  // Work real orders BEFORE auto-trade so contracts/standing orders get first
-  // claim on inventory (a player who works the boards), then sell the rest.
-  if (g.tickCount % 5 === 0) g = workOrders(g)
-  g = applyAutoTrade(g, autoTrade)
+export type PlaythroughResult = {
+  game: GameState
+  goalTick: Record<string, number>
+  yearScores: { year: number; score: number; grade: string }[]
+}
 
-  if (g.tickCount % DECISION_EVERY === 0) g = decide(g)
+// Reusable so scripts/sim-check.ts can assert on it (regression gate).
+export function runPlaythrough(): PlaythroughResult {
+  let g = createInitialGameState()
+  const goalTick: Record<string, number> = {}
+  const yearScores: { year: number; score: number; grade: string }[] = []
 
-  // year-end close (awards / S-grade / reputation)
-  if (g.tickCount > 0 && g.tickCount % YEAR_TICKS === 0) {
-    const closed = closeBusinessYear(g)
-    yearScores.push({ year: g.businessYear, score: closed.record.score, grade: closed.record.grade })
-    g = closed.game
+  for (let step = 0; step < MAX_TICKS; step++) {
+    g = tick(g)
+    // Work real orders BEFORE auto-trade so contracts/standing orders get first
+    // claim on inventory (a player who works the boards), then sell the rest.
+    if (g.tickCount % 5 === 0) g = workOrders(g)
+    g = applyAutoTrade(g, autoTrade)
+
+    if (g.tickCount % DECISION_EVERY === 0) g = decide(g)
+
+    // year-end close (awards / S-grade / reputation)
+    if (g.tickCount > 0 && g.tickCount % YEAR_TICKS === 0) {
+      const closed = closeBusinessYear(g)
+      yearScores.push({ year: g.businessYear, score: closed.record.score, grade: closed.record.grade })
+      g = closed.game
+    }
+
+    // record goal completion ticks
+    for (const goal of ENDGAME_GOALS) {
+      if (goalTick[goal.key] === undefined && goal.isComplete(g)) goalTick[goal.key] = g.tickCount
+    }
+    if (areAllEndgameGoalsComplete(g)) { goalTick['LEGEND'] = g.tickCount; break }
   }
+  return { game: g, goalTick, yearScores }
+}
 
-  // record goal completion ticks
+function printReport({ game: g, goalTick, yearScores }: PlaythroughResult) {
+  console.log('=== Full-loop playthrough (auto-pilot) ===\n')
+  const d = calculateDerivedStats(g)
+  console.log(`reached: level ${g.refineryLevel}/${MAX_REFINERY_LEVEL}  cash ${fmtMoney(g.money)}  ` +
+    `research ${g.unlockedResearchIds.length}/${RESEARCH_ITEMS.length}  grid L${g.gridExpansionLevel}/3  ` +
+    `lifetime gas ${Math.round(g.totalGasolineProduced).toLocaleString()}  rep ${Math.round(g.reputation)}  ` +
+    `bestAward ${g.awardHistory.map((a) => a.grade).join('') || '-'}`)
+  console.log(`final gas/sec ${Math.round(d.productionRate * d.prestigeOutputMultiplier * d.speedOverflowYieldMultiplier * 10) / 10}  business year ${g.businessYear}\n`)
+
+  console.log('time to each endgame goal:')
   for (const goal of ENDGAME_GOALS) {
-    if (goalTick[goal.key] === undefined && goal.isComplete(g)) goalTick[goal.key] = g.tickCount
+    const tk = goalTick[goal.key]
+    const p = goal.progress(g)
+    console.log(`  ${goal.key.padEnd(18)}: ${tk !== undefined ? fmtTime(tk) : `NOT MET (${Math.round(p.current).toLocaleString()}/${p.target.toLocaleString()})`}`)
   }
-  if (areAllEndgameGoalsComplete(g)) { goalTick['LEGEND'] = g.tickCount; break }
+  console.log(`\n  ${'INDUSTRY LEGEND'.padEnd(18)}: ${goalTick['LEGEND'] !== undefined ? fmtTime(goalTick['LEGEND']) : 'NOT REACHED within cap'}`)
+
+  console.log('\nannual award score by year:')
+  for (const y of [1, 2, 3, 5, 8, 12, 20]) {
+    const rec = yearScores.find((r) => r.year === y)
+    if (rec) console.log(`  year ${String(y).padStart(2)}: score ${rec.score.toLocaleString().padStart(8)}  grade ${rec.grade}`)
+  }
 }
 
-// --- report ---
-console.log('=== Full-loop playthrough (auto-pilot) ===\n')
-const d = calculateDerivedStats(g)
-console.log(`reached: level ${g.refineryLevel}/${MAX_REFINERY_LEVEL}  cash ${fmtMoney(g.money)}  ` +
-  `research ${g.unlockedResearchIds.length}/${RESEARCH_ITEMS.length}  grid L${g.gridExpansionLevel}/3  ` +
-  `lifetime gas ${Math.round(g.totalGasolineProduced).toLocaleString()}  rep ${Math.round(g.reputation)}  ` +
-  `bestAward ${g.awardHistory.map((a) => a.grade).join('') || '-'}`)
-console.log(`final gas/sec ${Math.round(d.productionRate * d.prestigeOutputMultiplier * d.speedOverflowYieldMultiplier * 10) / 10}  business year ${g.businessYear}\n`)
-
-console.log('time to each endgame goal:')
-for (const goal of ENDGAME_GOALS) {
-  const tk = goalTick[goal.key]
-  const p = goal.progress(g)
-  console.log(`  ${goal.key.padEnd(18)}: ${tk !== undefined ? fmtTime(tk) : `NOT MET (${Math.round(p.current).toLocaleString()}/${p.target.toLocaleString()})`}`)
-}
-console.log(`\n  ${'INDUSTRY LEGEND'.padEnd(18)}: ${goalTick['LEGEND'] !== undefined ? fmtTime(goalTick['LEGEND']) : 'NOT REACHED within cap'}`)
-
-console.log('\nannual award score by year (calibrating S/A/B thresholds):')
-for (const y of [1, 2, 3, 5, 8, 12, 20]) {
-  const rec = yearScores.find((r) => r.year === y)
-  if (rec) console.log(`  year ${String(y).padStart(2)}: score ${rec.score.toLocaleString().padStart(8)}  grade ${rec.grade}`)
-}
+if (require.main === module) printReport(runPlaythrough())

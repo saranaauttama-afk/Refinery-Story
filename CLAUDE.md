@@ -17,9 +17,17 @@ fork off `devMobile`.
 
 - Install: `npm install`
 - Dev: `npm run start` (Expo). `npm run web` for the browser build.
-- **Typecheck (the gate): `npx tsc --noEmit`** — there is no automated test
-  suite. Do NOT run `npm run build` (that was the old web app).
-- For pure logic, write throwaway `node -e` sims of the exported functions.
+- **Typecheck (the gate): `npx tsc --noEmit`** (or `npm run typecheck`). Do NOT
+  run `npm run build` (that was the old web app).
+- **Balance gate: `npm run sim:check`** — a headless full playthrough that
+  asserts the game still reaches Industry Legend in a sane time, every endgame
+  goal completes, and the annual award grades spread C→S (regression guard for
+  the balance work; catches "a goal became unreachable" bugs that typecheck
+  can't). Built on the RN-free `src/game/utils/gameTick.ts` (`tick` +
+  `applyAutoTrade`, extracted from `useGameLoop` so a Node sim can run the real
+  per-tick economy). `npm run sim` prints the full playthrough report;
+  `npm run sim:balance` prints the economy/ROI/auto-trade probes.
+- For pure logic, write throwaway `node -e`/`tsx` sims of the exported functions.
 - To see UI without a device: `npx expo export --platform web`, serve `dist/`
   with a static server, and screenshot with the pre-installed Playwright +
   Chromium (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`). Native-only

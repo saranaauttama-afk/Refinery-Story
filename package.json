@@ -8,7 +8,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sim": "npx --yes tsx@4 scripts/full-loop-sim.ts",
+    "sim:balance": "npx --yes tsx@4 scripts/balance-sim.ts",
+    "sim:check": "npx --yes tsx@4 scripts/sim-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
