@@ -4,8 +4,57 @@ Living plan for the game's design + balance direction. Status markers:
 `✅ done` · `🚧 in progress` · `⏳ planned`. Newest work is tracked here;
 deep implementation notes still live in `README.md`.
 
-Verify every change with `npx tsc --noEmit`. There is no automated test suite;
-isolated `node -e` sims + the web-export screenshot loop are the verification tools.
+Verify every change with `npx tsc --noEmit` **and** `npm run sim:check` (a
+headless full-playthrough balance gate, see below). `npm run sim` /
+`npm run sim:balance` print detailed reports; the web-export screenshot loop
+covers visuals.
+
+---
+
+## Recently shipped (balance audit + sim infrastructure)
+
+A full balance pass driven by headless simulation. All `tsc`-clean and guarded by
+`npm run sim:check`.
+
+- ✅ **RN-free tick (`src/game/utils/gameTick.ts`)** — `tick` + `applyAutoTrade`
+  extracted from `useGameLoop` (which imports react-native) so a Node sim can run
+  the real per-tick economy end to end. Behaviour identical; the hook imports them.
+- ✅ **Balance sims** — `scripts/balance-sim.ts` (crude wave, saturation, incident
+  curve, progression, prestige, staff ROI, auto-trade regimes) and
+  `scripts/full-loop-sim.ts` (a faithful auto-pilot playthrough using real
+  contracts + standing orders; reaches Industry Legend in ~2h26m, gated by
+  RP/all-research). `scripts/sim-check.ts` asserts the invariants (Legend
+  reachable in budget, every endgame goal completes, award grades spread C→S, no
+  NaN) and exits non-zero on regression.
+- ✅ **Prestige → output, not speed** — the New Game+ bonus was folded into the
+  gasoline *speed* multiplier, which floors at `minProductionMs` by ~Lv4, so it
+  was silently wasted. Now a flat yield/output bonus (`prestigeOutputMultiplier`)
+  on gasoline yield-per-batch and every downstream plant.
+- ✅ **Speed-floor recovery** — the whole speed branch (operators, morale,
+  production research, refinery/distillation speed, industrial spec, power
+  adjacency) was dead past the gasoline speed floor. The clamped-away portion is
+  now recovered as a yield bonus (`speedOverflowYieldMultiplier`): no-op until the
+  floor, then it keeps those investments paying off.
+- ✅ **Staff tension** — diminishing returns on stacking the same worker type
+  (`count^0.7`, `BONUS_BALANCE.workerStackDiminishingExponent`) + roughly doubled
+  wages, so "fill every bench slot" is a real decision, not an auto-answer.
+- ✅ **Auto-trade smarts** — high-value downstream products HOLD when their price
+  is depressed but still dump to avoid overflow (`autoSellMarketFloor` /
+  `autoSellOverflowGuardPct`); gasoline (overproduced commodity) keeps flowing for
+  throughput. Shared `autoSellTargetPct`.
+- ✅ **Annual award fix (was unreachable)** — `yearStats.gasolineProduced` was
+  never incremented and sales weren't credited to `moneyEarned`, so the award was
+  contracts-only and S-grade (an endgame goal) was impossible. Both now feed the
+  score; thresholds retuned (S 1400→5000) — grades progress C→B→A→S naturally.
+- ✅ **Polymer Plant margin** — was 10 petrochem ($1,500) → 5 pellets ($1,500), a
+  zero-value-add top-tier plant. Now 6 petrochem → 5 pellets = +$600/cycle.
+- ✅ **Discoverability cues** — gasoline is electricity-gated, and an under-built
+  power grid silently starves it; the HUD now shows a "⚡ Low power" flow warning,
+  a power-balance meter (gen vs demand) in More Info, an endgame-goal nudge once
+  the milestone ladder is exhausted, and a "↓ low" cue on the gasoline sell button.
+- ℹ️ **Finding** — repeatable contracts are NOT needed: standing orders already
+  sustain endgame RP/reputation/cash (the sim reaches Legend on real systems).
+- ℹ️ **`ICONS_NEEDED.md`** — spec for swapping the 33 inline-SVG icons to raster.
 
 ---
 

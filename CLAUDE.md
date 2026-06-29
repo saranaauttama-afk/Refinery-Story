@@ -48,10 +48,14 @@ fork off `devMobile`.
   hidden events / awards / auto-trade / recruitment / shipments / events), and
   ~50 action handlers. Exposed app-wide via `GameContext` (`useGame()`) so only
   one loop runs. Speed control lives here (`speed` drives the tick period).
-- **`src/game/utils/gameCalculations.ts`** — pure functions: `tick`,
+- **`src/game/utils/gameCalculations.ts`** — pure functions:
   `calculateDerivedStats` (the big derived-state computation read everywhere),
   economy/storage/production math, shipments, year-end close, etc. Prefer
   adding pure logic here and importing it into the hook.
+- **`src/game/utils/gameTick.ts`** — RN-free `tick` (the per-tick production /
+  market / ESG / demand economy) + `applyAutoTrade`, extracted from `useGameLoop`
+  so the headless sims (`scripts/*-sim.ts`, `npm run sim:check`) can run the real
+  economy without pulling in react-native. `useGameLoop` imports them.
 - **`src/game/data/balance.ts`** — all tunable constants (economy, production,
   contracts, plants, wages, awards, calendar, shipments, ...). Tune here, not
   in logic.
