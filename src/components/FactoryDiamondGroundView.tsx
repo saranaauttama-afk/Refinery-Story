@@ -31,6 +31,9 @@ const SMOKE_COLOR_BY_CATEGORY: Record<string, string> = {
 const TILE_SCALE = 1.5
 const TILE_WIDTH = 84 * TILE_SCALE
 const TILE_HEIGHT = 42 * TILE_SCALE
+// Spacing between cell centres as a multiple of the half-tile step. >1 opens a
+// gap between diamonds for walkways/roads (see isoX/isoY).
+const GRID_SPREAD = 1.22
 const SIDE_PADDING = 18 * TILE_SCALE
 const TOP_PADDING = 18 * TILE_SCALE
 const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
@@ -193,12 +196,16 @@ function insetDiamondPoints(x: number, y: number, width: number, height: number,
   )
 }
 
+// Cell pitch is spread slightly wider than the tile itself so neighbouring
+// diamonds no longer touch edge-to-edge — the gap reads as walkways/roads
+// between plants and stops the grid feeling cramped. 1.0 = old touching layout;
+// the tiles/plants keep their size, only the spacing between cell centres grows.
 function isoX(row: number, col: number, rows: number) {
-  return (col - row + rows - 1) * (TILE_WIDTH / 2) + SIDE_PADDING
+  return (col - row + rows - 1) * (TILE_WIDTH / 2) * GRID_SPREAD + SIDE_PADDING
 }
 
 function isoY(row: number, col: number) {
-  return (row + col) * (TILE_HEIGHT / 2) + TOP_PADDING
+  return (row + col) * (TILE_HEIGHT / 2) * GRID_SPREAD + TOP_PADDING
 }
 
 function clamp(value: number, min: number, max: number) {
