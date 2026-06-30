@@ -71,6 +71,7 @@ import {
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
+import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, GRID_DROP } from '../../../src/config/factoryScene'
 
 
 // The cleaned diamond-ground renderer is now the live review surface for
@@ -228,8 +229,8 @@ const ACTION_DOCK_H   = 48 // px — bottom action dock height
 // ── Layout tweaks (ปรับ UI position ตรงนี้ได้เลย) ───────────────────────────
 const HUD_OFFSET_UP  = 4  // px — HUD (resource dock) ขยับขึ้นจาก yardTop
 const GOAL_LEFT      = 18  // px — "Growing Refinery" banner ห่างจากขอบซ้าย/ขวา
-const BG_CROP_PCT    = 12  // % — crop ขอบบน/ล่างของ bg image (แสดงส่วนกลางรูป)
-const GRID_DROP      = 90  // px — ดัน factory grid ลงจาก HUD (กันไม่ให้ลอยสูงไป)
+// Scene framing + grid placement are tunable in src/config/factoryScene.ts
+// (FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, GRID_DROP).
 
 export default function RefineryScreen() {
   const router = useRouter()
@@ -495,8 +496,15 @@ export default function RefineryScreen() {
         {/* ── Layer 0: Background (absoluteFill, no pointer events) ─────── */}
         <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
           <Image
-            source={require('../../../assets/bg/ground_day_1.png')}
-            style={{ position: 'absolute', top: `-${BG_CROP_PCT}%`, bottom: `-${BG_CROP_PCT}%`, left: 0, right: 0 }}
+            source={FACTORY_BG}
+            style={{
+              position: 'absolute',
+              top: `-${BG_CROP_PCT}%`,
+              bottom: `-${BG_CROP_PCT}%`,
+              left: `-${BG_OVERSCAN_PCT}%`,
+              right: `-${BG_OVERSCAN_PCT}%`,
+              transform: [{ translateX: BG_OFFSET_X }],
+            }}
             resizeMode="cover"
           />
         </View>

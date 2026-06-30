@@ -8,6 +8,7 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
+import { GRID_SPREAD } from '../config/factoryScene'
 import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
@@ -31,9 +32,8 @@ const SMOKE_COLOR_BY_CATEGORY: Record<string, string> = {
 const TILE_SCALE = 1.5
 const TILE_WIDTH = 84 * TILE_SCALE
 const TILE_HEIGHT = 42 * TILE_SCALE
-// Spacing between cell centres as a multiple of the half-tile step. >1 opens a
-// gap between diamonds for walkways/roads (see isoX/isoY).
-const GRID_SPREAD = 1.22
+// Spacing between cell centres (>1 opens walkway/road gaps; see isoX/isoY).
+// Tunable alongside the rest of the scene layout in src/config/factoryScene.ts.
 const SIDE_PADDING = 18 * TILE_SCALE
 const TOP_PADDING = 18 * TILE_SCALE
 const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
