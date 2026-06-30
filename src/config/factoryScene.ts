@@ -24,8 +24,8 @@ export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/ground_d
 // BG_OFFSET_X      : horizontal pan, in px. NEGATIVE moves the scene LEFT,
 //                    positive moves it RIGHT.
 export const BG_CROP_PCT = 12
-export const BG_OVERSCAN_PCT = 16
-export const BG_OFFSET_X = -64
+export const BG_OVERSCAN_PCT = 18
+export const BG_OFFSET_X = -92
 
 // ── Isometric grid placement ──
 // GRID_DROP   : how many px the grid is pushed DOWN from the HUD. Increase to
@@ -37,10 +37,14 @@ export const BG_OFFSET_X = -64
 export const GRID_DROP = 232
 export const GRID_SPREAD = 1.22
 
-// SHOW_GRID : draw the diamond tile art (the cream tiles, outlines, "+" markers
-//             on empty cells, and the tile under each plant)? Set false to HIDE
-//             the grid for a clean "plants sit straight on the painted yard"
-//             look — cells are STILL tappable to place/inspect and plants,
-//             synergy auras and smoke still render; only the tile chrome is
-//             hidden. true = the classic visible isometric grid.
-export const SHOW_GRID = false
+// SHOW_GRID : draw the diamond tile art for the ACTIVE (playable) cells — the
+//             cream tiles, outlines, "+" markers on empty cells, and the tile
+//             under each plant. false = clean "plants sit straight on the yard"
+//             look (cells stay tappable; plants/auras/smoke/combo-hints still
+//             render). true = the classic visible isometric grid.
+export const SHOW_GRID = true
+
+// SHOW_SHELL : draw the faint decorative diamonds OUTSIDE the active grid (the
+//              future-expansion preview shell). false shows ONLY the cells you
+//              can actually use right now. Independent of SHOW_GRID.
+export const SHOW_SHELL = false

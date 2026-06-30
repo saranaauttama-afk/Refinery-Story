@@ -8,7 +8,7 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
-import { GRID_SPREAD, SHOW_GRID } from '../config/factoryScene'
+import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL } from '../config/factoryScene'
 import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
@@ -332,7 +332,7 @@ function FactoryDiamondGroundView({
             const zIndex = 10 + tile.row + tile.col
 
             if (isDisabled) {
-              if (!SHOW_GRID) return null // grid hidden: no decorative shell tiles
+              if (!SHOW_SHELL) return null // only the active grid is drawn
               return (
                 <View key={`disabled-${tile.displayIndex}`} style={[styles.cell, { left: x, top: y, zIndex }]}>
                   <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
