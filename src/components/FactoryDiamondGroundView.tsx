@@ -8,7 +8,7 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
-import { GRID_SPREAD } from '../config/factoryScene'
+import { GRID_SPREAD, SHOW_GRID } from '../config/factoryScene'
 import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
@@ -332,6 +332,7 @@ function FactoryDiamondGroundView({
             const zIndex = 10 + tile.row + tile.col
 
             if (isDisabled) {
+              if (!SHOW_GRID) return null // grid hidden: no decorative shell tiles
               return (
                 <View key={`disabled-${tile.displayIndex}`} style={[styles.cell, { left: x, top: y, zIndex }]}>
                   <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
@@ -361,16 +362,20 @@ function FactoryDiamondGroundView({
                   onPress={() => onCellPress?.(activeIndex)}
                   style={[styles.cell, { left: x, top: y, zIndex }]}
                 >
-                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
-                    <Polygon
-                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                      fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'}
-                      stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'}
-                      strokeWidth={1}
-                    />
-                  </Svg>
-                  <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
+                  {SHOW_GRID || isComboHint ? (
+                    <>
+                      <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+                        <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
+                        <Polygon
+                          points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
+                          fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'}
+                          stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'}
+                          strokeWidth={1}
+                        />
+                      </Svg>
+                      <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
+                    </>
+                  ) : null}
                   {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
                 </Pressable>
               )
@@ -405,7 +410,7 @@ function FactoryDiamondGroundView({
                 onPress={() => onCellPress?.(activeIndex)}
                 style={[styles.cell, { left: x, top: y, zIndex }]}
               >
-                {plantImage ? (
+                {!SHOW_GRID ? null : plantImage ? (
                   <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
                     <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
                     <Polygon

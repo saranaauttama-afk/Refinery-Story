@@ -34,5 +34,13 @@ export const BG_OFFSET_X = -64
 // GRID_SPREAD : spacing between cell centres. 1.0 = diamonds touch edge-to-edge
 //               (cramped); >1 opens a walkway/road gap between cells. Tiles and
 //               plant sprites keep their size — only the spacing grows.
-export const GRID_DROP = 188
+export const GRID_DROP = 232
 export const GRID_SPREAD = 1.22
+
+// SHOW_GRID : draw the diamond tile art (the cream tiles, outlines, "+" markers
+//             on empty cells, and the tile under each plant)? Set false to HIDE
+//             the grid for a clean "plants sit straight on the painted yard"
+//             look — cells are STILL tappable to place/inspect and plants,
+//             synergy auras and smoke still render; only the tile chrome is
+//             hidden. true = the classic visible isometric grid.
+export const SHOW_GRID = false
