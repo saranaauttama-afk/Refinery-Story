@@ -34,7 +34,7 @@ export const BG_OFFSET_X = -92
 // GRID_SPREAD : spacing between cell centres. 1.0 = diamonds touch edge-to-edge
 //               (cramped); >1 opens a walkway/road gap between cells. Tiles and
 //               plant sprites keep their size — only the spacing grows.
-export const GRID_DROP = 232
+export const GRID_DROP = 262
 export const GRID_SPREAD = 1.22
 
 // SHOW_GRID : draw the diamond tile art for the ACTIVE (playable) cells — the

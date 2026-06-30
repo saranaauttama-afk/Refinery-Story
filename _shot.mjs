@@ -7,5 +7,5 @@ await page.goto('http://localhost:8099/game', { waitUntil: 'networkidle' })
 await page.waitForTimeout(3500)
 try { await page.getByText('Skip', { exact: true }).click({ timeout: 3000 }) } catch {}
 await page.waitForTimeout(700)
-await page.screenshot({ path: out + '/factory_active_grid.png' })
+await page.screenshot({ path: out + '/factory_drop262.png' })
 await browser.close()
