@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 const exe = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
+const out = '/tmp/claude-0/-home-user-Refinery-Story/da9040f6-c20e-555b-a464-3e3a4d92ea35/scratchpad'
 const browser = await chromium.launch({ executablePath: exe })
 const ctx = await browser.newContext({ viewport: { width: 414, height: 896 }, hasTouch: true, isMobile: true })
 const page = await ctx.newPage()
@@ -7,10 +8,19 @@ await page.goto('http://localhost:8099/game', { waitUntil: 'networkidle' })
 await page.waitForTimeout(3500)
 try { await page.getByText('Skip', { exact: true }).click({ timeout: 3000 }) } catch {}
 await page.waitForTimeout(700)
-let opened = false
-for (const [x,y] of [[207,560],[160,590],[255,590]]) {
-  await page.touchscreen.tap(x,y); await page.waitForTimeout(500)
-  if (await page.getByText('Build', { exact: true }).count() > 0) { opened = true; console.log('BUILD OPENED at', x, y); break }
+await page.touchscreen.tap(207,540); await page.waitForTimeout(500)
+try { await page.getByText('Crude Tank', { exact: true }).first().click({ timeout: 1500 }) } catch {}
+await page.waitForTimeout(600)
+try { await page.getByText('Close', { exact: true }).first().click({ timeout: 800 }) } catch {}
+await page.waitForTimeout(600)
+await page.screenshot({ path: out + '/fix_before.png' })
+// enter move mode: tap building, then click the Move action button (right side)
+await page.touchscreen.tap(207,540); await page.waitForTimeout(700)
+try { await page.getByRole('button', { name: /^Move/ }).click({ timeout: 1200 }) } catch {
+  try { await page.getByText('Move', { exact: true }).last().click({ timeout: 1200 }) } catch {}
 }
-if (!opened) console.log('BUILD NEVER OPENED')
+await page.waitForTimeout(800)
+const hint = await page.getByText('tap here to cancel').count()
+console.log('move-mode active:', hint > 0)
+await page.screenshot({ path: out + '/fix_move.png' })
 await browser.close()

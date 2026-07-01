@@ -179,6 +179,10 @@ type FactoryDiamondGroundViewProps = {
   onCellPress?: (index: number) => void
   isActive?: boolean
   comboHintCells?: number[]
+  // Pushes the grid CONTENT down within the viewport (px) without shrinking the
+  // viewport itself — so moving the grid lower doesn't clip it / make it pannable
+  // (which caused the grid to jump around). See src/config/factoryScene GRID_DROP.
+  contentOffsetY?: number
 }
 
 function diamondPoints(x: number, y: number, width: number, height: number) {
@@ -225,6 +229,7 @@ function FactoryDiamondGroundView({
   onCellPress,
   isActive = true,
   comboHintCells = [],
+  contentOffsetY = 0,
 }: FactoryDiamondGroundViewProps) {
   const activeCols = Math.round(Math.sqrt(grid.length))
   const activeRows = activeCols
@@ -270,9 +275,13 @@ function FactoryDiamondGroundView({
   const worldWidth = maxX - minX
   const worldHeight = maxY - minY
   const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
-  const mapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
+  // The map is made taller by contentOffsetY and the grid is pushed into its
+  // lower part, so the grid sits `contentOffsetY` px down from the top of the
+  // (full-height) viewport while every cell stays inside the map's touch bounds.
+  const baseMapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
+  const mapHeight = baseMapHeight + contentOffsetY
   const offsetX = (mapWidth - worldWidth) / 2 - minX
-  const offsetY = (mapHeight - worldHeight) / 2 - minY
+  const offsetY = (baseMapHeight - worldHeight) / 2 - minY + contentOffsetY
 
   // Viewport: container clips the world. If viewportHeight not given, show full world.
   const vpWidth = containerWidth

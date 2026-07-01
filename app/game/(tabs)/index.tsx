@@ -515,14 +515,15 @@ export default function RefineryScreen() {
         )}
 
         {/* ── Layer 1: Grid (absolute, pushed down from HUD by GRID_DROP) ── */}
-        <View style={[styles.gridLayer, { top: yardTop + GRID_DROP }]}>
+        <View style={[styles.gridLayer, { top: yardTop }]}>
           <FactoryDiamondGroundView
             game={game}
             derived={derived}
             grid={game.grid}
             gridLevels={game.gridLevels}
             containerWidth={width}
-            viewportHeight={sceneHeight - yardTop - GRID_DROP}
+            viewportHeight={sceneHeight - yardTop}
+            contentOffsetY={GRID_DROP}
             displayGridSize={11}
             anchorGridSize={EXPANSION_BALANCE[0].size}
             onCellPress={handleCellPress}
