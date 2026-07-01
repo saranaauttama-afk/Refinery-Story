@@ -291,6 +291,12 @@ function FactoryDiamondGroundView({
   const savedY = useSharedValue(translateY.value)
 
   const pan = Gesture.Pan()
+    // Require deliberate movement before the pan activates. Without this, the
+    // slight finger jitter of a real tap immediately activated the pan, which
+    // stole the touch so the cell's onPress never fired — you couldn't place a
+    // building on a device (a synthetic zero-movement web tap worked, hiding it).
+    .activeOffsetX([-14, 14])
+    .activeOffsetY([-14, 14])
     .onStart(() => {
       'worklet'
       savedX.value = translateX.value
