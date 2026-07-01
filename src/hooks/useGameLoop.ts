@@ -355,7 +355,13 @@ export function useGameLoop() {
         }
 
         // Milestone headlines — fire when a key milestone is newly completed
-        const prevKeys = (game ?? next).completedMilestoneKeys
+        // THIS tick. Compare against `current` (the pre-tick state passed to the
+        // updater), NOT the `game` closure variable: `game` is captured when the
+        // interval is created and goes stale, so using it made every
+        // already-completed milestone look "new" every tick — the headline
+        // (e.g. "Industrial Scale") popped up again and again and couldn't be
+        // dismissed.
+        const prevKeys = current.completedMilestoneKeys
         const newKeys = next.completedMilestoneKeys.filter((k) => !prevKeys.includes(k))
         for (const key of newKeys) {
           const headline = MILESTONE_HEADLINES[key]
