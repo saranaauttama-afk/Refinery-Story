@@ -592,20 +592,26 @@ export default function RefineryScreen() {
         <View style={[styles.resourceDock, { top: resourceTop }]}>
           <View style={styles.dockStat}>
             <GameIcon name="money" size={22} />
-            <Text style={styles.dockVal}>${(game.money >= 1000 ? `${(game.money/1000).toFixed(1)}k` : Math.floor(game.money).toString())}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
+            <View style={styles.dockText}>
+              <Text style={styles.dockVal}>${(game.money >= 1000 ? `${(game.money/1000).toFixed(1)}k` : Math.floor(game.money).toString())}</Text>
+              <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
+            </View>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <GameIcon name="crude" size={22} />
-            <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.crude)}</Text>
+            <View style={styles.dockText}>
+              <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
+              <Text style={styles.dockLabel}>{t(text.hud.crude)}</Text>
+            </View>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <GameIcon name="gas" size={22} />
-            <Text style={styles.dockVal}>{game.gasoline}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
+            <View style={styles.dockText}>
+              <Text style={styles.dockVal}>{game.gasoline}</Text>
+              <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
+            </View>
           </View>
           <View style={styles.dockDivider} />
           {/* Rep doubles as the "More Info" toggle — ESG / Morale / Specialization
@@ -616,8 +622,10 @@ export default function RefineryScreen() {
               <GameIcon name="reputation" size={22} />
               {secondaryAlert && <View style={styles.dockAlertDot} />}
             </View>
-            <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
-            <Text style={styles.dockLabel}>{t(text.hud.rep)} ⋯</Text>
+            <View style={styles.dockText}>
+              <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
+              <Text style={styles.dockLabel}>{t(text.hud.rep)} ⋯</Text>
+            </View>
           </Pressable>
         </View>
 
@@ -1755,8 +1763,13 @@ const styles = StyleSheet.create({
   },
   dockStat: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 1,
+    justifyContent: 'center',
+    gap: 5,
+  },
+  dockText: {
+    alignItems: 'flex-start',
   },
   dockToggleIconWrap: {
     position: 'relative',
