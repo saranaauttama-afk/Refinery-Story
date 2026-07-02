@@ -533,6 +533,12 @@ export const text = {
       'This restarts the whole game from scratch but keeps your permanent production bonus.',
       'จะเริ่มเกมใหม่ทั้งหมด แต่คงโบนัสผลิตถาวรไว้',
     ),
+    prestigePerkTitle: bilingual('Choose a Legacy Perk', 'เลือกเพิร์กมรดก'),
+    prestigePerkSub: bilingual(
+      'Pick one permanent perk to keep forever. You can pick another one each time you prestige.',
+      'เลือกเพิร์กถาวรหนึ่งอย่างเก็บไว้ตลอด เพรสทีจครั้งต่อไปเลือกเพิ่มได้อีก',
+    ),
+    prestigePerkOwned: bilingual('Already earned:', 'ได้มาแล้ว:'),
     dangerZone: bilingual('Danger Zone', 'พื้นที่อันตราย'),
     resetSave: bilingual('Reset save', 'รีเซ็ตเซฟ'),
     resetSaveSub: bilingual('Deletes all progress after confirmation.', 'ลบความคืบหน้าทั้งหมดหลังยืนยัน'),

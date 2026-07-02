@@ -48,6 +48,7 @@ import { MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
+import { getPrestigePerkEffects } from '../data/prestigePerks'
 import { areAllEndgameGoalsComplete } from '../data/endgameGoals'
 import { getStaffName } from '../data/staffNames'
 import { generateRecruitmentPool, RECRUITMENT_BALANCE } from '../data/recruitment'
@@ -77,6 +78,7 @@ import type {
   MilestoneProgress,
   PendingShipment,
   PerkKey,
+  PrestigePerkKey,
   ProductKey,
   RandomEvent,
   ReputationTier,
@@ -208,6 +210,7 @@ export function createInitialGameState(): GameState {
     prototypeCompleted: false,
     legendAchieved: false,
     prestigeLevel: 0,
+    prestigePerks: [],
     everBoughtCrude: false,
     starterGuideDismissed: false,
     refineryName: DEFAULT_REFINERY_NAME,
@@ -237,8 +240,20 @@ export function createInitialGameState(): GameState {
 // Prestige / New Game+: a completely fresh run that keeps only the prestige
 // level (bumped by one), which grants a permanent production bonus. Only
 // meaningful once the player has reached Industry Legend.
-export function prestigeGame(game: GameState): GameState {
-  return { ...createInitialGameState(), prestigeLevel: game.prestigeLevel + 1 }
+export function prestigeGame(game: GameState, chosenPerk?: PrestigePerkKey): GameState {
+  const prestigePerks =
+    chosenPerk && !game.prestigePerks.includes(chosenPerk)
+      ? [...game.prestigePerks, chosenPerk]
+      : [...game.prestigePerks]
+  const perkEffects = getPrestigePerkEffects(prestigePerks)
+  const fresh = createInitialGameState()
+  return {
+    ...fresh,
+    prestigeLevel: game.prestigeLevel + 1,
+    prestigePerks,
+    // War Chest perk: extra starting cash on every fresh run.
+    money: fresh.money + perkEffects.startingCash,
+  }
 }
 
 export function getUpgradeCost(level: number) {
@@ -877,8 +892,17 @@ export function getTotalCellOutput(
   // Prestige / New Game+ is a flat output bonus on every downstream plant
   // (mirrors the gasoline yield-per-batch bonus). It lives here rather than in
   // the gasoline speed multiplier because that one floors at minProductionMs,
-  // which silently wasted the prestige bonus past mid-game.
-  return total * (1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel)
+  // which silently wasted the prestige bonus past mid-game. The Refined Process
+  // perk adds to this same flat output bonus.
+  return total * getPrestigeOutputMultiplier(game)
+}
+
+// The permanent output multiplier from prestige: the per-level flat bonus plus
+// the Refined Process perk. Read by both the gasoline yield path (derived
+// stats) and the downstream-plant output above, so they never drift apart.
+export function getPrestigeOutputMultiplier(game: GameState): number {
+  const perkEffects = getPrestigePerkEffects(game.prestigePerks)
+  return 1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel + perkEffects.outputBonus
 }
 
 
@@ -949,8 +973,11 @@ export function shouldRetire(employee: { hiredOnYear?: number }, businessYear: n
 export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): number {
   const dirtyCount = ESG_DIRTY_BUILDINGS.reduce((sum, key) => sum + buildingCounts[key], 0)
   const safetyEffectiveSum = getEffectiveWorkerSum(game.employees, 'safetyOfficer')
+  // Prestige "Green Legacy" perk: extra ESG regen from safety officers.
+  const perkRegenMultiplier = 1 + getPrestigePerkEffects(game.prestigePerks).esgRegenBonus
   const regen = safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick *
-    (game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.esgRegenMultiplier : 1)
+    (game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.esgRegenMultiplier : 1) *
+    perkRegenMultiplier
   const decay = dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick *
     (game.specialization === 'industrial' ? SPECIALIZATION_BALANCE.industrial.esgDecayMultiplier : 1)
   return regen - decay
@@ -1711,7 +1738,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // Applied as a flat OUTPUT bonus (gasoline yield-per-batch + downstream plant
   // output), NOT as a speed multiplier -- gasoline speed floors at
   // minProductionMs by mid-game, which silently wasted the bonus there.
-  const prestigeOutputMultiplier = 1 + game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel
+  const prestigeOutputMultiplier = getPrestigeOutputMultiplier(game)
   // Power-plant adjacency combo: a downstream plant next to a power plant runs hotter.
   const powerAdjacencyMultiplier = 1 + comboStats.powerToPlant * BONUS_BALANCE.adjacencyBonusRate
   const workerProductionMultiplier =
@@ -1781,12 +1808,15 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   // current tech era. Applies to EVERY product, not just gasoline, so the player's
   // sell-side investments lift their whole catalogue consistently.
   const specSellPriceBonusRate = isGreen ? SPECIALIZATION_BALANCE.green.sellPriceBonusRate : 0
+  // Prestige "Market Maven" perk: a permanent flat lift on every product's price.
+  const prestigePerkSellPriceBonus = getPrestigePerkEffects(game.prestigePerks).sellPriceBonus
   const productSellMultiplier =
     1 +
     salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonusRate +
     perkSellPriceBonusRate +
     eraSellPriceBonusRate +
-    specSellPriceBonusRate
+    specSellPriceBonusRate +
+    prestigePerkSellPriceBonus
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
   // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier
@@ -2322,7 +2352,9 @@ export function getYearlyPayroll(game: GameState): number {
     total += wage * levelFactor
   }
   const specDiscount = game.specialization === 'green' ? 1 - SPECIALIZATION_BALANCE.green.wageCostReduction : 1
-  return Math.round(total * specDiscount)
+  // Prestige "Lean Crew" perk: permanent payroll cut, stacks with the discount.
+  const perkDiscount = 1 - getPrestigePerkEffects(game.prestigePerks).wageReduction
+  return Math.round(total * specDiscount * perkDiscount)
 }
 
 // Annual building upkeep (Economy audit money sink): flat fee + a fraction of
@@ -2334,7 +2366,9 @@ export function getYearlyMaintenance(game: GameState): number {
     total += MAINTENANCE_BALANCE.flatPerBuilding + BUILDINGS[cell].cost * MAINTENANCE_BALANCE.costRate
   }
   const specDiscount = game.specialization === 'industrial' ? 1 - SPECIALIZATION_BALANCE.industrial.maintenanceCostReduction : 1
-  return Math.round(total * specDiscount)
+  // Prestige "Frugal Upkeep" perk: permanent maintenance cut.
+  const perkDiscount = 1 - getPrestigePerkEffects(game.prestigePerks).maintenanceReduction
+  return Math.round(total * specDiscount * perkDiscount)
 }
 
 // Award score uses NET profit (revenue − payroll) for the money component, so

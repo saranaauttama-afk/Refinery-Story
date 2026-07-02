@@ -18,6 +18,7 @@ import { text } from '../translations'
 import { createInitialGameState, DEFAULT_REFINERY_NAME, getEmployeesByType } from './gameCalculations'
 import { DEMAND_SHIFT_BALANCE, ESG_BALANCE, FEEDSTOCK_PRIORITY_BALANCE, MORALE_BALANCE, PLANT_PRODUCTION } from '../data/balance'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
+import { PRESTIGE_PERKS } from '../data/prestigePerks'
 import { HIDDEN_EVENTS } from '../data/hiddenEvents'
 import { BUILDINGS } from '../data/buildings'
 import { getStaffName } from '../data/staffNames'
@@ -561,6 +562,16 @@ export function sanitizeLoadedGameState(value: unknown) {
     prototypeCompleted: getSafeBoolean(value.prototypeCompleted, fallback.prototypeCompleted),
     legendAchieved: getSafeBoolean(value.legendAchieved, fallback.legendAchieved),
     prestigeLevel: getSafeNumber(value.prestigeLevel, fallback.prestigeLevel),
+    // Prestige perks (added later): default to [] for old saves; drop any key
+    // that no longer maps to a current PRESTIGE_PERKS entry and de-dupe (each
+    // perk is owned at most once). Same defensive pattern as discoveredCombos.
+    prestigePerks: Array.from(
+      new Set(
+        getSafeStringArray(value.prestigePerks, []).filter((key) =>
+          PRESTIGE_PERKS.some((perk) => perk.key === key),
+        ),
+      ),
+    ) as GameState['prestigePerks'],
     everBoughtCrude: getSafeBoolean(value.everBoughtCrude, fallback.everBoughtCrude),
     starterGuideDismissed: getSafeBoolean(value.starterGuideDismissed, fallback.starterGuideDismissed),
     refineryName: getSafeString(value.refineryName, DEFAULT_REFINERY_NAME).trim().slice(0, 40) || DEFAULT_REFINERY_NAME,

@@ -11,6 +11,7 @@ import type {
   HiddenEventConfig,
   GameState,
   PerkConfig,
+  PrestigePerkKey,
   RecruitmentCandidate,
   ResearchItem,
   StandingOrderKey,
@@ -1279,9 +1280,9 @@ export function useGameLoop() {
 
   // Prestige / New Game+: fresh run keeping the (bumped) prestige level for a
   // permanent production bonus. Only offered once Industry Legend is reached.
-  const prestige = useCallback(() => {
+  const prestige = useCallback((chosenPerk?: PrestigePerkKey) => {
     setGame((current) => {
-      const next = current ? prestigeGame(current) : createInitialGameState()
+      const next = current ? prestigeGame(current, chosenPerk) : createInitialGameState()
       gameRef.current = next
       return next
     })

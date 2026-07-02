@@ -183,6 +183,9 @@ export type GameState = {
   // Industry Legend. Carries forward across the reset and grants a permanent
   // production bonus (PRESTIGE_BALANCE.bonusPerLevel each).
   prestigeLevel: number
+  // Permanent perks chosen at prestige (one per prestige, see data/prestigePerks.ts).
+  // Carries forward across every reset; each key appears at most once.
+  prestigePerks: PrestigePerkKey[]
   everBoughtCrude: boolean
   starterGuideDismissed: boolean
   // Player-chosen name for their refinery, shown in the hero panel alongside
@@ -315,6 +318,17 @@ export type WorkerCounts = Record<WorkerType, number>
 // Level multiplies that employee's bonus effectiveness (see
 // getWorkerLevelMultiplier). XP accrues passively via "concentrated
 // training" (see applyStaffXp) or can be bought instantly for one employee.
+// Prestige Perks — permanent per-prestige picks (see data/prestigePerks.ts).
+// Defined here (not in the data file) to avoid a types <-> data import cycle,
+// mirroring StaffTraitKey.
+export type PrestigePerkKey =
+  | 'refinedProcess'
+  | 'marketMaven'
+  | 'leanCrew'
+  | 'greenLegacy'
+  | 'frugalUpkeep'
+  | 'warChest'
+
 export type StaffTraitKey =
   | 'greenhorn'
   | 'steady'

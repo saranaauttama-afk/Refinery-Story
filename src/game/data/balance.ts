@@ -1017,6 +1017,20 @@ export const PRESTIGE_BALANCE = {
   bonusPerLevel: 0.1, // +10% production per prestige level
 } as const
 
+// Prestige Perks: on each prestige the player permanently picks ONE perk from
+// the pool (perks already owned are excluded, so the choice narrows over runs).
+// Each perk is a single, distinct, permanent modifier that stacks with prestige
+// level and carries across every future New Game+. Magnitudes live here; the
+// pool/flavor lives in data/prestigePerks.ts.
+export const PRESTIGE_PERK_BALANCE = {
+  refinedProcessOutputBonus: 0.15, // +15% output (on top of per-level bonus)
+  marketMavenSellBonus: 0.12,      // +12% product sell price
+  leanCrewWageReduction: 0.18,     // -18% payroll
+  greenLegacyRegenBonus: 0.5,      // +50% ESG regen from safety officers
+  frugalUpkeepReduction: 0.2,      // -20% annual maintenance
+  warChestStartingCash: 5000,      // extra starting cash each fresh run
+} as const
+
 export const SPECIALIZATION_BALANCE = {
   unlockLevel: 5,
   green: {

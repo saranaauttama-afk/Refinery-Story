@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Share,
   Pressable,
   ScrollView,
@@ -38,8 +39,9 @@ import {
   getRefineryTitle,
   getSpecialistPlantForWorker,
 } from '../../../src/game/utils/gameCalculations'
-import type { BuildingType, WorkerType } from '../../../src/game/types'
+import type { BuildingType, WorkerType, PrestigePerkKey } from '../../../src/game/types'
 import { PLANT_PRODUCTION } from '../../../src/game/data/balance'
+import { PRESTIGE_PERKS, getAvailablePrestigePerks, getPrestigePerkConfig } from '../../../src/game/data/prestigePerks'
 
 type CompanyTab = 'team' | 'grow' | 'settings'
 
@@ -104,6 +106,7 @@ export default function CompanyScreen() {
   const [activeTab, setActiveTab] = useState<CompanyTab>('team')
   const [pickerEmployeeId, setPickerEmployeeId] = useState<string | null>(null)
   const [name, setName] = useState('')
+  const [perkPickerOpen, setPerkPickerOpen] = useState(false)
 
   if (!loaded || !game || !derived) {
     return (
@@ -125,6 +128,14 @@ export default function CompanyScreen() {
   const nextExpansion = EXPANSION_BALANCE[game.gridExpansionLevel + 1] as PaidExpansionEntry | undefined
   const currentSize = EXPANSION_BALANCE[game.gridExpansionLevel].size
   const retiringCount = game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length
+  // Prestige perks: the pool still available to pick this prestige.
+  const availablePerks = getAvailablePrestigePerks(game.prestigePerks)
+  // Fire the prestige (optionally with a chosen perk) after the confirm step.
+  const doPrestige = (perk?: PrestigePerkKey) => {
+    setPerkPickerOpen(false)
+    prestige(perk)
+    router.replace('/game')
+  }
 
   const TABS: { key: CompanyTab; label: string; badge?: number }[] = [
     { key: 'team',     label: t(cs.tabs.team),     badge: retiringCount || undefined },
@@ -372,10 +383,18 @@ export default function CompanyScreen() {
               title={t(cs.prestigeTitle(game.prestigeLevel + 1))}
               subtitle={t(cs.prestigeSub(Math.round((game.prestigeLevel + 1) * PRESTIGE_BALANCE.bonusPerLevel * 100)))}
               actionLabel={t(cs.prestigeAction)}
-              onPress={() => Alert.alert(t(cs.prestigeConfirmTitle), t(cs.prestigeConfirmBody), [
-                { text: t(cs.cancel), style: 'cancel' },
-                { text: t(cs.prestigeAction), onPress: () => { prestige(); router.replace('/game') } },
-              ])}
+              onPress={() => {
+                // If any perk is still unpicked, open the perk chooser; once
+                // every perk is owned, prestige is just a plain confirm.
+                if (availablePerks.length > 0) {
+                  setPerkPickerOpen(true)
+                } else {
+                  Alert.alert(t(cs.prestigeConfirmTitle), t(cs.prestigeConfirmBody), [
+                    { text: t(cs.cancel), style: 'cancel' },
+                    { text: t(cs.prestigeAction), onPress: () => doPrestige() },
+                  ])
+                }
+              }}
             />
           ) : (
             <ListRow
@@ -399,6 +418,54 @@ export default function CompanyScreen() {
           />
         </ScrollView>
       )}
+
+      {/* Prestige perk chooser: pick one permanent perk to carry into the
+          next run. Shown only when at least one perk is still unowned. */}
+      <Modal visible={perkPickerOpen} transparent animationType="fade" onRequestClose={() => setPerkPickerOpen(false)}>
+        <Pressable style={styles.perkOverlay} onPress={() => setPerkPickerOpen(false)}>
+          <Pressable style={styles.perkSheet} onPress={() => {}}>
+            <Text style={styles.perkTitle}>{t(cs.prestigePerkTitle)}</Text>
+            <Text style={styles.perkSub}>{t(cs.prestigePerkSub)}</Text>
+            <ScrollView style={styles.perkList}>
+              {availablePerks.map((perk) => (
+                <AnimatedPressable
+                  key={perk.key}
+                  style={styles.perkCard}
+                  onPress={() => {
+                    Alert.alert(
+                      t(cs.prestigeConfirmTitle),
+                      `${perk.icon} ${t(perk.name)}\n\n${t(cs.prestigeConfirmBody)}`,
+                      [
+                        { text: t(cs.cancel), style: 'cancel' },
+                        { text: t(cs.prestigeAction), onPress: () => doPrestige(perk.key) },
+                      ],
+                    )
+                  }}
+                >
+                  <Text style={styles.perkIcon}>{perk.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.perkName}>{t(perk.name)}</Text>
+                    <Text style={styles.perkFlavor}>{t(perk.flavor)}</Text>
+                  </View>
+                </AnimatedPressable>
+              ))}
+            </ScrollView>
+            {game.prestigePerks.length > 0 && (
+              <Text style={styles.perkOwned}>
+                {t(cs.prestigePerkOwned)}{' '}
+                {game.prestigePerks
+                  .map((k) => getPrestigePerkConfig(k))
+                  .filter((p): p is NonNullable<typeof p> => !!p)
+                  .map((p) => p.icon)
+                  .join(' ')}
+              </Text>
+            )}
+            <Pressable style={styles.perkCancel} onPress={() => setPerkPickerOpen(false)}>
+              <Text style={styles.perkCancelText}>{t(cs.cancel)}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -430,6 +497,18 @@ const styles = StyleSheet.create({
   tabBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
   list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
   sectionLabel: { fontSize: 11, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, paddingHorizontal: spacing.xs },
+  perkOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  perkSheet: { width: '100%', maxWidth: 420, maxHeight: '80%', backgroundColor: colors.cream, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.sm },
+  perkTitle: { fontSize: 18, fontWeight: '900', color: colors.ink, textAlign: 'center' },
+  perkSub: { fontSize: 12, color: colors.inkMuted, textAlign: 'center', marginBottom: spacing.xs },
+  perkList: { flexGrow: 0 },
+  perkCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.white, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.creamBorder, padding: spacing.md, marginBottom: spacing.xs },
+  perkIcon: { fontSize: 26 },
+  perkName: { fontSize: 15, fontWeight: '900', color: colors.ink },
+  perkFlavor: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
+  perkOwned: { fontSize: 12, color: colors.inkMuted, textAlign: 'center', marginTop: spacing.xs },
+  perkCancel: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  perkCancelText: { fontSize: 14, fontWeight: '700', color: colors.inkMuted },
   card: { backgroundColor: colors.white, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.creamBorder, padding: spacing.md },
   emptyState: { alignItems: 'center', paddingTop: 48, gap: 8 },
   emptyIcon: { fontSize: 40 },
