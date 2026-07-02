@@ -34,6 +34,13 @@ export const BG_OFFSET_X = -92
 //            (Values >1 zoom in.)
 export const BG_SCALE = 0.7
 
+// BG_PARALLAX : how much the background follows the grid when you pan. 0 = the
+//   bg is fixed (old behaviour); 1 = it moves 1:1 with the plants (locked
+//   together like one camera); values in between give a depth/parallax feel.
+//   Keep it modest so panning never drags the painting off its overscan and
+//   exposes a blank edge.
+export const BG_PARALLAX = 0.5
+
 // ── Isometric grid placement ──
 // GRID_DROP   : how many px the grid is pushed DOWN from the HUD. Increase to
 //               move the plants further down onto the dirt/land (away from the

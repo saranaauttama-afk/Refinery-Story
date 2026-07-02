@@ -15,6 +15,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
 import { useRouter } from 'expo-router'
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -72,7 +73,7 @@ import {
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
-import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, BG_SCALE, GRID_DROP } from '../../../src/config/factoryScene'
+import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, BG_SCALE, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
 
 
 // The cleaned diamond-ground renderer is now the live review surface for
@@ -319,6 +320,17 @@ export default function RefineryScreen() {
   // shrinks the (cover-fitted) image, it still fully covers the screen. 0 at
   // scale 1; grows as you zoom out. Added on top of the crop/overscan framing.
   const bgCoverPad  = Math.max(0, ((1 / BG_SCALE - 1) / 2) * 100)
+  // Background parallax: the grid view writes its live pan offset into these,
+  // and the bg follows at BG_PARALLAX so the whole scene pans together.
+  const bgPanX      = useSharedValue(0)
+  const bgPanY      = useSharedValue(0)
+  const bgAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: BG_OFFSET_X + bgPanX.value * BG_PARALLAX },
+      { translateY: bgPanY.value * BG_PARALLAX },
+      { scale: BG_SCALE },
+    ],
+  }))
   // Where the yard background starts (absolute y within scene)
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
@@ -507,16 +519,18 @@ export default function RefineryScreen() {
 
         {/* ── Layer 0: Background (absoluteFill, no pointer events) ─────── */}
         <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
-          <Image
+          <Animated.Image
             source={FACTORY_BG}
-            style={{
-              position: 'absolute',
-              top: `${-(BG_CROP_PCT + bgCoverPad)}%`,
-              bottom: `${-(BG_CROP_PCT + bgCoverPad)}%`,
-              left: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
-              right: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
-              transform: [{ translateX: BG_OFFSET_X }, { scale: BG_SCALE }],
-            }}
+            style={[
+              {
+                position: 'absolute',
+                top: `${-(BG_CROP_PCT + bgCoverPad)}%`,
+                bottom: `${-(BG_CROP_PCT + bgCoverPad)}%`,
+                left: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
+                right: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
+              },
+              bgAnimStyle,
+            ]}
             resizeMode="cover"
           />
         </View>
@@ -540,6 +554,8 @@ export default function RefineryScreen() {
             anchorGridSize={EXPANSION_BALANCE[0].size}
             onCellPress={handleCellPress}
             isActive={game.crudeOil > 0}
+            panOutX={bgPanX}
+            panOutY={bgPanY}
           />
           {gridEditMode && (
             <Pressable style={styles.hintOverlay} onPress={() => setGridEditMode(null)}>
@@ -972,6 +988,7 @@ export default function RefineryScreen() {
                   const thumb          = PLANT_THUMB[key]
                   const extraReq       = BUILD_REQUIRES[key]
                   const surfaceColor   = BUILDING_CATEGORY_SURFACE[category]
+                  const builtCount     = derived.buildingCounts[key] ?? 0
 
                   return (
                     <Pressable
@@ -1003,6 +1020,12 @@ export default function RefineryScreen() {
                         {locked && (
                           <View style={styles.buildLockOverlay}>
                             <Text style={styles.buildLockIcon}>🔒</Text>
+                          </View>
+                        )}
+                        {/* How many of this building are already placed */}
+                        {builtCount > 0 && (
+                          <View style={[styles.buildCountBadge, { borderColor: accentColor }]}>
+                            <Text style={[styles.buildCountBadgeText, { color: accentColor }]}>{builtCount}</Text>
                           </View>
                         )}
                       </View>
@@ -1539,6 +1562,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  buildCountBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buildCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
   },
   buildThumb: {
     width: 64,

@@ -3,6 +3,7 @@ import type { ImageSourcePropType } from 'react-native'
 import Svg, { Polygon } from 'react-native-svg'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
+import type { SharedValue } from 'react-native-reanimated'
 
 import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE, getTileStatusBadge } from '../buildingIdentity'
 import { BUILDINGS } from '../game/data/buildings'
@@ -183,6 +184,11 @@ type FactoryDiamondGroundViewProps = {
   // viewport itself — so moving the grid lower doesn't clip it / make it pannable
   // (which caused the grid to jump around). See src/config/factoryScene GRID_DROP.
   contentOffsetY?: number
+  // Optional output mirrors of the live pan offset (px). The grid keeps full
+  // control of its own pan; it just writes the current value here each frame so
+  // the parent can move the background in parallax with it (see index.tsx).
+  panOutX?: SharedValue<number>
+  panOutY?: SharedValue<number>
 }
 
 function diamondPoints(x: number, y: number, width: number, height: number) {
@@ -230,6 +236,8 @@ function FactoryDiamondGroundView({
   isActive = true,
   comboHintCells = [],
   contentOffsetY = 0,
+  panOutX,
+  panOutY,
 }: FactoryDiamondGroundViewProps) {
   const activeCols = Math.round(Math.sqrt(grid.length))
   const activeRows = activeCols
@@ -326,12 +334,18 @@ function FactoryDiamondGroundView({
       translateY.value = withSpring(clamp(translateY.value, minPanY, maxPanY), SPRING_CONFIG)
     })
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-    ],
-  }))
+  const animatedStyle = useAnimatedStyle(() => {
+    // Mirror the live pan out to the parent (for background parallax) every
+    // frame — including the spring snap-back — so the bg tracks 1:1 in feel.
+    if (panOutX) panOutX.value = translateX.value
+    if (panOutY) panOutY.value = translateY.value
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    }
+  })
 
   return (
     <View style={[styles.viewport, { width: vpWidth, height: vpHeight }]}>
