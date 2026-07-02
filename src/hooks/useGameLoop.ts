@@ -378,7 +378,7 @@ export function useGameLoop() {
           if (crisis) next = { ...next, activeCrisis: crisis, lastCrisisTick: next.tickCount }
         }
         if (next.activeCrisis && next.tickCount >= next.activeCrisis.expiresAtTick) {
-          next = applyCrisisPenalty(next)
+          next = applyCrisisPenalty(next, next.tickCount)
         }
 
         // Hidden Event system: checked every tick (cheap -- short,
@@ -1407,7 +1407,7 @@ export function useGameLoop() {
     ignoreCrisis: () =>
       update((current) => {
         if (!current.activeCrisis) return current
-        return applyCrisisPenalty(current)
+        return applyCrisisPenalty(current, current.tickCount)
       }),
     dismissWinCelebration: () => setPendingWinCelebration(false),
     dismissLegendCelebration: () => setPendingLegendCelebration(false),

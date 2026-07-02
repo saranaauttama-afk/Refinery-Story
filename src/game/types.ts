@@ -111,6 +111,12 @@ export type GameState = {
   lastChoiceEventTick: number
   activeCrisis: ActiveCrisis | null
   lastCrisisTick: number
+  // Temporary production throttle from an IGNORED crisis (e.g. equipment
+  // failure halts the line, a strike slows it). While tickCount < untilTick,
+  // calculateDerivedStats scales production by `multiplier`. null = no penalty.
+  // This is what makes ignoring a crisis actually hurt rather than just cost a
+  // flat one-off — the plant runs degraded until the window passes.
+  productionPenalty: { multiplier: number; untilTick: number } | null
   // Mobile-only: 🔥 Boost button state. While tickCount < boostActiveUntilTick,
   // gasoline production runs at BOOST_BALANCE.productionMultiplier speed.
   // boostAvailableAtTick is the tick at which the button is usable again

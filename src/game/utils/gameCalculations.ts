@@ -182,6 +182,7 @@ export function createInitialGameState(): GameState {
         mentorXpBonus: {},
         activeCrisis: null,
         lastCrisisTick: 0,
+        productionPenalty: null,
         recruitmentNameCounter: nextNameIndex,
       }
     })(),
@@ -1741,8 +1742,14 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const prestigeOutputMultiplier = getPrestigeOutputMultiplier(game)
   // Power-plant adjacency combo: a downstream plant next to a power plant runs hotter.
   const powerAdjacencyMultiplier = 1 + comboStats.powerToPlant * BONUS_BALANCE.adjacencyBonusRate
+  // Ignored-crisis throttle: while the penalty window is open, the whole line
+  // runs degraded (equipment failure ~30%, strike ~80%). 1.0 (no-op) otherwise.
+  const crisisProductionMultiplier =
+    game.productionPenalty && game.tickCount < game.productionPenalty.untilTick
+      ? game.productionPenalty.multiplier
+      : 1
   const workerProductionMultiplier =
-    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * powerAdjacencyMultiplier
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * powerAdjacencyMultiplier * crisisProductionMultiplier
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.

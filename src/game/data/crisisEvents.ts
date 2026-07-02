@@ -7,6 +7,26 @@ const CRISIS_DURATION_TICKS = {
   high: Math.round((6 * 60 * 60 * 1000) / TICK_MS),    // ~6 hours
 }
 
+// How long an ignored crisis keeps hurting after it expires — the throttle
+// window. Kept in "game days" so it reads at the same scale as the durations
+// above; ~1 in-game day ≈ 6 real minutes at CALENDAR_BALANCE.dayLengthTicks.
+const GAME_DAY_TICKS = Math.round((24 * 60 * 60 * 1000) / TICK_MS)
+
+// Knock a random built tile (level > 1) down one level. Real, visible damage
+// for the power-surge crisis rather than a cosmetic line. Returns the new
+// gridLevels array, or the same reference if nothing was eligible.
+function downgradeRandomBuilding(game: GameState): number[] {
+  const eligible: number[] = []
+  for (let i = 0; i < game.grid.length; i++) {
+    if (game.grid[i] !== null && (game.gridLevels[i] ?? 1) > 1) eligible.push(i)
+  }
+  if (eligible.length === 0) return game.gridLevels
+  const target = eligible[Math.floor(Math.random() * eligible.length)]
+  const next = [...game.gridLevels]
+  next[target] = Math.max(1, (next[target] ?? 1) - 1)
+  return next
+}
+
 type CrisisTemplate = {
   key: CrisisKey
   title: string
@@ -15,8 +35,10 @@ type CrisisTemplate = {
   fixCostBase: number
   penaltyDescription: string
   minLevel: number
-  // penalty applied when ignored (function runs against game state)
-  applyPenalty: (game: GameState) => Partial<GameState>
+  // Penalty applied when the crisis is IGNORED (expires or dismissed). Runs
+  // against the current state + tick so it can set a time-boxed production
+  // throttle (productionPenalty) that keeps biting until the window passes.
+  applyPenalty: (game: GameState, currentTick: number) => Partial<GameState>
 }
 
 export const CRISIS_TEMPLATES: CrisisTemplate[] = [
@@ -26,11 +48,11 @@ export const CRISIS_TEMPLATES: CrisisTemplate[] = [
     description: 'A key distillation unit component is failing. Fix now or production halts.',
     urgency: 'high',
     fixCostBase: 800,
-    penaltyDescription: 'Distillation Unit halted for 2 business days (production drops)',
+    penaltyDescription: 'Production runs at 30% for ~2 business days',
     minLevel: 2,
-    applyPenalty: (game) => ({
-      totalGasolineProduced: Math.max(0, game.totalGasolineProduced - 50),
+    applyPenalty: (game, currentTick) => ({
       money: game.money - 200,
+      productionPenalty: { multiplier: 0.3, untilTick: currentTick + 2 * GAME_DAY_TICKS },
     }),
   },
   {
@@ -52,11 +74,12 @@ export const CRISIS_TEMPLATES: CrisisTemplate[] = [
     description: 'Unstable power readings in the plant. Shut down or risk equipment damage.',
     urgency: 'high',
     fixCostBase: 1200,
-    penaltyDescription: 'Random building downgraded by 1 level',
+    penaltyDescription: 'A random building loses 1 level',
     minLevel: 5,
     applyPenalty: (game) => ({
       money: game.money - 500,
       esgScore: Math.max(0, game.esgScore - 5),
+      gridLevels: downgradeRandomBuilding(game),
     }),
   },
   {
@@ -65,10 +88,10 @@ export const CRISIS_TEMPLATES: CrisisTemplate[] = [
     description: 'Your crude supplier is cutting delivery. Pay premium or face shortage.',
     urgency: 'low',
     fixCostBase: 600,
-    penaltyDescription: 'No crude deliveries for 2 days',
+    penaltyDescription: 'Half your crude stock is lost to the shortfall',
     minLevel: 4,
     applyPenalty: (game) => ({
-      crudeOil: Math.max(0, game.crudeOil - 30),
+      crudeOil: Math.floor(game.crudeOil * 0.5),
     }),
   },
   {
@@ -77,11 +100,11 @@ export const CRISIS_TEMPLATES: CrisisTemplate[] = [
     description: 'Staff morale is low. Address now or face a work slowdown.',
     urgency: 'medium',
     fixCostBase: 500,
-    penaltyDescription: 'Production efficiency -20% for 3 days',
+    penaltyDescription: 'Production efficiency -20% for ~3 business days',
     minLevel: 6,
-    applyPenalty: (game) => ({
+    applyPenalty: (game, currentTick) => ({
       reputation: Math.max(0, game.reputation - 15),
-      money: game.money - 250,
+      productionPenalty: { multiplier: 0.8, untilTick: currentTick + 3 * GAME_DAY_TICKS },
     }),
   },
 ]
@@ -113,10 +136,10 @@ export function spawnCrisis(game: GameState, currentTick: number): ActiveCrisis 
   }
 }
 
-export function applyCrisisPenalty(game: GameState): GameState {
+export function applyCrisisPenalty(game: GameState, currentTick: number): GameState {
   const template = CRISIS_TEMPLATES.find((c) => c.key === game.activeCrisis?.key)
   if (!template) return game
-  const penalty = template.applyPenalty(game)
+  const penalty = template.applyPenalty(game, currentTick)
   return { ...game, ...penalty, activeCrisis: null }
 }
 

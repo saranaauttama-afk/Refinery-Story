@@ -469,6 +469,15 @@ export function sanitizeLoadedGameState(value: unknown) {
     boostAvailableAtTick: getSafeNumber(value.boostAvailableAtTick, 0),
     activeCrisis: null,  // always reset crisis on load (don't persist mid-crisis timer)
     lastCrisisTick: typeof value.lastCrisisTick === 'number' ? value.lastCrisisTick : 0,
+    // Crisis production throttle (added later): tick-based (not wall-clock), so
+    // it's safe to persist. Keep only a well-formed { multiplier, untilTick };
+    // anything else (incl. old saves without the field) resets to null.
+    productionPenalty: (() => {
+      const pp = value.productionPenalty as { multiplier?: unknown; untilTick?: unknown } | null | undefined
+      return pp && typeof pp === 'object' && typeof pp.multiplier === 'number' && typeof pp.untilTick === 'number'
+        ? { multiplier: pp.multiplier, untilTick: pp.untilTick }
+        : null
+    })(),
     mentorXpBonus: (typeof value.mentorXpBonus === 'object' && value.mentorXpBonus !== null)
       ? Object.fromEntries(
           Object.entries(value.mentorXpBonus as Record<string, unknown>)
