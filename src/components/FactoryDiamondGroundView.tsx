@@ -8,7 +8,7 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
-import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL } from '../config/factoryScene'
+import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL, PLANT_IMAGE_SCALE } from '../config/factoryScene'
 import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
@@ -402,7 +402,11 @@ function FactoryDiamondGroundView({
             const code = BUILDINGS[cell].shortName
             const level = gridLevels[activeIndex] ?? 1
             const plantImage = getPlantImageSpec(cell, level)
-            const plantImageHeight = plantImage ? PLANT_IMAGE_WIDTH / plantImage.aspectRatio : 0
+            // Sprite drawn at PLANT_IMAGE_SCALE of the tile width, bottom-centred
+            // on the tile (tile/grid/tap area stay full size).
+            const plantImageWidth = PLANT_IMAGE_WIDTH * PLANT_IMAGE_SCALE
+            const plantImageHeight = plantImage ? plantImageWidth / plantImage.aspectRatio : 0
+            const plantImageLeft = (TILE_WIDTH - plantImageWidth) / 2
             // Staffed indicator: a worker badge on plants that have a specialist
             // assigned, so you can tell staffed from idle plants at a glance.
             const assignedWorker = cellAcceptsSpecialist(cell) ? getEmployeeAssignedToCell(game, activeIndex) : null
@@ -458,7 +462,7 @@ function FactoryDiamondGroundView({
                   </Svg>
                 ) : null}
                 {plantImage ? (
-                  <Image source={plantImage.source} style={[styles.plantImage, { height: plantImageHeight }]} resizeMode="contain" />
+                  <Image source={plantImage.source} style={[styles.plantImage, { width: plantImageWidth, height: plantImageHeight, left: plantImageLeft }]} resizeMode="contain" />
                 ) : (
                   <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
                 )}

@@ -44,6 +44,14 @@ export const BG_SCALE = 0.7
 export const GRID_DROP = 262
 export const GRID_SPREAD = 1.22
 
+// PLANT_IMAGE_SCALE : size of the plant sprites relative to their tile. 1.0 =
+//   sprite spans the tile width (the old look). LESS than 1 shrinks the plant
+//   art — handy to match a zoomed-out BG_SCALE so the plants don't look
+//   oversized on the smaller ground. Only the drawn sprite (and its smoke)
+//   shrinks; the tile, grid spacing, and tap targets are untouched. The sprite
+//   stays bottom-centred on its tile.
+export const PLANT_IMAGE_SCALE = 0.75
+
 // SHOW_GRID : draw the diamond tile art for the ACTIVE (playable) cells — the
 //             cream tiles, outlines, "+" markers on empty cells, and the tile
 //             under each plant. false = clean "plants sit straight on the yard"
