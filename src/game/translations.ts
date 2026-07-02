@@ -1178,6 +1178,16 @@ export const text = {
         'Level up your refinery to unlock supply contracts — they pay far more than spot-selling.',
         'อัปเกรดโรงกลั่นเพื่อปลดล็อกสัญญาจัดส่ง — จ่ายดีกว่าขายในตลาดมาก',
       ),
+      rushTitle: bilingual('⚡ Rush Orders', '⚡ ออเดอร์ด่วน'),
+      rushName: (product: BilingualTextValue) =>
+        bilingual(`Rush: ${product.en}`, `ด่วน: ${product.th}`),
+      rushExpires: (mins: number) =>
+        bilingual(`⏳ ${mins}m left`, `⏳ เหลือ ${mins} นาที`),
+      rushSub: (have: number, need: number, unit: BilingualTextValue, money: number, rp: number) =>
+        bilingual(
+          `${have}/${need} ${unit.en} · +$${money.toLocaleString()} · +${rp} RP`,
+          `${have}/${need} ${unit.th} · +$${money.toLocaleString()} · +${rp} RP`,
+        ),
     },
     requires: (amount: number, product: BilingualTextValue) =>
       bilingual(

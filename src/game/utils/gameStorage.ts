@@ -558,6 +558,27 @@ export function sanitizeLoadedGameState(value: unknown) {
           typeof c.reputationReward === 'number',
       )
     })(),
+    // Rotating "Rush Orders" (added later): transient tick-based offers, safe
+    // to persist. Keep only well-formed entries; drop anything malformed. Old
+    // saves without these fields default to empty / 0.
+    rotatingContracts: (() => {
+      const raw = isRecord(value) ? value.rotatingContracts : undefined
+      if (!Array.isArray(raw)) return []
+      return raw.filter(
+        (c): c is GameState['rotatingContracts'][number] =>
+          isRecord(c) &&
+          typeof c.id === 'number' &&
+          typeof c.productKey === 'string' &&
+          typeof c.required === 'number' &&
+          typeof c.reward === 'number' &&
+          typeof c.rpReward === 'number' &&
+          typeof c.reputationReward === 'number' &&
+          typeof c.spawnedAtTick === 'number' &&
+          typeof c.expiresAtTick === 'number',
+      )
+    })(),
+    rotatingContractCounter: getSafeNumber(value.rotatingContractCounter, 0),
+    lastRotatingSpawnTick: getSafeNumber(value.lastRotatingSpawnTick, 0),
     upgradePoints: getSafeNumber(value.upgradePoints, 0),
     unlockedPerks: getSafePerks(value.unlockedPerks),
     highestEraIndex: getSafeNumber(value.highestEraIndex, 0),

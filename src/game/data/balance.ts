@@ -1017,6 +1017,23 @@ export const PRESTIGE_BALANCE = {
   bonusPerLevel: 0.1, // +10% production per prestige level
 } as const
 
+// Rotating "Rush Orders": transient, time-limited premium contracts that
+// appear on their own and expire if not filled. A short-horizon decision layer
+// on top of the permanent CONTRACTS ladder — "drop what you're doing and pivot
+// to jet fuel for the next few minutes for a fat bonus?".
+export const ROTATING_CONTRACT_BALANCE = {
+  minRefineryLevel: 3,       // don't clutter the very early game
+  maxActive: 3,              // most offers live at once
+  spawnIntervalTicks: 1200,  // min gap between spawns (~4 in-game hours)
+  spawnChance: 0.5,          // roll once the interval has elapsed and a slot is free
+  lifetimeTicks: 3000,       // deadline window (~1.6 in-game days)
+  baseRequirement: 30,       // units required at minRefineryLevel
+  requirementPerLevel: 6,    // +units per refinery level above the minimum
+  rewardPremium: 1.7,        // cash vs. the goods' raw sell value
+  rpPerReward: 0.006,        // research points scaled off the cash reward
+  reputationReward: 4,
+} as const
+
 // Prestige Perks: on each prestige the player permanently picks ONE perk from
 // the pool (perks already owned are excluded, so the choice narrows over runs).
 // Each perk is a single, distinct, permanent modifier that stacks with prestige

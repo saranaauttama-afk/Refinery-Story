@@ -165,6 +165,12 @@ export type GameState = {
   // CONTRACTS so claimed hidden contracts show up and are completable
   // exactly like normal ones, just sourced from here instead.
   hiddenContracts: Contract[]
+  // Rotating "Rush Orders" (see data/rotatingContracts.ts): transient premium
+  // contracts with a deadline. Spawned/expired in the tick loop; removed on
+  // completion. rotatingContractCounter hands out unique ids.
+  rotatingContracts: RotatingContract[]
+  rotatingContractCounter: number
+  lastRotatingSpawnTick: number
   // Specialization (Roadmap feature 2): permanent strategic choice, null until
   // the player picks at Level 5.
   specialization: SpecializationPath | null
@@ -260,6 +266,21 @@ export type Contract = {
   reward: number
   rpReward: number
   reputationReward: number
+}
+
+// Rotating "Rush Order": a time-limited, single-shot contract that appears on
+// its own, pays a premium, and expires if not filled in time. Unlike the static
+// CONTRACTS ladder (permanent, id-tracked once) these are transient offers held
+// live in GameState.rotatingContracts and removed on completion or expiry.
+export type RotatingContract = {
+  id: number
+  productKey: ProductKey
+  required: number
+  reward: number
+  rpReward: number
+  reputationReward: number
+  spawnedAtTick: number
+  expiresAtTick: number
 }
 
 export type ActiveContract = Contract & {

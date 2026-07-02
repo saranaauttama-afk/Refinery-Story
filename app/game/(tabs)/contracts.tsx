@@ -11,7 +11,8 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
-import { getContractProgress } from '../../../src/game/utils/gameCalculations'
+import { getContractProgress, TICK_MS } from '../../../src/game/utils/gameCalculations'
+import { getRotatingContractHave } from '../../../src/game/data/rotatingContracts'
 import { text } from '../../../src/game/translations'
 import type { ActiveContract } from '../../../src/game/types'
 
@@ -123,7 +124,7 @@ const subStyles = StyleSheet.create({
 
 export default function ContractsScreen() {
   const router = useRouter()
-  const { game, loaded, derived, completeContract, claimHiddenEvent, autoTrade } = useGame()
+  const { game, loaded, derived, completeContract, completeRotatingContract, claimHiddenEvent, autoTrade } = useGame()
   const { t } = useLang()
   const sc = text.contracts.screen
 
@@ -140,7 +141,9 @@ export default function ContractsScreen() {
   const mysteryEvents = HIDDEN_EVENTS.filter(
     (e) => e.reward.kind === 'contract' && game.hiddenEventStatus[e.key] === 'unlocked',
   )
-  const hasAnyContent = mysteryEvents.length > 0 || unlockedContracts.length > 0
+  // Rotating Rush Orders — soonest-to-expire first so the urgent ones lead.
+  const rushOrders = [...game.rotatingContracts].sort((a, b) => a.expiresAtTick - b.expiresAtTick)
+  const hasAnyContent = mysteryEvents.length > 0 || unlockedContracts.length > 0 || rushOrders.length > 0
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -165,6 +168,30 @@ export default function ContractsScreen() {
         {mysteryEvents.map((event) => (
           <ListRow key={event.key} title={t(sc.mysteryTitle)} subtitle={t(sc.mysterySubtitle)} badge="???" actionLabel={t(sc.reveal)} onPress={() => claimHiddenEvent(event.key)} />
         ))}
+
+        {/* Rotating Rush Orders — time-limited premium offers */}
+        {rushOrders.length > 0 && (
+          <Section title={t(sc.rushTitle)} count={rushOrders.length} defaultOpen>
+            {rushOrders.map((order) => {
+              const have = getRotatingContractHave(game, order.productKey)
+              const ready = have >= order.required
+              const minsLeft = Math.max(1, Math.round(((order.expiresAtTick - game.tickCount) * TICK_MS) / 60000))
+              const unit = sc.groups[order.productKey as keyof typeof sc.groups]
+              return (
+                <View key={order.id}>
+                  <ListRow
+                    title={t(sc.rushName(unit))}
+                    subtitle={t(sc.rushSub(have, order.required, unit, order.reward, order.rpReward))}
+                    badge={ready ? t(sc.ok) : t(sc.rushExpires(minsLeft))}
+                    actionLabel={t(sc.complete)}
+                    disabled={!ready}
+                    onPress={() => { if (ready) completeRotatingContract(order.id) }}
+                  />
+                </View>
+              )
+            })}
+          </Section>
+        )}
 
         {/* Product groups */}
         {PRODUCT_GROUPS.map((group) => {

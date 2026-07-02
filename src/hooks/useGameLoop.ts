@@ -100,6 +100,7 @@ import {
 import { text } from '../game/translations'
 import { MILESTONE_HEADLINES } from '../components/MilestoneHeadline'
 import { shouldSpawnCrisis, spawnCrisis, applyCrisisPenalty } from '../game/data/crisisEvents'
+import { updateRotatingContracts, getRotatingContractHave } from '../game/data/rotatingContracts'
 import { BUILDINGS } from '../game/data/buildings'
 import { SELLABLE_PRODUCTS, type SellableProductKey } from '../game/data/products'
 import { CHOICE_EVENTS, getRandomChoiceEvent, getRandomStaffEvent } from '../game/data/choiceEvents'
@@ -380,6 +381,10 @@ export function useGameLoop() {
         if (next.activeCrisis && next.tickCount >= next.activeCrisis.expiresAtTick) {
           next = applyCrisisPenalty(next, next.tickCount)
         }
+
+        // Rotating "Rush Orders": expire stale offers and occasionally spawn a
+        // new time-limited premium contract.
+        next = { ...next, ...updateRotatingContracts(next, next.tickCount) }
 
         // Hidden Event system: checked every tick (cheap -- short,
         // hand-curated list) since time-based conditions can become true
@@ -1386,6 +1391,37 @@ export function useGameLoop() {
           yearStats: {
             ...current.yearStats,
             moneyEarned: current.yearStats.moneyEarned + reward,
+            contractsCompleted: current.yearStats.contractsCompleted + 1,
+          },
+        }))
+      }),
+    completeRotatingContract: (id: number) =>
+      update((current) => {
+        const contract = current.rotatingContracts.find((c) => c.id === id)
+        if (!contract) return current
+        if (current.tickCount >= contract.expiresAtTick) {
+          // Expired between render and tap — drop it, no reward.
+          return { ...current, rotatingContracts: current.rotatingContracts.filter((c) => c.id !== id) }
+        }
+        const have = getRotatingContractHave(current, contract.productKey)
+        if (have < contract.required) return current
+
+        const isGasoline = contract.productKey === 'gasoline'
+        const productInventory = { ...current.productInventory }
+        if (!isGasoline) productInventory[contract.productKey] -= contract.required
+
+        return applyWinGoal(applyMilestones({
+          ...current,
+          gasoline: isGasoline ? current.gasoline - contract.required : current.gasoline,
+          productInventory,
+          money: current.money + contract.reward,
+          researchPoints: current.researchPoints + contract.rpReward,
+          reputation: current.reputation + contract.reputationReward,
+          completedContractCount: current.completedContractCount + 1,
+          rotatingContracts: current.rotatingContracts.filter((c) => c.id !== id),
+          yearStats: {
+            ...current.yearStats,
+            moneyEarned: current.yearStats.moneyEarned + contract.reward,
             contractsCompleted: current.yearStats.contractsCompleted + 1,
           },
         }))
