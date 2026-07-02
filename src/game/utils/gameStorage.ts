@@ -6,6 +6,7 @@ import type {
   Contract,
   Employee,
   GameState,
+  StaffSkill,
   PendingShipment,
   PerkKey,
   RecruitmentCandidate,
@@ -23,6 +24,7 @@ import { HIDDEN_EVENTS } from '../data/hiddenEvents'
 import { BUILDINGS } from '../data/buildings'
 import { getStaffName } from '../data/staffNames'
 import { getStaffTrait } from '../data/staffTraits'
+import { deriveSkillsForEmployee } from '../data/staffSkills'
 import { generateRecruitmentPool, getUnlockedWorkerTypes, RECRUITMENT_BALANCE } from '../data/recruitment'
 
 const STORAGE_KEY = 'refinery-story-save'
@@ -171,20 +173,29 @@ function getSafeEmployees(value: unknown, workerCounts: WorkerCounts): Employee[
           (item): item is Record<string, unknown> =>
             isRecord(item) && item.type === key,
         )
-        .map((item, i): Employee => ({
-          id: getSafeString(item.id, `${key}-${i}`),
-          type: key,
-          name: getSafeString(item.name, getStaffName(i)),
-          level: clampLevel(getSafeNumber(item.level, 1)),
-          xp: Math.max(0, getSafeNumber(item.xp, 0)),
-          ...(getStaffTrait(typeof item.trait === 'string' ? item.trait : undefined)
-            ? { trait: item.trait as Employee['trait'] }
-            : {}),
-        }))
+        .map((item, i): Employee => {
+          const level = clampLevel(getSafeNumber(item.level, 1))
+          const trait = getStaffTrait(typeof item.trait === 'string' ? item.trait : undefined)
+            ? (item.trait as Employee['trait'])
+            : undefined
+          return {
+            id: getSafeString(item.id, `${key}-${i}`),
+            type: key,
+            name: getSafeString(item.name, getStaffName(i)),
+            level,
+            xp: Math.max(0, getSafeNumber(item.xp, 0)),
+            skills: getSafeSkills(item.skills, key, level, trait),
+            ...(item.isAce === true ? { isAce: true } : {}),
+            ...(trait ? { trait } : {}),
+          }
+        })
         .slice(0, workerCounts[key])
       while (ofType.length < workerCounts[key]) {
         const i = ofType.length
-        ofType.push({ id: `${key}-${i}`, type: key, name: getStaffName(i), level: 1, xp: 0 })
+        ofType.push({
+          id: `${key}-${i}`, type: key, name: getStaffName(i), level: 1, xp: 0,
+          skills: deriveSkillsForEmployee(key, 1).skills,
+        })
       }
       result.push(...ofType)
     }
@@ -208,10 +219,36 @@ function getSafeEmployees(value: unknown, workerCounts: WorkerCounts): Employee[
         name: typeof names[i] === 'string' ? names[i] : getStaffName(i),
         level: sharedLevel,
         xp: 0,
+        skills: deriveSkillsForEmployee(key, sharedLevel).skills,
       })
     }
   }
   return result
+}
+
+const SKILL_CHANNEL_SET = new Set<StaffSkill['channel']>(['output', 'trade', 'safety', 'upkeep'])
+
+// Keep a well-formed skills array from a save, else derive a stable default so
+// employees from before the skill system always have skills.
+function getSafeSkills(
+  raw: unknown,
+  type: WorkerType,
+  level: number,
+  trait: Employee['trait'],
+): StaffSkill[] {
+  if (Array.isArray(raw)) {
+    const valid = raw
+      .filter(
+        (s): s is StaffSkill =>
+          isRecord(s) &&
+          typeof s.value === 'number' &&
+          typeof s.channel === 'string' &&
+          SKILL_CHANNEL_SET.has(s.channel as StaffSkill['channel']),
+      )
+      .map((s) => ({ channel: s.channel, value: s.value }))
+    if (valid.length > 0) return valid
+  }
+  return deriveSkillsForEmployee(type, level, trait).skills
 }
 
 function clampLevel(level: number): number {

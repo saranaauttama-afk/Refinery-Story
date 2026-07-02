@@ -16,6 +16,10 @@ export type RecruitmentCandidate = {
   isVeteran: boolean
   // Personality trait the hired employee will carry (see data/staffTraits).
   trait?: StaffTraitKey
+  // Numeric skills this candidate would bring (see StaffSkill / data/staffSkills).
+  skills?: StaffSkill[]
+  // Whether they rolled the rare Ace 3rd skill (gold card in the recruit UI).
+  isAce?: boolean
 }
 
 // Product types — gasoline is primary. asphalt, jetFuel, lubricants, petrochemicals are secondary products.
@@ -366,17 +370,34 @@ export type StaffTraitKey =
   | 'prodigy'
   | 'veteran'
 
+// --- Staff Skills (v2) ---
+// Every hire carries a short list of explicit, numeric % skills across four
+// channels. Normal hires get 2 (a role skill + a secondary); rare "Ace" hires
+// get a 3rd, much stronger one. Values are FLAT fractions (0.03 = +3%) shown
+// verbatim on the card = exactly what they contribute, aggregated per plant
+// (assigned specialist) and team-wide (everyone). See data/staffSkills.ts.
+export type SkillChannel = 'output' | 'trade' | 'safety' | 'upkeep'
+
+export type StaffSkill = {
+  channel: SkillChannel
+  value: number // fraction, e.g. 0.03 = +3%
+}
+
 export type Employee = {
   id: string
   type: WorkerType
   name: string
   level: number
   xp: number
-  // Permanent personality trait rolled at hire time. Adds a small bonus (or
-  // penalty) to this employee's effectiveness multiplier (see
-  // getEmployeeMultiplier) and gives them character on the staff card. The
-  // trait table + roll logic lives in data/staffTraits.ts.
+  // Permanent personality trait rolled at hire time. Now purely flavour/
+  // character on the staff card (badge + name); mechanical bonuses live in
+  // `skills`. The trait table lives in data/staffTraits.ts.
   trait?: StaffTraitKey
+  // Numeric skills (see StaffSkill). 2 for a normal hire, 3 for an Ace. Older
+  // saves without this are backfilled on load (deriveSkillsForEmployee).
+  skills?: StaffSkill[]
+  // Whether this hire rolled the rare Ace 3rd skill (drives the gold card).
+  isAce?: boolean
   // Phase 5: business year this employee was hired. Used to determine
   // retirement eligibility (see HIRING_BALANCE.retirementAfterYears).
   hiredOnYear?: number

@@ -9,6 +9,7 @@
 
 import type { Employee, RecruitmentCandidate, RecruitmentTier, WorkerType } from '../types'
 import { rollStaffTrait, rollStarTrait } from './staffTraits'
+import { rollSkillsForWorker } from './staffSkills'
 import { STAFF_LEVEL_BALANCE } from './balance'
 import { WORKERS } from './workers'
 import { getStaffName } from './staffNames'
@@ -95,6 +96,8 @@ export function generateCandidate(
   const tier = rollTier(refineryLevel)
   // Every candidate has a personality; star recruits get a standout one.
   const trait = tier === 'star' ? rollStarTrait() : rollStaffTrait()
+  // ...and a set of numeric skills (2, or 3 for a rare Ace).
+  const { skills, isAce } = rollSkillsForWorker(type, tier)
   return {
     id: `candidate-${nameIndex}-${type}`,
     type,
@@ -104,6 +107,8 @@ export function generateCandidate(
     cost: getCandidateCost(type, tier),
     isVeteran: trait === 'veteran',
     trait,
+    skills,
+    isAce,
   }
 }
 
@@ -164,6 +169,8 @@ export function hireCandidateEmployee(employees: Employee[], candidate: Recruitm
     name: candidate.name,
     level: candidate.startingLevel,
     xp: 0,
+    ...(candidate.skills ? { skills: candidate.skills } : {}),
+    ...(candidate.isAce ? { isAce: candidate.isAce } : {}),
     ...(candidate.trait ? { trait: candidate.trait } : {}),
   }
 }

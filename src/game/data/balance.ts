@@ -1034,6 +1034,29 @@ export const ROTATING_CONTRACT_BALANCE = {
   reputationReward: 4,
 } as const
 
+// Staff Skills (v2): every hire carries 2-3 explicit % skills across four
+// channels (output/trade/safety/upkeep). Values are flat fractions shown
+// verbatim on the card. A skill's role/secondary value scales by recruit tier;
+// rare "Ace" hires roll a 3rd, much stronger skill. Team-wide sums are softly
+// diminished so a huge roster doesn't run away (guarded by npm run sim:check).
+export const STAFF_SKILL_BALANCE = {
+  // Role skill #1 value range by recruit tier (min..max fraction).
+  roleValueByTier: {
+    rookie: [0.005, 0.01],
+    skilled: [0.008, 0.015],
+    expert: [0.012, 0.02],
+    star: [0.018, 0.028],
+  },
+  // Secondary skill #2 value range (any channel), tier-independent.
+  secondaryValue: [0.003, 0.008],
+  // Ace: rare 3rd skill. aceChance is the roll probability (5-10% band).
+  aceChance: 0.07,
+  aceValue: [0.05, 0.09],
+  // Hard cap on each aggregated team channel bonus (fraction) so a huge roster
+  // can't stack to absurd bonuses. Skills sum linearly up to this ceiling.
+  channelCap: 0.2,
+} as const
+
 // Prestige Perks: on each prestige the player permanently picks ONE perk from
 // the pool (perks already owned are excluded, so the choice narrows over runs).
 // Each perk is a single, distinct, permanent modifier that stacks with prestige

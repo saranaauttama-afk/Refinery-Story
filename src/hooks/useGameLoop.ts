@@ -116,6 +116,7 @@ import {
   RECRUITMENT_BALANCE,
 } from '../game/data/recruitment'
 import type { RecruitmentPoolOptions } from '../game/data/recruitment'
+import { rollSkillsForWorker } from '../game/data/staffSkills'
 
 // Recruitment-pool bias for the per-plant specialists: guarantee a slot for
 // one you're short on, occasionally offer a staffed one for upgrades, and keep
@@ -862,6 +863,8 @@ export function useGameLoop() {
           }
           case 'staff': {
             const { workerType, name, startingLevel } = config.reward
+            // Legendary hire: always an Ace-tier skill roll to match the flavour.
+            const { skills } = rollSkillsForWorker(workerType, 'star')
             const employee: Employee = {
               id: `hidden-${key}`,
               type: workerType,
@@ -869,6 +872,8 @@ export function useGameLoop() {
               level: startingLevel,
               xp: 0,
               trait: 'veteran',
+              skills,
+              isAce: true,
             }
             next = {
               ...next,

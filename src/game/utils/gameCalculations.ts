@@ -22,6 +22,7 @@ import {
   REPUTATION_TIER_BALANCE,
   SEASONAL_BALANCE,
   STAFF_LEVEL_BALANCE,
+  STAFF_SKILL_BALANCE,
   STARTING_BALANCE,
   STORAGE_BALANCE,
   TANK_FARM_BALANCE,
@@ -39,6 +40,7 @@ import { BUILDINGS } from '../data/buildings'
 import type { PlantProductionConfig, ShipmentOption } from '../data/balance'
 import { CONTRACTS } from '../data/contracts'
 import { getStaffTrait, rollStaffTrait } from '../data/staffTraits'
+import { rollSkillsForWorker, deriveSkillsForEmployee } from '../data/staffSkills'
 import { getCurrentEra, getNextEra } from '../data/eras'
 import { RANDOM_EVENTS } from '../data/events'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
@@ -80,6 +82,8 @@ import type {
   PerkKey,
   PrestigePerkKey,
   ProductKey,
+  SkillChannel,
+  StaffSkill,
   RandomEvent,
   ReputationTier,
   WorkerCounts,
@@ -411,6 +415,38 @@ export function getEffectiveWorkerSum(employees: Employee[], type: WorkerType): 
   )
 }
 
+// --- Staff Skills (v2) aggregation ---
+
+// An employee's skills, backfilling deterministically for old saves whose
+// employees predate the skill system (so the UI + math never see undefined).
+export function getEmployeeSkills(employee: Employee): StaffSkill[] {
+  if (employee.skills && employee.skills.length > 0) return employee.skills
+  return deriveSkillsForEmployee(employee.type, employee.level, employee.trait).skills
+}
+
+// One employee's total value on a single channel (sums multiple matching skills).
+export function getEmployeeChannelBonus(employee: Employee, channel: SkillChannel): number {
+  return getEmployeeSkills(employee)
+    .filter((s) => s.channel === channel)
+    .reduce((sum, s) => sum + s.value, 0)
+}
+
+// Team-wide skill bonus per channel: a linear sum across EVERY hire, capped so
+// a huge roster can't run away. This is the mechanical driver — folded into
+// production (output), sell price (trade), ESG regen (safety) and maintenance
+// (upkeep) in calculateDerivedStats.
+export function getTeamSkillBonuses(game: GameState): Record<SkillChannel, number> {
+  const totals: Record<SkillChannel, number> = { output: 0, trade: 0, safety: 0, upkeep: 0 }
+  for (const e of game.employees) {
+    for (const s of getEmployeeSkills(e)) totals[s.channel] += s.value
+  }
+  const cap = STAFF_SKILL_BALANCE.channelCap
+  ;(Object.keys(totals) as SkillChannel[]).forEach((k) => {
+    totals[k] = Math.min(cap, totals[k])
+  })
+  return totals
+}
+
 // Phase 4: roll whether a new hire is a Veteran (rare, permanent bonus).
 export function rollVeteranTrait(): Employee['trait'] {
   return rollStaffTrait()
@@ -430,12 +466,16 @@ export function createNewEmployee(employees: Employee[], type: WorkerType): Empl
   const typeIndex = _getEmployeesByType(employees, type).length
   const globalIndex = employees.length
   const trait = rollVeteranTrait()
+  // Free/choice-event hires roll skills at the 'skilled' tier.
+  const { skills, isAce } = rollSkillsForWorker(type, 'skilled')
   return {
     id: `${type}-${typeIndex}`,
     type,
     name: getStaffName(globalIndex),
     level: 1,
     xp: 0,
+    skills,
+    ...(isAce ? { isAce } : {}),
     ...(trait ? { trait } : {}),
   }
 }
@@ -1021,9 +1061,11 @@ export function getEsgDrift(game: GameState, buildingCounts: BuildingCounts): nu
   const safetyEffectiveSum = getEffectiveWorkerSum(game.employees, 'safetyOfficer')
   // Prestige "Green Legacy" perk: extra ESG regen from safety officers.
   const perkRegenMultiplier = 1 + getPrestigePerkEffects(game.prestigePerks).esgRegenBonus
+  // Staff Skills: team-wide "safety" channel adds to the regen.
+  const skillRegenMultiplier = 1 + getTeamSkillBonuses(game).safety
   const regen = safetyEffectiveSum * ESG_BALANCE.regenPerSafetyOfficerPerTick *
     (game.specialization === 'green' ? SPECIALIZATION_BALANCE.green.esgRegenMultiplier : 1) *
-    perkRegenMultiplier
+    perkRegenMultiplier * skillRegenMultiplier
   const decay = dirtyCount * ESG_BALANCE.decayPerDirtyBuildingPerTick *
     (game.specialization === 'industrial' ? SPECIALIZATION_BALANCE.industrial.esgDecayMultiplier : 1)
   return regen - decay
@@ -1619,6 +1661,11 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const safetyOfficerCount = effectiveWorkers('safetyOfficer')
   const fuelSpecialistCount = diminishStack(effectiveWorkers('fuelSpecialist'))
 
+  // Staff Skills (v2): team-wide per-channel bonuses, folded into the matching
+  // multipliers below (output→production, trade→sell, safety→ESG, upkeep→
+  // maintenance). See getTeamSkillBonuses.
+  const teamSkillBonuses = getTeamSkillBonuses(game)
+
   // --- System 2: Refinery Perk Tree bonuses ---
   const unlockedPerks = game.unlockedPerks ?? []
   let perkProductionBonusRate = 0
@@ -1794,7 +1841,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       ? game.productionPenalty.multiplier
       : 1
   const workerProductionMultiplier =
-    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * powerAdjacencyMultiplier * crisisProductionMultiplier
+    (1 + operatorCount * BONUS_BALANCE.operatorProductionBonusRate) * moraleMultiplier * specProductionMultiplier * powerAdjacencyMultiplier * crisisProductionMultiplier *
+    (1 + teamSkillBonuses.output)
   // Efficiency perks no longer divide productionInterval (see
   // PERK_EFFECTS comment) -- they boost gasoline yield-per-batch instead,
   // applied in the App.tsx tick loop via perkProductionBonusRate.
@@ -1868,7 +1916,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     perkSellPriceBonusRate +
     eraSellPriceBonusRate +
     specSellPriceBonusRate +
-    prestigePerkSellPriceBonus
+    prestigePerkSellPriceBonus +
+    teamSkillBonuses.trade
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
   // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier
@@ -2420,7 +2469,9 @@ export function getYearlyMaintenance(game: GameState): number {
   const specDiscount = game.specialization === 'industrial' ? 1 - SPECIALIZATION_BALANCE.industrial.maintenanceCostReduction : 1
   // Prestige "Frugal Upkeep" perk: permanent maintenance cut.
   const perkDiscount = 1 - getPrestigePerkEffects(game.prestigePerks).maintenanceReduction
-  return Math.round(total * specDiscount * perkDiscount)
+  // Staff Skills: team-wide "upkeep" channel cuts maintenance too.
+  const skillDiscount = 1 - getTeamSkillBonuses(game).upkeep
+  return Math.round(total * specDiscount * perkDiscount * skillDiscount)
 }
 
 // Award score uses NET profit (revenue − payroll) for the money component, so
