@@ -114,4 +114,86 @@ export const HIDDEN_EVENTS: HiddenEventConfig[] = [
     ),
     reward: { kind: 'staff', workerType: 'polymerEngineer', name: 'Dr. Apinya Chaiyaporn', startingLevel: 4 },
   },
+
+  // --- Easy: weekend + late-morning window. A walk-in surplus lubricant
+  // buyer, recurs weekly once found. No game condition, so early players
+  // can stumble on it. ---
+  {
+    key: 'weekendLubricantRun',
+    difficulty: 'easy',
+    timeConditions: [
+      { type: 'dayOfWeek', day: 6 },
+      { type: 'hourRange', startHour: 10, endHour: 13 },
+    ],
+    gameConditions: [{ type: 'minBuildingCount', building: 'lubricantPlant', count: 1 }],
+    name: bilingual('Weekend Lubricant Run', 'ออเดอร์สารหล่อลื่นวันหยุด'),
+    revealMessage: bilingual(
+      'A workshop chain does its restocking on weekends and wants lubricant in bulk — cash on delivery.',
+      'เครือร้านซ่อมเติมสต๊อกช่วงวันหยุดและต้องการสารหล่อลื่นจำนวนมาก — จ่ายสดเมื่อส่งของ',
+    ),
+    reward: {
+      kind: 'contract',
+      contract: {
+        id: 9003,
+        name: bilingual('Weekend Lubricant Order', 'ออเดอร์สารหล่อลื่นวันหยุด'),
+        tier: 2,
+        unlockLevel: 1,
+        gasolineRequired: 0,
+        lubricantsRequired: 35,
+        reward: 1800,
+        rpReward: 8,
+        reputationReward: 5,
+      },
+    },
+  },
+
+  // --- Medium: mid-month clean-energy grant. Rewards players leaning into
+  // ESG (waste treatment) with a free power plant. Recurs monthly. ---
+  {
+    key: 'midMonthGreenGrant',
+    difficulty: 'medium',
+    timeConditions: [{ type: 'dayOfMonth', day: 15 }],
+    gameConditions: [{ type: 'minBuildingCount', building: 'wasteTreatmentPlant', count: 1 }],
+    name: bilingual('Mid-Month Green Grant', 'ทุนพลังงานสะอาดกลางเดือน'),
+    revealMessage: bilingual(
+      'A clean-energy foundation noticed your waste treatment and shipped you a Power Plant, no strings attached.',
+      'มูลนิธิพลังงานสะอาดเห็นระบบบำบัดของเสียของคุณ จึงส่งโรงไฟฟ้าให้ฟรีโดยไม่มีเงื่อนไข',
+    ),
+    reward: { kind: 'building', building: 'powerPlant', uses: 1, costOverride: 0 },
+  },
+
+  // --- Hard: end-of-month night-shift jet-fuel haul. A big-ticket contract
+  // for late-game players running jet fuel at scale. Narrow window (late
+  // night on the last day of the month) so it stays rare. ---
+  {
+    key: 'monthEndJetHaul',
+    difficulty: 'hard',
+    timeConditions: [
+      { type: 'dayOfMonth', day: 29 },
+      { type: 'hourRange', startHour: 22, endHour: 2 },
+    ],
+    gameConditions: [
+      { type: 'minRefineryLevel', level: 15 },
+      { type: 'minBuildingCount', building: 'jetFuelPlant', count: 2 },
+    ],
+    name: bilingual('Month-End Jet Haul', 'ขนเชื้อเพลิงอากาศยานสิ้นเดือน'),
+    revealMessage: bilingual(
+      'An airline scrambling to close its quarter needs jet fuel tonight — and will pay a premium for the rush.',
+      'สายการบินที่เร่งปิดไตรมาสต้องการเชื้อเพลิงอากาศยานคืนนี้ — และยอมจ่ายแพงเพื่อความเร่งด่วน',
+    ),
+    reward: {
+      kind: 'contract',
+      contract: {
+        id: 9004,
+        name: bilingual('Month-End Jet Order', 'ออเดอร์เชื้อเพลิงอากาศยานสิ้นเดือน'),
+        tier: 3,
+        unlockLevel: 1,
+        gasolineRequired: 0,
+        jetFuelRequired: 60,
+        reward: 5200,
+        rpReward: 18,
+        reputationReward: 10,
+      },
+    },
+  },
 ]

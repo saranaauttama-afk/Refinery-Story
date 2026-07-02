@@ -73,4 +73,50 @@ export const HIDDEN_COMBOS: HiddenComboConfig[] = [
     rpReward: 25,
     reputationReward: 10,
   },
+  {
+    key: 'tankFarm',
+    name: bilingual('Tank Farm', 'ลานถังเก็บ'),
+    message: bilingual(
+      'Crude Tank, Jet Fuel Tank, and Petrochemical Tank side by side — a proper tank farm. Logistics love it.',
+      'ถังน้ำมันดิบ ถังเชื้อเพลิงอากาศยาน และถังปิโตรเคมีเรียงกัน — ลานถังเก็บเต็มรูปแบบ ฝ่ายโลจิสติกส์ปลื้ม',
+    ),
+    buildings: ['crudeTank', 'jetFuelTank', 'petrochemicalTank'],
+    cashReward: 700,
+    rpReward: 10,
+  },
+  {
+    key: 'poweredLine',
+    name: bilingual('Powered Line', 'สายพานติดไฟ'),
+    message: bilingual(
+      'Power Plant, Distillation Unit, and Maintenance Workshop in a row — the line runs itself.',
+      'โรงไฟฟ้า หน่วยกลั่น และโรงซ่อมบำรุงเรียงกัน — สายการผลิตเดินเองได้',
+    ),
+    buildings: ['powerPlant', 'distillationUnit', 'maintenanceWorkshop'],
+    cashReward: 1000,
+    rpReward: 12,
+  },
+  {
+    key: 'greenLoop',
+    name: bilingual('Green Loop', 'วงจรสีเขียว'),
+    message: bilingual(
+      'Waste Treatment, Recycling Bunker, and Pellet Silo closing the loop — nothing wasted. Regulators approve.',
+      'บำบัดของเสีย บังเกอร์รีไซเคิล และไซโลเม็ดพลาสติกครบวงจร — ไม่มีอะไรสูญเปล่า หน่วยงานกำกับชื่นชม',
+    ),
+    buildings: ['wasteTreatmentPlant', 'recyclingBunker', 'pelletSilo'],
+    cashReward: 1500,
+    rpReward: 18,
+    reputationReward: 12,
+  },
+  {
+    key: 'polymerLine',
+    name: bilingual('Polymer Line', 'สายพอลิเมอร์'),
+    message: bilingual(
+      'Petrochemical Plant, Polymer Plant, and Pellet Silo aligned — feedstock to finished pellets in one line.',
+      'โรงปิโตรเคมี โรงพอลิเมอร์ และไซโลเม็ดพลาสติกเรียงกัน — จากวัตถุดิบสู่เม็ดสำเร็จรูปในสายเดียว',
+    ),
+    buildings: ['petrochemicalPlant', 'polymerPlant', 'pelletSilo'],
+    cashReward: 2500,
+    rpReward: 30,
+    reputationReward: 8,
+  },
 ]
