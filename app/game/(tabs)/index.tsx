@@ -305,6 +305,20 @@ export default function RefineryScreen() {
   const sendTruck = (direction: 'in' | 'out') =>
     setTruck((t) => ({ key: t.key + 1, direction }))
 
+  // Background parallax shared values + style. MUST stay above the early
+  // return below so the hook order is identical on every render (React #310).
+  // The grid view writes its live pan offset into these; the bg follows at
+  // BG_PARALLAX so the whole scene pans together.
+  const bgPanX      = useSharedValue(0)
+  const bgPanY      = useSharedValue(0)
+  const bgAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: BG_OFFSET_X + bgPanX.value * BG_PARALLAX },
+      { translateY: bgPanY.value * BG_PARALLAX },
+      { scale: BG_SCALE },
+    ],
+  }))
+
   if (!loaded || !game || !derived) {
     return (
       <SafeAreaView style={styles.loadingScreen}>
@@ -322,17 +336,6 @@ export default function RefineryScreen() {
   // shrinks the (cover-fitted) image, it still fully covers the screen. 0 at
   // scale 1; grows as you zoom out. Added on top of the crop/overscan framing.
   const bgCoverPad  = Math.max(0, ((1 / BG_SCALE - 1) / 2) * 100)
-  // Background parallax: the grid view writes its live pan offset into these,
-  // and the bg follows at BG_PARALLAX so the whole scene pans together.
-  const bgPanX      = useSharedValue(0)
-  const bgPanY      = useSharedValue(0)
-  const bgAnimStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: BG_OFFSET_X + bgPanX.value * BG_PARALLAX },
-      { translateY: bgPanY.value * BG_PARALLAX },
-      { scale: BG_SCALE },
-    ],
-  }))
   // Where the yard background starts (absolute y within scene)
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
