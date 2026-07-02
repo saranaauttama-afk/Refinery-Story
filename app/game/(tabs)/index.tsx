@@ -72,7 +72,7 @@ import {
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
-import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, GRID_DROP } from '../../../src/config/factoryScene'
+import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, BG_SCALE, GRID_DROP } from '../../../src/config/factoryScene'
 
 
 // The cleaned diamond-ground renderer is now the live review surface for
@@ -315,6 +315,10 @@ export default function RefineryScreen() {
   // the scene View fills exactly (screenHeight - insets.top).
   const sceneHeight = height - insets.top
   const skyH        = Math.round(sceneHeight * SKY_RATIO)
+  // Extra % the bg box must extend past every edge so that, after BG_SCALE
+  // shrinks the (cover-fitted) image, it still fully covers the screen. 0 at
+  // scale 1; grows as you zoom out. Added on top of the crop/overscan framing.
+  const bgCoverPad  = Math.max(0, ((1 / BG_SCALE - 1) / 2) * 100)
   // Where the yard background starts (absolute y within scene)
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
@@ -507,11 +511,11 @@ export default function RefineryScreen() {
             source={FACTORY_BG}
             style={{
               position: 'absolute',
-              top: `-${BG_CROP_PCT}%`,
-              bottom: `-${BG_CROP_PCT}%`,
-              left: `-${BG_OVERSCAN_PCT}%`,
-              right: `-${BG_OVERSCAN_PCT}%`,
-              transform: [{ translateX: BG_OFFSET_X }],
+              top: `${-(BG_CROP_PCT + bgCoverPad)}%`,
+              bottom: `${-(BG_CROP_PCT + bgCoverPad)}%`,
+              left: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
+              right: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
+              transform: [{ translateX: BG_OFFSET_X }, { scale: BG_SCALE }],
             }}
             resizeMode="cover"
           />
