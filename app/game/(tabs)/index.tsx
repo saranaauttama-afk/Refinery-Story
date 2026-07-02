@@ -68,6 +68,7 @@ import {
   getUpgradeReputationRequirement,
   getUpgradeResearchRequirement,
   getRefineryTitle,
+  getSeasonForecast,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
@@ -326,6 +327,13 @@ export default function RefineryScreen() {
   // ── Derived game values ───────────────────────────────────────────────────
   const seasonLabel        = getSeasonLabel(game.tickCount, game.yearStartTick)
   const seasonPct          = Math.round(derived.seasonalGasolineMultiplier * 100)
+  // Forecast the seasonal gasoline-demand wave so the player can time stockpiling
+  // vs selling (pairs with the crude price wave on the Supply tab).
+  const seasonFc           = getSeasonForecast(game.tickCount, game.yearStartTick)
+  const seasonFcMins       = Math.max(1, Math.round((seasonFc.ticksToExtreme * TICK_MS) / 60000))
+  const seasonForecast     = seasonFc.rising
+    ? t(text.hud.seasonForecastUp(seasonFc.swingPct, seasonFcMins))
+    : t(text.hud.seasonForecastDown(seasonFc.swingPct, seasonFcMins))
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
@@ -426,7 +434,7 @@ export default function RefineryScreen() {
           })(),
         }]
       : []),
-    { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}%` },
+    { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}% · ${seasonForecast}` },
     { label: t(text.hud.era),            value: t(derived.currentEra.name) },
     ...(game.prestigeLevel > 0
       ? [{ label: t(text.hud.prestige), value: `Lv${game.prestigeLevel} · +${Math.round(game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel * 100)}%` }]

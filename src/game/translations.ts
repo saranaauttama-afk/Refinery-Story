@@ -206,6 +206,10 @@ export const text = {
     idleNoPower: bilingual('No power for gas', 'ไฟไม่พอผลิตแก๊ส'),
     lowPower: bilingual('Low power', 'ไฟไม่พอ'),
     power: bilingual('Power', 'ไฟฟ้า'),
+    seasonForecastUp: (pct: number, mins: number) =>
+      bilingual(`↑ peak +${pct}% in ~${mins}m`, `↑ พีค +${pct}% ในอีก ~${mins} นาที`),
+    seasonForecastDown: (pct: number, mins: number) =>
+      bilingual(`↓ dip −${pct}% in ~${mins}m`, `↓ ตก −${pct}% ในอีก ~${mins} นาที`),
     feedstock: bilingual('Feedstock', 'วัตถุดิบ'),
     reputation: bilingual('Reputation', 'ชื่อเสียง'),
     season: bilingual('Season', 'ฤดูกาล'),

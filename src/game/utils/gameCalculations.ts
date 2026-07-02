@@ -1024,6 +1024,30 @@ export function getSeasonalGasolineMultiplier(tickCount: number, yearStartTick: 
 // quarter of the sine wave the year is in:
 // [0, 0.25) demand rising toward peak, [0.25, 0.5) past peak and cooling,
 // [0.5, 0.75) demand falling toward the trough, [0.75, 1) recovering.
+// Look-ahead for the seasonal gasoline-demand wave so the player can plan
+// (stockpile before a peak, sell before a dip). Returns whether demand is
+// currently RISING toward the seasonal peak or falling toward the trough, the
+// peak/trough swing magnitude (± amplitude, as %), and how many ticks until that
+// next extreme. Peak sits at phase 0.25, trough at 0.75; demand rises while
+// cos(2π·phase) > 0.
+export function getSeasonForecast(
+  tickCount: number,
+  yearStartTick: number,
+): { rising: boolean; swingPct: number; ticksToExtreme: number } {
+  const yearLength = AWARDS_BALANCE.yearLengthTicks
+  const ticksIntoYear = (((tickCount - yearStartTick) % yearLength) + yearLength) % yearLength
+  const phase = ticksIntoYear / yearLength
+  const rising = Math.cos(2 * Math.PI * phase) > 0
+  const nextExtremePhase = rising ? 0.25 : 0.75
+  let dp = nextExtremePhase - phase
+  if (dp <= 0) dp += 1
+  return {
+    rising,
+    swingPct: Math.round(SEASONAL_BALANCE.amplitude * 100),
+    ticksToExtreme: Math.round(dp * yearLength),
+  }
+}
+
 export function getSeasonLabel(tickCount: number, yearStartTick: number): BilingualTextValue {
   const yearLength = AWARDS_BALANCE.yearLengthTicks
   const ticksIntoYear = ((tickCount - yearStartTick) % yearLength + yearLength) % yearLength
