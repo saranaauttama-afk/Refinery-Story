@@ -424,6 +424,7 @@ export const text = {
     starts: bilingual('Starts', 'เริ่มที่'),
     hired: bilingual('Hired', 'จ้างแล้ว'),
     mentorXp: bilingual('Mentor XP', 'XP พี่เลี้ยง'),
+    ace: bilingual('ACE — rare skill', 'ACE — สกิลหายาก'),
     full: (cap: number) => bilingual(`Full (${cap} max)`, `เต็ม (สูงสุด ${cap})`),
     need: (cost: string) => bilingual(`Need $${cost}`, `ต้องการ $${cost}`),
     hireName: (name: string, cost: string) =>
@@ -457,6 +458,7 @@ export const text = {
     hireHint: bilingual('Go to Recruit to hire your first staff.', 'ไปที่หน้าจ้างงานเพื่อจ้างพนักงานคนแรก'),
     retiresIn: (n: number) => bilingual(`Retires in ${n} year${n !== 1 ? 's' : ''}`, `เกษียณในอีก ${n} ปี`),
     tenure: (n: number) => bilingual(`${n} yr${n !== 1 ? 's' : ''} with you`, `อยู่กับเรามา ${n} ปี`),
+    teamSkillsTitle: bilingual('Team Skill Totals', 'รวมสกิลทีม'),
     maxLevel: bilingual('Max Level', 'เลเวลสูงสุด'),
     train: (money: string, rp: number) => bilingual(`Train $${money} · ${rp}RP`, `ฝึก $${money} · ${rp}RP`),
     assigned: bilingual('Assigned', 'มอบหมายแล้ว'),

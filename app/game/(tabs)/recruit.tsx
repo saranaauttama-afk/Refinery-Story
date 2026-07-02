@@ -8,6 +8,7 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import GameIcon from '../../../src/components/GameIcon'
 import ScreenHeader from '../../../src/components/ScreenHeader'
+import StaffSkillList from '../../../src/components/StaffSkillList'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
@@ -46,6 +47,7 @@ function CandidateFigure({ candidate, selected, onPress }: { candidate: Recruitm
         <View style={[figStyles.body, { backgroundColor: tc.bodyColor }]} />
         <View style={figStyles.legs}><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /></View>
         {selected && <View style={figStyles.ring} />}
+        {candidate.isAce && <Text style={figStyles.aceMark}>★</Text>}
         <Text style={figStyles.roleLabel} numberOfLines={1}>{worker ? t(worker.name) : candidate.type}</Text>
       </Animated.View>
     </Pressable>
@@ -61,6 +63,7 @@ const figStyles = StyleSheet.create({
   legs: { flexDirection: 'row', gap: 3, marginTop: 1 },
   leg: { width: 8, height: 14, borderRadius: 3 },
   ring: { position: 'absolute', bottom: 6, width: 52, height: 14, borderRadius: 26, backgroundColor: 'rgba(242,193,46,0.35)' },
+  aceMark: { position: 'absolute', top: 26, right: 6, fontSize: 14, color: colors.gold, zIndex: 3 },
   roleLabel: { fontSize: 8, color: 'rgba(255,255,255,0.55)', fontWeight: '700', marginTop: 4, textAlign: 'center', textTransform: 'uppercase' },
 })
 
@@ -141,6 +144,12 @@ export default function RecruitScreen() {
               </View>
             )
           })()}
+          {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
+            <View style={styles.skillBlock}>
+              {selectedCandidate.isAce && <Text style={styles.aceRibbon}>★ {t(rs.ace)}</Text>}
+              <StaffSkillList skills={selectedCandidate.skills} isAce={selectedCandidate.isAce} />
+            </View>
+          )}
           <View style={styles.infoStats}>
             <View style={styles.iStat}><Text style={styles.iStatVal}>Lv{selectedCandidate.startingLevel}</Text><Text style={styles.iStatLabel}>{t(rs.starts)}</Text></View>
             <View style={styles.iStatDiv} />
@@ -191,6 +200,8 @@ const styles = StyleSheet.create({
   roleTagGlobal: { backgroundColor: 'rgba(124,179,66,0.15)', borderColor: 'rgba(124,179,66,0.5)' },
   roleTagAssign: { backgroundColor: 'rgba(91,141,191,0.18)', borderColor: 'rgba(91,141,191,0.6)' },
   roleTagText: { fontSize: 11.5, fontWeight: '700', color: '#DCE7F0' },
+  skillBlock: { marginTop: spacing.sm, gap: 6 },
+  aceRibbon: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '900', color: colors.gold, letterSpacing: 0.5 },
   tierBadge: { borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   tierBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
   infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: radii.sm, padding: spacing.sm, marginBottom: spacing.sm },

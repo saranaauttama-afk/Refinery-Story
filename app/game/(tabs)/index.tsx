@@ -56,6 +56,7 @@ import {
   getBuildingEffectLines,
   getCellAssignedToEmployee,
   getCellStaffBonus,
+  getEmployeeSkills,
   getContractProgress,
   getComboHintCells,
   getEmployeeAssignedToCell,
@@ -72,6 +73,7 @@ import {
   getSeasonForecast,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
+import StaffSkillList from '../../../src/components/StaffSkillList'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
 import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, BG_SCALE, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
 
@@ -1221,6 +1223,9 @@ export default function RefineryScreen() {
                       {staffBonus && staffBonus.bonusPct > 0 && (
                         <Text style={styles.staffBoostLine}>{t(text.plantInfo.staffBoost(staffBonus.bonusPct))}</Text>
                       )}
+                      <View style={styles.plantSkillRow}>
+                        <StaffSkillList skills={getEmployeeSkills(assignedEmployee)} isAce={assignedEmployee.isAce} compact />
+                      </View>
                     </>
                   ) : (
                     <Text style={styles.infoHint}>
@@ -2221,6 +2226,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     marginTop: 4,
+    marginBottom: spacing.sm,
+  },
+  plantSkillRow: {
     marginBottom: spacing.sm,
   },
 

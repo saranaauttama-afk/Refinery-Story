@@ -19,6 +19,8 @@ import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
 import ArtSlot from '../../../src/components/ArtSlot'
 import GameIcon from '../../../src/components/GameIcon'
+import StaffSkillList from '../../../src/components/StaffSkillList'
+import { SKILL_CHANNELS } from '../../../src/game/data/staffSkills'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { parseBilingualText, text } from '../../../src/game/translations'
@@ -38,6 +40,8 @@ import {
   getSeasonLabel,
   getRefineryTitle,
   getSpecialistPlantForWorker,
+  getEmployeeSkills,
+  getTeamSkillBonuses,
 } from '../../../src/game/utils/gameCalculations'
 import type { BuildingType, WorkerType, PrestigePerkKey } from '../../../src/game/types'
 import { PLANT_PRODUCTION } from '../../../src/game/data/balance'
@@ -195,6 +199,24 @@ export default function CompanyScreen() {
               <Text style={styles.emptyHint}>{t(cs.hireHint)}</Text>
             </View>
           )}
+          {/* Team skill totals — the aggregated bonus every hire adds up to. */}
+          {game.employees.length > 0 && (() => {
+            const totals = getTeamSkillBonuses(game)
+            return (
+              <View style={styles.teamSkillPanel}>
+                <Text style={styles.teamSkillTitle}>{t(cs.teamSkillsTitle)}</Text>
+                <View style={styles.teamSkillRow}>
+                  {SKILL_CHANNELS.map((ch) => (
+                    <View key={ch.key} style={styles.teamSkillStat}>
+                      <Text style={styles.teamSkillIcon}>{ch.icon}</Text>
+                      <Text style={styles.teamSkillVal}>+{(totals[ch.key] * 100).toFixed(totals[ch.key] * 100 % 1 === 0 ? 0 : 1)}%</Text>
+                      <Text style={styles.teamSkillLbl}>{t(ch.short)}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )
+          })()}
           {game.employees.map((employee) => {
             const w = WORKERS.find((wk) => wk.key === employee.type)
             const maxed = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
@@ -239,6 +261,9 @@ export default function CompanyScreen() {
                   </View>
                 </View>
                 <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
+                <View style={styles.empSkills}>
+                  <StaffSkillList skills={getEmployeeSkills(employee)} isAce={employee.isAce} compact />
+                </View>
                 {nearRetire && yearsLeft !== null ? (
                   <Text style={styles.retireWarn}>{t(cs.retiresIn(yearsLeft))}</Text>
                 ) : employee.hiredOnYear !== undefined ? (
@@ -497,6 +522,14 @@ const styles = StyleSheet.create({
   tabBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
   list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
   sectionLabel: { fontSize: 11, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, paddingHorizontal: spacing.xs },
+  empSkills: { marginTop: 8 },
+  teamSkillPanel: { backgroundColor: '#1C2634', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.sm },
+  teamSkillTitle: { fontSize: 11, fontWeight: '900', color: '#8FA3B8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: spacing.sm },
+  teamSkillRow: { flexDirection: 'row' },
+  teamSkillStat: { flex: 1, alignItems: 'center', gap: 2 },
+  teamSkillIcon: { fontSize: 18 },
+  teamSkillVal: { fontSize: 15, fontWeight: '900', color: '#fff' },
+  teamSkillLbl: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.3 },
   perkOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
   perkSheet: { width: '100%', maxWidth: 420, maxHeight: '80%', backgroundColor: colors.cream, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.sm },
   perkTitle: { fontSize: 18, fontWeight: '900', color: colors.ink, textAlign: 'center' },
