@@ -70,9 +70,16 @@ export function getCandidateCost(type: WorkerType, tier: RecruitmentTier): numbe
 // recruitmentNameCounter) so candidate names cycle through STAFF_NAME_POOL
 // independently of how many employees have actually been hired -- a
 // candidate's displayed name doesn't change if other hires happen first.
-export function generateCandidate(refineryLevel: number, nameIndex: number): RecruitmentCandidate {
+export function generateCandidate(
+  refineryLevel: number,
+  nameIndex: number,
+  forceType?: WorkerType,
+): RecruitmentCandidate {
   const unlockedTypes = getUnlockedWorkerTypes(refineryLevel)
-  const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)]
+  const type =
+    forceType && unlockedTypes.includes(forceType)
+      ? forceType
+      : unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)]
   const tier = rollTier(refineryLevel)
   // Every candidate has a personality; star recruits get a standout one.
   const trait = tier === 'star' ? rollStarTrait() : rollStaffTrait()
@@ -91,11 +98,22 @@ export function generateCandidate(refineryLevel: number, nameIndex: number): Rec
 export function generateRecruitmentPool(
   refineryLevel: number,
   startNameIndex: number,
+  // Worker types to guarantee in the pool (e.g. a specialist the player needs
+  // for a plant). At most one guaranteed slot so the pool still varies; the
+  // rest stay random. Types not yet unlocked are ignored.
+  prioritizeTypes: WorkerType[] = [],
 ): { pool: RecruitmentCandidate[]; nextNameIndex: number } {
   const pool: RecruitmentCandidate[] = []
   let nameIndex = startNameIndex
+  const unlocked = getUnlockedWorkerTypes(refineryLevel)
+  const priorities = prioritizeTypes.filter((t) => unlocked.includes(t))
   for (let i = 0; i < RECRUITMENT_BALANCE.poolSize; i++) {
-    pool.push(generateCandidate(refineryLevel, nameIndex))
+    // Slot 0 is a needed specialist when there is one; the rest are random.
+    const forceType =
+      i === 0 && priorities.length > 0
+        ? priorities[Math.floor(Math.random() * priorities.length)]
+        : undefined
+    pool.push(generateCandidate(refineryLevel, nameIndex, forceType))
     nameIndex++
   }
   return { pool, nextNameIndex: nameIndex }

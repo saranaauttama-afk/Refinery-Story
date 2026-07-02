@@ -55,6 +55,7 @@ import {
   recoverProductMarket,
   getRandomEvent,
   getSpecialistMultiplierForCell,
+  getNeededSpecialistWorkerTypes,
   getTrainingCost,
   getUpgradeCost,
   getUpgradeProductionRequirement,
@@ -190,7 +191,11 @@ function sanitizeAutoTrade(value: unknown): AutoTradeSettings {
 // slots were already filled by individual hires in the meantime.
 export function applyRecruitmentRefresh(current: GameState): GameState {
   if (current.tickCount < current.recruitmentRefreshAt) return current
-  const { pool, nextNameIndex } = generateRecruitmentPool(current.refineryLevel, current.recruitmentNameCounter)
+  const { pool, nextNameIndex } = generateRecruitmentPool(
+    current.refineryLevel,
+    current.recruitmentNameCounter,
+    getNeededSpecialistWorkerTypes(current),
+  )
   return {
     ...current,
     recruitmentPool: pool,
@@ -1080,6 +1085,7 @@ export function useGameLoop() {
         const { pool, nextNameIndex } = generateRecruitmentPool(
           current.refineryLevel,
           current.recruitmentNameCounter,
+          getNeededSpecialistWorkerTypes(current),
         )
         return {
           ...current,

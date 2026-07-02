@@ -518,6 +518,26 @@ export function getSpecialistPlantForWorker(type: WorkerType): BuildingType | nu
   return null
 }
 
+// Specialist worker types the player currently NEEDS but is short on: a plant
+// that accepts a specialist is built + unlocked, but fewer of that specialist
+// are hired than there are such plants. Used to bias the recruitment pool so
+// the specialist you actually need shows up (the 3 random slots almost never
+// surfaced a specific one otherwise). Empty when everything is staffed.
+export function getNeededSpecialistWorkerTypes(game: GameState): WorkerType[] {
+  const needed: WorkerType[] = []
+  for (const cell of Object.keys(CELL_SPECIALIST) as BuildingType[]) {
+    const spec = CELL_SPECIALIST[cell]
+    if (!spec) continue
+    const plantCount = game.grid.filter((c) => c === cell).length
+    if (plantCount === 0) continue
+    const worker = WORKERS.find((w) => w.key === spec.worker)
+    if (!worker || (worker.unlockLevel ?? 1) > game.refineryLevel) continue
+    const hiredCount = game.workerCounts[spec.worker] ?? 0
+    if (hiredCount < plantCount) needed.push(spec.worker)
+  }
+  return needed
+}
+
 // For the building info sheet: the output bonus the *currently assigned*
 // specialist is adding to this specific plant. Returns null when the cell takes
 // no specialist or none is assigned. Numeric only (lang-agnostic) — the UI
