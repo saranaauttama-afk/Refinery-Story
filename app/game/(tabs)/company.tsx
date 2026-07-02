@@ -36,6 +36,7 @@ import {
   getEsgTier,
   getSeasonLabel,
   getRefineryTitle,
+  getSpecialistPlantForWorker,
 } from '../../../src/game/utils/gameCalculations'
 import type { BuildingType, WorkerType } from '../../../src/game/types'
 import { PLANT_PRODUCTION } from '../../../src/game/data/balance'
@@ -213,6 +214,14 @@ export default function CompanyScreen() {
                       {w ? t(w.name) : employee.type}{trait ? ` · ${t(trait.name)}` : ''}
                     </Text>
                     {trait ? <Text style={styles.empFlavor} numberOfLines={1}>{t(trait.flavor)}</Text> : null}
+                    {(() => {
+                      const specPlant = getSpecialistPlantForWorker(employee.type)
+                      return (
+                        <Text style={[styles.empRoleTag, specPlant ? styles.empRoleTagAssign : styles.empRoleTagGlobal]} numberOfLines={1}>
+                          {specPlant ? t(text.staffRole.assignTo(BUILDINGS[specPlant].name)) : t(text.staffRole.global)}
+                        </Text>
+                      )
+                    })()}
                   </View>
                   <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
                     <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
@@ -435,6 +444,9 @@ const styles = StyleSheet.create({
   empName: { fontSize: 14, fontWeight: '800', color: colors.ink },
   empRole: { fontSize: 11, color: colors.inkMuted, marginTop: 1 },
   empFlavor: { fontSize: 10.5, color: colors.inkMuted, fontStyle: 'italic', marginTop: 1 },
+  empRoleTag: { fontSize: 10, fontWeight: '700', marginTop: 3 },
+  empRoleTagGlobal: { color: colors.green },
+  empRoleTagAssign: { color: colors.blue },
   lvBadge: { backgroundColor: colors.blue, borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   lvBadgeMax: { backgroundColor: colors.gold },
   lvBadgeText: { fontSize: 11, fontWeight: '900', color: '#fff' },

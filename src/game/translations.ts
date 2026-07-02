@@ -2246,6 +2246,13 @@ export const text = {
     catchThem: (name: string) => bilingual(`Catch ${name}!`, `ไล่ ${name} ให้ทัน!`),
     defendLead: bilingual('Defend your lead!', 'รักษาตำแหน่งจ่าฝูงไว้!'),
   },
+  staffRole: {
+    // Tells the player whether a worker's bonus is automatic once hired, or
+    // whether they must be assigned to a specific plant to do anything.
+    global: bilingual('🌐 Works everywhere (no assign)', '🌐 ทำงานทั่วโรงงาน (ไม่ต้อง assign)'),
+    assignTo: (plant: BilingualTextValue) =>
+      bilingual(`📍 Assign to ${plant.en}`, `📍 ต้อง assign เข้า ${plant.th}`),
+  },
   logs: {
     refineryOnline: bilingual(
       'Refinery online. Place buildings to expand storage and output.',

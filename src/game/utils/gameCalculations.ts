@@ -488,6 +488,17 @@ export function cellAcceptsSpecialist(cell: BuildingType): boolean {
   return cell in CELL_SPECIALIST
 }
 
+// Which plant (if any) a worker type must be ASSIGNED to for its bonus to apply.
+// Returns the building for the 3 per-cell specialists (aviation/chemical/polymer
+// engineer), or null for every "global" worker whose bonus applies just from
+// being hired. Drives the staff-card "Global vs Assign to X" hint.
+export function getSpecialistPlantForWorker(type: WorkerType): BuildingType | null {
+  for (const cell of Object.keys(CELL_SPECIALIST) as BuildingType[]) {
+    if (CELL_SPECIALIST[cell]?.worker === type) return cell
+  }
+  return null
+}
+
 // For the building info sheet: the output bonus the *currently assigned*
 // specialist is adding to this specific plant. Returns null when the cell takes
 // no specialist or none is assigned. Numeric only (lang-agnostic) — the UI

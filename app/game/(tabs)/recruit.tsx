@@ -16,9 +16,10 @@ import { colors, radii, spacing } from '../../../src/theme'
 import { text } from '../../../src/game/translations'
 import { WORKERS } from '../../../src/game/data/workers'
 import { getStaffTrait } from '../../../src/game/data/staffTraits'
+import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
-import { TICK_MS, getMaxHireCount } from '../../../src/game/utils/gameCalculations'
+import { TICK_MS, getMaxHireCount, getSpecialistPlantForWorker } from '../../../src/game/utils/gameCalculations'
 import type { RecruitmentCandidate, RecruitmentTier } from '../../../src/game/types'
 
 const TIER_CONFIG: Record<RecruitmentTier, { label: string; bodyColor: string; legColor: string; headColor: string; borderColor: string }> = {
@@ -130,6 +131,16 @@ export default function RecruitScreen() {
               <Text style={styles.tierBadgeText}>{t(rs.tiers[selectedCandidate.tier])}</Text>
             </View>
           </View>
+          {(() => {
+            const specPlant = getSpecialistPlantForWorker(selectedCandidate.type)
+            return (
+              <View style={[styles.roleTag, specPlant ? styles.roleTagAssign : styles.roleTagGlobal]}>
+                <Text style={styles.roleTagText}>
+                  {specPlant ? t(text.staffRole.assignTo(BUILDINGS[specPlant].name)) : t(text.staffRole.global)}
+                </Text>
+              </View>
+            )
+          })()}
           <View style={styles.infoStats}>
             <View style={styles.iStat}><Text style={styles.iStatVal}>Lv{selectedCandidate.startingLevel}</Text><Text style={styles.iStatLabel}>{t(rs.starts)}</Text></View>
             <View style={styles.iStatDiv} />
@@ -176,6 +187,10 @@ const styles = StyleSheet.create({
   infoName: { fontSize: 17, fontWeight: '900', color: '#fff' },
   infoRole: { fontSize: 11, color: '#6B8099', marginTop: 2 },
   infoFlavor: { fontSize: 11, color: '#9FB3C8', fontStyle: 'italic', marginTop: 3 },
+  roleTag: { alignSelf: 'flex-start', borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4, marginTop: spacing.sm, borderWidth: 1 },
+  roleTagGlobal: { backgroundColor: 'rgba(124,179,66,0.15)', borderColor: 'rgba(124,179,66,0.5)' },
+  roleTagAssign: { backgroundColor: 'rgba(91,141,191,0.18)', borderColor: 'rgba(91,141,191,0.6)' },
+  roleTagText: { fontSize: 11.5, fontWeight: '700', color: '#DCE7F0' },
   tierBadge: { borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
   tierBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
   infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: radii.sm, padding: spacing.sm, marginBottom: spacing.sm },
