@@ -2335,9 +2335,19 @@ export function getAwardGrade(score: number): AwardGrade {
 // Each rival's baseline grows with its own personality (see rivals.ts), then
 // a random swing is applied. Computed once at year-close and stored on the
 // AwardRecord so the ranking shown in the ceremony doesn't change on reload.
-export function getRivalResults(year: number): RivalResult[] {
+// Grade tied to your RANK in the annual standings (rubber-band rivals shadow
+// your best year, so topping the field is a genuine contest instead of the
+// auto-S you'd get once absolute scores outran the fixed grade thresholds).
+export function rankToGrade(rank: number): AwardGrade {
+  if (rank <= 1) return 'S'
+  if (rank === 2) return 'A'
+  if (rank === 3) return 'B'
+  return 'C'
+}
+
+export function getRivalResults(year: number, playerBestScore = 0): RivalResult[] {
   return RIVAL_REFINERIES.map((rival) => {
-    const baseline = getRivalBaselineScore(rival, year)
+    const baseline = getRivalBaselineScore(rival, year, playerBestScore)
     const swing = 1 + (Math.random() * 2 - 1) * rival.varianceFactor
     const score = Math.max(0, Math.round(baseline * swing))
     return {
@@ -2369,7 +2379,13 @@ export function closeBusinessYear(game: GameState): {
   // flat cost of doing business, deducted from cash but not graded.
   const netProfit = stats.moneyEarned - payroll - maintenance
   const score = getAwardScore(stats, payroll)
-  const grade = getAwardGrade(score)
+  // Rubber-band rivals track the player's best year, then grade is RANK-based —
+  // beating a field that scales with you keeps S meaningful all game.
+  const playerBest = Math.max(score, 0, ...game.awardHistory.map((a) => a.score))
+  const rivals = getRivalResults(game.businessYear, playerBest)
+  const playerRank = getPlayerRank(score, rivals)
+  const previousRank = game.awardHistory[0]?.playerRank
+  const grade = rankToGrade(playerRank)
   const cashReward = AWARDS_BALANCE.cashByGrade[grade]
   const reputationReward = AWARDS_BALANCE.reputationByGrade[grade]
 
@@ -2385,10 +2401,6 @@ export function closeBusinessYear(game: GameState): {
     reputationReward +
     greenReputationBonus -
     (couldNotAfford ? WAGE_BALANCE.unpaidReputationPenalty : 0)
-
-  const rivals = getRivalResults(game.businessYear)
-  const playerRank = getPlayerRank(score, rivals)
-  const previousRank = game.awardHistory[0]?.playerRank
 
   const record: AwardRecord = {
     year: game.businessYear,

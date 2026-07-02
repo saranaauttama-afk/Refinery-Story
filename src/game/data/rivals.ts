@@ -24,6 +24,12 @@ export type RivalRefineryConfig = {
   growthCapYears: number
   // Random swing applied each year, as a fraction of that year's baseline.
   varianceFactor: number
+  // Rubber-band: the rival's baseline also tracks the player's best year so far,
+  // at this fraction of it. Keeps the #1 fight a real contest as the player
+  // scales (a purely static baseline gets left behind by mid-game). The frontr-
+  // unner (~1.0) hovers right at your peak; the underdog trails. The higher of
+  // this and the static baseline wins, so rivals never go trivially weak early.
+  rubberBandFactor: number
 }
 
 export const RIVAL_REFINERIES: RivalRefineryConfig[] = [
@@ -37,6 +43,7 @@ export const RIVAL_REFINERIES: RivalRefineryConfig[] = [
     growthPerYear: 0.015,
     growthCapYears: 10,
     varianceFactor: 0.1,
+    rubberBandFactor: 0.85,
   },
   {
     key: 'apex',
@@ -48,6 +55,7 @@ export const RIVAL_REFINERIES: RivalRefineryConfig[] = [
     growthPerYear: 0.03,
     growthCapYears: 10,
     varianceFactor: 0.3,
+    rubberBandFactor: 1.0,
   },
   {
     key: 'highland',
@@ -59,6 +67,7 @@ export const RIVAL_REFINERIES: RivalRefineryConfig[] = [
     growthPerYear: 0.05,
     growthCapYears: 10,
     varianceFactor: 0.15,
+    rubberBandFactor: 0.72,
   },
 ]
 
@@ -70,8 +79,15 @@ export function getRivalConfig(key: string): RivalRefineryConfig | undefined {
   return RIVAL_BY_KEY[key]
 }
 
-export function getRivalBaselineScore(rival: RivalRefineryConfig, year: number): number {
+export function getRivalBaselineScore(
+  rival: RivalRefineryConfig,
+  year: number,
+  playerBestScore = 0,
+): number {
   const aThreshold = AWARDS_BALANCE.gradeThresholds.A
   const growthYears = Math.min(Math.max(year - 1, 0), rival.growthCapYears)
-  return aThreshold * rival.baselineFactor * (1 + growthYears * rival.growthPerYear)
+  const staticBaseline = aThreshold * rival.baselineFactor * (1 + growthYears * rival.growthPerYear)
+  // Whichever is higher: the fixed year-scaled baseline (keeps early rivals from
+  // being trivial) or a fraction of the player's best year (keeps them chasing).
+  return Math.max(staticBaseline, playerBestScore * rival.rubberBandFactor)
 }
