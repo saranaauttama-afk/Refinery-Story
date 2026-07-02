@@ -22,6 +22,10 @@ export const RECRUITMENT_BALANCE = {
   refreshIntervalTicks: 3600,
   manualRefreshBaseCost: 200,
   manualRefreshCostPerLevel: 20,
+  // Chance a refresh offers an already-staffed specialist (for quality
+  // upgrades) when you own its plant but have no empty slot for it. Under-
+  // staffed specialists are guaranteed instead (see generateRecruitmentPool).
+  specialistUpgradeChance: 0.4,
   tiers: {
     rookie: { startingLevel: 1, costMultiplier: 1.0 },
     skilled: { startingLevel: 2, costMultiplier: 1.5 },
@@ -74,12 +78,20 @@ export function generateCandidate(
   refineryLevel: number,
   nameIndex: number,
   forceType?: WorkerType,
+  // Types kept out of the random draw (e.g. specialists whose plant you don't
+  // own). Ignored when forceType is set. Falls back to the full unlocked list
+  // if excluding would leave nothing.
+  excludeTypes: WorkerType[] = [],
 ): RecruitmentCandidate {
   const unlockedTypes = getUnlockedWorkerTypes(refineryLevel)
-  const type =
-    forceType && unlockedTypes.includes(forceType)
-      ? forceType
-      : unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)]
+  let type: WorkerType
+  if (forceType && unlockedTypes.includes(forceType)) {
+    type = forceType
+  } else {
+    const pickable = unlockedTypes.filter((t) => !excludeTypes.includes(t))
+    const from = pickable.length > 0 ? pickable : unlockedTypes
+    type = from[Math.floor(Math.random() * from.length)]
+  }
   const tier = rollTier(refineryLevel)
   // Every candidate has a personality; star recruits get a standout one.
   const trait = tier === 'star' ? rollStarTrait() : rollStaffTrait()
@@ -95,25 +107,40 @@ export function generateCandidate(
   }
 }
 
+export type RecruitmentPoolOptions = {
+  // Guaranteed in slot 0 (one, random among them): a specialist you're short a
+  // body for. Highest priority so an empty plant gets filled promptly.
+  guaranteeTypes?: WorkerType[]
+  // Offered in slot 0 with `specialistUpgradeChance` when nothing is guaranteed:
+  // already-staffed specialists you own the plant for, so you can keep fishing
+  // for a better-tier hire and retire the weaker one.
+  chanceTypes?: WorkerType[]
+  // Kept out of the random draw entirely (e.g. specialists with no plant yet).
+  excludeTypes?: WorkerType[]
+}
+
 export function generateRecruitmentPool(
   refineryLevel: number,
   startNameIndex: number,
-  // Worker types to guarantee in the pool (e.g. a specialist the player needs
-  // for a plant). At most one guaranteed slot so the pool still varies; the
-  // rest stay random. Types not yet unlocked are ignored.
-  prioritizeTypes: WorkerType[] = [],
+  { guaranteeTypes = [], chanceTypes = [], excludeTypes = [] }: RecruitmentPoolOptions = {},
 ): { pool: RecruitmentCandidate[]; nextNameIndex: number } {
   const pool: RecruitmentCandidate[] = []
   let nameIndex = startNameIndex
   const unlocked = getUnlockedWorkerTypes(refineryLevel)
-  const priorities = prioritizeTypes.filter((t) => unlocked.includes(t))
+  const guarantees = guaranteeTypes.filter((t) => unlocked.includes(t))
+  const chances = chanceTypes.filter((t) => unlocked.includes(t))
   for (let i = 0; i < RECRUITMENT_BALANCE.poolSize; i++) {
-    // Slot 0 is a needed specialist when there is one; the rest are random.
-    const forceType =
-      i === 0 && priorities.length > 0
-        ? priorities[Math.floor(Math.random() * priorities.length)]
-        : undefined
-    pool.push(generateCandidate(refineryLevel, nameIndex, forceType))
+    // Slot 0: a needed specialist if any; else, sometimes, an upgrade-worthy
+    // one; else a normal random hire (specialists without a plant excluded).
+    let forceType: WorkerType | undefined
+    if (i === 0) {
+      if (guarantees.length > 0) {
+        forceType = guarantees[Math.floor(Math.random() * guarantees.length)]
+      } else if (chances.length > 0 && Math.random() < RECRUITMENT_BALANCE.specialistUpgradeChance) {
+        forceType = chances[Math.floor(Math.random() * chances.length)]
+      }
+    }
+    pool.push(generateCandidate(refineryLevel, nameIndex, forceType, excludeTypes))
     nameIndex++
   }
   return { pool, nextNameIndex: nameIndex }

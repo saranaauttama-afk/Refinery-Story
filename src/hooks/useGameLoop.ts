@@ -56,6 +56,8 @@ import {
   getRandomEvent,
   getSpecialistMultiplierForCell,
   getNeededSpecialistWorkerTypes,
+  getRelevantSpecialistWorkerTypes,
+  SPECIALIST_WORKER_TYPES,
   getTrainingCost,
   getUpgradeCost,
   getUpgradeProductionRequirement,
@@ -113,6 +115,21 @@ import {
   hireCandidateEmployee,
   RECRUITMENT_BALANCE,
 } from '../game/data/recruitment'
+import type { RecruitmentPoolOptions } from '../game/data/recruitment'
+
+// Recruitment-pool bias for the per-plant specialists: guarantee a slot for
+// one you're short on, occasionally offer a staffed one for upgrades, and keep
+// specialists whose plant you don't own out of the random draw entirely.
+function specialistPoolOptions(game: GameState): RecruitmentPoolOptions {
+  const relevant = getRelevantSpecialistWorkerTypes(game)
+  const needed = getNeededSpecialistWorkerTypes(game)
+  const relevantSet = new Set(relevant)
+  return {
+    guaranteeTypes: needed,
+    chanceTypes: relevant.filter((t) => !needed.includes(t)),
+    excludeTypes: SPECIALIST_WORKER_TYPES.filter((t) => !relevantSet.has(t)),
+  }
+}
 
 const SAVE_INTERVAL_MS = 5000
 
@@ -194,7 +211,7 @@ export function applyRecruitmentRefresh(current: GameState): GameState {
   const { pool, nextNameIndex } = generateRecruitmentPool(
     current.refineryLevel,
     current.recruitmentNameCounter,
-    getNeededSpecialistWorkerTypes(current),
+    specialistPoolOptions(current),
   )
   return {
     ...current,
@@ -1052,7 +1069,11 @@ export function useGameLoop() {
         const nextMentorXpBonus = mentorBonus > 0
           ? { ...current.mentorXpBonus, [candidate.type]: 0 }
           : current.mentorXpBonus
-        const replacement = generateRecruitmentPool(current.refineryLevel, current.recruitmentNameCounter)
+        const replacement = generateRecruitmentPool(
+          current.refineryLevel,
+          current.recruitmentNameCounter,
+          specialistPoolOptions(current),
+        )
         const recruitmentPool = [...current.recruitmentPool]
         recruitmentPool[slotIndex] = replacement.pool[0]
 
@@ -1085,7 +1106,7 @@ export function useGameLoop() {
         const { pool, nextNameIndex } = generateRecruitmentPool(
           current.refineryLevel,
           current.recruitmentNameCounter,
-          getNeededSpecialistWorkerTypes(current),
+          specialistPoolOptions(current),
         )
         return {
           ...current,

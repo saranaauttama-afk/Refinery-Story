@@ -518,11 +518,33 @@ export function getSpecialistPlantForWorker(type: WorkerType): BuildingType | nu
   return null
 }
 
-// Specialist worker types the player currently NEEDS but is short on: a plant
-// that accepts a specialist is built + unlocked, but fewer of that specialist
-// are hired than there are such plants. Used to bias the recruitment pool so
-// the specialist you actually need shows up (the 3 random slots almost never
-// surfaced a specific one otherwise). Empty when everything is staffed.
+// Every specialist (per-plant-assigned) worker type. Used to keep specialists
+// OUT of the random pool until their plant is owned (see recruitment.ts).
+export const SPECIALIST_WORKER_TYPES: WorkerType[] = Object.values(CELL_SPECIALIST)
+  .filter((s): s is NonNullable<typeof s> => !!s)
+  .map((s) => s.worker)
+
+// Specialist worker types RELEVANT to the player right now: a plant that
+// accepts them is built and their unlock level is met. Whether or not one is
+// already hired — so they keep appearing for quality upgrades ("fluke a better
+// one, fire the weaker"). Empty until you own the plant.
+export function getRelevantSpecialistWorkerTypes(game: GameState): WorkerType[] {
+  const relevant: WorkerType[] = []
+  for (const cell of Object.keys(CELL_SPECIALIST) as BuildingType[]) {
+    const spec = CELL_SPECIALIST[cell]
+    if (!spec) continue
+    const plantCount = game.grid.filter((c) => c === cell).length
+    if (plantCount === 0) continue
+    const worker = WORKERS.find((w) => w.key === spec.worker)
+    if (!worker || (worker.unlockLevel ?? 1) > game.refineryLevel) continue
+    relevant.push(spec.worker)
+  }
+  return relevant
+}
+
+// Subset of the relevant specialists the player is SHORT on (fewer hired than
+// plants of that type). These get a guaranteed pool slot so an empty plant can
+// be filled promptly; the rest (already staffed) only appear for upgrades.
 export function getNeededSpecialistWorkerTypes(game: GameState): WorkerType[] {
   const needed: WorkerType[] = []
   for (const cell of Object.keys(CELL_SPECIALIST) as BuildingType[]) {
