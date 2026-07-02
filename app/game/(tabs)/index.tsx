@@ -352,9 +352,6 @@ export default function RefineryScreen() {
   // vs selling (pairs with the crude price wave on the Supply tab).
   const seasonFc           = getSeasonForecast(game.tickCount, game.yearStartTick)
   const seasonFcMins       = Math.max(1, Math.round((seasonFc.ticksToExtreme * TICK_MS) / 60000))
-  const seasonForecast     = seasonFc.rising
-    ? t(text.hud.seasonForecastUp(seasonFc.swingPct, seasonFcMins))
-    : t(text.hud.seasonForecastDown(seasonFc.swingPct, seasonFcMins))
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
@@ -455,7 +452,7 @@ export default function RefineryScreen() {
           })(),
         }]
       : []),
-    { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}% · ${seasonForecast}` },
+    { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}%` },
     { label: t(text.hud.era),            value: t(derived.currentEra.name) },
     ...(game.prestigeLevel > 0
       ? [{ label: t(text.hud.prestige), value: `Lv${game.prestigeLevel} · +${Math.round(game.prestigeLevel * PRESTIGE_BALANCE.bonusPerLevel * 100)}%` }]
@@ -685,6 +682,15 @@ export default function RefineryScreen() {
                 <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
               </>
             )}
+          </View>
+          {/* Season price forecast — gasoline's seasonal price direction + ETA
+              to the next peak/trough, so buy/sell timing is readable at a glance. */}
+          <View style={styles.flowItem}>
+            <Text style={styles.flowIcon}>{seasonFc.rising ? '📈' : '📉'}</Text>
+            <Text style={[styles.flowVal, seasonFc.rising ? styles.flowValUp : styles.flowValDown]}>
+              {seasonFc.rising ? '+' : '−'}{seasonFc.swingPct}%
+            </Text>
+            <Text style={styles.flowUnit}>~{seasonFcMins}m</Text>
           </View>
         </View>
 
