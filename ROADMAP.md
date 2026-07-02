@@ -11,6 +11,40 @@ covers visuals.
 
 ---
 
+## Recently shipped (depth pass — recurring decisions + tension)
+
+Adds the "recurring decisions / tension that forces choices" the roadmap flagged
+as the game's main gap. All `tsc`-clean and guarded by `npm run sim:check`.
+
+- ✅ **Rubber-band rivals + rank-based grade** — three rival refineries
+  (`data/rivals.ts`) whose year-end scores track the player's best year
+  (`rubberBandFactor`), so the #1 fight stays a real contest instead of being
+  left behind mid-game. The annual grade is now the finishing *rank* (#1 S …
+  #4 C), and the ceremony (`AwardModal`) shows the leaderboard with taunts /
+  concede lines and rank movement. Produces a natural grade spread.
+- ✅ **Season price forecast** — the HUD "Season" row shows where the seasonal
+  swing is heading and the ETA to the next peak/trough (`getSeasonForecast`), so
+  buy/sell timing is a readable decision, not a hidden sine wave.
+- ✅ **More discovery content** — 4 new hidden combos (Tank Farm, Powered Line,
+  Green Loop, Polymer Line) and 3 calendar-tied hidden events (Weekend Lubricant
+  Run, Mid-Month Green Grant, Month-End Jet Haul).
+- ✅ **Prestige perks** — each prestige now grants a permanent *choice* of one
+  Legacy Perk (`data/prestigePerks.ts`: Refined Process, Market Maven, Lean Crew,
+  Green Legacy, Frugal Upkeep, War Chest) that stacks with the per-level bonus
+  and carries across every New Game+. Owned perks leave the pool, so the choice
+  narrows over runs. `getPrestigePerkEffects` is the single source of truth.
+- ✅ **Crises with teeth** — ignoring a crisis now actually hurts: a time-boxed
+  production throttle (`GameState.productionPenalty`, read every tick), a real
+  building downgrade (power surge), or a crude-stock drain (shortfall) — no more
+  cosmetic one-off nicks that didn't match the scary descriptions.
+- ✅ **Rotating "Rush Orders"** — transient, time-limited premium contracts
+  (`data/rotatingContracts.ts`) that appear on their own, pay ~1.7× the goods'
+  raw value, scale to refinery level, only ask for products you can make, and
+  expire on a deadline. A short-horizon "drop everything and pivot?" decision on
+  top of the permanent ladder. Shown in the Contracts tab with a live countdown.
+
+---
+
 ## Recently shipped (balance audit + sim infrastructure)
 
 A full balance pass driven by headless simulation. All `tsc`-clean and guarded by
@@ -178,7 +212,8 @@ screen with progress bars. Completing all flips `legendAchieved` → the
 "Industry Legend" celebration (modal + confetti). Closes the post-Lv20 loop.
 Follow-up: ✅ **New Game+ / Prestige** — once Industry Legend is reached, the
 Company › Settings tab offers Prestige: a fresh run that carries a permanent
-stacking +10%/level production bonus (`PRESTIGE_BALANCE`, `prestigeGame`).
+stacking +10%/level production bonus (`PRESTIGE_BALANCE`, `prestigeGame`), plus
+a **choice of one permanent Legacy Perk per prestige** (`data/prestigePerks.ts`).
 
 ---
 

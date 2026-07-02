@@ -60,7 +60,12 @@ fork off `devMobile`.
   contracts, plants, wages, awards, calendar, shipments, ...). Tune here, not
   in logic.
 - **`src/game/data/`** — content tables (buildings, workers, research, perks,
-  contracts, eras, events, hidden combos/events, recruitment, rivals).
+  contracts, eras, events, hidden combos/events, recruitment, rivals,
+  `prestigePerks.ts` (permanent per-prestige picks; `getPrestigePerkEffects` is
+  the single source of truth for their power), `rotatingContracts.ts` (transient
+  time-limited "Rush Orders", spawned/expired in the tick loop), `crisisEvents.ts`
+  (ignored-crisis penalties are real: a `productionPenalty` throttle, a random
+  building downgrade, a crude drain)).
 - **`src/game/types.ts`** — `GameState` and all domain types.
 - **`src/game/utils/gameStorage.ts`** — AsyncStorage save/load with
   field-by-field sanitization + migrations. Add a migration when you change the
