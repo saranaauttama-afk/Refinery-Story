@@ -92,7 +92,6 @@ import type {
 } from '../types'
 
 export const TICK_MS = CORE_BALANCE.tickMs
-export const GRID_SIZE = CORE_BALANCE.gridSize
 export const STARTING_MONEY = STARTING_BALANCE.money
 export const STARTING_CRUDE = STARTING_BALANCE.crudeOil
 export const CRUDE_COST = ECONOMY_BALANCE.crudeCost
@@ -109,7 +108,6 @@ export function getRefineryTitle(level: number): BilingualTextValue {
   if (level >= 5) return text.refinery.titleRegionalSupplier
   return text.refinery.titleLocalRefinery
 }
-export const RANDOM_EVENT_INTERVAL_MS = CORE_BALANCE.randomEventIntervalMs
 export const RANDOM_EVENT_INTERVAL_TICKS = CORE_BALANCE.randomEventIntervalTicks
 export const CHOICE_EVENT_FALLBACK_TICKS = CORE_BALANCE.choiceEventFallbackTicks
 export const AUTO_TRADE_BUFFER_PERCENT = CORE_BALANCE.autoTradeBufferPercent
@@ -136,11 +134,6 @@ export const REPUTATION_TIERS: ReputationTier[] = [
     contractRewardBonusRate: REPUTATION_TIER_BALANCE[3].contractRewardBonusRate,
   },
 ]
-
-export function getGridColumns(expansionLevel: number): number {
-  const entry = EXPANSION_BALANCE[Math.min(expansionLevel, EXPANSION_BALANCE.length - 1)]
-  return entry.size
-}
 
 export function createInitialGameState(): GameState {
   return {
@@ -424,13 +417,6 @@ export function getEmployeeSkills(employee: Employee): StaffSkill[] {
   return deriveSkillsForEmployee(employee.type, employee.level, employee.trait).skills
 }
 
-// One employee's total value on a single channel (sums multiple matching skills).
-export function getEmployeeChannelBonus(employee: Employee, channel: SkillChannel): number {
-  return getEmployeeSkills(employee)
-    .filter((s) => s.channel === channel)
-    .reduce((sum, s) => sum + s.value, 0)
-}
-
 // Team-wide skill bonus per channel: a linear sum across EVERY hire, capped so
 // a huge roster can't run away. This is the mechanical driver — folded into
 // production (output), sell price (trade), ESG regen (safety) and maintenance
@@ -481,17 +467,6 @@ export function createNewEmployee(employees: Employee[], type: WorkerType): Empl
 }
 
 // --- Per-Plant Staff Assignment (design doc Part A) ---
-
-// How many specialist slots a plant TYPE has in total = how many of that
-// building exist on the grid. Used for "X total slots" display purposes
-// (e.g. Staff tab); the actual assign/unassign action is per-cell, not
-// against this aggregate.
-export function getAssignmentCapacity(buildingCounts: BuildingCounts, type: WorkerType): number {
-  const plant = PLANT_PRODUCTION.find((p) => p.specialistWorker === type)
-  if (plant) return buildingCounts[plant.buildingKey]
-  if (type === 'polymerEngineer') return buildingCounts.polymerPlant
-  return 0
-}
 
 // The employee assigned to a specific grid cell, if any. Returns null if
 // the cell has no assignment, or if the assigned id doesn't match a live

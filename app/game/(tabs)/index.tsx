@@ -74,6 +74,7 @@ import {
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import StaffSkillList from '../../../src/components/StaffSkillList'
+import { isBoostActive, canActivateBoost } from '../../../src/hooks/useGameLoop'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
 import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, BG_SCALE, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
 
@@ -243,7 +244,7 @@ export default function RefineryScreen() {
   const sound = useSound()
   const {
     game, loaded, derived,
-    buyCrude, sellGasoline, sellProduct,
+    buyCrude, sellGasoline,
     placeBuilding, demolishBuilding, moveBuilding, swapBuildings,
     claimHiddenEvent, upgradeBuilding, upgradeRefinery,
     autoTrade, updateAutoTrade, activateBoost,
@@ -352,6 +353,16 @@ export default function RefineryScreen() {
   // vs selling (pairs with the crude price wave on the Supply tab).
   const seasonFc           = getSeasonForecast(game.tickCount, game.yearStartTick)
   const seasonFcMins       = Math.max(1, Math.round((seasonFc.ticksToExtreme * TICK_MS) / 60000))
+  // 🔥 Boost button state: active (running), ready (tappable), or cooling down.
+  const boostActive        = isBoostActive(game)
+  const boostReady         = canActivateBoost(game) && !boostActive
+  const boostSecs          = Math.max(
+    0,
+    Math.ceil(((boostActive ? game.boostActiveUntilTick : game.boostAvailableAtTick) - game.tickCount) * TICK_MS / 1000),
+  )
+  // Colour a 0–100 meter (ESG / morale) by health: red danger, orange warning.
+  const meterColorStyle = (v: number) =>
+    v < 40 ? styles.meterDanger : v < 60 ? styles.meterWarn : styles.meterGood
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
@@ -435,8 +446,6 @@ export default function RefineryScreen() {
     ? (game.specialization === 'green' ? t(text.hud.green) : t(text.hud.industrial))
     : t(text.hud.specNone)
   const secondaryStats = [
-    { label: t(text.hud.esg),            value: `${Math.round(game.esgScore)}/100` },
-    { label: t(text.hud.morale),         value: `${Math.round(game.staffMorale)}/100` },
     { label: t(text.hud.specialization), value: specValue },
     { label: t(text.hud.feedstock),      value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
     // Power balance: generation vs downstream demand per cycle. Surplus feeds the
@@ -608,6 +617,16 @@ export default function RefineryScreen() {
           >
             <Text style={[styles.speedPillText, speed === 0 && styles.speedPillTextPaused]}>{speed === 0 ? '⏸' : `${speed}×`}</Text>
           </Pressable>
+          {/* 🔥 Boost — active-tap temporary 2× gasoline production (BOOST_BALANCE) */}
+          <Pressable
+            style={[styles.boostPill, boostActive ? styles.boostPillActive : boostReady ? styles.boostPillReady : styles.boostPillCooldown]}
+            disabled={!boostReady}
+            onPress={() => { haptics.confirm(); sound.play('tap'); activateBoost() }}
+          >
+            <Text style={[styles.boostPillText, !boostReady && !boostActive && styles.boostPillTextDim]}>
+              🔥{boostActive ? ` ${boostSecs}s` : boostReady ? '' : ` ${boostSecs}s`}
+            </Text>
+          </Pressable>
           <Pressable style={styles.eventsBtn} onPress={() => setEventModalOpen(true)}>
             <Bell size={13} color={colors.white} />
             {claimableHiddenEvents.length > 0 && (
@@ -644,9 +663,28 @@ export default function RefineryScreen() {
             </View>
           </View>
           <View style={styles.dockDivider} />
-          {/* Rep doubles as the "More Info" toggle — ESG / Morale / Specialization
-              and the rest of the slow meters live one tap away to keep the dock
-              focused on the core loop. Alert dot flags a meter that needs eyes. */}
+          {/* ESG + Morale — the two hidden meters that actually bite (low ESG
+              throttles buyers, low morale cuts output), pulled out of More Info
+              so they're always in view. Value colour flags the danger zone. */}
+          <View style={styles.dockStat}>
+            <Text style={styles.dockEmoji}>🌱</Text>
+            <View style={styles.dockText}>
+              <Text style={[styles.dockVal, meterColorStyle(game.esgScore)]}>{Math.round(game.esgScore)}</Text>
+              <Text style={styles.dockLabel}>{t(text.hud.esg)}</Text>
+            </View>
+          </View>
+          <View style={styles.dockDivider} />
+          <View style={styles.dockStat}>
+            <Text style={styles.dockEmoji}>🙂</Text>
+            <View style={styles.dockText}>
+              <Text style={[styles.dockVal, meterColorStyle(game.staffMorale)]}>{Math.round(game.staffMorale)}</Text>
+              <Text style={styles.dockLabel}>{t(text.hud.morale)}</Text>
+            </View>
+          </View>
+          <View style={styles.dockDivider} />
+          {/* Rep doubles as the "More Info" toggle — Specialization / Feedstock /
+              Power / Era / Prestige live one tap away to keep the dock focused.
+              Alert dot flags a meter that needs eyes. */}
           <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
             <View style={styles.dockToggleIconWrap}>
               <GameIcon name="reputation" size={22} />
@@ -1771,6 +1809,35 @@ const styles = StyleSheet.create({
   speedPillPaused: {
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
+  boostPill: {
+    height: 28,
+    minWidth: 30,
+    paddingHorizontal: 8,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  boostPillReady: {
+    backgroundColor: 'rgba(232,131,58,0.9)',
+    borderColor: '#FFB27A',
+  },
+  boostPillActive: {
+    backgroundColor: '#E8833A',
+    borderColor: '#FFD9B0',
+  },
+  boostPillCooldown: {
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  boostPillText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  boostPillTextDim: {
+    color: 'rgba(255,255,255,0.55)',
+  },
   speedPillText: {
     fontSize: 12,
     fontFamily: fonts.heading,
@@ -1879,6 +1946,10 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: '#2E3D50',
   },
+  dockEmoji: { fontSize: 17 },
+  meterGood: { color: '#7CE38B' },
+  meterWarn: { color: '#F2C12E' },
+  meterDanger: { color: '#FF6B5A' },
   // Flow-rate strip — slim translucent bar under the resource dock
   // top set dynamically (= flowTop)
   flowStrip: {

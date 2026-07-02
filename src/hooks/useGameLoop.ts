@@ -262,10 +262,6 @@ export function isBoostActive(game: GameState): boolean {
   return game.tickCount < game.boostActiveUntilTick
 }
 
-export function isBoostOnCooldown(game: GameState): boolean {
-  return game.tickCount < game.boostAvailableAtTick
-}
-
 export function canActivateBoost(game: GameState): boolean {
   return game.tickCount >= game.boostAvailableAtTick
 }
@@ -579,32 +575,6 @@ export function useGameLoop() {
           money: current.money + actual * stats.sellPrice,
           yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + actual * stats.sellPrice },
           productMarket: applyProductSaturation(current.productMarket, 'gasoline', actual),
-        }
-      }),
-    [update],
-  )
-
-  const sellProduct = useCallback(
-    (key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets', amount: number) =>
-      update((current) => {
-        const stats = calculateDerivedStats(current)
-        const have = current.productInventory[key]
-        const actual = Math.min(amount, have)
-        if (actual <= 0) return current
-        const demandMultiplier = key === 'petrochemicals' ? current.petrochemicalsDemandMultiplier : 1
-        // Dynamic Market: effective price = base * sell multipliers * this
-        // product's saturation level. Selling then lowers that level.
-        const price = Math.round(
-          getProductSellPrice(key, stats.productSellMultiplier, demandMultiplier) *
-            getProductMarketLevel(current, key),
-        )
-        if (price <= 0) return current
-        return {
-          ...current,
-          productInventory: { ...current.productInventory, [key]: have - actual },
-          money: current.money + price * actual,
-          yearStats: { ...current.yearStats, moneyEarned: current.yearStats.moneyEarned + price * actual },
-          productMarket: applyProductSaturation(current.productMarket, key, actual),
         }
       }),
     [update],
@@ -1357,7 +1327,6 @@ export function useGameLoop() {
     pendingHiddenEventUnlock,
     buyCrude,
     sellGasoline,
-    sellProduct,
     placeBuilding,
     demolishBuilding,
     moveBuilding,

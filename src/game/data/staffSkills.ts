@@ -46,9 +46,6 @@ const ROLE_CHANNEL: Record<WorkerType, SkillChannel> = {
   polymerEngineer: 'output',
 }
 
-export function getRoleChannel(type: WorkerType): SkillChannel {
-  return ROLE_CHANNEL[type]
-}
 
 // Round to a tidy 0.5% step so displayed numbers stay clean (1%, 1.5%, 3% ...).
 function roundStep(value: number): number {

@@ -290,8 +290,8 @@ export function tick(current: GameState): GameState {
   // `petrochemicals`, a different pool with its own dedicated
   // producer/consumer relationship -- 1 plant = 1 product, like every
   // other plant. Petrochemicals keeps its existing dual role: this
-  // consumes from the same productInventory.petrochemicals that can also
-  // be sold directly via sellProduct. polymerEngineer specialist (tier 3)
+  // consumes from the same productInventory.petrochemicals that auto-trade
+  // can also sell. polymerEngineer specialist (tier 3)
   // multiplies output, same pattern as chemicalEngineer/aviationSpecialist.
   {
     const polymerPlantCount = stats.buildingCounts.polymerPlant
