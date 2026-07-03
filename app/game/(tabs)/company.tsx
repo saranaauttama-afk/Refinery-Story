@@ -47,7 +47,8 @@ import type { BuildingType, WorkerType, PrestigePerkKey } from '../../../src/gam
 import { PLANT_PRODUCTION } from '../../../src/game/data/balance'
 import { PRESTIGE_PERKS, getAvailablePrestigePerks, getPrestigePerkConfig } from '../../../src/game/data/prestigePerks'
 
-type CompanyTab = 'team' | 'grow' | 'settings'
+// Team/staff moved to its own Staff tab (app/game/(tabs)/staff.tsx).
+type CompanyTab = 'grow' | 'settings'
 
 // Specialist config
 const SPECIALIST_TYPES: WorkerType[] = [
@@ -107,7 +108,7 @@ export default function CompanyScreen() {
   const cs = text.companyScreen
   const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
   const haptics = useHaptics()
-  const [activeTab, setActiveTab] = useState<CompanyTab>('team')
+  const [activeTab, setActiveTab] = useState<CompanyTab>('grow')
   const [pickerEmployeeId, setPickerEmployeeId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [perkPickerOpen, setPerkPickerOpen] = useState(false)
@@ -142,7 +143,6 @@ export default function CompanyScreen() {
   }
 
   const TABS: { key: CompanyTab; label: string; badge?: number }[] = [
-    { key: 'team',     label: t(cs.tabs.team),     badge: retiringCount || undefined },
     { key: 'grow',     label: t(cs.tabs.grow) },
     { key: 'settings', label: t(cs.tabs.settings) },
   ]
@@ -188,131 +188,6 @@ export default function CompanyScreen() {
           ))}
         </View>
       </View>
-
-      {/* ══ TEAM TAB ══ */}
-      {activeTab === 'team' && (
-        <ScrollView contentContainerStyle={styles.list}>
-          {game.employees.length === 0 && (
-            <View style={styles.emptyState}>
-              <ArtSlot id="team_empty" width={140} height={140} spec="480×480" radius={70} caption="Empty desks / hiring sign" />
-              <Text style={styles.emptyTitle}>{t(cs.noEmployees)}</Text>
-              <Text style={styles.emptyHint}>{t(cs.hireHint)}</Text>
-            </View>
-          )}
-          {/* Team skill totals — the aggregated bonus every hire adds up to. */}
-          {game.employees.length > 0 && (() => {
-            const totals = getTeamSkillBonuses(game)
-            return (
-              <View style={styles.teamSkillPanel}>
-                <Text style={styles.teamSkillTitle}>{t(cs.teamSkillsTitle)}</Text>
-                <View style={styles.teamSkillRow}>
-                  {SKILL_CHANNELS.map((ch) => (
-                    <View key={ch.key} style={styles.teamSkillStat}>
-                      <Text style={styles.teamSkillIcon}>{ch.icon}</Text>
-                      <Text style={styles.teamSkillVal}>+{(totals[ch.key] * 100).toFixed(totals[ch.key] * 100 % 1 === 0 ? 0 : 1)}%</Text>
-                      <Text style={styles.teamSkillLbl}>{t(ch.short)}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )
-          })()}
-          {game.employees.map((employee) => {
-            const w = WORKERS.find((wk) => wk.key === employee.type)
-            const maxed = employee.level >= STAFF_LEVEL_BALANCE.maxLevel
-            const xpNeeded = STAFF_LEVEL_BALANCE.xpToNextLevel[employee.level] ?? 0
-            const cost = getTrainingCost(employee.level)
-            const canTrain = !maxed && game.money >= cost.money && game.researchPoints >= cost.rp
-            const isSpecialist = SPECIALIST_TYPES.includes(employee.type)
-            const assignedCellIndex = getCellAssignedToEmployee(game, employee.id)
-            const buildingKey = SPECIALIST_BUILDING[employee.type]
-            const eligibleCells = buildingKey
-              ? game.grid.reduce<{ cellIndex: number; label: string }[]>((acc, cell, ci) => {
-                  if (cell === buildingKey) acc.push({ cellIndex: ci, label: t(cs.plantLabel(t(BUILDINGS[buildingKey].name), acc.length + 1)) })
-                  return acc
-                }, [])
-              : []
-            const assignedLabel = eligibleCells.find((c) => c.cellIndex === assignedCellIndex)?.label
-            const nearRetire = isNearRetirement(employee, game.businessYear)
-            const yearsLeft = employee.hiredOnYear !== undefined ? Math.max(0, (employee.hiredOnYear + 5) - game.businessYear) : null
-            const trait = getStaffTrait(employee.trait)
-
-            return (
-              <View key={employee.id} style={[styles.empCard, nearRetire && styles.empCardRetiring]}>
-                <View style={styles.empTop}>
-                  <View style={styles.empRoleIcon}><GameIcon name={`worker-${employee.type}`} size={34} /></View>
-                  <View style={styles.empNameBlock}>
-                    <Text style={styles.empName}>{employee.name}{trait ? ` ${trait.badge}` : ''}{nearRetire ? ' 🕰' : ''}</Text>
-                    <Text style={styles.empRole}>
-                      {w ? t(w.name) : employee.type}{trait ? ` · ${t(trait.name)}` : ''}
-                    </Text>
-                    {trait ? <Text style={styles.empFlavor} numberOfLines={1}>{t(trait.flavor)}</Text> : null}
-                    {(() => {
-                      const specPlant = getSpecialistPlantForWorker(employee.type)
-                      return (
-                        <Text style={[styles.empRoleTag, specPlant ? styles.empRoleTagAssign : styles.empRoleTagGlobal]} numberOfLines={1}>
-                          {specPlant ? t(text.staffRole.assignTo(BUILDINGS[specPlant].name)) : t(text.staffRole.global)}
-                        </Text>
-                      )
-                    })()}
-                  </View>
-                  <View style={[styles.lvBadge, maxed && styles.lvBadgeMax]}>
-                    <Text style={styles.lvBadgeText}>Lv{employee.level}</Text>
-                  </View>
-                </View>
-                <XpBar current={employee.xp} max={xpNeeded} level={employee.level} />
-                <View style={styles.empSkills}>
-                  <StaffSkillList skills={getEmployeeSkills(employee)} isAce={employee.isAce} compact />
-                </View>
-                {nearRetire && yearsLeft !== null ? (
-                  <Text style={styles.retireWarn}>{t(cs.retiresIn(yearsLeft))}</Text>
-                ) : employee.hiredOnYear !== undefined ? (
-                  <Text style={styles.empTenure}>🕰 {t(cs.tenure(Math.max(0, game.businessYear - employee.hiredOnYear)))}</Text>
-                ) : null}
-                <View style={styles.empActions}>
-                  <AnimatedPressable
-                    disabled={!canTrain}
-                    onPress={() => {
-                      if (canTrain) { spawnFloat(`-$${cost.money.toLocaleString()}`, 'expense'); haptics.confirm() }
-                      trainEmployee(employee.id)
-                    }}
-                    style={[styles.actBtn, canTrain ? styles.actBtnTrain : styles.actBtnOff]}
-                  >
-                    <Text style={styles.actBtnLabel}>{maxed ? t(cs.maxLevel) : t(cs.train(cost.money.toLocaleString(), cost.rp))}</Text>
-                  </AnimatedPressable>
-                  {isSpecialist && (
-                    <Pressable
-                      disabled={eligibleCells.length === 0}
-                      onPress={() => {
-                        if (assignedCellIndex !== null) { unassignCell(assignedCellIndex); setPickerEmployeeId(null) }
-                        else setPickerEmployeeId(pickerEmployeeId === employee.id ? null : employee.id)
-                      }}
-                      style={[styles.actBtn, assignedCellIndex !== null ? styles.actBtnAssigned : styles.actBtnOff]}
-                    >
-                      <Text style={styles.actBtnLabel}>
-                        {assignedCellIndex !== null ? `📌 ${assignedLabel ?? t(cs.assigned)}` : eligibleCells.length === 0 ? t(cs.noPlantBuilt) : t(cs.assign)}
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
-                {pickerEmployeeId === employee.id && assignedCellIndex === null && (
-                  <View style={styles.picker}>
-                    <Text style={styles.pickerTitle}>{t(cs.selectPlant)}</Text>
-                    {eligibleCells.map(({ cellIndex, label }) => {
-                      const occ = game.employees.find((e) => getCellAssignedToEmployee(game, e.id) === cellIndex)
-                      return (
-                        <Pressable key={cellIndex} style={styles.pickerOption} onPress={() => { assignEmployeeToCell(employee.id, cellIndex); setPickerEmployeeId(null); haptics.confirm() }}>
-                          <Text style={styles.pickerLabel}>{label}{occ ? ` · ${occ.name}` : ''}</Text>
-                        </Pressable>
-                      )
-                    })}
-                  </View>
-                )}
-              </View>
-            )
-          })}
-        </ScrollView>
-      )}
 
       {/* ══ GROW TAB ══ */}
       {activeTab === 'grow' && (

@@ -256,6 +256,7 @@ export const text = {
     recruit: bilingual('Recruit', 'จ้างงาน'),
     research: bilingual('R&D', 'วิจัย'),
     company: bilingual('Company', 'บริษัท'),
+    staff: bilingual('Staff', 'พนักงาน'),
   },
   researchScreen: {
     title: bilingual('Research & Perks', 'วิจัยและเพิร์ก'),

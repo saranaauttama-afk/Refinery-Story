@@ -58,6 +58,7 @@ import {
   getCellStaffBonus,
   getEmployeeSkills,
   getPowerBreakdown,
+  isNearRetirement,
   getContractProgress,
   getComboHintCells,
   getEmployeeAssignedToCell,
@@ -447,6 +448,9 @@ export default function RefineryScreen() {
     return have >= need
   }).length
   const staffReady = game.recruitmentPool.length > 0 ? 1 : 0
+  // Staff tab badge = employees near retirement (needs attention), distinct from
+  // the recruit-pool badge which now lives on the floating Recruit button.
+  const retiringStaff = game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length
   const researchReady = derived.activeResearchItems.filter(
     (i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost
   ).length
@@ -464,7 +468,7 @@ export default function RefineryScreen() {
     { route: '/game',             icon: '🏭', label: t(text.nav.factory) },
     { route: '/game/contracts',   icon: '📋', label: t(text.nav.contracts), badge: contractsReady || undefined },
     { route: '/game/supply',      icon: '🛢',  label: t(text.nav.supply),    badge: standaloneReady || undefined },
-    { route: '/game/recruit',     icon: '👥', label: t(text.nav.recruit),   badge: staffReady || undefined },
+    { route: '/game/staff',       icon: '👥', label: t(text.nav.staff),     badge: retiringStaff || undefined },
     { route: '/game/research',    icon: '🔬', label: t(text.nav.research),  badge: researchReady || undefined },
     { route: '/game/company',     icon: '🏢', label: t(text.nav.company) },
   ]
@@ -1572,6 +1576,17 @@ export default function RefineryScreen() {
         <OnboardingOverlay onDismiss={handleDismissOnboarding} />
       )}
 
+      {/* ── Floating Recruit button (bottom-right) — quick access to the
+          hiring pool without taking a bottom-nav slot. ──────────────────── */}
+      <Pressable
+        style={[styles.recruitFab, { bottom: 66 + insets.bottom + ACTION_DOCK_H + 10 }]}
+        onPress={() => router.push('/game/recruit')}
+      >
+        <Text style={styles.recruitFabIcon}>🧑‍💼</Text>
+        {staffReady ? <View style={styles.recruitFabBadge}><Text style={styles.recruitFabBadgeText}>{game.recruitmentPool.length}</Text></View> : null}
+        <Text style={styles.recruitFabLabel}>{t(text.nav.recruit)}</Text>
+      </Pressable>
+
       {/* ── Persistent bottom navigation ──────────────────────────────── */}
       <BottomNav items={FAB_ITEMS} />
 
@@ -2170,6 +2185,41 @@ const styles = StyleSheet.create({
   // ── Layer 4: Floating action buttons ──────────────────────────────────────
   // ── Unified Trade panel (Buy/Sell + Auto-trade, collapsible) ───────────
   // ── Action Dock (bottom, above tab bar) ──────────────────────────────────
+  recruitFab: {
+    position: 'absolute',
+    right: spacing.md,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.blue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 25,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 10,
+  },
+  recruitFabIcon: { fontSize: 22 },
+  recruitFabLabel: { fontSize: 7.5, fontWeight: '900', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: -1 },
+  recruitFabBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: colors.orange,
+    borderWidth: 1.5,
+    borderColor: '#1C2634',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recruitFabBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
   actionDock: {
     position: 'absolute',
     left: spacing.md,
