@@ -202,6 +202,24 @@ export const text = {
     idleNoPower: bilingual('No power for gas', 'ไฟไม่พอผลิตแก๊ส'),
     lowPower: bilingual('Low power', 'ไฟไม่พอ'),
     power: bilingual('Power', 'ไฟฟ้า'),
+    powerSheetTitle: bilingual('⚡ Power Usage', '⚡ การใช้ไฟฟ้า'),
+    powerSupply: bilingual('Supply /cyc', 'ผลิต /รอบ'),
+    powerDemand: bilingual('Demand /cyc', 'ใช้ /รอบ'),
+    powerDeficit: (pct: number) =>
+      bilingual(
+        `⚠️ Only ${pct}% covered — plants run slower. Build more Power Plants.`,
+        `⚠️ ไฟพอแค่ ${pct}% — โรงงานเดินช้าลง สร้างโรงไฟฟ้าเพิ่ม`,
+      ),
+    powerCovered: bilingual('✓ All plants fully powered', '✓ ไฟพอทุกโรงงาน'),
+    powerNoPlant: bilingual(
+      "No Power Plant yet — plants don't need power until you build one.",
+      'ยังไม่มีโรงไฟฟ้า — โรงงานยังไม่ต้องใช้ไฟจนกว่าจะสร้าง',
+    ),
+    powerNoDraw: bilingual('No power-using plants built yet.', 'ยังไม่มีโรงงานที่ใช้ไฟ'),
+    powerGasNote: bilingual(
+      'Gasoline production also draws power each batch.',
+      'การผลิตน้ำมันเบนซินก็ใช้ไฟทุกรอบผลิตเช่นกัน',
+    ),
     feedstock: bilingual('Feedstock', 'วัตถุดิบ'),
     reputation: bilingual('Reputation', 'ชื่อเสียง'),
     season: bilingual('Season', 'ฤดูกาล'),

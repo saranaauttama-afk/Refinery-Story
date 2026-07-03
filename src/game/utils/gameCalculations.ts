@@ -887,6 +887,46 @@ export function getBuildingEffectLines(
   }
 }
 
+// --- Power (electricity) breakdown ---
+// Where the power goes: supply (from Power Plants) vs a per-plant-type demand
+// list, so a starved grid shows exactly which plants are drawing it. Mirrors
+// the electricityDemandPerCycle sum in calculateDerivedStats. Gasoline draws
+// power on a different cadence (see PRODUCTION_BALANCE.electricityPerGasolineBatch)
+// so it's flagged separately rather than mixed into this per-cycle list.
+export type PowerBreakdownRow = {
+  buildingKey: BuildingType
+  count: number
+  perCycle: number
+  total: number
+}
+
+export function getPowerBreakdown(buildingCounts: BuildingCounts): {
+  supply: number
+  demand: number
+  rows: PowerBreakdownRow[]
+  gasolineDraws: boolean
+} {
+  const rows: PowerBreakdownRow[] = []
+  for (const plant of PLANT_PRODUCTION) {
+    const count = buildingCounts[plant.buildingKey]
+    if (count > 0 && plant.electricityPerCycle > 0) {
+      rows.push({ buildingKey: plant.buildingKey, count, perCycle: plant.electricityPerCycle, total: count * plant.electricityPerCycle })
+    }
+  }
+  if (buildingCounts.polymerPlant > 0 && POLYMER_PLANT_BALANCE.electricityPerCycle > 0) {
+    rows.push({
+      buildingKey: 'polymerPlant',
+      count: buildingCounts.polymerPlant,
+      perCycle: POLYMER_PLANT_BALANCE.electricityPerCycle,
+      total: buildingCounts.polymerPlant * POLYMER_PLANT_BALANCE.electricityPerCycle,
+    })
+  }
+  rows.sort((a, b) => b.total - a.total)
+  const demand = rows.reduce((sum, r) => sum + r.total, 0)
+  const supply = buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
+  return { supply, demand, rows, gasolineDraws: buildingCounts.powerPlant > 0 }
+}
+
 // --- ESG / Safety axis ---
 
 // Per-tick ESG drift: "dirty" buildings (core refining/processing) pull the

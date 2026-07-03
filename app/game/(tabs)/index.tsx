@@ -57,6 +57,7 @@ import {
   getCellAssignedToEmployee,
   getCellStaffBonus,
   getEmployeeSkills,
+  getPowerBreakdown,
   getContractProgress,
   getComboHintCells,
   getEmployeeAssignedToCell,
@@ -281,6 +282,7 @@ export default function RefineryScreen() {
   // ...}) on this branch, and the old always-expanded Buy/Sell button
   // pair). Starts collapsed.
   const [tradePanelOpen, setTradePanelOpen] = useState(false)
+  const [powerPanelOpen, setPowerPanelOpen] = useState(false)
   const toggleTradePanel = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setTradePanelOpen((v) => !v)
@@ -363,6 +365,9 @@ export default function RefineryScreen() {
   // Colour a 0–100 meter (ESG / morale) by health: red danger, orange warning.
   const meterColorStyle = (v: number) =>
     v < 40 ? styles.meterDanger : v < 60 ? styles.meterWarn : styles.meterGood
+  // Power (electricity) supply-vs-demand breakdown for the power sheet.
+  const powerBd = getPowerBreakdown(derived.buildingCounts)
+  const hasPowerInfo = powerBd.supply > 0 || powerBd.demand > 0
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
@@ -710,17 +715,21 @@ export default function RefineryScreen() {
             </Text>
             <Text style={styles.flowUnit}>{t(text.hud.net)}{t(text.hud.perMin)}</Text>
           </View>
-          <View style={styles.flowItem}>
+          <Pressable
+            style={styles.flowItem}
+            disabled={!hasPowerInfo}
+            onPress={() => setPowerPanelOpen(true)}
+          >
             <GameIcon name="gas" size={15} />
             {gasPowerStarved ? (
-              <Text style={styles.flowWarn} numberOfLines={1}>⚡ {t(text.hud.lowPower)}</Text>
+              <Text style={styles.flowWarn} numberOfLines={1}>⚡ {t(text.hud.lowPower)} ⓘ</Text>
             ) : (
               <>
                 <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
-                <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
+                <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}{hasPowerInfo ? ' ⚡ⓘ' : ''}</Text>
               </>
             )}
-          </View>
+          </Pressable>
           {/* Season price forecast — gasoline's seasonal price direction + ETA
               to the next peak/trough, so buy/sell timing is readable at a glance. */}
           <View style={styles.flowItem}>
@@ -928,6 +937,59 @@ export default function RefineryScreen() {
                 </>
               )}
                 </ScrollView>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* ── Power breakdown sheet — where the electricity goes ──────────── */}
+        <Modal visible={powerPanelOpen} transparent animationType="fade" onRequestClose={() => setPowerPanelOpen(false)}>
+          <Pressable style={styles.tradeModalBackdrop} onPress={() => setPowerPanelOpen(false)}>
+            <View style={styles.tradeModalAnchor}>
+              <Pressable style={styles.tradePanel} onPress={(e) => e.stopPropagation()}>
+                <Text style={styles.powerTitle}>{t(text.hud.powerSheetTitle)}</Text>
+                {/* Supply vs demand summary */}
+                <View style={styles.powerSummaryRow}>
+                  <View style={styles.powerSummaryCol}>
+                    <Text style={styles.powerSummaryVal}>{powerBd.supply}</Text>
+                    <Text style={styles.powerSummaryLbl}>{t(text.hud.powerSupply)}</Text>
+                  </View>
+                  <Text style={styles.powerSummaryVs}>vs</Text>
+                  <View style={styles.powerSummaryCol}>
+                    <Text style={[styles.powerSummaryVal, powerBd.demand > powerBd.supply && powerBd.supply > 0 && styles.meterDanger]}>{powerBd.demand}</Text>
+                    <Text style={styles.powerSummaryLbl}>{t(text.hud.powerDemand)}</Text>
+                  </View>
+                </View>
+                {powerBd.supply > 0 && powerBd.demand > powerBd.supply ? (
+                  <Text style={styles.powerDeficit}>{t(text.hud.powerDeficit(Math.round((powerBd.supply / powerBd.demand) * 100)))}</Text>
+                ) : powerBd.supply > 0 ? (
+                  <Text style={styles.powerCovered}>{t(text.hud.powerCovered)}</Text>
+                ) : (
+                  <Text style={styles.powerHint}>{t(text.hud.powerNoPlant)}</Text>
+                )}
+                <View style={styles.tradeDivider} />
+                {/* Per-plant-type consumption, biggest draw first */}
+                {powerBd.rows.length === 0 ? (
+                  <Text style={styles.powerHint}>{t(text.hud.powerNoDraw)}</Text>
+                ) : (
+                  powerBd.rows.map((row) => {
+                    const share = powerBd.demand > 0 ? row.total / powerBd.demand : 0
+                    return (
+                      <View key={row.buildingKey} style={styles.powerRow}>
+                        <Text style={styles.powerRowName} numberOfLines={1}>
+                          {t(BUILDINGS[row.buildingKey].name)} ×{row.count}
+                        </Text>
+                        <View style={styles.powerBarTrack}>
+                          <View style={[styles.powerBarFill, { width: `${Math.round(share * 100)}%` }]} />
+                        </View>
+                        <Text style={styles.powerRowVal}>{row.total}⚡</Text>
+                      </View>
+                    )
+                  })
+                )}
+                {powerBd.gasolineDraws && (
+                  <Text style={styles.powerGasNote}>{t(text.hud.powerGasNote)}</Text>
+                )}
               </Pressable>
             </View>
           </Pressable>
@@ -1950,6 +2012,22 @@ const styles = StyleSheet.create({
   meterGood: { color: '#7CE38B' },
   meterWarn: { color: '#F2C12E' },
   meterDanger: { color: '#FF6B5A' },
+  // Power breakdown sheet
+  powerTitle: { fontSize: 16, fontWeight: '900', color: colors.ink, textAlign: 'center', marginBottom: spacing.sm },
+  powerSummaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, marginBottom: spacing.xs },
+  powerSummaryCol: { alignItems: 'center' },
+  powerSummaryVal: { fontSize: 22, fontWeight: '900', color: colors.ink },
+  powerSummaryLbl: { fontSize: 9, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  powerSummaryVs: { fontSize: 12, color: colors.inkMuted, fontWeight: '700' },
+  powerDeficit: { fontSize: 12, fontWeight: '800', color: '#C4501E', textAlign: 'center', marginBottom: spacing.xs },
+  powerCovered: { fontSize: 12, fontWeight: '800', color: colors.green, textAlign: 'center', marginBottom: spacing.xs },
+  powerHint: { fontSize: 12, color: colors.inkMuted, textAlign: 'center', marginVertical: spacing.xs },
+  powerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 6 },
+  powerRowName: { fontSize: 12, fontWeight: '700', color: colors.ink, width: 120 },
+  powerBarTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: '#E6DECF', overflow: 'hidden' },
+  powerBarFill: { height: '100%', borderRadius: 4, backgroundColor: colors.orange },
+  powerRowVal: { fontSize: 12, fontWeight: '900', color: colors.ink, width: 44, textAlign: 'right' },
+  powerGasNote: { fontSize: 11, color: colors.inkMuted, fontStyle: 'italic', marginTop: spacing.xs },
   // Flow-rate strip — slim translucent bar under the resource dock
   // top set dynamically (= flowTop)
   flowStrip: {
