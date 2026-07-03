@@ -98,6 +98,12 @@ export const CALENDAR_BALANCE = {
   // Not tied to daysPerWeek (30 isn't a multiple of 7) -- intentional, this
   // is a flavor calendar, not a real one.
   daysPerMonth: 30,
+  // Grace period at the very start of a run before ANY hidden event can
+  // unlock. A fresh game begins at tick 0 = 00:00 (midnight), which instantly
+  // satisfies the "Midnight Oil" event (hour 0-1) and threw a "??? mystery"
+  // banner at the player before they'd done anything. One in-game day of quiet
+  // fixes that; the recurring midnight window still fires the next night.
+  hiddenEventGraceTicks: 1800,
 } as const
 
 export const EXPANSION_BALANCE = [

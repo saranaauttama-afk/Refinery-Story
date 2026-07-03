@@ -1570,6 +1570,9 @@ export function getNewlyUnlockedHiddenEvents(
   derived: DerivedStats,
   discovered: string[],
 ): HiddenEventConfig[] {
+  // Quiet grace window at the very start of a run so an event can't fire on
+  // tick 0 (a fresh game begins at midnight, instantly matching Midnight Oil).
+  if (game.tickCount < CALENDAR_BALANCE.hiddenEventGraceTicks) return []
   return HIDDEN_EVENTS.filter(
     (config) => !discovered.includes(config.key) && getIsHiddenEventConditionMet(config, game, derived),
   )

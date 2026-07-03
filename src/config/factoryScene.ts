@@ -12,33 +12,22 @@ import type { ImageSourcePropType } from 'react-native'
 export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/ground_day_1.png')
 
 // ── Background framing ──
-// The image is drawn with resizeMode:'cover' inside an over-sized box so it can
-// be nudged around without ever showing a blank edge.
+// The image is drawn at an EXPLICIT pixel size computed to always cover the
+// screen (using the painting's real aspect ratio), then centred and nudged.
+// This is deterministic on both native and web — no %-inset + transform tricks
+// that used to leave a black edge on device.
 //
-// BG_CROP_PCT      : trims the top & bottom by this % (shows the middle band).
-//                    Higher = more zoomed-in vertically.
-// BG_OVERSCAN_PCT  : extends the image past the LEFT & RIGHT screen edges by
-//                    this %, giving room to pan horizontally (see BG_OFFSET_X)
-//                    without exposing an empty edge. Raise it if a big
-//                    BG_OFFSET_X reveals a gap.
-// BG_OFFSET_X      : horizontal pan, in px. NEGATIVE moves the scene LEFT,
-//                    positive moves it RIGHT.
-export const BG_CROP_PCT = 12
-export const BG_OVERSCAN_PCT = 18
-export const BG_OFFSET_X = -92
-
-// BG_SCALE : zoom of the whole background. 1.0 = fills the screen exactly (the
-//            old behaviour). LESS than 1 zooms OUT (the painting looks smaller /
-//            more of it fits); e.g. 0.7 = 30% smaller. The scene auto-expands
-//            its draw box to match, so zooming out never exposes a blank edge.
-//            (Values >1 zoom in.)
-export const BG_SCALE = 0.7
+// BG_OFFSET_X : horizontal nudge, in px. NEGATIVE moves the scene LEFT, positive
+//               RIGHT. The draw box auto-widens by this much so the far edge is
+//               never uncovered.
+// BG_OFFSET_Y : vertical nudge, in px. NEGATIVE moves the scene UP (shows more
+//               of the lower land), positive DOWN.
+export const BG_OFFSET_X = -60
+export const BG_OFFSET_Y = 0
 
 // BG_PARALLAX : how much the background follows the grid when you pan. 0 = the
-//   bg is fixed (old behaviour); 1 = it moves 1:1 with the plants (locked
-//   together like one camera); values in between give a depth/parallax feel.
-//   Keep it modest so panning never drags the painting off its overscan and
-//   exposes a blank edge.
+//   bg is fixed; 1 = it moves 1:1 with the plants (one camera); in between gives
+//   a depth feel. Kept modest so panning stays within the offset slack.
 export const BG_PARALLAX = 0.5
 
 // ── Isometric grid placement ──

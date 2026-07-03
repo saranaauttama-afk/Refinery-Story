@@ -77,7 +77,7 @@ import {
 import StaffSkillList from '../../../src/components/StaffSkillList'
 import { isBoostActive, canActivateBoost } from '../../../src/hooks/useGameLoop'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
-import { FACTORY_BG, BG_CROP_PCT, BG_OVERSCAN_PCT, BG_OFFSET_X, BG_SCALE, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
+import { FACTORY_BG, BG_OFFSET_X, BG_OFFSET_Y, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
 
 
 // The cleaned diamond-ground renderer is now the live review surface for
@@ -314,11 +314,11 @@ export default function RefineryScreen() {
   // BG_PARALLAX so the whole scene pans together.
   const bgPanX      = useSharedValue(0)
   const bgPanY      = useSharedValue(0)
+  // Background transform: static framing offset + live parallax pan (no scale).
   const bgAnimStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: BG_OFFSET_X + bgPanX.value * BG_PARALLAX },
-      { translateY: bgPanY.value * BG_PARALLAX },
-      { scale: BG_SCALE },
+      { translateY: BG_OFFSET_Y + bgPanY.value * BG_PARALLAX },
     ],
   }))
 
@@ -338,7 +338,14 @@ export default function RefineryScreen() {
   // Extra % the bg box must extend past every edge so that, after BG_SCALE
   // shrinks the (cover-fitted) image, it still fully covers the screen. 0 at
   // scale 1; grows as you zoom out. Added on top of the crop/overscan framing.
-  const bgCoverPad  = Math.max(0, ((1 / BG_SCALE - 1) / 2) * 100)
+  // ── Background overscan ──
+  // The painting fills an over-sized box (each edge pushed out by bgOverscan px)
+  // with resizeMode:cover, so it always covers the screen. The box is nudged by
+  // BG_OFFSET_X/Y and the parallax pan via a translate — bgOverscan is sized to
+  // absorb the offset + a healthy pan range so no edge is ever exposed. NO
+  // scale transform (that was what shrank the image below cover, leaving the
+  // black band on device).
+  const bgOverscan = Math.abs(BG_OFFSET_X) + Math.abs(BG_OFFSET_Y) + 140
   // Where the yard background starts (absolute y within scene)
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
@@ -538,13 +545,7 @@ export default function RefineryScreen() {
           <Animated.Image
             source={FACTORY_BG}
             style={[
-              {
-                position: 'absolute',
-                top: `${-(BG_CROP_PCT + bgCoverPad)}%`,
-                bottom: `${-(BG_CROP_PCT + bgCoverPad)}%`,
-                left: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
-                right: `${-(BG_OVERSCAN_PCT + bgCoverPad)}%`,
-              },
+              { position: 'absolute', top: -bgOverscan, left: -bgOverscan, right: -bgOverscan, bottom: -bgOverscan },
               bgAnimStyle,
             ]}
             resizeMode="cover"
