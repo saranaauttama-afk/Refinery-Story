@@ -35,7 +35,12 @@ import {
 } from '../data/balance'
 
 export type AutoTradeSettings = {
-  enabled: boolean
+  enabled: boolean // master switch (the AUTO button)
+  // Per-stream on/off, gated under `enabled`. Let the player auto-buy crude but
+  // hand-sell gas, or auto-sell only some products. Missing = on (default).
+  crudeBuyEnabled: boolean
+  gasolineSellEnabled: boolean
+  productSellEnabled: Partial<Record<SellableProductKey, boolean>>
   buyThreshold: number // 0-100, % of maxCrudeStorage below which to top up
   sellThreshold: number // 0-100, % of maxGasolineStorage above which to sell down to
   // One threshold per secondary product (lubricants, jetFuel,
@@ -51,6 +56,11 @@ export type AutoTradeSettings = {
 }
 
 export const DEFAULT_PRODUCT_SELL_THRESHOLD = 80
+
+// Highest crude auto-buy threshold. At a literal 100% the top-up refilled every
+// tick, pinning crude to full (the "crude never drains" bug report). Capping
+// just under 100 guarantees a visible buy→drain cycle.
+export const CRUDE_BUY_THRESHOLD_MAX = 95
 
 // Maps each secondary product to the building that produces it (used to
 // gate auto-sell on "does the player actually have this plant") and to a
@@ -98,13 +108,17 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
   const stats = precomputedStats ?? calculateDerivedStats(current)
   let next = current
 
-  if (stats.maxCrudeStorage > 0) {
+  if (settings.crudeBuyEnabled && stats.maxCrudeStorage > 0) {
     const crudePct = (next.crudeOil / stats.maxCrudeStorage) * 100
-    if (crudePct < settings.buyThreshold) {
+    // Cap the effective buy threshold below 100 so crude always drains a little
+    // before the next top-up — at a literal 100% it refilled every tick and
+    // looked frozen (reported bug).
+    const effBuyThreshold = Math.min(settings.buyThreshold, CRUDE_BUY_THRESHOLD_MAX)
+    if (crudePct < effBuyThreshold) {
       // Overshoot to threshold + buffer (not exactly the threshold) so
       // crude visibly drains back down via production before the next
       // top-up, instead of being corrected to the same number every tick.
-      const targetPct = Math.min(100, settings.buyThreshold + AUTO_TRADE_BUFFER_PERCENT)
+      const targetPct = Math.min(100, effBuyThreshold + AUTO_TRADE_BUFFER_PERCENT)
       const targetCrude = Math.floor((targetPct / 100) * stats.maxCrudeStorage)
       const needed = Math.max(0, targetCrude - next.crudeOil)
       // Dynamic Market: auto-buy at the current spot price (no timing edge --
@@ -123,7 +137,7 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
     }
   }
 
-  if (stats.maxGasolineStorage > 0) {
+  if (settings.gasolineSellEnabled && stats.maxGasolineStorage > 0) {
     const gasolinePct = (next.gasoline / stats.maxGasolineStorage) * 100
     // B2: gasoline is the high-volume COMMODITY line — overproduced ~4x vs what
     // the market absorbs, and its margin is thin (downstream carries the profit).
@@ -165,6 +179,7 @@ export function applyAutoTrade(current: GameState, settings: AutoTradeSettings, 
   // it, and showing an active threshold for it would be confusing UI
   // noise on top of being a no-op.
   for (const product of SELLABLE_PRODUCTS) {
+    if (settings.productSellEnabled[product.key] === false) continue // per-product off
     const plantBuilding = PRODUCT_PLANT_BUILDING[product.key]
     if ((stats.buildingCounts[plantBuilding] ?? 0) <= 0) continue
     const maxStorage = PRODUCT_MAX_STORAGE_KEY[product.key](stats)

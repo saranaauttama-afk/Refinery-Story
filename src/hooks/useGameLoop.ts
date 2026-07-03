@@ -168,12 +168,16 @@ import {
   tick,
   applyAutoTrade,
   DEFAULT_PRODUCT_SELL_THRESHOLD,
+  CRUDE_BUY_THRESHOLD_MAX,
   type AutoTradeSettings,
 } from '../game/utils/gameTick'
 
 const AUTO_TRADE_KEY = 'refinery-story-autotrade'
 const DEFAULT_AUTO_TRADE: AutoTradeSettings = {
   enabled: false,
+  crudeBuyEnabled: true,
+  gasolineSellEnabled: true,
+  productSellEnabled: {},
   buyThreshold: 20,
   sellThreshold: 80,
   productSellThresholds: {},
@@ -189,15 +193,27 @@ function sanitizeAutoTrade(value: unknown): AutoTradeSettings {
       ? (v.productSellThresholds as Partial<Record<SellableProductKey, unknown>>)
       : {}
   const productSellThresholds: Partial<Record<SellableProductKey, number>> = {}
+  const rawProductEnabled =
+    typeof v.productSellEnabled === 'object' && v.productSellEnabled !== null
+      ? (v.productSellEnabled as Partial<Record<SellableProductKey, unknown>>)
+      : {}
+  const productSellEnabled: Partial<Record<SellableProductKey, boolean>> = {}
   for (const product of SELLABLE_PRODUCTS) {
     const raw = rawProductThresholds[product.key]
     if (typeof raw === 'number' && Number.isFinite(raw)) {
       productSellThresholds[product.key] = clamp(raw, DEFAULT_PRODUCT_SELL_THRESHOLD)
     }
+    if (typeof rawProductEnabled[product.key] === 'boolean') {
+      productSellEnabled[product.key] = rawProductEnabled[product.key] as boolean
+    }
   }
   return {
     enabled: typeof v.enabled === 'boolean' ? v.enabled : DEFAULT_AUTO_TRADE.enabled,
-    buyThreshold: clamp(v.buyThreshold, DEFAULT_AUTO_TRADE.buyThreshold),
+    crudeBuyEnabled: typeof v.crudeBuyEnabled === 'boolean' ? v.crudeBuyEnabled : true,
+    gasolineSellEnabled: typeof v.gasolineSellEnabled === 'boolean' ? v.gasolineSellEnabled : true,
+    productSellEnabled,
+    // Clamp crude buy threshold below 100 (the pinned-crude fix).
+    buyThreshold: Math.min(CRUDE_BUY_THRESHOLD_MAX, clamp(v.buyThreshold, DEFAULT_AUTO_TRADE.buyThreshold)),
     sellThreshold: clamp(v.sellThreshold, DEFAULT_AUTO_TRADE.sellThreshold),
     productSellThresholds,
   }

@@ -529,6 +529,17 @@ export default function RefineryScreen() {
     { key: 'plasticPellets',   label: 'Pellets',     color: colors.teal },
   ]
 
+  // Inventory strip (bottom dock): crude + gas + every product the player has a
+  // plant for, each shown as have/max — so quantities are visible at a glance
+  // and a new product's row appears the moment its plant is built.
+  const inventoryItems: { key: string; label: string; color: string; have: number; max: number }[] = [
+    { key: 'crude', label: 'Crude', color: colors.goldDark, have: game.crudeOil, max: derived.maxCrudeStorage },
+    { key: 'gasoline', label: 'Gas', color: colors.orange, have: game.gasoline, max: derived.maxGasolineStorage },
+    ...products
+      .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
+      .map((p) => ({ key: p.key, label: p.label, color: p.color, have: game.productInventory[p.key] ?? 0, max: PRODUCT_MAX_STORAGE(derived, p.key) })),
+  ]
+
   const safeGame    = game
   const safeDerived = derived
 
@@ -793,10 +804,25 @@ export default function RefineryScreen() {
         {/* ── Action Dock — gasoline context + AUTO badge + trade toggle ── */}
         {/* Sits just above the persistent BottomNav (height 56 + safe-area). */}
         <View style={[styles.actionDock, { bottom: 66 + insets.bottom }]} pointerEvents="box-none">
-          <View style={styles.actionDockLeft}>
-            <Text style={styles.actionDockVal}>⛽ {game.gasoline}/{derived.maxGasolineStorage}</Text>
-            <Text style={styles.actionDockLabel}>Gasoline</Text>
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.invStrip}
+            contentContainerStyle={styles.invStripContent}
+          >
+            {inventoryItems.map((item) => {
+              const full = item.max > 0 && item.have >= item.max
+              return (
+                <View key={item.key} style={styles.invChip}>
+                  <View style={[styles.invDot, { backgroundColor: item.color }]} />
+                  <View>
+                    <Text style={[styles.invVal, full && styles.invValFull]}>{item.have}/{item.max}</Text>
+                    <Text style={styles.invLabel}>{item.label}</Text>
+                  </View>
+                </View>
+              )
+            })}
+          </ScrollView>
           <View style={styles.actionDockRight}>
             {autoTrade.enabled && (
               <View style={styles.autoBadge}>
@@ -891,19 +917,31 @@ export default function RefineryScreen() {
               {autoTrade.enabled && (
                 <>
                   <View style={styles.thresholdRow}>
-                    <Text style={styles.thresholdLabel}>Buy crude below {autoTrade.buyThreshold}%</Text>
+                    <Switch
+                      style={styles.rowSwitch}
+                      value={autoTrade.crudeBuyEnabled}
+                      onValueChange={(v) => updateAutoTrade({ crudeBuyEnabled: v })}
+                      trackColor={{ false: colors.creamBorder, true: colors.green }}
+                    />
+                    <Text style={[styles.thresholdLabel, !autoTrade.crudeBuyEnabled && styles.thresholdLabelOff]}>Buy crude below {autoTrade.buyThreshold}%</Text>
                     <View style={styles.stepper}>
                       <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}>
                         <Text style={styles.stepperLabel}>−</Text>
                       </Pressable>
                       <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
-                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.min(100, autoTrade.buyThreshold + 5) })}>
+                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.min(95, autoTrade.buyThreshold + 5) })}>
                         <Text style={styles.stepperLabel}>+</Text>
                       </Pressable>
                     </View>
                   </View>
                   <View style={styles.thresholdRow}>
-                    <Text style={styles.thresholdLabel}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
+                    <Switch
+                      style={styles.rowSwitch}
+                      value={autoTrade.gasolineSellEnabled}
+                      onValueChange={(v) => updateAutoTrade({ gasolineSellEnabled: v })}
+                      trackColor={{ false: colors.creamBorder, true: colors.green }}
+                    />
+                    <Text style={[styles.thresholdLabel, !autoTrade.gasolineSellEnabled && styles.thresholdLabelOff]}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
                     <View style={styles.stepper}>
                       <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}>
                         <Text style={styles.stepperLabel}>−</Text>
@@ -925,9 +963,16 @@ export default function RefineryScreen() {
                     .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
                     .map((p) => {
                       const threshold = autoTrade.productSellThresholds[p.key] ?? 80
+                      const on = autoTrade.productSellEnabled[p.key] !== false
                       return (
                         <View key={p.key} style={styles.thresholdRow}>
-                          <Text style={styles.thresholdLabel}>
+                          <Switch
+                            style={styles.rowSwitch}
+                            value={on}
+                            onValueChange={(v) => updateAutoTrade({ productSellEnabled: { ...autoTrade.productSellEnabled, [p.key]: v } })}
+                            trackColor={{ false: colors.creamBorder, true: colors.green }}
+                          />
+                          <Text style={[styles.thresholdLabel, !on && styles.thresholdLabelOff]}>
                             Sell {p.label.toLowerCase()} above {threshold}%
                           </Text>
                           <View style={styles.stepper}>
@@ -2160,6 +2205,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  invStrip: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  invStripContent: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingRight: spacing.sm,
+  },
+  invChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  invDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  invVal: {
+    fontSize: 12.5,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  invValFull: {
+    color: '#F2C12E',
+  },
+  invLabel: {
+    fontSize: 8,
+    color: '#6B8099',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   actionDockRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2434,6 +2512,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.inkMuted,
     paddingRight: spacing.sm,
+  },
+  thresholdLabelOff: {
+    opacity: 0.4,
+  },
+  rowSwitch: {
+    transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }],
+    marginRight: 2,
   },
   stepper: {
     flexDirection: 'row',

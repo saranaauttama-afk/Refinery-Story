@@ -116,6 +116,9 @@ function workOrders(g: GameState): GameState {
 
 const autoTrade: AutoTradeSettings = {
   enabled: true,
+  crudeBuyEnabled: true,
+  gasolineSellEnabled: true,
+  productSellEnabled: {},
   buyThreshold: 35,
   sellThreshold: 80,
   productSellThresholds: {},
