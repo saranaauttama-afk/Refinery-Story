@@ -21,6 +21,7 @@ import {
   PRODUCTION_BALANCE,
   REPUTATION_TIER_BALANCE,
   SEASONAL_BALANCE,
+  SAFETY_NET_BALANCE,
   STAFF_LEVEL_BALANCE,
   STAFF_SKILL_BALANCE,
   STARTING_BALANCE,
@@ -1248,6 +1249,35 @@ export function getCrudeMarketMultiplier(tickCount: number): number {
 // shipments keep their own fixed pre-negotiated prices.
 export function getCrudePrice(tickCount: number): number {
   return Math.max(1, Math.round(ECONOMY_BALANCE.crudeCost * getCrudeMarketMultiplier(tickCount)))
+}
+
+// Anti-bankruptcy safety net (see SAFETY_NET_BALANCE). Detects the one truly
+// unrecoverable state -- no crude, no feedstock, no gasoline, no products, and
+// too little cash to buy even a single barrel -- and, only then, restores just
+// enough crude + cash to restart the production loop. Pure; returns whether it
+// fired so the caller can surface a one-off banner. Never triggers in normal
+// play, so it can't be farmed and doesn't affect balance.
+export function applyBankruptcySafetyNet(
+  game: GameState,
+  stats: DerivedStats,
+): { game: GameState; triggered: boolean } {
+  const crudePrice = getCrudePrice(game.tickCount)
+  const hasProducts = Object.values(game.productInventory).some((v) => v > 0)
+  const stuck =
+    game.money < crudePrice &&
+    game.crudeOil <= 0 &&
+    game.feedstock <= 0 &&
+    game.gasoline <= 0 &&
+    !hasProducts
+  if (!stuck) return { game, triggered: false }
+  return {
+    game: {
+      ...game,
+      money: Math.max(game.money, SAFETY_NET_BALANCE.moneyGrant),
+      crudeOil: Math.min(stats.maxCrudeStorage, SAFETY_NET_BALANCE.crudeGrant),
+    },
+    triggered: true,
+  }
 }
 
 // A product's current demand-saturation level (1.0 = full price), clamped to

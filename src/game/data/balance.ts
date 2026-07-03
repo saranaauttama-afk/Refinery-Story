@@ -135,6 +135,19 @@ export const STARTING_BALANCE = {
   reputation: 0,
 } as const
 
+// Anti-bankruptcy safety net. A new (or unlucky) player can dead-end the game
+// with a single bad early buy: spend all cash on crude/a wrong building, run
+// that crude out, and end up with no crude, no gasoline, no products, and less
+// money than one barrel of crude costs -- with no crude there is nothing to
+// refine, so no gasoline to sell, so no way to ever earn again. When that exact
+// rock-bottom state is detected, grant a one-off relief that restarts the
+// production loop. Tuned to only ever fire at true zero, so it never distorts
+// normal play (the balance sim never triggers it).
+export const SAFETY_NET_BALANCE = {
+  moneyGrant: 100, // top cash up to at least this so crude is affordable again
+  crudeGrant: 5,   // and hand back a little crude so production resumes at once
+} as const
+
 // --- Dynamic Market (Roadmap feature 1) ---
 // Crude spot price swings on a deterministic wave (replayable, derived from
 // tickCount) so buying is a timing decision: stockpile when cheap. Each

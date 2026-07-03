@@ -21,6 +21,7 @@ import {
   applyChoiceEventOption,
   applyMilestones,
   applyMoraleDrift,
+  applyBankruptcySafetyNet,
   applyRandomEvent,
   applyShipmentArrivals,
   applyStaffXp,
@@ -461,6 +462,24 @@ export function useGameLoop() {
         // wall-clock timer.
         if (next.pendingShipments.length > 0) {
           next = applyShipmentArrivals(next)
+        }
+
+        // Anti-bankruptcy safety net: if the player is truly stuck (no crude,
+        // no gasoline, no products, no cash, and nothing inbound), hand back
+        // just enough to restart production so a bad early buy can't dead-end
+        // the game. Skipped while crude is en route (recovery is already
+        // coming). Only fires at absolute rock bottom, so it never affects
+        // normal balance.
+        if (next.pendingShipments.length === 0) {
+          const relief = applyBankruptcySafetyNet(next, derivedForTick)
+          if (relief.triggered) {
+            next = { ...relief.game, activityLog: addLog(relief.game.activityLog, '🆘 Emergency subsidy — your refinery was out of crude and cash.') }
+            setPendingMilestoneHeadline({
+              icon: '🆘',
+              title: 'Emergency Subsidy',
+              body: 'Out of crude and cash — a relief grant restarts your refinery. Sell gasoline to get back on your feet.',
+            })
+          }
         }
 
         if (shouldFireRandomEvent(next)) {
