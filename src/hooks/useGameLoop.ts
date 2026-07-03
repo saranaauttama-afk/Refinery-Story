@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   AwardRecord,
   BuildingType,
@@ -1305,6 +1305,11 @@ export function useGameLoop() {
     setSpeed((s) => (s >= 3 ? 0 : s + 1))
   }, [])
 
+  // calculateDerivedStats is the hot per-tick computation. Memoise on `game` so
+  // it only recomputes when game state actually changes (each tick), not on
+  // every unrelated re-render of a consumer/provider.
+  const derived = useMemo(() => (game ? calculateDerivedStats(game) : null), [game])
+
   return {
     game,
     loaded,
@@ -1315,7 +1320,7 @@ export function useGameLoop() {
     updateAutoTrade,
     flowRates,
     moneyHistory,
-    derived: game ? calculateDerivedStats(game) : null,
+    derived,
     pendingChoiceEvent,
     pendingAward,
     pendingEraBanner,

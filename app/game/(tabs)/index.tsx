@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -322,6 +322,23 @@ export default function RefineryScreen() {
     ],
   }))
 
+  // Stable across ticks (game.grid ref only changes on a build op) so the
+  // memoised grid cells don't re-render every tick just because this callback
+  // was recreated. MUST stay above the early return below (hook order / #310).
+  const gameGrid = game?.grid
+  const handleCellPress = useCallback((index: number) => {
+    if (!game) return
+    if (gridEditMode) {
+      if (gridEditMode.type === 'move') moveBuilding(gridEditMode.fromIndex, index)
+      else                               swapBuildings(gridEditMode.fromIndex, index)
+      setGridEditMode(null)
+      return
+    }
+    if (game.grid[index] === null) setPickerCell(index)
+    else                           setInfoCell(index)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridEditMode, gameGrid, moveBuilding, swapBuildings])
+
   if (!loaded || !game || !derived) {
     return (
       <SafeAreaView style={styles.loadingScreen}>
@@ -482,16 +499,6 @@ export default function RefineryScreen() {
   // Nudge dot on the More Info toggle when a hidden meter needs attention.
   const secondaryAlert = game.esgScore < 40 || game.staffMorale < 40
 
-  const handleCellPress = (index: number) => {
-    if (gridEditMode) {
-      if (gridEditMode.type === 'move') moveBuilding(gridEditMode.fromIndex, index)
-      else                               swapBuildings(gridEditMode.fromIndex, index)
-      setGridEditMode(null)
-      return
-    }
-    if (game.grid[index] === null) setPickerCell(index)
-    else                           setInfoCell(index)
-  }
 
   const upgradeCost                = getUpgradeCost(game.refineryLevel)
   const upgradeProductionRequired  = getUpgradeProductionRequirement(game.refineryLevel)

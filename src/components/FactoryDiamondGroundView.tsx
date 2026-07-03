@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { ImageSourcePropType } from 'react-native'
 import Svg, { Polygon } from 'react-native-svg'
@@ -223,6 +224,109 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
+// One grid tile, memoised so it only re-renders when ITS OWN props change.
+// The parent re-runs every game tick (200ms); without this, all 121 tiles
+// (SVGs + plant sprites + smoke) reconciled every tick, which is what made
+// panning stutter once the yard filled up. Props are kept primitive (worker
+// TYPE not the employee object, a stable onCellPress) so the shallow compare
+// actually skips: empty '+' tiles and steady plants no longer re-render — only
+// a tile whose smoke/synergy/level/worker just changed does.
+type DiamondCellProps = {
+  variant: 'disabled' | 'empty' | 'built'
+  index: number
+  x: number
+  y: number
+  zIndex: number
+  isComboHint?: boolean
+  cell?: BuildingType
+  level?: number
+  isSmoking?: boolean
+  synergy?: string | null
+  workerType?: string | null
+  debugLabel?: string
+  onCellPress?: (index: number) => void
+}
+
+const DiamondCell = memo(function DiamondCell({
+  variant, index, x, y, zIndex, isComboHint, cell, level = 1,
+  isSmoking, synergy, workerType, debugLabel, onCellPress,
+}: DiamondCellProps) {
+  if (variant === 'disabled') {
+    return (
+      <View style={[styles.cell, { left: x, top: y, zIndex }]}>
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="rgba(225, 215, 192, 0.36)" stroke="rgba(145, 126, 93, 0.18)" strokeWidth={1} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, DISABLED_INSET_X, DISABLED_INSET_Y)} fill="rgba(245, 239, 227, 0.22)" stroke="rgba(148, 128, 95, 0.12)" strokeWidth={0.8} />
+        </Svg>
+        {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabelDisabled}>{debugLabel}</Text> : null}
+      </View>
+    )
+  }
+
+  if (variant === 'empty') {
+    return (
+      <Pressable onPress={() => onCellPress?.(index)} style={[styles.cell, { left: x, top: y, zIndex }]}>
+        {SHOW_GRID || isComboHint ? (
+          <>
+            <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
+              <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'} stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'} strokeWidth={1} />
+            </Svg>
+            <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
+          </>
+        ) : null}
+        {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+      </Pressable>
+    )
+  }
+
+  // built
+  const category = BUILDING_CATEGORY_BY_TYPE[cell!]
+  const accentColor = BUILDING_CATEGORY_ACCENT[category]
+  const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
+  const code = BUILDINGS[cell!].shortName
+  const plantImage = getPlantImageSpec(cell!, level)
+  const plantImageWidth = PLANT_IMAGE_WIDTH * PLANT_IMAGE_SCALE
+  const plantImageHeight = plantImage ? plantImageWidth / plantImage.aspectRatio : 0
+  const plantImageLeft = (TILE_WIDTH - plantImageWidth) / 2
+
+  return (
+    <Pressable onPress={() => onCellPress?.(index)} style={[styles.cell, { left: x, top: y, zIndex }]}>
+      {!SHOW_GRID ? null : plantImage ? (
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill="rgba(238, 229, 211, 0.18)" stroke="rgba(148, 128, 95, 0.16)" strokeWidth={1} />
+        </Svg>
+      ) : (
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)} fill={surfaceColor} stroke={accentColor} strokeWidth={1.1} />
+        </Svg>
+      )}
+      {synergy ? (
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT} style={styles.auraSvg}>
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={synergy === 'bonus' ? 'rgba(124,179,66,0.22)' : 'rgba(232,131,58,0.22)'} stroke={synergy === 'bonus' ? '#7CB342' : '#E8833A'} strokeWidth={2.5} strokeLinejoin="round" />
+        </Svg>
+      ) : null}
+      {plantImage ? (
+        <Image source={plantImage.source} style={[styles.plantImage, { width: plantImageWidth, height: plantImageHeight, left: plantImageLeft }]} resizeMode="contain" />
+      ) : (
+        <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
+      )}
+      {isSmoking ? (
+        <PlantSmoke width={TILE_WIDTH} topY={TILE_HEIGHT - (plantImage ? plantImageHeight : TILE_HEIGHT) + 8 * TILE_SCALE} color={SMOKE_COLOR_BY_CATEGORY[category] ?? SMOKE_COLOR_BY_CATEGORY.production} />
+      ) : null}
+      {SHOW_DEBUG_LABELS && !plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+      {!plantImage ? (
+        <View style={styles.levelBadge}><Text style={styles.levelText}>L{level}</Text></View>
+      ) : null}
+      {workerType ? (
+        <View style={styles.staffBadge}><GameIcon name={`worker-${workerType}`} size={STAFF_BADGE_ICON} /></View>
+      ) : null}
+    </Pressable>
+  )
+})
+
 function FactoryDiamondGroundView({
   game,
   derived,
@@ -239,67 +343,56 @@ function FactoryDiamondGroundView({
   panOutX,
   panOutY,
 }: FactoryDiamondGroundViewProps) {
-  const activeCols = Math.round(Math.sqrt(grid.length))
-  const activeRows = activeCols
-  const displayCols = Math.max(displayGridSize ?? activeCols, activeCols)
-  const displayRows = displayCols
-  const anchorCols = Math.min(anchorGridSize ?? activeCols, displayCols)
-  const anchorRows = anchorCols
-  const anchoredRowOffset = Math.floor((displayRows - anchorRows) / 2)
-  const activeRowOffset = Math.max(0, anchoredRowOffset - ACTIVE_ROW_BIAS)
-  const anchoredColOffset = Math.floor((displayCols - anchorCols) / 2)
-  const activeColOffset = Math.max(0, anchoredColOffset - ACTIVE_COL_BIAS)
+  // Grid geometry only depends on the layout inputs (grid size, container,
+  // offsets) — none of which change on a normal game tick — so memoise the
+  // whole 121-tile layout + world/viewport/pan-bounds math to stop it churning
+  // every 200ms while the economy ticks.
+  const layout = useMemo(() => {
+    const activeCols = Math.round(Math.sqrt(grid.length))
+    const activeRows = activeCols
+    const displayCols = Math.max(displayGridSize ?? activeCols, activeCols)
+    const displayRows = displayCols
+    const anchorCols = Math.min(anchorGridSize ?? activeCols, displayCols)
+    const anchorRows = anchorCols
+    const anchoredRowOffset = Math.floor((displayRows - anchorRows) / 2)
+    const activeRowOffset = Math.max(0, anchoredRowOffset - ACTIVE_ROW_BIAS)
+    const anchoredColOffset = Math.floor((displayCols - anchorCols) / 2)
+    const activeColOffset = Math.max(0, anchoredColOffset - ACTIVE_COL_BIAS)
 
-  const tileLayouts = Array.from({ length: displayCols * displayRows }, (_, displayIndex) => {
-    const row = Math.floor(displayIndex / displayCols)
-    const col = displayIndex % displayCols
-    const x = isoX(row, col, displayRows)
-    const y = isoY(row, col)
-    const withinActiveRows = row >= activeRowOffset && row < activeRowOffset + activeRows
-    const withinActiveCols = col >= activeColOffset && col < activeColOffset + activeCols
-    const activeIndex =
-      withinActiveRows && withinActiveCols
-        ? (row - activeRowOffset) * activeCols + (col - activeColOffset)
-        : null
+    const tileLayouts = Array.from({ length: displayCols * displayRows }, (_, displayIndex) => {
+      const row = Math.floor(displayIndex / displayCols)
+      const col = displayIndex % displayCols
+      const x = isoX(row, col, displayRows)
+      const y = isoY(row, col)
+      const withinActiveRows = row >= activeRowOffset && row < activeRowOffset + activeRows
+      const withinActiveCols = col >= activeColOffset && col < activeColOffset + activeCols
+      const activeIndex =
+        withinActiveRows && withinActiveCols
+          ? (row - activeRowOffset) * activeCols + (col - activeColOffset)
+          : null
+      return { displayIndex, row, col, diagonal: row + col, x, y, right: x + TILE_WIDTH, bottom: y + TILE_HEIGHT, activeIndex }
+    })
 
-    return {
-      displayIndex,
-      row,
-      col,
-      diagonal: row + col,
-      x,
-      y,
-      right: x + TILE_WIDTH,
-      bottom: y + TILE_HEIGHT,
-      activeIndex,
-    }
-  })
+    const visibleTiles = tileLayouts.filter((tile) => tile.diagonal >= TOP_CUT_DIAGONALS)
+    const minX = Math.min(...visibleTiles.map((tile) => tile.x))
+    const maxX = Math.max(...visibleTiles.map((tile) => tile.right))
+    const minY = Math.min(...visibleTiles.map((tile) => tile.y))
+    const maxY = Math.max(...visibleTiles.map((tile) => tile.bottom))
+    const worldWidth = maxX - minX
+    const worldHeight = maxY - minY
+    const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
+    const baseMapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
+    const mapHeight = baseMapHeight + contentOffsetY
+    const offsetX = (mapWidth - worldWidth) / 2 - minX
+    const offsetY = (baseMapHeight - worldHeight) / 2 - minY + contentOffsetY
+    const vpWidth = containerWidth
+    const vpHeight = viewportHeight ?? mapHeight
+    const minPanX = Math.min(0, vpWidth - mapWidth)
+    const minPanY = Math.min(0, vpHeight - mapHeight)
+    return { activeCols, visibleTiles, offsetX, offsetY, mapWidth, mapHeight, vpWidth, vpHeight, minPanX, maxPanX: 0, minPanY, maxPanY: 0 }
+  }, [grid.length, displayGridSize, anchorGridSize, containerWidth, viewportHeight, contentOffsetY])
 
-  const visibleTiles = tileLayouts.filter((tile) => tile.diagonal >= TOP_CUT_DIAGONALS)
-  const minX = Math.min(...visibleTiles.map((tile) => tile.x))
-  const maxX = Math.max(...visibleTiles.map((tile) => tile.right))
-  const minY = Math.min(...visibleTiles.map((tile) => tile.y))
-  const maxY = Math.max(...visibleTiles.map((tile) => tile.bottom))
-  const worldWidth = maxX - minX
-  const worldHeight = maxY - minY
-  const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
-  // The map is made taller by contentOffsetY and the grid is pushed into its
-  // lower part, so the grid sits `contentOffsetY` px down from the top of the
-  // (full-height) viewport while every cell stays inside the map's touch bounds.
-  const baseMapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
-  const mapHeight = baseMapHeight + contentOffsetY
-  const offsetX = (mapWidth - worldWidth) / 2 - minX
-  const offsetY = (baseMapHeight - worldHeight) / 2 - minY + contentOffsetY
-
-  // Viewport: container clips the world. If viewportHeight not given, show full world.
-  const vpWidth = containerWidth
-  const vpHeight = viewportHeight ?? mapHeight
-
-  // Pan bounds: how far world can move (negative = world moved left/up)
-  const minPanX = Math.min(0, vpWidth - mapWidth)
-  const maxPanX = 0
-  const minPanY = Math.min(0, vpHeight - mapHeight)
-  const maxPanY = 0
+  const { activeCols, visibleTiles, offsetX, offsetY, mapWidth, mapHeight, vpWidth, vpHeight, minPanX, maxPanX, minPanY, maxPanY } = layout
 
   // Shared values for pan offset
   const translateX = useSharedValue((minPanX + maxPanX) / 2)
@@ -353,152 +446,52 @@ function FactoryDiamondGroundView({
         <Animated.View style={[styles.map, { width: mapWidth, height: mapHeight }, animatedStyle]}>
           {visibleTiles.map((tile) => {
             const activeIndex = tile.activeIndex
-            const isDisabled = activeIndex === null
-            const cell = activeIndex === null ? null : grid[activeIndex]
-            const debugLabel = `${tile.row + 1},${tile.col + 1}`
             const x = tile.x + offsetX
             const y = tile.y + offsetY
             const zIndex = 10 + tile.row + tile.col
+            const debugLabel = `${tile.row + 1},${tile.col + 1}`
 
-            if (isDisabled) {
+            if (activeIndex === null) {
               if (!SHOW_SHELL) return null // only the active grid is drawn
               return (
-                <View key={`disabled-${tile.displayIndex}`} style={[styles.cell, { left: x, top: y, zIndex }]}>
-                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                    <Polygon
-                      points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)}
-                      fill="rgba(225, 215, 192, 0.36)"
-                      stroke="rgba(145, 126, 93, 0.18)"
-                      strokeWidth={1}
-                    />
-                    <Polygon
-                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, DISABLED_INSET_X, DISABLED_INSET_Y)}
-                      fill="rgba(245, 239, 227, 0.22)"
-                      stroke="rgba(148, 128, 95, 0.12)"
-                      strokeWidth={0.8}
-                    />
-                  </Svg>
-                  {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabelDisabled}>{debugLabel}</Text> : null}
-                </View>
+                <DiamondCell key={`disabled-${tile.displayIndex}`} variant="disabled" index={tile.displayIndex} x={x} y={y} zIndex={zIndex} debugLabel={debugLabel} />
               )
             }
 
+            const cell = grid[activeIndex]
             if (!cell) {
-              const isComboHint = comboHintCells.includes(activeIndex)
-            return (
-                <Pressable
-                  key={activeIndex}
-                  onPress={() => onCellPress?.(activeIndex)}
-                  style={[styles.cell, { left: x, top: y, zIndex }]}
-                >
-                  {SHOW_GRID || isComboHint ? (
-                    <>
-                      <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                        <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
-                        <Polygon
-                          points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                          fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'}
-                          stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'}
-                          strokeWidth={1}
-                        />
-                      </Svg>
-                      <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
-                    </>
-                  ) : null}
-                  {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
-                </Pressable>
+              return (
+                <DiamondCell key={activeIndex} variant="empty" index={activeIndex} x={x} y={y} zIndex={zIndex}
+                  isComboHint={comboHintCells.includes(activeIndex)} debugLabel={debugLabel} onCellPress={onCellPress} />
               )
             }
 
             const category = BUILDING_CATEGORY_BY_TYPE[cell]
-            const accentColor = BUILDING_CATEGORY_ACCENT[category]
-            const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
-            const code = BUILDINGS[cell].shortName
-            const level = gridLevels[activeIndex] ?? 1
-            const plantImage = getPlantImageSpec(cell, level)
-            // Sprite drawn at PLANT_IMAGE_SCALE of the tile width, bottom-centred
-            // on the tile (tile/grid/tap area stay full size).
-            const plantImageWidth = PLANT_IMAGE_WIDTH * PLANT_IMAGE_SCALE
-            const plantImageHeight = plantImage ? plantImageWidth / plantImage.aspectRatio : 0
-            const plantImageLeft = (TILE_WIDTH - plantImageWidth) / 2
-            // Staffed indicator: a worker badge on plants that have a specialist
-            // assigned, so you can tell staffed from idle plants at a glance.
+            // Per-tick data the memoised cell needs, kept primitive so its
+            // shallow compare skips unchanged tiles: smoke (production state),
+            // synergy, and the assigned worker's TYPE (not the employee object).
             const assignedWorker = cellAcceptsSpecialist(cell) ? getEmployeeAssignedToCell(game, activeIndex) : null
-            // Synergy aura: green = positive adjacency pair, orange = layout penalty.
-            const synergy = getCellSynergy(grid, activeIndex)
-
-            // "Working" smoke: only for processing categories, and only when
-            // the plant has no blocking/idle/full status this tick (a null
-            // badge means it's genuinely humming). Gated on isActive so an
-            // out-of-crude refinery falls silent. Ties the cosmetic directly
-            // to real production state -- fix the shortage, smoke returns.
             const isSmoking =
               isActive &&
               SMOKING_CATEGORIES.has(category) &&
               getTileStatusBadge(cell, activeIndex, game, derived) === null
 
             return (
-              <Pressable
+              <DiamondCell
                 key={activeIndex}
-                onPress={() => onCellPress?.(activeIndex)}
-                style={[styles.cell, { left: x, top: y, zIndex }]}
-              >
-                {!SHOW_GRID ? null : plantImage ? (
-                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
-                    <Polygon
-                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                      fill="rgba(238, 229, 211, 0.18)"
-                      stroke="rgba(148, 128, 95, 0.16)"
-                      strokeWidth={1}
-                    />
-                  </Svg>
-                ) : (
-                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-                    <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
-                    <Polygon
-                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)}
-                      fill={surfaceColor}
-                      stroke={accentColor}
-                      strokeWidth={1.1}
-                    />
-                  </Svg>
-                )}
-                {synergy ? (
-                  <Svg width={TILE_WIDTH} height={TILE_HEIGHT} style={styles.auraSvg}>
-                    <Polygon
-                      points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)}
-                      fill={synergy === 'bonus' ? 'rgba(124,179,66,0.22)' : 'rgba(232,131,58,0.22)'}
-                      stroke={synergy === 'bonus' ? '#7CB342' : '#E8833A'}
-                      strokeWidth={2.5}
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                ) : null}
-                {plantImage ? (
-                  <Image source={plantImage.source} style={[styles.plantImage, { width: plantImageWidth, height: plantImageHeight, left: plantImageLeft }]} resizeMode="contain" />
-                ) : (
-                  <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
-                )}
-                {isSmoking ? (
-                  <PlantSmoke
-                    width={TILE_WIDTH}
-                    topY={TILE_HEIGHT - (plantImage ? plantImageHeight : TILE_HEIGHT) + 8 * TILE_SCALE}
-                    color={SMOKE_COLOR_BY_CATEGORY[category] ?? SMOKE_COLOR_BY_CATEGORY.production}
-                  />
-                ) : null}
-                {SHOW_DEBUG_LABELS && !plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
-                {!plantImage ? (
-                  <View style={styles.levelBadge}>
-                    <Text style={styles.levelText}>L{level}</Text>
-                  </View>
-                ) : null}
-                {assignedWorker ? (
-                  <View style={styles.staffBadge}>
-                    <GameIcon name={`worker-${assignedWorker.type}`} size={STAFF_BADGE_ICON} />
-                  </View>
-                ) : null}
-              </Pressable>
+                variant="built"
+                index={activeIndex}
+                x={x}
+                y={y}
+                zIndex={zIndex}
+                cell={cell}
+                level={gridLevels[activeIndex] ?? 1}
+                isSmoking={isSmoking}
+                synergy={getCellSynergy(grid, activeIndex)}
+                workerType={assignedWorker ? assignedWorker.type : null}
+                debugLabel={debugLabel}
+                onCellPress={onCellPress}
+              />
             )
           })}
         </Animated.View>
