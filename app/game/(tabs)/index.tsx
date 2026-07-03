@@ -395,6 +395,9 @@ export default function RefineryScreen() {
   // Power (electricity) supply-vs-demand breakdown for the power sheet.
   const powerBd = getPowerBreakdown(derived.buildingCounts)
   const hasPowerInfo = powerBd.supply > 0 || powerBd.demand > 0
+  // A real deficit only bites once a Power Plant exists and can't cover demand;
+  // pre-plant the demand is just informational (plants run unpowered).
+  const powerDeficit = derived.buildingCounts.powerPlant > 0 && powerBd.supply < powerBd.demand
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
@@ -783,11 +786,19 @@ export default function RefineryScreen() {
           >
             <GameIcon name="gas" size={15} />
             {gasPowerStarved ? (
-              <Text style={styles.flowWarn} numberOfLines={1}>⚡ {t(text.hud.lowPower)} ⓘ</Text>
+              <Text style={styles.flowWarn} numberOfLines={1}>⚡ {t(text.hud.lowPower)} {powerBd.supply}/{powerBd.demand} ⓘ</Text>
             ) : (
               <>
                 <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
-                <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}{hasPowerInfo ? ' ⚡ⓘ' : ''}</Text>
+                {hasPowerInfo ? (
+                  <Text style={styles.flowUnit} numberOfLines={1}>
+                    {'· ⚡'}
+                    <Text style={[styles.flowPowerNum, powerDeficit && styles.flowUnitDeficit]}>{powerBd.supply}/{powerBd.demand}</Text>
+                    {' ⓘ'}
+                  </Text>
+                ) : (
+                  <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
+                )}
               </>
             )}
           </Pressable>
@@ -2194,6 +2205,16 @@ const styles = StyleSheet.create({
     color: '#90A6BE',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  // Inline power supply/demand readout (x/x) in the gas flow item.
+  flowPowerNum: {
+    fontSize: 10,
+    fontFamily: fonts.heading,
+    color: '#DDE6F0',
+    letterSpacing: 0.2,
+  },
+  flowUnitDeficit: {
+    color: colors.orange,
   },
   // Goal banner — slim dark strip inside yard
   // top set dynamically (= goalTop)
