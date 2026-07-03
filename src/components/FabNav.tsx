@@ -15,6 +15,9 @@ export type FabNavItem = {
   icon: string
   label: string
   badge?: number
+  // When set, tapping the item runs this instead of navigating (e.g. the
+  // "Menu" button that opens the side drawer).
+  onPress?: () => void
 }
 
 // ── Single animated menu item ─────────────────────────────────────────────────

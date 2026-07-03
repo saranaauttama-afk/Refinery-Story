@@ -28,6 +28,7 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import DeliveryTruck from '../../../src/components/DeliveryTruck'
 import BottomNav from '../../../src/components/BottomNav'
 import { type FabNavItem } from '../../../src/components/FabNav'
+import SideMenu, { type SideMenuSection } from '../../../src/components/SideMenu'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
 import CrisisBanner from '../../../src/components/CrisisBanner'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
@@ -302,6 +303,7 @@ export default function RefineryScreen() {
     updateAutoTrade({ productSellThresholds: { ...autoTrade.productSellThresholds, [key]: next } })
   }
   const [secondaryOpen, setSecondaryOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
   // Drives the delivery-truck flyby on the yard: bump the counter on a trade
   // and stamp the direction (crude in / gasoline out).
@@ -464,13 +466,49 @@ export default function RefineryScreen() {
       (game.productInventory[pKey] as number) >= order.required
   }).length
 
+  // Bottom nav = the core always-visible tabs + a Menu button that opens the
+  // full grouped drawer. Less-used destinations (R&D, Company, Recruit) live in
+  // the drawer so the bar stays uncluttered.
   const FAB_ITEMS: FabNavItem[] = [
     { route: '/game',             icon: '🏭', label: t(text.nav.factory) },
     { route: '/game/contracts',   icon: '📋', label: t(text.nav.contracts), badge: contractsReady || undefined },
     { route: '/game/supply',      icon: '🛢',  label: t(text.nav.supply),    badge: standaloneReady || undefined },
     { route: '/game/staff',       icon: '👥', label: t(text.nav.staff),     badge: retiringStaff || undefined },
-    { route: '/game/research',    icon: '🔬', label: t(text.nav.research),  badge: researchReady || undefined },
-    { route: '/game/company',     icon: '🏢', label: t(text.nav.company) },
+    { route: '__menu', icon: '☰', label: t(text.nav.menu), badge: researchReady || undefined, onPress: () => setMenuOpen(true) },
+  ]
+  // Full navigation map for the side drawer — grouped and collapsible.
+  const MENU_SECTIONS: SideMenuSection[] = [
+    {
+      key: 'operations',
+      title: t(text.nav.groupOperations),
+      items: [
+        { route: '/game',           icon: '🏭', label: t(text.nav.factory), desc: t(text.nav.factoryDesc) },
+        { route: '/game/supply',    icon: '🛢',  label: t(text.nav.supply),  desc: t(text.nav.supplyDesc), badge: standaloneReady || undefined },
+      ],
+    },
+    {
+      key: 'business',
+      title: t(text.nav.groupBusiness),
+      items: [
+        { route: '/game/contracts', icon: '📋', label: t(text.nav.contracts), desc: t(text.nav.contractsDesc), badge: contractsReady || undefined },
+        { route: '/game/company',   icon: '🏢', label: t(text.nav.company),   desc: t(text.nav.companyDesc) },
+      ],
+    },
+    {
+      key: 'people',
+      title: t(text.nav.groupPeople),
+      items: [
+        { route: '/game/staff',     icon: '👥', label: t(text.nav.staff),   desc: t(text.nav.staffDesc), badge: retiringStaff || undefined },
+        { route: '/game/recruit',   icon: '🧑‍💼', label: t(text.nav.recruit), desc: t(text.nav.recruitDesc), badge: staffReady ? game.recruitmentPool.length : undefined },
+      ],
+    },
+    {
+      key: 'progress',
+      title: t(text.nav.groupProgress),
+      items: [
+        { route: '/game/research',  icon: '🔬', label: t(text.nav.research), desc: t(text.nav.researchDesc), badge: researchReady || undefined },
+      ],
+    },
   ]
   // The slow-moving meters live in the "More Info" sheet (one tap on the Rep
   // stat) so the always-on dock can stay focused on the core economic loop.
@@ -1589,6 +1627,9 @@ export default function RefineryScreen() {
 
       {/* ── Persistent bottom navigation ──────────────────────────────── */}
       <BottomNav items={FAB_ITEMS} />
+
+      {/* ── Grouped, collapsible side drawer (opened from the Menu tab) ── */}
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} sections={MENU_SECTIONS} />
 
     </SafeAreaView>
   )

@@ -28,6 +28,10 @@ export default function BottomNav({ items }: { items: FabNavItem[] }) {
             key={item.route}
             style={styles.item}
             onPress={() => {
+              if (item.onPress) {
+                item.onPress()
+                return
+              }
               if (isActive) return
               router.push(item.route as any)
             }}

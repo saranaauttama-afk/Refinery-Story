@@ -257,6 +257,20 @@ export const text = {
     research: bilingual('R&D', 'วิจัย'),
     company: bilingual('Company', 'บริษัท'),
     staff: bilingual('Staff', 'พนักงาน'),
+    menu: bilingual('Menu', 'เมนู'),
+    // Drawer section headings (grouped navigation).
+    groupOperations: bilingual('Operations', 'ปฏิบัติการ'),
+    groupBusiness: bilingual('Business', 'ธุรกิจ'),
+    groupPeople: bilingual('People', 'บุคลากร'),
+    groupProgress: bilingual('Progress', 'ความก้าวหน้า'),
+    // Drawer row subtitles.
+    factoryDesc: bilingual('Overview & build', 'ภาพรวม · ก่อสร้าง'),
+    supplyDesc: bilingual('Feedstock & buildings', 'วัตถุดิบ · อาคาร'),
+    contractsDesc: bilingual('Orders & rush jobs', 'สัญญา · งานด่วน'),
+    companyDesc: bilingual('Finance · grow · settings', 'การเงิน · ขยาย · ตั้งค่า'),
+    staffDesc: bilingual('Assign & train', 'มอบหมาย · ฝึก'),
+    recruitDesc: bilingual('Hire new workers', 'จ้างพนักงานใหม่'),
+    researchDesc: bilingual('R&D & perks', 'วิจัย · เพิร์ก'),
   },
   researchScreen: {
     title: bilingual('Research & Perks', 'วิจัยและเพิร์ก'),
