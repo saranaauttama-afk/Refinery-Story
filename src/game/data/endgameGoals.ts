@@ -9,8 +9,8 @@ import { RESEARCH_ITEMS } from './research'
 // late game has something to chase instead of dead-ending. All checks read
 // existing GameState fields; no new tracking is needed.
 
-const LEGEND_MILLION = 1_000_000
-const LEGEND_LIFETIME_GASOLINE = 100_000
+const LEGEND_MILLION = 10_000_000
+export const LEGEND_LIFETIME_GASOLINE = 560_000
 
 export type EndgameGoal = {
   key: string
@@ -32,7 +32,7 @@ export const ENDGAME_GOALS: EndgameGoal[] = [
   {
     key: 'millionaire',
     name: bilingual('Industry Tycoon', 'เจ้าพ่ออุตสาหกรรม'),
-    description: bilingual('Hold $1,000,000 in cash.', 'มีเงินสด $1,000,000'),
+    description: bilingual(`Hold $${LEGEND_MILLION.toLocaleString()} in cash.`, `มีเงินสด $${LEGEND_MILLION.toLocaleString()}`),
     isComplete: (g) => g.money >= LEGEND_MILLION,
     progress: (g) => ({ current: Math.floor(g.money), target: LEGEND_MILLION }),
   },

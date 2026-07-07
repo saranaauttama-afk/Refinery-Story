@@ -108,8 +108,8 @@ export const CALENDAR_BALANCE = {
 
 export const EXPANSION_BALANCE = [
   { level: 0, size: 3, cells: 9 },
-  { level: 1, size: 4, cells: 16, cost: 25000, requiresRefineryLevel: 5 },
-  { level: 2, size: 5, cells: 25, cost: 100000, requiresRefineryLevel: 10 },
+  { level: 1, size: 4, cells: 16, cost: 90000, requiresRefineryLevel: 5 },
+  { level: 2, size: 5, cells: 25, cost: 380000, requiresRefineryLevel: 10 },
   // Grid Expansion Tier 4 (backlog item, see README "What's NOT done" for
   // the original discussion). Added once the "revisit" condition was met:
   // Production Complexity Expansion shipped 3 new building types (Power
@@ -118,7 +118,7 @@ export const EXPANSION_BALANCE = [
   // their dedicated Tank Farm storage buildings. Cost and level gate follow
   // the existing pattern (each tier roughly 4x the previous cost, gated
   // ~5-10 refinery levels past the previous tier's requirement).
-  { level: 3, size: 6, cells: 36, cost: 400000, requiresRefineryLevel: 20 },
+  { level: 3, size: 6, cells: 36, cost: 1500000, requiresRefineryLevel: 20 },
 ] as const
 
 export type PaidExpansionEntry = {
@@ -195,12 +195,17 @@ export const ECONOMY_BALANCE = {
   // Fuel Plant it unlocks) and Lv15 (~$23,220, vs $15,000) now roughly
   // track the infrastructure each level gates, without exploding at very
   // high levels the way an exponential curve would.
-  refineryUpgradeBaseCost: 200,
-  refineryUpgradeLevelStep: 50,
+  refineryUpgradeBaseCost: 600,
+  refineryUpgradeLevelStep: 180,
   // Non-cash gate alongside the cost: cumulative lifetime gasoline output
   // required to advance past a level. Scales harder now to enforce
   // "run your refinery for a while" before leveling..
-  refineryUpgradeProductionPerLevel: 200,
+  // Longer-play rebalance: the gate is quadratic in level (see
+  // getUpgradeProductionRequirement) so this is the per-level² coefficient.
+  // ~60 keeps the first upgrades fast (60, 240, 540 gas) while L18-20 need
+  // ~19-24k cumulative — a genuine "run the plant for a while" gate that
+  // stops the old 2-3-levels-in-a-row spam.
+  refineryUpgradeProductionPerLevel: 60,
 } as const
 
 export const PRODUCTION_BALANCE = {
@@ -938,7 +943,7 @@ export const AWARDS_BALANCE = {
   // earned" — see gameTick). With both now feeding the score, a strong year
   // lands ~5-6k and an ok year ~1.5k, so S is a genuine "flawless year", A a
   // good one, B a steady one. (Was S:1400 when the inputs were broken.)
-  gradeThresholds: { S: 5000, A: 2800, B: 1400, C: 0 },
+  gradeThresholds: { S: 8000, A: 3600, B: 1600, C: 0 },
   // Cash reward by grade.
   cashByGrade: { S: 12000, A: 6000, B: 3000, C: 1000 },
   // Reputation reward by grade.

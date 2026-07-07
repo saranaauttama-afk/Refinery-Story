@@ -8,12 +8,13 @@
  * Exits non-zero on any failed assertion — wire into CI / a pre-push hook.
  */
 import { runPlaythrough } from './full-loop-sim'
-import { ENDGAME_GOALS } from '../src/game/data/endgameGoals'
+import { ENDGAME_GOALS, LEGEND_LIFETIME_GASOLINE } from '../src/game/data/endgameGoals'
 
-// Industry Legend was reached in ~43,700 ticks (~2h26m) in the faithful sim.
-// Budget generously at 90,000 ticks (~5h) — exceeding it means something
-// regressed (e.g. an endgame goal became unreachable, as with the award bug).
-const LEGEND_TICK_BUDGET = 90_000
+// Longer-play rebalance targets Industry Legend around ~120-140k ticks
+// (~6.5-8h at 1x). Budget generously at 200,000 ticks (~11h) — exceeding it
+// means something regressed (e.g. an endgame goal became unreachable, as with
+// the award bug), not merely that the game is intentionally long.
+const LEGEND_TICK_BUDGET = 200_000
 
 const failures: string[] = []
 const check = (cond: boolean, msg: string) => { if (!cond) failures.push(msg) }
@@ -49,7 +50,7 @@ for (const [name, val] of numbers) check(finite(val), `${name} is not finite (${
 
 // 5. Economy sanity.
 check(g.money > 0, `ended with non-positive cash (${Math.round(g.money)})`)
-check(g.totalGasolineProduced >= 100_000, `lifetime gasoline below the 100k goal (${Math.round(g.totalGasolineProduced)})`)
+check(g.totalGasolineProduced >= LEGEND_LIFETIME_GASOLINE, `lifetime gasoline below the ${LEGEND_LIFETIME_GASOLINE.toLocaleString()} goal (${Math.round(g.totalGasolineProduced)})`)
 
 // --- report ---
 if (failures.length === 0) {

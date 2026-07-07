@@ -266,8 +266,11 @@ export function getUpgradeCost(level: number) {
 }
 
 // Cumulative lifetime gasoline output required to advance past `level`.
+// Quadratic in level: cheap early (fast first upgrades keep onboarding
+// snappy) but steeply rising so late levels are a goal you run toward for a
+// while, not something you click 2-3x back-to-back once cash is banked.
 export function getUpgradeProductionRequirement(level: number) {
-  return ECONOMY_BALANCE.refineryUpgradeProductionPerLevel * level
+  return ECONOMY_BALANCE.refineryUpgradeProductionPerLevel * level * level
 }
 
 // Reputation required to advance past `level`. 0 for early levels,
