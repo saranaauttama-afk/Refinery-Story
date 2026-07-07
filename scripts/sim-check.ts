@@ -10,11 +10,11 @@
 import { runPlaythrough } from './full-loop-sim'
 import { ENDGAME_GOALS, LEGEND_LIFETIME_GASOLINE } from '../src/game/data/endgameGoals'
 
-// Longer-play rebalance targets Industry Legend around ~120-140k ticks
-// (~6.5-8h at 1x). Budget generously at 200,000 ticks (~11h) — exceeding it
-// means something regressed (e.g. an endgame goal became unreachable, as with
-// the award bug), not merely that the game is intentionally long.
-const LEGEND_TICK_BUDGET = 200_000
+// Idle-scale rebalance targets Industry Legend around ~860k ticks (~48h at
+// 1x). Budget generously at 1,300,000 ticks (~72h) — exceeding it means
+// something regressed (e.g. an endgame goal became unreachable, as with the
+// award bug), not merely that the game is intentionally long.
+const LEGEND_TICK_BUDGET = 1_300_000
 
 const failures: string[] = []
 const check = (cond: boolean, msg: string) => { if (!cond) failures.push(msg) }

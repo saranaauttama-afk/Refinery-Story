@@ -74,6 +74,7 @@ import {
   getUpgradeResearchRequirement,
   getRefineryTitle,
   getSeasonForecast,
+  formatCompactNumber,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
 import StaffSkillList from '../../../src/components/StaffSkillList'
@@ -411,9 +412,7 @@ export default function RefineryScreen() {
   const gasRate   = flowRates.gasPerMin
   const fmtMoneyRate = (n: number) => {
     const sign = n > 0 ? '+' : n < 0 ? '−' : ''
-    const abs = Math.abs(n)
-    const v = abs >= 1000 ? `${(abs / 1000).toFixed(1)}k` : `${abs}`
-    return `${sign}$${v}`
+    return `${sign}$${formatCompactNumber(Math.abs(n))}`
   }
   const flowState: 'profit' | 'loss' | 'idle' =
     gasRate <= 0 && moneyRate === 0 ? 'idle' : moneyRate >= 0 ? 'profit' : 'loss'
@@ -711,7 +710,7 @@ export default function RefineryScreen() {
           <View style={styles.dockStat}>
             <GameIcon name="money" size={22} />
             <View style={styles.dockText}>
-              <Text style={styles.dockVal}>${(game.money >= 1000 ? `${(game.money/1000).toFixed(1)}k` : Math.floor(game.money).toString())}</Text>
+              <Text style={styles.dockVal}>${formatCompactNumber(game.money)}</Text>
               <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
             </View>
           </View>
@@ -824,7 +823,7 @@ export default function RefineryScreen() {
             </Text>
             {nextGoal.progress ? (
               <Text style={styles.goalBannerProgress}>
-                {nextGoal.progress.current.toLocaleString()}/{nextGoal.progress.target.toLocaleString()}
+                {formatCompactNumber(nextGoal.progress.current)}/{formatCompactNumber(nextGoal.progress.target)}
               </Text>
             ) : null}
           </Pressable>
@@ -1406,7 +1405,7 @@ export default function RefineryScreen() {
                         <View style={{ flex: 1 }}>
                           <Text style={styles.upgradePanelTitle}>Upgrade to Lv{level + 1}</Text>
                           <Text style={[styles.upgradePanelSub, !canAffordUpgrade && { color: colors.orange }]}>
-                            ${upgradeCost.toLocaleString()} · {canAffordUpgrade ? `have $${Math.floor(game.money).toLocaleString()}` : `need $${(upgradeCost - game.money).toLocaleString()} more`}
+                            ${formatCompactNumber(upgradeCost)} · {canAffordUpgrade ? `have $${formatCompactNumber(game.money)}` : `need $${formatCompactNumber(upgradeCost - game.money)} more`}
                           </Text>
                         </View>
                       </View>
@@ -1504,12 +1503,12 @@ export default function RefineryScreen() {
             {
               label: 'Cost',
               met: hasEnoughMoney,
-              display: `$${upgradeCost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`,
+              display: `$${formatCompactNumber(upgradeCost)} (have $${formatCompactNumber(game.money)})`,
             },
             {
               label: 'Gasoline output',
               met: hasEnoughProduction,
-              display: `${game.totalGasolineProduced.toLocaleString()} / ${upgradeProductionRequired.toLocaleString()}`,
+              display: `${formatCompactNumber(game.totalGasolineProduced)} / ${formatCompactNumber(upgradeProductionRequired)}`,
               showBar: true,
               barPct: prodPct,
             },
@@ -1593,7 +1592,7 @@ export default function RefineryScreen() {
                   style={[styles.upgButton, !canUpgrade && styles.upgButtonOff]}
                   onPress={() => {
                     if (!canUpgrade) return
-                    spawnFloat(`-$${upgradeCost.toLocaleString()}`, 'expense')
+                    spawnFloat(`-$${formatCompactNumber(upgradeCost)}`, 'expense')
                     haptics.confirm()
                     upgradeRefinery()
                     setUpgradeModalOpen(false)

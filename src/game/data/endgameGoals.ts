@@ -9,8 +9,8 @@ import { RESEARCH_ITEMS } from './research'
 // late game has something to chase instead of dead-ending. All checks read
 // existing GameState fields; no new tracking is needed.
 
-const LEGEND_MILLION = 10_000_000
-export const LEGEND_LIFETIME_GASOLINE = 560_000
+const LEGEND_MILLION = 100_000_000_000
+export const LEGEND_LIFETIME_GASOLINE = 6_000_000
 
 export type EndgameGoal = {
   key: string

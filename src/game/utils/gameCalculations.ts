@@ -258,11 +258,14 @@ export function prestigeGame(game: GameState, chosenPerk?: PrestigePerkKey): Gam
   }
 }
 
+// Exponential (idle-scale): base × growth^level, rounded to 3 significant
+// digits so the price tags read cleanly ($2.45M, not $2,447,193).
 export function getUpgradeCost(level: number) {
-  return (
-    ECONOMY_BALANCE.refineryUpgradeBaseCost +
-    ECONOMY_BALANCE.refineryUpgradeLevelStep * level * level
-  )
+  const raw =
+    ECONOMY_BALANCE.refineryUpgradeBaseCost *
+    Math.pow(ECONOMY_BALANCE.refineryUpgradeCostGrowth, level)
+  const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(raw)) - 2))
+  return Math.round(raw / magnitude) * magnitude
 }
 
 // Cumulative lifetime gasoline output required to advance past `level`.
@@ -280,9 +283,11 @@ export function getUpgradeReputationRequirement(level: number): number {
 }
 
 // Research items required to advance past `level`. 0 for early levels,
-// then 1 additional item required per 2 levels above 6.
+// then 1 additional item required per 2 levels above 6, capped at the number
+// of research items that actually exist (uncapped, the formula would exceed
+// the catalogue at L28 and permanently block upgrades under the 60-level cap).
 export function getUpgradeResearchRequirement(level: number): number {
-  return Math.max(0, Math.floor((level - 6) / 2))
+  return Math.min(RESEARCH_ITEMS.length, Math.max(0, Math.floor((level - 6) / 2)))
 }
 
 // Returns all unmet requirements as human-readable strings.
@@ -295,11 +300,33 @@ export function getUpgradeBlockers(game: GameState): string[] {
   const repReq = getUpgradeReputationRequirement(level)
   const researchReq = getUpgradeResearchRequirement(level)
   const blockers: string[] = []
-  if (game.money < cost) blockers.push(`Need $${cost.toLocaleString()} (have $${Math.floor(game.money).toLocaleString()})`)
-  if (game.totalGasolineProduced < prodReq) blockers.push(`Need ${prodReq.toLocaleString()} lifetime gasoline (have ${game.totalGasolineProduced.toLocaleString()})`)
+  if (game.money < cost) blockers.push(`Need $${formatCompactNumber(cost)} (have $${formatCompactNumber(game.money)})`)
+  if (game.totalGasolineProduced < prodReq) blockers.push(`Need ${formatCompactNumber(prodReq)} lifetime gasoline (have ${formatCompactNumber(game.totalGasolineProduced)})`)
   if (game.reputation < repReq) blockers.push(`Need ${repReq} reputation (have ${Math.floor(game.reputation)})`)
   if (game.unlockedResearchIds.length < researchReq) blockers.push(`Need ${researchReq} research items (have ${game.unlockedResearchIds.length})`)
   return blockers
+}
+
+// Compact display for idle-scale numbers: 950 → "950", 15_500 → "15.5k",
+// 2_450_000 → "2.45M", 1_200_000_000 → "1.2B", 3.4e12 → "3.4T". Trailing
+// zeros trimmed ("2M", not "2.00M"). Money callers prefix their own "$".
+export function formatCompactNumber(n: number): string {
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs < 1e4) return `${sign}${Math.floor(abs).toLocaleString()}`
+  const units: [number, string][] = [[1e3, 'k'], [1e6, 'M'], [1e9, 'B'], [1e12, 'T']]
+  let idx = units.length - 1
+  while (idx > 0 && abs < units[idx][0]) idx--
+  let v = abs / units[idx][0]
+  const digits = v >= 100 ? 0 : v >= 10 ? 1 : 2
+  let rounded = parseFloat(v.toFixed(digits))
+  // Rounding can carry into the next unit (999,999 → "1000k"); roll it up.
+  if (rounded >= 1000 && idx < units.length - 1) {
+    idx++
+    v = abs / units[idx][0]
+    rounded = parseFloat(v.toFixed(2))
+  }
+  return `${sign}${rounded}${units[idx][1]}`
 }
 
 export function addLog(logs: string[], message: string) {
@@ -1961,14 +1988,24 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const specSellPriceBonusRate = isGreen ? SPECIALIZATION_BALANCE.green.sellPriceBonusRate : 0
   // Prestige "Market Maven" perk: a permanent flat lift on every product's price.
   const prestigePerkSellPriceBonus = getPrestigePerkEffects(game.prestigePerks).sellPriceBonus
+  // Idle-scale engine: every refinery level compounds a "market influence"
+  // multiplier on ALL sell prices (gasoline + every product). This is what
+  // lets income chase the exponential upgrade-cost curve — without it the
+  // physical economy (finite grid, fixed prices) tops out and late levels
+  // (hundreds of millions+) would be unaffordable forever.
+  const levelIncomeMultiplier = Math.pow(
+    ECONOMY_BALANCE.refineryLevelIncomeGrowth,
+    game.refineryLevel - 1,
+  )
   const productSellMultiplier =
-    1 +
-    salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonusRate +
-    perkSellPriceBonusRate +
-    eraSellPriceBonusRate +
-    specSellPriceBonusRate +
-    prestigePerkSellPriceBonus +
-    teamSkillBonuses.trade
+    (1 +
+      salesAgentCount * BONUS_BALANCE.salesAgentSellPriceBonusRate +
+      perkSellPriceBonusRate +
+      eraSellPriceBonusRate +
+      specSellPriceBonusRate +
+      prestigePerkSellPriceBonus +
+      teamSkillBonuses.trade) *
+    levelIncomeMultiplier
   const fuelSpecialistSellPriceMultiplier =
     1 + fuelSpecialistCount * BONUS_BALANCE.fuelSpecialistSellPriceBonusRate
   // Gasoline-specific: base × combo/research × fuelSpecialist × global multiplier

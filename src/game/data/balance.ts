@@ -109,7 +109,7 @@ export const CALENDAR_BALANCE = {
 export const EXPANSION_BALANCE = [
   { level: 0, size: 3, cells: 9 },
   { level: 1, size: 4, cells: 16, cost: 90000, requiresRefineryLevel: 5 },
-  { level: 2, size: 5, cells: 25, cost: 380000, requiresRefineryLevel: 10 },
+  { level: 2, size: 5, cells: 25, cost: 1500000, requiresRefineryLevel: 12 },
   // Grid Expansion Tier 4 (backlog item, see README "What's NOT done" for
   // the original discussion). Added once the "revisit" condition was met:
   // Production Complexity Expansion shipped 3 new building types (Power
@@ -118,7 +118,7 @@ export const EXPANSION_BALANCE = [
   // their dedicated Tank Farm storage buildings. Cost and level gate follow
   // the existing pattern (each tier roughly 4x the previous cost, gated
   // ~5-10 refinery levels past the previous tier's requirement).
-  { level: 3, size: 6, cells: 36, cost: 1500000, requiresRefineryLevel: 20 },
+  { level: 3, size: 6, cells: 36, cost: 40000000, requiresRefineryLevel: 24 },
 ] as const
 
 export type PaidExpansionEntry = {
@@ -195,16 +195,22 @@ export const ECONOMY_BALANCE = {
   // Fuel Plant it unlocks) and Lv15 (~$23,220, vs $15,000) now roughly
   // track the infrastructure each level gates, without exploding at very
   // high levels the way an exponential curve would.
+  // --- Idle-scale progression (48h-class playthrough) ---
+  // Upgrade cost grows exponentially (base × growth^level) so late levels
+  // cost hundreds of millions to billions, like the idle/tycoon genre. Each
+  // level also multiplies ALL sell prices by levelIncomeGrowth (compounding
+  // "market influence"), so income chases the cost curve: the cost/income
+  // growth ratio (~1.33/1.19 ≈ 1.12) makes each level take ~12% longer than
+  // the last — snappy early levels, hours-long late ones.
   refineryUpgradeBaseCost: 600,
-  refineryUpgradeLevelStep: 180,
+  refineryUpgradeCostGrowth: 1.39,
+  refineryLevelIncomeGrowth: 1.15,
   // Non-cash gate alongside the cost: cumulative lifetime gasoline output
-  // required to advance past a level. Scales harder now to enforce
-  // "run your refinery for a while" before leveling..
-  // Longer-play rebalance: the gate is quadratic in level (see
-  // getUpgradeProductionRequirement) so this is the per-level² coefficient.
-  // ~60 keeps the first upgrades fast (60, 240, 540 gas) while L18-20 need
-  // ~19-24k cumulative — a genuine "run the plant for a while" gate that
-  // stops the old 2-3-levels-in-a-row spam.
+  // required to advance past a level. Quadratic in level (see
+  // getUpgradeProductionRequirement): ~60 keeps the first upgrades fast
+  // (60, 240, 540 gas) while high levels need tens of thousands cumulative —
+  // a genuine "run the plant for a while" gate that stops back-to-back
+  // level spam.
   refineryUpgradeProductionPerLevel: 60,
 } as const
 
@@ -972,7 +978,10 @@ export const AWARDS_BALANCE = {
 // Maximum refinery level. Beyond this, upgradeRefinery() is a no-op.
 // All content (buildings, eras, contracts, standing orders) is available
 // by Lv20. The cap exists to give the game a clear ceiling.
-export const MAX_REFINERY_LEVEL = 20
+// Raised 20 → 60 for the idle-scale progression: the exponential cost curve
+// (see ECONOMY_BALANCE.refineryUpgradeCostGrowth) needs headroom to reach
+// the hundreds-of-millions/billions range that anchors the 48h-class run.
+export const MAX_REFINERY_LEVEL = 60
 
 export const HIRING_BALANCE = {
   capBase: 2,
