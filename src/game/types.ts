@@ -252,7 +252,7 @@ export type ComboStats = {
 export type Contract = {
   id: number
   name: BilingualTextValue
-  tier: 1 | 2 | 3
+  tier: 1 | 2 | 3 | 4 | 5 | 6
   unlockLevel: number
   gasolineRequired: number
   // Phase B: asphalt contracts use this field instead of gasolineRequired
@@ -621,6 +621,15 @@ export type MilestoneKey =
   | 'aviationPartner'
   | 'petrochemicalPioneer'
   | 'productMogul'
+  // Idle-scale mid/late ladder (data-driven, see LADDER_MILESTONES)
+  | 'continentalRefiner'
+  | 'globalRefiner'
+  | 'energyEmpire'
+  | 'firstMillion'
+  | 'firstBillion'
+  | 'fuelForANation'
+  | 'oceanOfFuel'
+  | 'contractLegend'
 
 export type Milestone = {
   key: MilestoneKey

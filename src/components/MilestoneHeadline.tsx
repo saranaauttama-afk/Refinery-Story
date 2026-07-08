@@ -22,6 +22,13 @@ const MILESTONE_HEADLINES: Partial<Record<string, HeadlineData>> = {
   jetFuelPioneer:        { icon: '✈️', title: 'Aviation Fuel Online',      body: 'New market unlocked. Airlines are watching.' },
   petrochemicalPioneer:  { icon: '🧪', title: 'Petrochem Expansion',       body: 'Downstream chemicals open a new revenue stream.' },
   productMogul:          { icon: '👑', title: 'Product Mogul',             body: 'Your refinery spans the full product portfolio.' },
+  // Idle-scale mid/late ladder beats
+  continentalRefiner:    { icon: '🌍', title: 'Continental Refiner',       body: 'Level 25 — your operation spans the continent.' },
+  firstMillion:          { icon: '💰', title: 'First Million!',            body: '$1,000,000 in the bank. The empire begins.' },
+  globalRefiner:         { icon: '🌐', title: 'Global Refiner',            body: 'Level 40 — a true multinational energy player.' },
+  firstBillion:          { icon: '💎', title: 'Billionaire!',              body: '$1B cash. Markets move when you speak.' },
+  energyEmpire:          { icon: '⚡', title: 'Energy Empire',             body: 'Level 50 — few in history have built this far.' },
+  oceanOfFuel:           { icon: '🌊', title: 'Ocean of Fuel',             body: '3,000,000 lifetime gasoline. An era-defining output.' },
 }
 
 export { MILESTONE_HEADLINES }

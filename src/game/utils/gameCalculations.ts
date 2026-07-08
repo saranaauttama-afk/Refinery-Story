@@ -47,7 +47,7 @@ import { RANDOM_EVENTS } from '../data/events'
 import { HIDDEN_COMBOS } from '../data/hiddenCombos'
 import { HIDDEN_EVENTS } from '../data/hiddenEvents'
 import type { HiddenComboConfig } from '../data/hiddenCombos'
-import { MILESTONES } from '../data/milestones'
+import { LADDER_MILESTONES, MILESTONES } from '../data/milestones'
 import { PERK_EFFECTS } from '../data/perks'
 import { RESEARCH_ITEMS } from '../data/research'
 import { getRivalBaselineScore, RIVAL_REFINERIES } from '../data/rivals'
@@ -104,6 +104,10 @@ export const DEFAULT_REFINERY_NAME = 'Sunrise Refinery'
 // the hero panel, derived purely from refinery level (no extra save state).
 // Thresholds line up with the advanced-plant unlock levels (5/10/15).
 export function getRefineryTitle(level: number): BilingualTextValue {
+  if (level >= 55) return text.refinery.titleIndustryTitan
+  if (level >= 45) return text.refinery.titleEnergyEmpire
+  if (level >= 35) return text.refinery.titleGlobalPowerhouse
+  if (level >= 25) return text.refinery.titleContinentalPlayer
   if (level >= 15) return text.refinery.titleIndustryLeader
   if (level >= 10) return text.refinery.titleNationalProducer
   if (level >= 5) return text.refinery.titleRegionalSupplier
@@ -2188,6 +2192,12 @@ export function applyLegendGoal(game: GameState): GameState {
 // milestones whose condition isn't a single count threshold (e.g. "build a
 // Jet Fuel Plant", "complete a Tier 3 contract").
 export function getMilestoneProgress(game: GameState, key: MilestoneKey): MilestoneProgress | null {
+  // Data-driven ladder milestones carry their own progress function.
+  const ladder = LADDER_MILESTONES.find((m) => m.key === key)
+  if (ladder) {
+    const { current, target } = ladder.progress(game)
+    return { current: Math.min(current, target), target }
+  }
   switch (key) {
     case 'firstFuel':
       return { current: Math.min(game.totalGasolineProduced, 50), target: 50 }
@@ -2464,6 +2474,28 @@ export function applyMilestones(game: GameState) {
         completedMilestoneKeys: [...nextGame.completedMilestoneKeys, 'productMogul'],
         activityLog: addLog(nextGame.activityLog, message),
       }
+    }
+  }
+
+  // Idle-scale mid/late ladder — data-driven (one loop instead of a
+  // hand-coded block per milestone; definitions in LADDER_MILESTONES).
+  for (const ladder of LADDER_MILESTONES) {
+    if (nextGame.completedMilestoneKeys.includes(ladder.key)) continue
+    if (!ladder.isComplete(nextGame)) continue
+    const config = MILESTONES.find((m) => m.key === ladder.key)
+    const message = serializeBilingualText(
+      text.logs.milestoneLadder(
+        config?.name ?? { en: ladder.key, th: ladder.key },
+        config?.reward ?? '',
+      ),
+    )
+    nextGame = {
+      ...nextGame,
+      money: nextGame.money + ladder.moneyReward,
+      researchPoints: nextGame.researchPoints + ladder.rpReward,
+      reputation: nextGame.reputation + ladder.reputationReward,
+      completedMilestoneKeys: [...nextGame.completedMilestoneKeys, ladder.key],
+      activityLog: addLog(nextGame.activityLog, message),
     }
   }
 

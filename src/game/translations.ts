@@ -93,6 +93,10 @@ export const text = {
     titleRegionalSupplier: bilingual('Regional Supplier', 'ผู้จัดส่งระดับภูมิภาค'),
     titleNationalProducer: bilingual('National Producer', 'ผู้ผลิตระดับประเทศ'),
     titleIndustryLeader: bilingual('Industry Leader', 'ผู้นำอุตสาหกรรม'),
+    titleContinentalPlayer: bilingual('Continental Player', 'ผู้เล่นระดับทวีป'),
+    titleGlobalPowerhouse: bilingual('Global Powerhouse', 'มหาอำนาจระดับโลก'),
+    titleEnergyEmpire: bilingual('Energy Empire', 'จักรวรรดิพลังงาน'),
+    titleIndustryTitan: bilingual('Industry Titan', 'ไททันแห่งอุตสาหกรรม'),
   },
   resources: {
     section: bilingual('Resources', 'ทรัพยากร'),
@@ -1715,6 +1719,34 @@ export const text = {
       32: {
         name: bilingual('Global Plastics Consortium', 'สมาคมพลาสติกโลก'),
       },
+      // Tiers 4-6: idle-scale mid/late-game ladder
+      33: {
+        name: bilingual('Interstate Fuel Network', 'เครือข่ายเชื้อเพลิงระหว่างรัฐ'),
+      },
+      34: {
+        name: bilingual('Flag Carrier Airline', 'สายการบินแห่งชาติ'),
+      },
+      35: {
+        name: bilingual('Continental Chemicals Group', 'กลุ่มเคมีภัณฑ์ระดับทวีป'),
+      },
+      36: {
+        name: bilingual('National Highway Authority', 'การทางหลวงแห่งชาติ'),
+      },
+      37: {
+        name: bilingual('Intercontinental Airline Alliance', 'พันธมิตรสายการบินข้ามทวีป'),
+      },
+      38: {
+        name: bilingual('World Polymer Exchange', 'ตลาดพอลิเมอร์โลก'),
+      },
+      39: {
+        name: bilingual('Strategic Fuel Reserve', 'คลังเชื้อเพลิงยุทธศาสตร์'),
+      },
+      40: {
+        name: bilingual('World Expo Megaproject', 'เมกะโปรเจกต์เวิลด์เอ็กซ์โป'),
+      },
+      41: {
+        name: bilingual('Orbital Industries Contract', 'สัญญาอุตสาหกรรมอวกาศ'),
+      },
     } satisfies Record<number, { name: BilingualTextValue }>,
     milestones: {
       firstFuel: {
@@ -1836,6 +1868,47 @@ export const text = {
           'สร้างโรงงานปิโตรเคมี',
         ),
         reward: '$5,000, +50 Rep',
+      },
+      // Idle-scale mid/late ladder
+      continentalRefiner: {
+        name: bilingual('Continental Refiner', 'โรงกลั่นระดับทวีป'),
+        requirement: bilingual('Reach refinery level 25', 'อัปเกรดโรงกลั่นถึงเลเวล 25'),
+        reward: '$800k, 100 RP, +100 Rep',
+      },
+      globalRefiner: {
+        name: bilingual('Global Refiner', 'โรงกลั่นระดับโลก'),
+        requirement: bilingual('Reach refinery level 40', 'อัปเกรดโรงกลั่นถึงเลเวล 40'),
+        reward: '$120M, 200 RP, +200 Rep',
+      },
+      energyEmpire: {
+        name: bilingual('Energy Empire', 'จักรวรรดิพลังงาน'),
+        requirement: bilingual('Reach refinery level 50', 'อัปเกรดโรงกลั่นถึงเลเวล 50'),
+        reward: '$3B, 300 RP, +300 Rep',
+      },
+      firstMillion: {
+        name: bilingual('First Million', 'ล้านแรก'),
+        requirement: bilingual('Hold $1M in cash', 'มีเงินสด $1M'),
+        reward: '60 RP, +60 Rep',
+      },
+      firstBillion: {
+        name: bilingual('First Billion', 'พันล้านแรก'),
+        requirement: bilingual('Hold $1B in cash', 'มีเงินสด $1B'),
+        reward: '250 RP, +250 Rep',
+      },
+      fuelForANation: {
+        name: bilingual('Fuel for a Nation', 'เชื้อเพลิงหล่อเลี้ยงประเทศ'),
+        requirement: bilingual('Produce 500k lifetime gasoline', 'ผลิตน้ำมันสะสม 500k หน่วย'),
+        reward: '$30M, 150 RP, +150 Rep',
+      },
+      oceanOfFuel: {
+        name: bilingual('Ocean of Fuel', 'มหาสมุทรน้ำมัน'),
+        requirement: bilingual('Produce 3M lifetime gasoline', 'ผลิตน้ำมันสะสม 3M หน่วย'),
+        reward: '$1B, 350 RP, +350 Rep',
+      },
+      contractLegend: {
+        name: bilingual('Contract Legend', 'ตำนานนักเจรจา'),
+        requirement: bilingual('Complete 30 contracts', 'ทำสัญญาสำเร็จ 30 ฉบับ'),
+        reward: '$5M, 200 RP, +200 Rep',
       },
       productMogul: {
         name: bilingual('Product Mogul', 'เจ้าพ่อผลิตภัณฑ์'),
@@ -2456,6 +2529,12 @@ export const text = {
       'Milestone completed: Product Mogul. Reward: $10,000, +75 reputation.',
       'ทำหมุดหมายสำเร็จ: Product Mogul รับรางวัล $10,000 และชื่อเสียง +75',
     ),
+    // Generic completion line for the data-driven ladder milestones.
+    milestoneLadder: (name: BilingualTextValue, reward: string) =>
+      bilingual(
+        `Milestone completed: ${name.en}. Reward: ${reward}.`,
+        `ทำหมุดหมายสำเร็จ: ${name.th} รับรางวัล ${reward}`,
+      ),
     staffLevelUp: (employeeName: string, typeName: BilingualTextValue, level: number) =>
       bilingual(
         `${employeeName} (${typeName.en}) reached Level ${level}!`,

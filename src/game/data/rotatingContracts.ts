@@ -64,15 +64,25 @@ function generateRotatingContract(game: GameState, currentTick: number): Rotatin
         sizeJitter,
     ),
   )
-  const reward = Math.round(
+  // Idle-scale: real sell prices compound with refinery level (the "market
+  // influence" multiplier, see calculateDerivedStats). Rush-order rewards must
+  // track that or the premium turns into pocket change by the mid-game.
+  const levelIncomeMultiplier = Math.pow(
+    ECONOMY_BALANCE.refineryLevelIncomeGrowth,
+    game.refineryLevel - 1,
+  )
+  const baseReward = Math.round(
     required * PRODUCT_UNIT_VALUE[productKey] * ROTATING_CONTRACT_BALANCE.rewardPremium,
   )
+  const reward = Math.round(baseReward * levelIncomeMultiplier)
   return {
     id: game.rotatingContractCounter + 1,
     productKey,
     required,
     reward,
-    rpReward: Math.max(1, Math.round(reward * ROTATING_CONTRACT_BALANCE.rpPerReward)),
+    // RP scales off the UNSCALED reward — research costs don't inflate with
+    // the level income multiplier, so neither should RP income.
+    rpReward: Math.max(1, Math.round(baseReward * ROTATING_CONTRACT_BALANCE.rpPerReward)),
     reputationReward: ROTATING_CONTRACT_BALANCE.reputationReward,
     spawnedAtTick: currentTick,
     expiresAtTick: currentTick + ROTATING_CONTRACT_BALANCE.lifetimeTicks,

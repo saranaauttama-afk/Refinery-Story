@@ -1,4 +1,4 @@
-import type { Milestone } from '../types'
+import type { GameState, Milestone, MilestoneKey } from '../types'
 import { text } from '../translations'
 
 export const MILESTONES: Milestone[] = [
@@ -99,5 +99,103 @@ export const MILESTONES: Milestone[] = [
     name: text.data.milestones.productMogul.name,
     requirement: text.data.milestones.productMogul.requirement,
     reward: '$10,000, +75 Rep',
+  },
+  // Idle-scale mid/late ladder — display entries; the check/reward logic is
+  // data-driven in LADDER_MILESTONES below (applied generically in
+  // applyMilestones instead of one hand-coded block per milestone).
+  ...([
+    'continentalRefiner',
+    'globalRefiner',
+    'energyEmpire',
+    'firstMillion',
+    'firstBillion',
+    'fuelForANation',
+    'oceanOfFuel',
+    'contractLegend',
+  ] as const).map((key) => ({
+    key,
+    name: text.data.milestones[key].name,
+    requirement: text.data.milestones[key].requirement,
+    reward: text.data.milestones[key].reward,
+  })),
+]
+
+// The mid/late-game ladder that fills the long idle-scale climb (L20-60,
+// $1M-$100B) with sub-goals. Each entry is checked generically every tick;
+// rewards are sized at ~10-20% of a contemporary refinery upgrade so hitting
+// one feels great without skipping a level outright.
+export type LadderMilestone = {
+  key: MilestoneKey
+  isComplete: (game: GameState) => boolean
+  progress: (game: GameState) => { current: number; target: number }
+  moneyReward: number
+  rpReward: number
+  reputationReward: number
+}
+
+export const LADDER_MILESTONES: LadderMilestone[] = [
+  {
+    key: 'continentalRefiner',
+    isComplete: (g) => g.refineryLevel >= 25,
+    progress: (g) => ({ current: g.refineryLevel, target: 25 }),
+    moneyReward: 800_000,
+    rpReward: 100,
+    reputationReward: 100,
+  },
+  {
+    key: 'globalRefiner',
+    isComplete: (g) => g.refineryLevel >= 40,
+    progress: (g) => ({ current: g.refineryLevel, target: 40 }),
+    moneyReward: 120_000_000,
+    rpReward: 200,
+    reputationReward: 200,
+  },
+  {
+    key: 'energyEmpire',
+    isComplete: (g) => g.refineryLevel >= 50,
+    progress: (g) => ({ current: g.refineryLevel, target: 50 }),
+    moneyReward: 3_000_000_000,
+    rpReward: 300,
+    reputationReward: 300,
+  },
+  {
+    key: 'firstMillion',
+    isComplete: (g) => g.money >= 1_000_000,
+    progress: (g) => ({ current: Math.floor(g.money), target: 1_000_000 }),
+    moneyReward: 0,
+    rpReward: 60,
+    reputationReward: 60,
+  },
+  {
+    key: 'firstBillion',
+    isComplete: (g) => g.money >= 1_000_000_000,
+    progress: (g) => ({ current: Math.floor(g.money), target: 1_000_000_000 }),
+    moneyReward: 0,
+    rpReward: 250,
+    reputationReward: 250,
+  },
+  {
+    key: 'fuelForANation',
+    isComplete: (g) => g.totalGasolineProduced >= 500_000,
+    progress: (g) => ({ current: g.totalGasolineProduced, target: 500_000 }),
+    moneyReward: 30_000_000,
+    rpReward: 150,
+    reputationReward: 150,
+  },
+  {
+    key: 'oceanOfFuel',
+    isComplete: (g) => g.totalGasolineProduced >= 3_000_000,
+    progress: (g) => ({ current: g.totalGasolineProduced, target: 3_000_000 }),
+    moneyReward: 1_000_000_000,
+    rpReward: 350,
+    reputationReward: 350,
+  },
+  {
+    key: 'contractLegend',
+    isComplete: (g) => g.completedContractCount >= 30,
+    progress: (g) => ({ current: g.completedContractCount, target: 30 }),
+    moneyReward: 5_000_000,
+    rpReward: 200,
+    reputationReward: 200,
   },
 ]
