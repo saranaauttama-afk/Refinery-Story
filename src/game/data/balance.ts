@@ -109,7 +109,7 @@ export const CALENDAR_BALANCE = {
 export const EXPANSION_BALANCE = [
   { level: 0, size: 3, cells: 9 },
   { level: 1, size: 4, cells: 16, cost: 90000, requiresRefineryLevel: 5 },
-  { level: 2, size: 5, cells: 25, cost: 1500000, requiresRefineryLevel: 12 },
+  { level: 2, size: 5, cells: 25, cost: 600000, requiresRefineryLevel: 12 },
   // Grid Expansion Tier 4 (backlog item, see README "What's NOT done" for
   // the original discussion). Added once the "revisit" condition was met:
   // Production Complexity Expansion shipped 3 new building types (Power
@@ -118,7 +118,7 @@ export const EXPANSION_BALANCE = [
   // their dedicated Tank Farm storage buildings. Cost and level gate follow
   // the existing pattern (each tier roughly 4x the previous cost, gated
   // ~5-10 refinery levels past the previous tier's requirement).
-  { level: 3, size: 6, cells: 36, cost: 40000000, requiresRefineryLevel: 24 },
+  { level: 3, size: 6, cells: 36, cost: 4000000, requiresRefineryLevel: 22 },
 ] as const
 
 export type PaidExpansionEntry = {
@@ -195,16 +195,16 @@ export const ECONOMY_BALANCE = {
   // Fuel Plant it unlocks) and Lv15 (~$23,220, vs $15,000) now roughly
   // track the infrastructure each level gates, without exploding at very
   // high levels the way an exponential curve would.
-  // --- Idle-scale progression (48h-class playthrough) ---
-  // Upgrade cost grows exponentially (base × growth^level) so late levels
-  // cost hundreds of millions to billions, like the idle/tycoon genre. Each
-  // level also multiplies ALL sell prices by levelIncomeGrowth (compounding
-  // "market influence"), so income chases the cost curve: the cost/income
-  // growth ratio (~1.33/1.19 ≈ 1.12) makes each level take ~12% longer than
-  // the last — snappy early levels, hours-long late ones.
+  // --- "Sit-and-play sim" progression (~10-12h, Direction A) ---
+  // Upgrade cost is quadratic in level (base + step·level²) so it stays in a
+  // human-readable million-scale the PHYSICAL economy can actually reach —
+  // income comes from building out the grid (plants, combos, product mix,
+  // staff, research, eras, prestige), not from a big per-level auto-multiplier.
+  // A small per-level income lift keeps leveling rewarding (×1.05 ≈ ×3.7 over
+  // the whole climb) without dwarfing the layout play that is the game's core.
   refineryUpgradeBaseCost: 600,
-  refineryUpgradeCostGrowth: 1.39,
-  refineryLevelIncomeGrowth: 1.15,
+  refineryUpgradeLevelStep: 240,
+  refineryLevelIncomeGrowth: 1.05,
   // Non-cash gate alongside the cost: cumulative lifetime gasoline output
   // required to advance past a level. Quadratic in level (see
   // getUpgradeProductionRequirement): ~60 keeps the first upgrades fast
@@ -655,96 +655,94 @@ export const CONTRACT_BALANCE = [
     rpReward: 150,
     reputationReward: 140,
   },
-  // --- Tiers 4-6: idle-scale mid/late-game ladder ---
-  // Rewards are positioned against the level income multiplier at each
-  // tier's unlock (≈11x at L18, ≈33x at L26, ≈101x at L34) so they beat
-  // spot-selling by ~25-40%, same principle as tier 1. Requirements are
-  // deliberately above a "default" build's storage caps — completing them
-  // means investing grid cells in a real tank farm.
+  // --- Tiers 4-6: mid/late-game ladder (Direction A, million-scale) ---
+  // Rewards beat spot-selling by a healthy margin at each tier's unlock, and
+  // requirements sit above a "default" build's storage caps — completing them
+  // means investing grid cells in a real tank farm (rewards layout depth).
   {
     id: 33,
     tier: 4,
-    unlockLevel: 18,
+    unlockLevel: 14,
     gasolineRequired: 800,
-    reward: 220000,
+    reward: 45000,
     rpReward: 120,
     reputationReward: 110,
   },
   {
     id: 34,
     tier: 4,
-    unlockLevel: 18,
+    unlockLevel: 14,
     gasolineRequired: 0,
     jetFuelRequired: 300,
-    reward: 400000,
+    reward: 70000,
     rpReward: 140,
     reputationReward: 130,
   },
   {
     id: 35,
     tier: 4,
-    unlockLevel: 18,
+    unlockLevel: 14,
     gasolineRequired: 0,
     petrochemicalsRequired: 250,
-    reward: 550000,
+    reward: 95000,
     rpReward: 160,
     reputationReward: 150,
   },
   {
     id: 36,
     tier: 5,
-    unlockLevel: 26,
+    unlockLevel: 20,
     gasolineRequired: 1200,
-    reward: 950000,
+    reward: 160000,
     rpReward: 200,
     reputationReward: 180,
   },
   {
     id: 37,
     tier: 5,
-    unlockLevel: 26,
+    unlockLevel: 20,
     gasolineRequired: 0,
     jetFuelRequired: 500,
-    reward: 2000000,
+    reward: 260000,
     rpReward: 230,
     reputationReward: 210,
   },
   {
     id: 38,
     tier: 5,
-    unlockLevel: 26,
+    unlockLevel: 20,
     gasolineRequired: 0,
     plasticPelletsRequired: 300,
-    reward: 3800000,
+    reward: 420000,
     rpReward: 260,
     reputationReward: 240,
   },
   {
     id: 39,
     tier: 6,
-    unlockLevel: 34,
+    unlockLevel: 26,
     gasolineRequired: 1500,
-    reward: 3600000,
+    reward: 600000,
     rpReward: 300,
     reputationReward: 280,
   },
   {
     id: 40,
     tier: 6,
-    unlockLevel: 34,
+    unlockLevel: 26,
     gasolineRequired: 0,
     petrochemicalsRequired: 600,
-    reward: 12000000,
+    reward: 1100000,
     rpReward: 350,
     reputationReward: 320,
   },
   {
     id: 41,
     tier: 6,
-    unlockLevel: 34,
+    unlockLevel: 26,
     gasolineRequired: 0,
     plasticPelletsRequired: 450,
-    reward: 18000000,
+    reward: 1800000,
     rpReward: 400,
     reputationReward: 360,
   },
@@ -1071,10 +1069,10 @@ export const AWARDS_BALANCE = {
 // Maximum refinery level. Beyond this, upgradeRefinery() is a no-op.
 // All content (buildings, eras, contracts, standing orders) is available
 // by Lv20. The cap exists to give the game a clear ceiling.
-// Raised 20 → 60 for the idle-scale progression: the exponential cost curve
-// (see ECONOMY_BALANCE.refineryUpgradeCostGrowth) needs headroom to reach
-// the hundreds-of-millions/billions range that anchors the 48h-class run.
-export const MAX_REFINERY_LEVEL = 60
+// Direction A: 30 levels is enough progression for a ~10-12h sit-and-play run
+// without leveling becoming THE game — layout/plants/products/prestige carry
+// the rest. (Was 60 during the idle-scale experiment.)
+export const MAX_REFINERY_LEVEL = 30
 
 export const HIRING_BALANCE = {
   capBase: 2,

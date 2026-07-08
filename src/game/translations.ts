@@ -1874,43 +1874,43 @@ export const text = {
       // Idle-scale mid/late ladder
       continentalRefiner: {
         name: bilingual('Continental Refiner', 'โรงกลั่นระดับทวีป'),
-        requirement: bilingual('Reach refinery level 25', 'อัปเกรดโรงกลั่นถึงเลเวล 25'),
-        reward: '$800k, 100 RP, +100 Rep',
+        requirement: bilingual('Reach refinery level 20', 'อัปเกรดโรงกลั่นถึงเลเวล 20'),
+        reward: '$300k, 100 RP, +100 Rep',
       },
       globalRefiner: {
         name: bilingual('Global Refiner', 'โรงกลั่นระดับโลก'),
-        requirement: bilingual('Reach refinery level 40', 'อัปเกรดโรงกลั่นถึงเลเวล 40'),
-        reward: '$120M, 200 RP, +200 Rep',
+        requirement: bilingual('Reach refinery level 25', 'อัปเกรดโรงกลั่นถึงเลเวล 25'),
+        reward: '$1.2M, 200 RP, +200 Rep',
       },
       energyEmpire: {
         name: bilingual('Energy Empire', 'จักรวรรดิพลังงาน'),
-        requirement: bilingual('Reach refinery level 50', 'อัปเกรดโรงกลั่นถึงเลเวล 50'),
-        reward: '$3B, 300 RP, +300 Rep',
+        requirement: bilingual('Reach refinery level 30', 'อัปเกรดโรงกลั่นถึงเลเวล 30'),
+        reward: '$4M, 300 RP, +300 Rep',
       },
       firstMillion: {
         name: bilingual('First Million', 'ล้านแรก'),
         requirement: bilingual('Hold $1M in cash', 'มีเงินสด $1M'),
-        reward: '60 RP, +60 Rep',
+        reward: '80 RP, +80 Rep',
       },
       firstBillion: {
-        name: bilingual('First Billion', 'พันล้านแรก'),
-        requirement: bilingual('Hold $1B in cash', 'มีเงินสด $1B'),
+        name: bilingual('Ten Million Club', 'สโมสรสิบล้าน'),
+        requirement: bilingual('Hold $10M in cash', 'มีเงินสด $10M'),
         reward: '250 RP, +250 Rep',
       },
       fuelForANation: {
         name: bilingual('Fuel for a Nation', 'เชื้อเพลิงหล่อเลี้ยงประเทศ'),
-        requirement: bilingual('Produce 500k lifetime gasoline', 'ผลิตน้ำมันสะสม 500k หน่วย'),
-        reward: '$30M, 150 RP, +150 Rep',
+        requirement: bilingual('Produce 300k lifetime gasoline', 'ผลิตน้ำมันสะสม 300k หน่วย'),
+        reward: '$1.5M, 150 RP, +150 Rep',
       },
       oceanOfFuel: {
         name: bilingual('Ocean of Fuel', 'มหาสมุทรน้ำมัน'),
-        requirement: bilingual('Produce 3M lifetime gasoline', 'ผลิตน้ำมันสะสม 3M หน่วย'),
-        reward: '$1B, 350 RP, +350 Rep',
+        requirement: bilingual('Produce 800k lifetime gasoline', 'ผลิตน้ำมันสะสม 800k หน่วย'),
+        reward: '$6M, 350 RP, +350 Rep',
       },
       contractLegend: {
         name: bilingual('Contract Legend', 'ตำนานนักเจรจา'),
         requirement: bilingual('Complete 30 contracts', 'ทำสัญญาสำเร็จ 30 ฉบับ'),
-        reward: '$5M, 200 RP, +200 Rep',
+        reward: '$3M, 200 RP, +200 Rep',
       },
       productMogul: {
         name: bilingual('Product Mogul', 'เจ้าพ่อผลิตภัณฑ์'),

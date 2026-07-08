@@ -104,13 +104,13 @@ export const DEFAULT_REFINERY_NAME = 'Sunrise Refinery'
 // the hero panel, derived purely from refinery level (no extra save state).
 // Thresholds line up with the advanced-plant unlock levels (5/10/15).
 export function getRefineryTitle(level: number): BilingualTextValue {
-  if (level >= 55) return text.refinery.titleIndustryTitan
-  if (level >= 45) return text.refinery.titleEnergyEmpire
-  if (level >= 35) return text.refinery.titleGlobalPowerhouse
-  if (level >= 25) return text.refinery.titleContinentalPlayer
-  if (level >= 15) return text.refinery.titleIndustryLeader
-  if (level >= 10) return text.refinery.titleNationalProducer
-  if (level >= 5) return text.refinery.titleRegionalSupplier
+  if (level >= 30) return text.refinery.titleIndustryTitan
+  if (level >= 25) return text.refinery.titleEnergyEmpire
+  if (level >= 20) return text.refinery.titleGlobalPowerhouse
+  if (level >= 15) return text.refinery.titleContinentalPlayer
+  if (level >= 12) return text.refinery.titleIndustryLeader
+  if (level >= 8) return text.refinery.titleNationalProducer
+  if (level >= 4) return text.refinery.titleRegionalSupplier
   return text.refinery.titleLocalRefinery
 }
 export const RANDOM_EVENT_INTERVAL_TICKS = CORE_BALANCE.randomEventIntervalTicks
@@ -262,12 +262,14 @@ export function prestigeGame(game: GameState, chosenPerk?: PrestigePerkKey): Gam
   }
 }
 
-// Exponential (idle-scale): base × growth^level, rounded to 3 significant
-// digits so the price tags read cleanly ($2.45M, not $2,447,193).
+// Quadratic (Direction A): base + step·level² — a million-scale curve the
+// physical economy can reach, rounded to 3 significant digits so price tags
+// read cleanly ($46.2k, not $46,140).
 export function getUpgradeCost(level: number) {
   const raw =
-    ECONOMY_BALANCE.refineryUpgradeBaseCost *
-    Math.pow(ECONOMY_BALANCE.refineryUpgradeCostGrowth, level)
+    ECONOMY_BALANCE.refineryUpgradeBaseCost +
+    ECONOMY_BALANCE.refineryUpgradeLevelStep * level * level
+  if (raw < 1000) return Math.round(raw)
   const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(raw)) - 2))
   return Math.round(raw / magnitude) * magnitude
 }

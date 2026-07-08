@@ -21,11 +21,10 @@ export const ERAS: EraConfig[] = [
     index: 1,
     name: text.data.eras.expansion.name,
     tagline: text.data.eras.expansion.tagline,
-    // Idle-scale stretch: era levels re-spread across the 60-level ladder
-    // (was 7/13/18 under the old 20-level cap) so era progression paces the
-    // long mid-game instead of finishing in the first hours.
+    // Era levels re-spread across the 30-level ladder (Direction A) so era
+    // progression paces the mid-game rather than finishing in hour two.
     requiredResearch: 4,
-    requiredLevel: 10,
+    requiredLevel: 8,
     sellPriceBonusRate: 0.1,
     researchRateBonusRate: 0.15,
   },
@@ -35,7 +34,7 @@ export const ERAS: EraConfig[] = [
     name: text.data.eras.modern.name,
     tagline: text.data.eras.modern.tagline,
     requiredResearch: 8,
-    requiredLevel: 22,
+    requiredLevel: 16,
     sellPriceBonusRate: 0.2,
     researchRateBonusRate: 0.3,
   },
@@ -44,11 +43,10 @@ export const ERAS: EraConfig[] = [
     index: 3,
     name: text.data.eras.energyTransition.name,
     tagline: text.data.eras.energyTransition.tagline,
-    // Endgame: requires all 10 research items and deep into the 60-level
-    // ladder -- a genuine late-game inflection point, not just the next
-    // rung on the same ladder.
+    // Endgame era: all 10 research items and deep into the 30-level ladder --
+    // a genuine late-game inflection point, not just the next rung.
     requiredResearch: 10,
-    requiredLevel: 34,
+    requiredLevel: 24,
     sellPriceBonusRate: 0.3,
     researchRateBonusRate: 0.4,
     demandShift: true,
