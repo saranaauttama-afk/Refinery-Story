@@ -13,14 +13,14 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
-import { colors, radii, spacing } from '../../../src/theme'
+import { colors, fonts, radii, spacing } from '../../../src/theme'
 import { text } from '../../../src/game/translations'
 import { WORKERS } from '../../../src/game/data/workers'
 import { getStaffTrait } from '../../../src/game/data/staffTraits'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { getManualRefreshCost } from '../../../src/game/data/recruitment'
-import { TICK_MS, getMaxHireCount, getSpecialistPlantForWorker } from '../../../src/game/utils/gameCalculations'
+import { TICK_MS, getMaxHireCount, getSpecialistPlantForWorker, formatCompactNumber } from '../../../src/game/utils/gameCalculations'
 import type { RecruitmentCandidate, RecruitmentTier } from '../../../src/game/types'
 
 const TIER_CONFIG: Record<RecruitmentTier, { label: string; bodyColor: string; legColor: string; headColor: string; borderColor: string }> = {
@@ -158,11 +158,11 @@ export default function RecruitScreen() {
           </View>
           <AnimatedPressable
             disabled={!canHire}
-            onPress={() => { if (canHire) { spawnFloat("-$" + selectedCandidate.cost.toLocaleString(), 'expense'); haptics.confirm() }; hireCandidate(selectedSlot); setSelectedSlot(0) }}
+            onPress={() => { if (canHire) { spawnFloat("-$" + formatCompactNumber(selectedCandidate.cost), 'expense'); haptics.confirm() }; hireCandidate(selectedSlot); setSelectedSlot(0) }}
             style={[styles.hireBtn, canHire ? styles.hireBtnActive : styles.hireBtnOff]}
           >
             <Text style={styles.hireBtnLabel}>
-              {atCap ? t(rs.full(cap)) : !affordable ? t(rs.need(selectedCandidate.cost.toLocaleString())) : t(rs.hireName(selectedCandidate.name, selectedCandidate.cost.toLocaleString()))}
+              {atCap ? t(rs.full(cap)) : !affordable ? t(rs.need(formatCompactNumber(selectedCandidate.cost))) : t(rs.hireName(selectedCandidate.name, formatCompactNumber(selectedCandidate.cost)))}
             </Text>
           </AnimatedPressable>
         </View>
@@ -172,9 +172,9 @@ export default function RecruitScreen() {
       <View style={styles.refreshBar}>
         <Text style={styles.refreshTimer}>{refreshSecsLeft > 0 ? t(rs.newCandidatesIn(Math.ceil(refreshSecsLeft / 60))) : t(rs.candidatesReady)}</Text>
         <AnimatedPressable disabled={!canRefresh}
-          onPress={() => { if (canRefresh) { spawnFloat("-$" + refreshCost.toLocaleString(), 'expense'); haptics.tap() }; refreshRecruitmentPool(); setSelectedSlot(0) }}
+          onPress={() => { if (canRefresh) { spawnFloat("-$" + formatCompactNumber(refreshCost), 'expense'); haptics.tap() }; refreshRecruitmentPool(); setSelectedSlot(0) }}
           style={[styles.refreshBtn, canRefresh ? styles.refreshBtnActive : styles.refreshBtnOff]}>
-          <Text style={styles.refreshBtnLabel}>{t(rs.refresh(refreshCost.toLocaleString()))}</Text>
+          <Text style={styles.refreshBtnLabel}>{t(rs.refresh(formatCompactNumber(refreshCost)))}</Text>
         </AnimatedPressable>
       </View>
     </SafeAreaView>
@@ -190,11 +190,11 @@ const styles = StyleSheet.create({
   sceneSign: { position: 'absolute', top: '45%', left: 14, backgroundColor: colors.cream, borderRadius: 6, borderWidth: 2, borderColor: '#8A7A5A', paddingHorizontal: 8, paddingVertical: 3 },
   sceneSignText: { fontSize: 9, fontWeight: '800', color: colors.ink },
   candidatesStage: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 20, paddingHorizontal: 20 },
-  infoPanel: { backgroundColor: '#1C2634', borderTopWidth: 2, padding: spacing.md, paddingBottom: spacing.sm, flexShrink: 0 },
+  infoPanel: { backgroundColor: '#1C2634', borderTopWidth: 3, padding: spacing.md, paddingBottom: spacing.sm, flexShrink: 0 },
   infoTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   infoRoleIcon: { marginRight: spacing.sm },
-  infoName: { fontSize: 17, fontWeight: '900', color: '#fff' },
-  infoRole: { fontSize: 11, color: '#6B8099', marginTop: 2 },
+  infoName: { fontSize: 18, fontFamily: fonts.display, color: '#fff' },
+  infoRole: { fontSize: 11, fontFamily: fonts.body, color: '#8CA3BE', marginTop: 2 },
   infoFlavor: { fontSize: 11, color: '#9FB3C8', fontStyle: 'italic', marginTop: 3 },
   roleTag: { alignSelf: 'flex-start', borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4, marginTop: spacing.sm, borderWidth: 1 },
   roleTagGlobal: { backgroundColor: 'rgba(124,179,66,0.15)', borderColor: 'rgba(124,179,66,0.5)' },
@@ -202,21 +202,21 @@ const styles = StyleSheet.create({
   roleTagText: { fontSize: 11.5, fontWeight: '700', color: '#DCE7F0' },
   skillBlock: { marginTop: spacing.sm, gap: 6 },
   aceRibbon: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '900', color: colors.gold, letterSpacing: 0.5 },
-  tierBadge: { borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  tierBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
-  infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: radii.sm, padding: spacing.sm, marginBottom: spacing.sm },
+  tierBadge: { borderRadius: 10, borderBottomWidth: 3, borderBottomColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 10, paddingVertical: 4 },
+  tierBadgeText: { fontSize: 10, fontFamily: fonts.heading, color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: radii.md, padding: spacing.sm, marginBottom: spacing.sm },
   iStat: { flex: 1, alignItems: 'center' },
-  iStatVal: { fontSize: 16, fontWeight: '900', color: '#fff' },
-  iStatLabel: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase' },
+  iStatVal: { fontSize: 17, fontFamily: fonts.heading, color: '#fff' },
+  iStatLabel: { fontSize: 8, color: '#8CA3BE', textTransform: 'uppercase', letterSpacing: 0.5 },
   iStatDiv: { width: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 4 },
-  hireBtn: { borderRadius: radii.md, paddingVertical: 11, alignItems: 'center' },
-  hireBtnActive: { backgroundColor: colors.green },
-  hireBtnOff: { backgroundColor: '#2E3D50' },
-  hireBtnLabel: { fontSize: 14, fontWeight: '900', color: '#fff' },
+  hireBtn: { borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderBottomWidth: 4 },
+  hireBtnActive: { backgroundColor: colors.green, borderBottomColor: colors.greenDark },
+  hireBtnOff: { backgroundColor: '#2E3D50', borderBottomColor: '#1B2532' },
+  hireBtnLabel: { fontSize: 15, fontFamily: fonts.display, color: '#fff', letterSpacing: 0.5 },
   refreshBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#141E2A', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: '#2E3D50', flexShrink: 0 },
-  refreshTimer: { fontSize: 11, color: '#4A5A6A' },
-  refreshBtn: { borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  refreshBtnActive: { backgroundColor: '#2E3D50' },
-  refreshBtnOff: { backgroundColor: '#1A2530' },
-  refreshBtnLabel: { fontSize: 11, fontWeight: '700', color: '#8A9BB0' },
+  refreshTimer: { fontSize: 11, color: '#7C8FA6' },
+  refreshBtn: { borderRadius: 10, paddingHorizontal: spacing.md, paddingVertical: 7, borderBottomWidth: 3 },
+  refreshBtnActive: { backgroundColor: '#33496A', borderBottomColor: '#1B2A40' },
+  refreshBtnOff: { backgroundColor: '#1A2530', borderBottomColor: '#111922' },
+  refreshBtnLabel: { fontSize: 11, fontFamily: fonts.heading, color: '#CFDDEC' },
 })
