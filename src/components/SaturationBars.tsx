@@ -32,8 +32,8 @@ export default function SaturationBars({ rows }: { rows: { label: string; level:
 const styles = StyleSheet.create({
   wrap: { gap: 5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  label: { width: 74, fontSize: 11, fontWeight: '700', color: colors.ink },
-  track: { flex: 1, height: 8, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden' },
+  label: { width: 74, fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
+  track: { flex: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: radii.pill, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.pill },
   pct: { width: 34, fontSize: 11, fontWeight: '800', textAlign: 'right' },
 })
