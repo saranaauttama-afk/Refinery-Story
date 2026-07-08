@@ -26,7 +26,7 @@ import { useLang } from '../../../src/hooks/SettingsContext'
 import { parseBilingualText, text } from '../../../src/game/translations'
 import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
 import { useHaptics } from '../../../src/hooks/useHaptics'
-import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, fonts, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { EXPANSION_BALANCE, PRESTIGE_BALANCE, STAFF_LEVEL_BALANCE, type PaidExpansionEntry } from '../../../src/game/data/balance'
 import { WORKERS } from '../../../src/game/data/workers'
 import { getStaffTrait } from '../../../src/game/data/staffTraits'
@@ -405,18 +405,18 @@ const styles = StyleSheet.create({
   teamSkillIcon: { fontSize: 18 },
   teamSkillVal: { fontSize: 15, fontWeight: '900', color: '#fff' },
   teamSkillLbl: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.3 },
-  perkOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  perkSheet: { width: '100%', maxWidth: 420, maxHeight: '80%', backgroundColor: colors.cream, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.sm },
-  perkTitle: { fontSize: 18, fontWeight: '900', color: colors.ink, textAlign: 'center' },
-  perkSub: { fontSize: 12, color: colors.inkMuted, textAlign: 'center', marginBottom: spacing.xs },
+  perkOverlay: { flex: 1, backgroundColor: 'rgba(6,9,14,0.66)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  perkSheet: { width: '100%', maxWidth: 420, maxHeight: '80%', backgroundColor: '#161D28', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)', padding: spacing.lg, gap: spacing.sm },
+  perkTitle: { fontSize: 18, fontFamily: fonts.display, color: '#F2F6FB', textAlign: 'center' },
+  perkSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginBottom: spacing.xs },
   perkList: { flexGrow: 0 },
-  perkCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.white, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.creamBorder, padding: spacing.md, marginBottom: spacing.xs },
+  perkCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', padding: spacing.md, marginBottom: spacing.xs },
   perkIcon: { fontSize: 26 },
-  perkName: { fontSize: 15, fontWeight: '900', color: colors.ink },
-  perkFlavor: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
-  perkOwned: { fontSize: 12, color: colors.inkMuted, textAlign: 'center', marginTop: spacing.xs },
+  perkName: { fontSize: 15, fontWeight: '900', color: '#EAF1F8' },
+  perkFlavor: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
+  perkOwned: { fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: spacing.xs },
   perkCancel: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
-  perkCancelText: { fontSize: 14, fontWeight: '700', color: colors.inkMuted },
+  perkCancelText: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
   card: { backgroundColor: colors.white, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.creamBorder, padding: spacing.md },
   emptyState: { alignItems: 'center', paddingTop: 48, gap: 8 },
   emptyIcon: { fontSize: 40 },
