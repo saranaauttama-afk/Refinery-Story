@@ -1,17 +1,18 @@
 import { useEffect } from 'react'
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated'
 import type { AwardRecord } from '../game/types'
 import { colors, fonts, radii, spacing } from '../theme'
 import { useLang } from '../hooks/SettingsContext'
 import { text } from '../game/translations'
 import { getRivalConfig } from '../game/data/rivals'
+import { formatCompactNumber } from '../game/utils/gameCalculations'
+import Dialog, { DialogButton } from './Dialog'
 
 const GRADE_COLORS: Record<string, string> = {
   S: colors.gold,
@@ -29,65 +30,55 @@ const MEDALS = ['🥇', '🥈', '🥉']
 
 function AwardModal({ record, onDismiss }: AwardModalProps) {
   const { t } = useLang()
-  // Ceremony entrance: the card springs up, then the grade badge pops in with
-  // a little overshoot a beat later -- a reveal moment rather than a static
-  // dialog. Driven off `record` becoming non-null (the modal stays mounted in
-  // GlobalOverlays, so we key on the prop, not mount).
-  const cardScale = useSharedValue(0.85)
-  const cardOpacity = useSharedValue(0)
+  // The grade badge pops in with a little overshoot a beat after the card
+  // springs up (Dialog owns the card entrance) — a reveal moment, not a static
+  // dialog. Keyed on `record` since the modal stays mounted in GlobalOverlays.
   const badgeScale = useSharedValue(0)
 
   useEffect(() => {
     if (!record) return
-    cardScale.value = 0.85
-    cardOpacity.value = 0
     badgeScale.value = 0
-    cardOpacity.value = withTiming(1, { duration: 200 })
-    cardScale.value = withSpring(1, { damping: 14, stiffness: 180 })
-    badgeScale.value = withDelay(260, withSpring(1, { damping: 9, stiffness: 200 }))
-  }, [record, cardScale, cardOpacity, badgeScale])
+    badgeScale.value = withDelay(280, withSpring(1, { damping: 9, stiffness: 200 }))
+  }, [record, badgeScale])
 
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: cardOpacity.value,
-    transform: [{ scale: cardScale.value }],
-  }))
-  const badgeStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: badgeScale.value }],
-  }))
-
-  if (!record) return null
+  const badgeStyle = useAnimatedStyle(() => ({ transform: [{ scale: badgeScale.value }] }))
 
   return (
-    <Modal visible transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <Animated.View style={[styles.card, cardStyle]}>
-          <Text style={styles.title}>Year {record.year} Results</Text>
+    <Dialog
+      visible={!!record}
+      dismissOnBackdrop={false}
+      title={record ? `Year ${record.year} Results` : undefined}
+      scroll
+      footer={<DialogButton label="Continue" variant="primary" onPress={onDismiss} />}
+    >
+      {record ? (
+        <>
           <Animated.View style={[styles.gradeBadge, badgeStyle, { backgroundColor: GRADE_COLORS[record.grade] ?? colors.steelMid }]}>
             <Text style={styles.gradeText}>{record.grade}</Text>
           </Animated.View>
-          <Text style={styles.row}>Score: {record.score}</Text>
-          <Text style={styles.row}>Money earned: ${record.moneyEarned.toLocaleString()}</Text>
-          <Text style={styles.row}>Payroll: ${record.payroll.toLocaleString()}</Text>
-          {record.maintenance ? (
-            <Text style={styles.row}>Maintenance: ${record.maintenance.toLocaleString()}</Text>
-          ) : null}
-          <Text style={styles.row}>Net profit: ${record.netProfit.toLocaleString()}</Text>
-          <Text style={styles.row}>Cash bonus: +${record.cashReward.toLocaleString()}</Text>
-          <Text style={styles.row}>Gasoline produced: {record.gasolineProduced.toLocaleString()}</Text>
-          <Text style={styles.row}>Contracts completed: {record.contractsCompleted}</Text>
-          {typeof record.morale === 'number' && (
-            <Text style={styles.row}>
-              Staff morale: {record.morale}%{' '}
-              {record.morale >= 75 ? '😊' : record.morale < 40 ? '😟' : '😐'}
-            </Text>
-          )}
+
+          <View style={styles.statsPanel}>
+            <Row label="Score" value={formatCompactNumber(record.score)} />
+            <Row label="Money earned" value={`$${formatCompactNumber(record.moneyEarned)}`} />
+            <Row label="Payroll" value={`$${formatCompactNumber(record.payroll)}`} />
+            {record.maintenance ? <Row label="Maintenance" value={`$${formatCompactNumber(record.maintenance)}`} /> : null}
+            <Row label="Net profit" value={`$${formatCompactNumber(record.netProfit)}`} />
+            <Row label="Cash bonus" value={`+$${formatCompactNumber(record.cashReward)}`} />
+            <Row label="Gasoline produced" value={formatCompactNumber(record.gasolineProduced)} />
+            <Row label="Contracts completed" value={`${record.contractsCompleted}`} />
+            {typeof record.morale === 'number' && (
+              <Row
+                label="Staff morale"
+                value={`${record.morale}% ${record.morale >= 75 ? '😊' : record.morale < 40 ? '😟' : '😐'}`}
+              />
+            )}
+          </View>
+
           {record.couldNotAfford && (
-            <Text style={styles.warning}>⚠️ Payroll exceeded cash on hand -- reputation took a small hit.</Text>
+            <Text style={styles.warning}>⚠️ Payroll exceeded cash on hand — reputation took a small hit.</Text>
           )}
 
           {(record.rivals?.length ?? 0) > 0 && (() => {
-            // Combined leaderboard, sorted by score — the player is one of the
-            // four. Highlight the player's row + medals + a rank-movement line.
             const board = [
               { key: '__you', name: t(text.award.you), score: record.score, isPlayer: true },
               ...(record.rivals ?? []).map((r) => ({ key: r.key, name: t(r.name), score: r.score, isPlayer: false })),
@@ -95,7 +86,6 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
             const myIndex = board.findIndex((e) => e.isPlayer)
             const rank = record.playerRank
             const prev = record.previousRank
-            // Rank movement (lower rank number = better).
             const move =
               rank === 1 ? t(text.award.rankTop)
               : prev === undefined ? t(text.award.rankHeld(rank))
@@ -103,8 +93,6 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
               : rank > prev ? t(text.award.rankSlipped(rank))
               : t(text.award.rankHeld(rank))
             const moveColor = rank === 1 ? colors.gold : prev !== undefined && rank < prev ? colors.green : prev !== undefined && rank > prev ? colors.orange : colors.steelMid
-            // Rivalry beat: the rival directly above you taunts; if you're #1 the
-            // runner-up concedes; otherwise nudge the player to catch the target.
             const target = myIndex > 0 ? board[myIndex - 1] : null
             const targetCfg = target && !target.isPlayer ? getRivalConfig(target.key) : null
             const runnerUp = rank === 1 ? board[1] : null
@@ -127,7 +115,7 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
                       <Text style={[styles.rivalRow, e.isPlayer && styles.rivalRowYouText]}>
                         {i < 3 ? MEDALS[i] : `#${i + 1}`} {e.name}
                       </Text>
-                      <Text style={[styles.rivalScore, e.isPlayer && styles.rivalRowYouText]}>{e.score.toLocaleString()}</Text>
+                      <Text style={[styles.rivalScore, e.isPlayer && styles.rivalRowYouText]}>{formatCompactNumber(e.score)}</Text>
                     </View>
                   ))}
                 </ScrollView>
@@ -136,138 +124,105 @@ function AwardModal({ record, onDismiss }: AwardModalProps) {
               </View>
             )
           })()}
+        </>
+      ) : null}
+    </Dialog>
+  )
+}
 
-          <Pressable style={styles.dismissButton} onPress={onDismiss}>
-            <Text style={styles.dismissLabel}>Continue</Text>
-          </Pressable>
-        </Animated.View>
-      </View>
-    </Modal>
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  card: {
-    backgroundColor: colors.cream,
-    borderRadius: radii.lg,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    padding: spacing.lg,
-    width: '100%',
-    maxHeight: '80%',
-  },
-  title: {
-    fontSize: 19,
-    fontFamily: fonts.display,
-    color: colors.ink,
-    marginBottom: spacing.sm,
-  },
   gradeBadge: {
     alignSelf: 'center',
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.ink,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   gradeText: {
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: fonts.display,
-    color: colors.ink,
+    color: '#241a02',
+  },
+  statsPanel: {
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   row: {
-    fontSize: 13,
-    color: colors.ink,
-    marginBottom: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
   },
+  rowLabel: { fontSize: 13, fontFamily: fonts.body, color: 'rgba(255,255,255,0.6)' },
+  rowValue: { fontSize: 13, fontFamily: fonts.heading, color: '#EAF1F8' },
   warning: {
     fontSize: 12,
-    color: colors.red,
-    marginTop: spacing.xs,
+    fontFamily: fonts.body,
+    color: '#F3B4AC',
+    marginTop: spacing.sm,
   },
   rivalsBox: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.creamBorder,
-    paddingTop: spacing.sm,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    paddingTop: spacing.md,
   },
   rivalsTitle: {
-    fontWeight: '800',
-    color: colors.ink,
+    fontFamily: fonts.heading,
+    fontSize: 14,
+    color: '#EAF1F8',
     marginBottom: 4,
   },
-  rivalsList: {
-    maxHeight: 130,
-  },
+  rivalsList: { maxHeight: 150 },
   rankHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
   },
-  rankMove: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
+  rankMove: { fontSize: 12, fontFamily: fonts.heading },
   rivalRowBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 3,
-    paddingHorizontal: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
     borderRadius: radii.sm,
   },
   rivalRowYou: {
-    backgroundColor: 'rgba(242,193,46,0.18)',
+    backgroundColor: 'rgba(242,193,46,0.16)',
     borderWidth: 1,
-    borderColor: colors.gold,
+    borderColor: 'rgba(242,193,46,0.55)',
   },
-  rivalRow: {
-    fontSize: 12.5,
-    color: colors.inkMuted,
-  },
-  rivalScore: {
-    fontSize: 12.5,
-    color: colors.inkMuted,
-    fontWeight: '700',
-  },
-  rivalRowYouText: {
-    color: colors.ink,
-    fontWeight: '800',
-  },
+  rivalRow: { fontSize: 12.5, fontFamily: fonts.body, color: 'rgba(255,255,255,0.6)' },
+  rivalScore: { fontSize: 12.5, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.6)' },
+  rivalRowYouText: { color: '#F7F3E6' },
   rivalTaunt: {
     fontSize: 12,
-    color: colors.ink,
+    fontFamily: fonts.body,
+    color: 'rgba(255,255,255,0.75)',
     fontStyle: 'italic',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   rivalNudge: {
     fontSize: 12,
-    color: colors.blue,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  dismissButton: {
-    marginTop: spacing.md,
-    backgroundColor: colors.green,
-    borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.ink,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  dismissLabel: {
-    fontWeight: '800',
-    color: colors.ink,
+    fontFamily: fonts.heading,
+    color: colors.teal,
+    marginTop: 3,
   },
 })
 
