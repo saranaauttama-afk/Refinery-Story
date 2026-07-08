@@ -1,5 +1,5 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { colors, radii, spacing } from '../theme'
+import { colors, fonts, radii, spacing } from '../theme'
 import { useLang } from '../hooks/SettingsContext'
 import { text } from '../game/translations'
 
@@ -31,12 +31,15 @@ function Sheet({ visible, title, onClose, children }: SheetProps) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(6,9,14,0.6)',
   },
   sheet: {
-    backgroundColor: colors.cream,
-    borderTopLeftRadius: radii.lg,
-    borderTopRightRadius: radii.lg,
+    backgroundColor: '#161D28',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: 'rgba(255,255,255,0.09)',
     maxHeight: '75%',
     paddingBottom: spacing.xl,
   },
@@ -48,15 +51,15 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.creamBorder,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
-    color: colors.ink,
+    fontFamily: fonts.display,
+    color: '#F2F6FB',
   },
   close: {
-    color: colors.blue,
+    color: colors.teal,
     fontWeight: '700',
   },
   body: {

@@ -9,22 +9,25 @@ type ListRowProps = {
   done?: boolean
   // Small pill rendered next to the title, e.g. "NEW".
   badge?: string
+  // Render for a dark surface (e.g. inside the dark Build sheet) — the default
+  // is the light/cream content screens that share this row.
+  dark?: boolean
   onPress: () => void
 }
 
-function ListRow({ title, subtitle, actionLabel, disabled, done, badge, onPress }: ListRowProps) {
+function ListRow({ title, subtitle, actionLabel, disabled, done, badge, dark, onPress }: ListRowProps) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, dark && styles.rowDark]}>
       <View style={styles.text}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, dark && styles.titleDark]}>{title}</Text>
           {badge && (
             <View style={styles.badge}>
               <Text style={styles.badgeLabel}>{badge}</Text>
             </View>
           )}
         </View>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={[styles.subtitle, dark && styles.subtitleDark]}>{subtitle}</Text> : null}
       </View>
       <Pressable
         disabled={disabled || done}
@@ -51,6 +54,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.creamBorder,
     gap: spacing.md,
   },
+  rowDark: { borderBottomColor: 'rgba(255,255,255,0.08)' },
+  titleDark: { color: '#EAF1F8' },
+  subtitleDark: { color: 'rgba(255,255,255,0.55)' },
   text: {
     flex: 1,
   },

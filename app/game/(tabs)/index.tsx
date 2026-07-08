@@ -1137,6 +1137,7 @@ export default function RefineryScreen() {
             return (
               <ListRow
                 key={event.key}
+                dark
                 title={
                   event.reward.kind === 'staff'    ? t(text.eventsSheet.mysteryApplicant) :
                   event.reward.kind === 'contract' ? t(text.eventsSheet.mysteryContract)  : t(text.eventsSheet.mysteryDelivery)
@@ -1172,6 +1173,7 @@ export default function RefineryScreen() {
         ).map((event) => (
           <ListRow
             key={event.key}
+            dark
             title="??? Mystery Delivery"
             subtitle="Something unusual happened. Tap to find out what."
             badge="???"
@@ -1532,7 +1534,7 @@ export default function RefineryScreen() {
                   <Text style={styles.upgMaxIcon}>🏆</Text>
                   <View>
                     <Text style={styles.upgMaxTitle}>Maximum Level Reached</Text>
-                    <Text style={styles.upgMaxSub}>Lv20 — All buildings and eras unlocked.</Text>
+                    <Text style={styles.upgMaxSub}>Lv{MAX_REFINERY_LEVEL} — All buildings and eras unlocked.</Text>
                   </View>
                 </View>
               )}
@@ -1548,7 +1550,7 @@ export default function RefineryScreen() {
                   <Text style={[styles.upgArrowHead, canUpgrade && styles.upgArrowHeadReady]}>▶</Text>
                 </View>
                 <View style={[styles.upgLevelBox, styles.upgLevelBoxNext]}>
-                  <Text style={[styles.upgLevelNum, { color: canUpgrade ? colors.green : colors.inkMuted }]}>Lv{nextLevel}</Text>
+                  <Text style={[styles.upgLevelNum, { color: canUpgrade ? colors.green : 'rgba(255,255,255,0.5)' }]}>Lv{nextLevel}</Text>
                   <Text style={styles.upgLevelLabel}>Next</Text>
                 </View>
               </View>}
@@ -1866,43 +1868,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: '#FFF8E6',
+    backgroundColor: 'rgba(242,193,46,0.12)',
     borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.gold,
+    borderWidth: 1,
+    borderColor: 'rgba(242,193,46,0.5)',
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   upgMaxIcon: { fontSize: 32 },
-  upgMaxTitle: { fontSize: 15, fontWeight: '900', color: colors.ink },
-  upgMaxSub: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
+  upgMaxTitle: { fontSize: 15, fontWeight: '900', color: '#EAF1F8' },
+  upgMaxSub: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
   upgLevelStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md, gap: 0 },
-  upgLevelBox: { alignItems: 'center', backgroundColor: colors.cream, borderRadius: radii.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1.5, borderColor: colors.creamBorder },
+  upgLevelBox: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radii.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   upgLevelBoxNext: { borderColor: colors.green },
-  upgLevelNum: { fontSize: 24, fontWeight: '900', color: colors.ink },
-  upgLevelLabel: { fontSize: 9, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  upgLevelNum: { fontSize: 24, fontWeight: '900', color: '#EAF1F8' },
+  upgLevelLabel: { fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 },
   upgArrowWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
-  upgArrowLine: { height: 2, width: 28, backgroundColor: colors.creamBorder },
+  upgArrowLine: { height: 2, width: 28, backgroundColor: 'rgba(255,255,255,0.15)' },
   upgArrowLineReady: { backgroundColor: colors.green },
-  upgArrowHead: { fontSize: 14, color: colors.creamBorder, marginLeft: -4 },
+  upgArrowHead: { fontSize: 14, color: 'rgba(255,255,255,0.3)', marginLeft: -4 },
   upgArrowHeadReady: { color: colors.green },
-  upgUnlockBox: { backgroundColor: '#EBF5E8', borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.green, padding: spacing.sm, marginBottom: spacing.sm, gap: 3 },
-  upgUnlockTitle: { fontSize: 10, fontWeight: '900', color: colors.greenDark, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
-  upgUnlockItem: { fontSize: 12, color: colors.greenDark, fontWeight: '600' },
-  upgSectionLabel: { fontSize: 10, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs },
+  upgUnlockBox: { backgroundColor: 'rgba(127,174,116,0.12)', borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(127,174,116,0.5)', padding: spacing.sm, marginBottom: spacing.sm, gap: 3 },
+  upgUnlockTitle: { fontSize: 10, fontWeight: '900', color: '#9BD590', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
+  upgUnlockItem: { fontSize: 12, color: '#B6DDAE', fontWeight: '600' },
+  upgSectionLabel: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs },
   upgReqRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
   upgReqCheck: { fontSize: 16, fontWeight: '900', width: 22, textAlign: 'center' },
   upgReqCheckMet: { color: colors.green },
-  upgReqCheckUnmet: { color: colors.red },
+  upgReqCheckUnmet: { color: '#E77',  },
   upgReqTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  upgReqLabel: { fontSize: 13, color: colors.ink, fontWeight: '600' },
-  upgReqLabelUnmet: { color: colors.inkMuted },
-  upgReqValue: { fontSize: 12, fontWeight: '700', color: colors.ink },
-  upgReqValueUnmet: { color: colors.red },
-  upgReqBar: { height: 4, backgroundColor: colors.creamBorder, borderRadius: radii.pill, overflow: 'hidden', marginTop: 4 },
+  upgReqLabel: { fontSize: 13, color: '#EAF1F8', fontWeight: '600' },
+  upgReqLabelUnmet: { color: 'rgba(255,255,255,0.5)' },
+  upgReqValue: { fontSize: 12, fontWeight: '700', color: '#EAF1F8' },
+  upgReqValueUnmet: { color: '#E77' },
+  upgReqBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: radii.pill, overflow: 'hidden', marginTop: 4 },
   upgReqBarFill: { height: '100%', borderRadius: radii.pill },
   upgButton: { marginTop: spacing.sm, backgroundColor: colors.green, borderRadius: radii.md, paddingVertical: 13, alignItems: 'center' },
-  upgButtonOff: { backgroundColor: colors.creamBorder },
+  upgButtonOff: { backgroundColor: 'rgba(255,255,255,0.1)' },
   upgButtonLabel: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
   hintActive: {
     textAlign: 'center',
@@ -2501,21 +2503,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.creamBorder,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   infoStatLabel: {
-    color: colors.inkMuted,
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
   },
   infoStatValue: {
-    color: colors.ink,
+    color: '#EAF1F8',
     fontWeight: '800',
     fontSize: 13,
   },
 
   // ── Events sheet ─────────────────────────────────────────────────────────
   eventEmpty: {
-    color: colors.inkMuted,
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
@@ -2524,12 +2526,12 @@ const styles = StyleSheet.create({
   // ── Building info sheet ───────────────────────────────────────────────────
   infoLevel: {
     fontWeight: '800',
-    color: colors.ink,
+    color: '#EAF1F8',
     fontSize: 13,
     marginTop: spacing.sm,
   },
   infoDescription: {
-    color: colors.inkMuted,
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     marginTop: 2,
     marginBottom: spacing.sm,
@@ -2540,10 +2542,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: colors.creamBorder,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   infoEffectLabel: {
-    color: colors.ink,
+    color: '#EAF1F8',
     fontSize: 13,
     flex: 1,
     marginRight: spacing.sm,
