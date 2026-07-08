@@ -1176,6 +1176,8 @@ export const text = {
     // Contracts tab (the pushed screen) — its own UI strings.
     screen: {
       title: bilingual('Contracts', 'สัญญา'),
+      heroTitle: bilingual('Deliver. Profit. Grow.', 'ส่งมอบ ทำกำไร เติบโต'),
+      heroSub: bilingual('Complete contracts to earn cash and reputation.', 'ทำสัญญาให้สำเร็จเพื่อรับเงินและชื่อเสียง'),
       ready: (n: number) => bilingual(`${n} ready`, `พร้อม ${n}`),
       mysteryTitle: bilingual('??? Mystery Contract', '??? สัญญาปริศนา'),
       mysterySubtitle: bilingual('Something unusual happened.', 'มีเรื่องผิดปกติเกิดขึ้น'),
