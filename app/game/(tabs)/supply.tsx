@@ -2,15 +2,14 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDi
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
-import ArtSlot from '../../../src/components/ArtSlot'
 import ListRow from '../../../src/components/ListRow'
 import MarketGraph from '../../../src/components/MarketGraph'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
-import { colors, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, fonts, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
-import { CRUDE_COST, TICK_MS } from '../../../src/game/utils/gameCalculations'
+import { CRUDE_COST, TICK_MS, formatCompactNumber } from '../../../src/game/utils/gameCalculations'
 import { text } from '../../../src/game/translations'
 
 export default function SupplyScreen() {
@@ -42,8 +41,6 @@ export default function SupplyScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.list}>
-        <ArtSlot id="supply_header" width="100%" height={84} spec="1080×260" caption="Crude tanker / pipeline banner" />
-
         {/* Crude price chart — history + deterministic forecast so you can time the dip */}
         <View style={styles.marketCard}>
           <View style={styles.marketTop}>
@@ -69,9 +66,9 @@ export default function SupplyScreen() {
 
         <Text style={styles.sectionLabel}>{t(ss.orderCrude)}</Text>
         {SHIPMENT_BALANCE.map((option) => (
-          <ListRow key={option.key}
+          <ListRow key={option.key} dark
             title={t(text.shipments.names[option.key]) + t(ss.plusCrude(option.amount))}
-            subtitle={t(ss.shipmentSub(option.cost.toLocaleString(), option.delayMs / 1000))}
+            subtitle={t(ss.shipmentSub(formatCompactNumber(option.cost), option.delayMs / 1000))}
             actionLabel={t(ss.order)} disabled={game.money < option.cost}
             onPress={() => buyShipment(option)} />
         ))}
@@ -87,10 +84,10 @@ export default function SupplyScreen() {
           const ready = have >= order.required && !onCooldown
           const orderText = text.standingOrders.orders[order.key]
           return (
-            <ListRow key={order.key} title={t(orderText.name)}
+            <ListRow key={order.key} dark title={t(orderText.name)}
               subtitle={onCooldown
                 ? t(ss.cooldown(Math.ceil((ticksLeft * TICK_MS) / 1000)))
-                : have + "/" + order.required + " " + order.productKey + " +$" + order.reward.toLocaleString() + " +" + order.rpReward + "RP"}
+                : have + "/" + order.required + " " + order.productKey + " +$" + formatCompactNumber(order.reward) + " +" + order.rpReward + "RP"}
               actionLabel={t(ss.fulfill)} disabled={!ready}
               onPress={() => fulfillStandingOrder(order.key)} />
           )
@@ -101,18 +98,27 @@ export default function SupplyScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
-  loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+  screen: { flex: 1, backgroundColor: '#111820' },
+  loadingScreen: { flex: 1, backgroundColor: '#111820', alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
-  sectionLabel: { fontSize: 11, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs },
-  marketCard: { backgroundColor: colors.white, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.creamBorder, padding: spacing.md, marginBottom: spacing.xs },
+  sectionLabel: { fontSize: 11, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, marginTop: spacing.xs },
+  marketCard: {
+    backgroundColor: '#1B2534', borderRadius: 14,
+    borderTopWidth: 2, borderTopColor: '#2C3D54',
+    borderBottomWidth: 3, borderBottomColor: '#0C131C',
+    padding: spacing.md, marginBottom: spacing.sm,
+  },
   marketTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  marketTitle: { fontSize: 13, fontWeight: '900', color: colors.ink, textTransform: 'uppercase', letterSpacing: 0.5 },
-  marketPrice: { fontSize: 15, fontWeight: '900' },
+  marketTitle: { fontSize: 13, fontFamily: fonts.heading, color: '#EAF1F8', textTransform: 'uppercase', letterSpacing: 0.5 },
+  marketPrice: { fontSize: 16, fontFamily: fonts.heading },
   marketPriceCheap: { color: colors.green },
   marketPriceHigh: { color: colors.orange },
-  marketHint: { fontSize: 11, color: colors.inkMuted, marginTop: 4, fontStyle: 'italic' },
-  pendingBox: { backgroundColor: '#EBF4FF', borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.blue, padding: spacing.sm, gap: 4 },
-  pendingTitle: { fontSize: 12, fontWeight: '800', color: colors.blueDark },
-  pendingRow: { fontSize: 12, color: colors.blue },
+  marketHint: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4, fontStyle: 'italic' },
+  pendingBox: {
+    backgroundColor: 'rgba(91,141,191,0.14)', borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(91,141,191,0.5)',
+    padding: spacing.sm, gap: 4, marginBottom: spacing.sm,
+  },
+  pendingTitle: { fontSize: 12, fontFamily: fonts.heading, color: '#9CC2EC' },
+  pendingRow: { fontSize: 12, color: '#B9D4F2' },
 })

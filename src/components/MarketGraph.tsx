@@ -73,18 +73,18 @@ export default function MarketGraph({
     <View style={styles.wrap}>
       <Svg width={width} height={height}>
         {/* base-price reference line */}
-        <Line x1={PAD_L} y1={baseY} x2={width - PAD_R} y2={baseY} stroke={colors.creamBorder} strokeWidth={1} strokeDasharray="3 3" />
-        <SvgText x={width - PAD_R + 4} y={baseY + 3} fontSize={9} fill={colors.inkMuted}>${CRUDE_COST}</SvgText>
+        <Line x1={PAD_L} y1={baseY} x2={width - PAD_R} y2={baseY} stroke="rgba(255,255,255,0.15)" strokeWidth={1} strokeDasharray="3 3" />
+        <SvgText x={width - PAD_R + 4} y={baseY + 3} fontSize={9} fill="rgba(255,255,255,0.5)">${CRUDE_COST}</SvgText>
 
         {/* history (solid) + forecast (dashed) */}
-        <Path d={pastD} stroke={colors.blue} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
-        <Path d={futureD} stroke={colors.blue} strokeWidth={2} fill="none" strokeDasharray="4 4" opacity={0.55} strokeLinejoin="round" />
+        <Path d={pastD} stroke="#7FB2E8" strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+        <Path d={futureD} stroke="#7FB2E8" strokeWidth={2} fill="none" strokeDasharray="4 4" opacity={0.55} strokeLinejoin="round" />
 
         {/* now marker */}
-        <Line x1={nowX} y1={PAD_T} x2={nowX} y2={height - PAD_B} stroke={colors.inkMuted} strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
+        <Line x1={nowX} y1={PAD_T} x2={nowX} y2={height - PAD_B} stroke="rgba(255,255,255,0.35)" strokeWidth={1} strokeDasharray="2 3" opacity={0.6} />
         <Circle cx={nowX} cy={nowY} r={5} fill={lineColor} stroke="#fff" strokeWidth={2} />
         <SvgText x={nowX + 8} y={nowY - 8} fontSize={11} fontWeight="700" fill={lineColor}>${Math.round(nowPrice)}</SvgText>
-        <SvgText x={nowX + 2} y={height - 1} fontSize={8} fill={colors.inkMuted}>{nowLabel}</SvgText>
+        <SvgText x={nowX + 2} y={height - 1} fontSize={8} fill="rgba(255,255,255,0.5)">{nowLabel}</SvgText>
       </Svg>
     </View>
   )

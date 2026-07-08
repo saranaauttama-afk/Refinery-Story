@@ -2,12 +2,11 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
-import ArtSlot from '../../../src/components/ArtSlot'
 import ListRow from '../../../src/components/ListRow'
 import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
-import { colors, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, fonts, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import { text } from '../../../src/game/translations'
 import { PERKS } from '../../../src/game/data/perks'
 
@@ -31,13 +30,12 @@ export default function ResearchScreen() {
       <ScreenHeader title={t(rs.title)} onClose={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.list}>
-        <ArtSlot id="research_header" width="100%" height={84} spec="1080×260" caption="Lab / beakers & blueprints banner" />
-
         {/* Research */}
         <Text style={styles.sectionLabel}>{t(cs.researchHeader(Math.floor(game.researchPoints)))}</Text>
         {derived.activeResearchItems.map((item) => (
           <ListRow
             key={item.key}
+            dark
             title={t(item.name)}
             subtitle={item.isUnlocked ? t(item.description) : item.prerequisiteName ? t(cs.requiresResearch(t(item.prerequisiteName), item.cost)) : t(cs.descWithRp(t(item.description), item.cost))}
             actionLabel={t(cs.unlock)}
@@ -58,6 +56,7 @@ export default function ResearchScreen() {
               return (
                 <ListRow
                   key={perk.key}
+                  dark
                   title={t(cs.perkTitle(t(perk.name), perk.tier))}
                   subtitle={unlocked ? t(perk.description) : !prereqMet ? t(cs.requiresPrevTier) : t(cs.descWithPts(t(perk.description), perk.cost))}
                   actionLabel={t(cs.unlock)}
@@ -75,9 +74,9 @@ export default function ResearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
-  loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+  screen: { flex: 1, backgroundColor: '#111820' },
+  loadingScreen: { flex: 1, backgroundColor: '#111820', alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
-  sectionLabel: { fontSize: 11, fontWeight: '900', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, paddingHorizontal: spacing.xs },
-  branchLabel: { fontSize: 11, fontWeight: '700', color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: spacing.xs, marginTop: spacing.xs, marginBottom: 2 },
+  sectionLabel: { fontSize: 11, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
+  branchLabel: { fontSize: 11, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: spacing.xs, marginTop: spacing.xs, marginBottom: 2 },
 })
