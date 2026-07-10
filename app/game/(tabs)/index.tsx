@@ -27,6 +27,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import DeliveryTruck from '../../../src/components/DeliveryTruck'
 import BottomNav from '../../../src/components/BottomNav'
+import CardHUD from '../../../src/components/CardHUD'
+import CardResourceBar, { getMeterColor } from '../../../src/components/CardResourceBar'
 import { type FabNavItem } from '../../../src/components/FabNav'
 import SideMenu, { type SideMenuSection } from '../../../src/components/SideMenu'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
@@ -656,113 +658,81 @@ export default function RefineryScreen() {
           y={sceneHeight * 0.6}
         />
 
-        {/* ── Layer 2 + 3: Company block + Resource Dock + Goal ─────────── */}
+        {/* ── Layer 2 + 3: Card-Based HUD ────────────────────────────────── */}
 
-        {/* Company block — top left: name + title */}
-        <View style={styles.companyBlock}>
-          <Text style={styles.companyName} numberOfLines={1}>{game.refineryName}</Text>
-          <Text style={styles.companyTitle}>{refineryTitle}</Text>
-        </View>
+        {/* Top HUD Card — consolidated company info + controls */}
+        <View style={styles.hudCardWrap}>
+          <CardHUD
+            companyName={game.refineryName}
+            companyTitle={refineryTitle}
+            level={game.refineryLevel}
+            canUpgrade={canUpgrade}
+            isMaxLevel={isMaxLevel}
+            onUpgradePress={() => setUpgradeModalOpen(true)}
+            timeLabel={timeLabel}
+            isDaytime={isDaytime}
+            speed={speed}
+            onSpeedPress={() => { haptics.tap(); cycleSpeed() }}
+            boostActive={boostActive}
+            boostReady={boostReady}
+            boostSeconds={boostSecs}
+            onBoostPress={() => { haptics.confirm(); sound.play('tap'); activateBoost() }}
+            eventsCount={claimableHiddenEvents.length}
+            onEventsPress={() => setEventModalOpen(true)}
+          />
 
-        {/* Top right: Lv badge (tappable upgrade) + time + events bell */}
-        <View style={styles.topRightHud}>
-          <AnimatedPressable
-            style={[styles.lvBadge, canUpgrade && styles.lvBadgeReady, isMaxLevel && styles.lvBadgeMaxed]}
-            onPress={() => setUpgradeModalOpen(true)}
-          >
-            <Text style={styles.lvBadgeText}>
-              {isMaxLevel ? '🏆 Lv20' : `Lv${game.refineryLevel}${canUpgrade ? ' ↑' : ''}`}
-            </Text>
-          </AnimatedPressable>
-          <View style={styles.timePill}>
-            <Clock3 size={11} color={isDaytime ? colors.orangeDark : colors.blueDark} />
-            <Text style={styles.timePillText}>{timeLabel}</Text>
+          {/* Resource Cards — grouped stats below the header */}
+          <View style={styles.resourceCardsWrap}>
+            <CardResourceBar
+              stats={[
+                {
+                  icon: '💰',
+                  label: t(text.hud.money),
+                  value: `$${formatCompactNumber(game.money)}`,
+                  subtitle: fmtMoneyRate(moneyRate),
+                  color: moneyRate > 0 ? colors.green : moneyRate < 0 ? colors.red : undefined,
+                },
+                {
+                  icon: '🛢️',
+                  label: t(text.hud.crude),
+                  value: game.crudeOil,
+                  subtitle: game.crudeOil === 0 ? '⚠️ Empty' : `${Math.round((game.crudeOil / derived.maxCrudeStorage) * 100)}%`,
+                  warn: game.crudeOil === 0,
+                },
+                {
+                  icon: '⛽',
+                  label: t(text.hud.gas),
+                  value: game.gasoline,
+                  subtitle: gasRate > 0 ? `+${gasRate}/min` : undefined,
+                },
+                {
+                  icon: '⭐',
+                  label: `${t(text.hud.rep)} ⋯`,
+                  value: Math.floor(game.reputation),
+                  subtitle: secondaryAlert ? '⚠️ Check meters' : undefined,
+                  onPress: () => setSecondaryOpen((v) => !v),
+                },
+              ]}
+            />
           </View>
-          {/* Speed / pause control (Kairosoft-style): cycles 1× → 2× → 3× → ⏸ */}
-          <Pressable
-            style={[styles.speedPill, speed === 0 && styles.speedPillPaused]}
-            onPress={() => { haptics.tap(); cycleSpeed() }}
-          >
-            <Text style={[styles.speedPillText, speed === 0 && styles.speedPillTextPaused]}>{speed === 0 ? '⏸' : `${speed}×`}</Text>
-          </Pressable>
-          {/* 🔥 Boost — active-tap temporary 2× gasoline production (BOOST_BALANCE) */}
-          <Pressable
-            style={[styles.boostPill, boostActive ? styles.boostPillActive : boostReady ? styles.boostPillReady : styles.boostPillCooldown]}
-            disabled={!boostReady}
-            onPress={() => { haptics.confirm(); sound.play('tap'); activateBoost() }}
-          >
-            <Text style={[styles.boostPillText, !boostReady && !boostActive && styles.boostPillTextDim]}>
-              🔥{boostActive ? ` ${boostSecs}s` : boostReady ? '' : ` ${boostSecs}s`}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.eventsBtn} onPress={() => setEventModalOpen(true)}>
-            <Bell size={13} color={colors.white} />
-            {claimableHiddenEvents.length > 0 && (
-              <View style={styles.eventsBadge}>
-                <Text style={styles.eventsBadgeLabel}>{claimableHiddenEvents.length}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
 
-        {/* Resource dock — dark card straddling sky/yard boundary */}
-        <View style={[styles.resourceDock, { top: resourceTop }]}>
-          <View style={styles.dockStat}>
-            <GameIcon name="money" size={22} />
-            <View style={styles.dockText}>
-              <Text style={styles.dockVal}>${formatCompactNumber(game.money)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
+          {/* Health meters — ESG + Morale in a compact row */}
+          <View style={styles.meterCardsWrap}>
+            <View style={styles.meterChip}>
+              <Text style={styles.meterIcon}>🌱</Text>
+              <Text style={[styles.meterValue, { color: getMeterColor(game.esgScore) }]}>
+                {Math.round(game.esgScore)}
+              </Text>
+              <Text style={styles.meterLabel}>{t(text.hud.esg)}</Text>
+            </View>
+            <View style={styles.meterChip}>
+              <Text style={styles.meterIcon}>🙂</Text>
+              <Text style={[styles.meterValue, { color: getMeterColor(game.staffMorale) }]}>
+                {Math.round(game.staffMorale)}
+              </Text>
+              <Text style={styles.meterLabel}>{t(text.hud.morale)}</Text>
             </View>
           </View>
-          <View style={styles.dockDivider} />
-          <View style={styles.dockStat}>
-            <GameIcon name="crude" size={22} />
-            <View style={styles.dockText}>
-              <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.crude)}</Text>
-            </View>
-          </View>
-          <View style={styles.dockDivider} />
-          <View style={styles.dockStat}>
-            <GameIcon name="gas" size={22} />
-            <View style={styles.dockText}>
-              <Text style={styles.dockVal}>{game.gasoline}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
-            </View>
-          </View>
-          <View style={styles.dockDivider} />
-          {/* ESG + Morale — the two hidden meters that actually bite (low ESG
-              throttles buyers, low morale cuts output), pulled out of More Info
-              so they're always in view. Value colour flags the danger zone. */}
-          <View style={styles.dockStat}>
-            <Text style={styles.dockEmoji}>🌱</Text>
-            <View style={styles.dockText}>
-              <Text style={[styles.dockVal, meterColorStyle(game.esgScore)]}>{Math.round(game.esgScore)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.esg)}</Text>
-            </View>
-          </View>
-          <View style={styles.dockDivider} />
-          <View style={styles.dockStat}>
-            <Text style={styles.dockEmoji}>🙂</Text>
-            <View style={styles.dockText}>
-              <Text style={[styles.dockVal, meterColorStyle(game.staffMorale)]}>{Math.round(game.staffMorale)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.morale)}</Text>
-            </View>
-          </View>
-          <View style={styles.dockDivider} />
-          {/* Rep doubles as the "More Info" toggle — Specialization / Feedstock /
-              Power / Era / Prestige live one tap away to keep the dock focused.
-              Alert dot flags a meter that needs eyes. */}
-          <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
-            <View style={styles.dockToggleIconWrap}>
-              <GameIcon name="reputation" size={22} />
-              {secondaryAlert && <View style={styles.dockAlertDot} />}
-            </View>
-            <View style={styles.dockText}>
-              <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.rep)} ⋯</Text>
-            </View>
-          </Pressable>
         </View>
 
         {/* Flow-rate strip — net $/min + output/min, the "is my factory
@@ -2055,7 +2025,50 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // ── Layer 3: Resource Dock + Goal Banner ────────────────────────────────
+  // ── Layer 2+3: Card-Based HUD ─────────────────────────────────────────
+  hudCardWrap: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.md,
+    right: spacing.md,
+    zIndex: 20,
+    gap: spacing.sm,
+  },
+  resourceCardsWrap: {
+    // Padding handled by CardResourceBar
+  },
+  meterCardsWrap: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  meterChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(20, 28, 40, 0.85)',
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 1,
+  },
+  meterIcon: {
+    fontSize: 14,
+  },
+  meterValue: {
+    fontSize: 14,
+    fontFamily: fonts.heading,
+    fontWeight: '800',
+  },
+  meterLabel: {
+    fontSize: 9,
+    fontFamily: fonts.body,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+
+  // ── Layer 3 (Legacy): Resource Dock + Goal Banner ────────────────────────────────
   // top set dynamically (= resourceTop)
   resourceDock: {
     position: 'absolute',
