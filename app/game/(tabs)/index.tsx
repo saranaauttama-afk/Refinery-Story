@@ -229,7 +229,7 @@ function PRODUCT_MAX_STORAGE(
 }
 
 // ── Scene geometry constants ──────────────────────────────────────────────────
-const SKY_RATIO    = 0.08   // สัดส่วนความสูงฟ้า (0.0–1.0) → กำหนดตำแหน่ง HUD + Grid
+const SKY_RATIO    = 0.18   // สัดส่วนความสูงฟ้า (0.0–1.0) → กำหนดตำแหน่ง HUD + Grid
 const HORIZON_H    = 8    // px — ความสูง horizon strip (ถ้าไม่ใช้ bg รูปก็ set 0 ได้)
 const RESOURCE_H   = 48    // px — resource dock height
 const FLOW_H       = 22    // px — slim flow-rate strip (net $/min + output/min)
@@ -368,7 +368,7 @@ export default function RefineryScreen() {
   // absorb the offset + a healthy pan range so no edge is ever exposed. NO
   // scale transform (that was what shrank the image below cover, leaving the
   // black band on device).
-  const bgOverscan = Math.abs(BG_OFFSET_X) + Math.abs(BG_OFFSET_Y) + 140
+  const bgOverscan = Math.abs(BG_OFFSET_X) + Math.abs(BG_OFFSET_Y) + 180
   // Where the yard background starts (absolute y within scene)
   const yardTop     = skyH + HORIZON_H
   // Resource strip straddles the sky / yard boundary
