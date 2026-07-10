@@ -80,6 +80,11 @@ import {
 import StaffSkillList from '../../../src/components/StaffSkillList'
 import { isBoostActive, canActivateBoost } from '../../../src/hooks/useGameLoop'
 import FactoryDiamondGroundView from '../../../src/components/FactoryDiamondGroundView'
+import FactorySkiaView from '../../../src/components/FactorySkiaView'
+// Direction C: the GPU (Skia) scene renderer for smooth pan/zoom. Native only —
+// Skia needs CanvasKit on web, so the web build keeps the View renderer. Flip
+// the flag to false to fall back to the old renderer on device too.
+const USE_SKIA_SCENE = Platform.OS !== 'web'
 import { FACTORY_BG, BG_OFFSET_X, BG_OFFSET_Y, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
 
 
@@ -621,21 +626,36 @@ export default function RefineryScreen() {
 
         {/* ── Layer 1: Grid (absolute, pushed down from HUD by GRID_DROP) ── */}
         <View style={[styles.gridLayer, { top: yardTop }]}>
-          <FactoryDiamondGroundView
-            game={game}
-            derived={derived}
-            grid={game.grid}
-            gridLevels={game.gridLevels}
-            containerWidth={width}
-            viewportHeight={sceneHeight - yardTop}
-            contentOffsetY={GRID_DROP}
-            displayGridSize={11}
-            anchorGridSize={EXPANSION_BALANCE[0].size}
-            onCellPress={handleCellPress}
-            isActive={game.crudeOil > 0}
-            panOutX={bgPanX}
-            panOutY={bgPanY}
-          />
+          {USE_SKIA_SCENE ? (
+            <FactorySkiaView
+              grid={game.grid}
+              gridLevels={game.gridLevels}
+              containerWidth={width}
+              viewportHeight={sceneHeight - yardTop}
+              contentOffsetY={GRID_DROP}
+              displayGridSize={11}
+              anchorGridSize={EXPANSION_BALANCE[0].size}
+              onCellPress={handleCellPress}
+              panOutX={bgPanX}
+              panOutY={bgPanY}
+            />
+          ) : (
+            <FactoryDiamondGroundView
+              game={game}
+              derived={derived}
+              grid={game.grid}
+              gridLevels={game.gridLevels}
+              containerWidth={width}
+              viewportHeight={sceneHeight - yardTop}
+              contentOffsetY={GRID_DROP}
+              displayGridSize={11}
+              anchorGridSize={EXPANSION_BALANCE[0].size}
+              onCellPress={handleCellPress}
+              isActive={game.crudeOil > 0}
+              panOutX={bgPanX}
+              panOutY={bgPanY}
+            />
+          )}
           {gridEditMode && (
             <Pressable style={styles.hintOverlay} onPress={() => setGridEditMode(null)}>
               <Text style={styles.hintActive}>
