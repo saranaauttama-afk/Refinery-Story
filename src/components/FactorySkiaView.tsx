@@ -57,6 +57,15 @@ function clampW(v: number, min: number, max: number) {
   'worklet'
   return Math.min(max, Math.max(min, v))
 }
+function axisBounds(viewportSize: number, contentSize: number, scale: number) {
+  'worklet'
+  const scaledSize = contentSize * scale
+  if (scaledSize <= viewportSize) {
+    const centered = (viewportSize - scaledSize) / 2
+    return { min: centered, max: centered }
+  }
+  return { min: viewportSize - scaledSize, max: 0 }
+}
 
 // Absolute-coord diamond path (Skia). x,y = tile top-left in scene space.
 function diamondPath(x: number, y: number, w: number, h: number): SkPath {
@@ -119,6 +128,7 @@ export type FactorySkiaViewProps = {
   panOutX?: SharedValue<number>
   panOutY?: SharedValue<number>
   zoomOut?: SharedValue<number>
+  cameraResetKey?: number
 }
 
 function FactorySkiaView({
@@ -133,6 +143,7 @@ function FactorySkiaView({
   panOutX,
   panOutY,
   zoomOut,
+  cameraResetKey = 0,
 }: FactorySkiaViewProps) {
   // Same geometry as the View renderer — memoised so it never churns on a tick.
   const layout = useMemo(() => {
@@ -230,11 +241,13 @@ function FactorySkiaView({
   // Shared-value initializers only run on mount, so without this an expansion
   // or orientation change keeps offsets that belong to the previous layout.
   useEffect(() => {
+    scale.value = 1
+    savedScale.value = 1
     tx.value = centeredX
     ty.value = centeredY
     savedX.value = centeredX
     savedY.value = centeredY
-  }, [centeredX, centeredY, savedX, savedY, tx, ty])
+  }, [cameraResetKey, centeredX, centeredY, savedScale, savedX, savedY, scale, tx, ty])
 
   const transform = useDerivedValue(() => {
     // Expose movement relative to the centered camera. Consumers such as the
@@ -247,16 +260,17 @@ function FactorySkiaView({
 
   const boundX = (v: number, s: number) => {
     'worklet'
-    const min = Math.min(0, vpWidth - mapWidth * s)
-    return clampW(v, min - OVERSCROLL, OVERSCROLL)
+    const bounds = axisBounds(vpWidth, mapWidth, s)
+    return clampW(v, bounds.min - OVERSCROLL, bounds.max + OVERSCROLL)
   }
   const boundY = (v: number, s: number) => {
     'worklet'
-    const min = Math.min(0, vpHeight - mapHeight * s)
-    return clampW(v, min - OVERSCROLL, OVERSCROLL)
+    const bounds = axisBounds(vpHeight, mapHeight, s)
+    return clampW(v, bounds.min - OVERSCROLL, bounds.max + OVERSCROLL)
   }
 
   const pan = Gesture.Pan()
+    .maxPointers(1)
     .activeOffsetX([-14, 14])
     .activeOffsetY([-14, 14])
     .onStart(() => {
@@ -271,10 +285,10 @@ function FactorySkiaView({
     })
     .onEnd(() => {
       'worklet'
-      const min = Math.min(0, vpWidth - mapWidth * scale.value)
-      const minY = Math.min(0, vpHeight - mapHeight * scale.value)
-      tx.value = withSpring(clampW(tx.value, min, 0), SPRING)
-      ty.value = withSpring(clampW(ty.value, minY, 0), SPRING)
+      const xBounds = axisBounds(vpWidth, mapWidth, scale.value)
+      const yBounds = axisBounds(vpHeight, mapHeight, scale.value)
+      tx.value = withSpring(clampW(tx.value, xBounds.min, xBounds.max), SPRING)
+      ty.value = withSpring(clampW(ty.value, yBounds.min, yBounds.max), SPRING)
     })
 
   const pinch = Gesture.Pinch()
@@ -295,10 +309,10 @@ function FactorySkiaView({
     })
     .onEnd(() => {
       'worklet'
-      const min = Math.min(0, vpWidth - mapWidth * scale.value)
-      const minY = Math.min(0, vpHeight - mapHeight * scale.value)
-      tx.value = withSpring(clampW(tx.value, min, 0), SPRING)
-      ty.value = withSpring(clampW(ty.value, minY, 0), SPRING)
+      const xBounds = axisBounds(vpWidth, mapWidth, scale.value)
+      const yBounds = axisBounds(vpHeight, mapHeight, scale.value)
+      tx.value = withSpring(clampW(tx.value, xBounds.min, xBounds.max), SPRING)
+      ty.value = withSpring(clampW(ty.value, yBounds.min, yBounds.max), SPRING)
     })
 
   const pickCell = (px: number, py: number) => {
@@ -323,7 +337,10 @@ function FactorySkiaView({
       runOnJS(pickCell)(e.x, e.y)
     })
 
-  const gesture = Gesture.Race(tap, Gesture.Simultaneous(pan, pinch))
+  // Movement gestures get priority after crossing their activation threshold;
+  // a short stationary contact remains a tap. Limiting pan to one pointer
+  // prevents its translation from fighting a two-finger pinch.
+  const gesture = Gesture.Exclusive(Gesture.Simultaneous(pan, pinch), tap)
 
   return (
     <View style={[styles.viewport, { width: vpWidth, height: vpHeight }]}>

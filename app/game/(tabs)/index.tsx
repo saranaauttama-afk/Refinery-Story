@@ -21,7 +21,7 @@ import { useRouter } from 'expo-router'
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
-import { Bell, Clock3 } from 'lucide-react-native'
+import { Bell, Clock3, LocateFixed } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
@@ -324,6 +324,7 @@ export default function RefineryScreen() {
   const bgPanX      = useSharedValue(0)
   const bgPanY      = useSharedValue(0)
   const bgZoom      = useSharedValue(1)
+  const [cameraResetKey, setCameraResetKey] = useState(0)
   // Background derives from the same camera as the playable world. Reduced
   // pan/zoom factors preserve depth without allowing the two layers to drift.
   const bgAnimStyle = useAnimatedStyle(() => ({
@@ -642,6 +643,7 @@ export default function RefineryScreen() {
               panOutX={bgPanX}
               panOutY={bgPanY}
               zoomOut={bgZoom}
+              cameraResetKey={cameraResetKey}
             />
           ) : (
             <FactoryDiamondGroundView
@@ -659,6 +661,16 @@ export default function RefineryScreen() {
               panOutX={bgPanX}
               panOutY={bgPanY}
             />
+          )}
+          {USE_SKIA_SCENE && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Center factory camera"
+              style={styles.centerCameraButton}
+              onPress={() => setCameraResetKey((key) => key + 1)}
+            >
+              <LocateFixed size={19} color="#EAF1F8" strokeWidth={2.5} />
+            </Pressable>
           )}
           {gridEditMode && (
             <Pressable style={styles.hintOverlay} onPress={() => setGridEditMode(null)}>
@@ -1708,6 +1720,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0, right: 0, bottom: 0,
     zIndex: 10,
+  },
+  centerCameraButton: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: FLOATING_TAB_BAR_CLEARANCE + 72,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(19,29,42,0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    zIndex: 4,
   },
   hintOverlay: {
     position: 'absolute',
