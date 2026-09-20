@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { colors, fonts, spacing } from '../theme'
+import { fonts, modernUi, spacing } from '../theme'
 
 // Shared chunky "game panel" header for the pushed gameplay tabs (Contracts /
 // Supply / Recruit). Beveled metal bar, a red close button, a bold display
@@ -13,20 +13,22 @@ export default function ScreenHeader({
 }: {
   title: string
   badge?: string
-  onClose: () => void
+  onClose?: () => void
 }) {
   return (
     <View style={styles.header}>
-      <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={8}>
-        <Text style={styles.closeBtnText}>✕</Text>
-      </Pressable>
+      {onClose ? (
+        <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={8}>
+          <Text style={styles.closeBtnText}>‹</Text>
+        </Pressable>
+      ) : null}
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
       {badge ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge}</Text>
         </View>
       ) : (
-        <View style={styles.closeBtnSpacer} />
+        onClose ? <View style={styles.closeBtnSpacer} /> : null
       )}
     </View>
   )
@@ -34,52 +36,44 @@ export default function ScreenHeader({
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#223247',
+    backgroundColor: modernUi.surface,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: 10,
     gap: spacing.sm,
-    borderBottomWidth: 3,
-    borderBottomColor: '#0E1620',
-    // top bevel highlight
-    borderTopWidth: 2,
-    borderTopColor: '#3A5170',
+    borderBottomWidth: 1,
+    borderBottomColor: modernUi.border,
   },
   closeBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.red,
-    borderWidth: 2,
-    borderColor: '#7E241A',
-    borderBottomWidth: 4,
+    borderRadius: 9,
+    backgroundColor: modernUi.surfaceRaised,
+    borderWidth: 1,
+    borderColor: modernUi.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeBtnText: { fontSize: 16, color: '#fff', fontWeight: '900' },
+  closeBtnText: { fontSize: 27, lineHeight: 29, color: modernUi.text, fontWeight: '600' },
   closeBtnSpacer: { width: 36 },
   title: {
     flex: 1,
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: fonts.display,
     color: '#fff',
-    textAlign: 'center',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 0,
+    textAlign: 'left',
+    letterSpacing: 0.2,
   },
   badge: {
-    backgroundColor: colors.green,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#4C7A43',
-    borderBottomWidth: 4,
+    backgroundColor: modernUi.accentSoft,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: modernUi.accent,
     paddingHorizontal: 10,
     paddingVertical: 4,
     minWidth: 36,
     alignItems: 'center',
   },
-  badgeText: { fontSize: 11, fontFamily: fonts.heading, color: '#fff', letterSpacing: 0.5 },
+  badgeText: { fontSize: 11, fontFamily: fonts.heading, color: modernUi.accent, letterSpacing: 0.2 },
 })

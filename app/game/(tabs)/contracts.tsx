@@ -280,7 +280,6 @@ export default function ContractsScreen() {
       <ScreenHeader
         title={t(sc.title)}
         badge={totalReady > 0 ? t(sc.ready(totalReady)) : undefined}
-        onClose={() => router.back()}
       />
 
       <ScrollView contentContainerStyle={styles.list}>

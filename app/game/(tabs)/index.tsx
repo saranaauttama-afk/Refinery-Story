@@ -21,12 +21,11 @@ import { useRouter } from 'expo-router'
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
-import { Bell, Clock3, LocateFixed } from 'lucide-react-native'
+import { Bell, Clock3, LocateFixed, Menu, Zap } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import DeliveryTruck from '../../../src/components/DeliveryTruck'
-import BottomNav from '../../../src/components/BottomNav'
 import { type FabNavItem } from '../../../src/components/FabNav'
 import SideMenu, { type SideMenuSection } from '../../../src/components/SideMenu'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
@@ -41,7 +40,7 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { useSound } from '../../../src/hooks/useSound'
 import { useLang } from '../../../src/hooks/SettingsContext'
-import { colors, radii, spacing, fonts, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, radii, spacing, fonts, modernUi, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import GameIcon from '../../../src/components/GameIcon'
 import HistoryGraph from '../../../src/components/HistoryGraph'
 import SaturationBars from '../../../src/components/SaturationBars'
@@ -50,7 +49,7 @@ import { BUILDINGS } from '../../../src/game/data/buildings'
 import { ENDGAME_GOALS } from '../../../src/game/data/endgameGoals'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, STANDING_ORDER_BALANCE, PRODUCTION_BALANCE, POWER_PLANT_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, PRODUCTION_BALANCE, POWER_PLANT_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
 import type { BilingualTextValue, BuildingType, DerivedStats } from '../../../src/game/types'
 import {
   CRUDE_COST,
@@ -59,8 +58,6 @@ import {
   getCellStaffBonus,
   getEmployeeSkills,
   getPowerBreakdown,
-  isNearRetirement,
-  getContractProgress,
   getComboHintCells,
   getEmployeeAssignedToCell,
   getProductMarketLevel,
@@ -454,70 +451,29 @@ export default function RefineryScreen() {
     ? getComboHintCells(game.grid, game.discoveredCombos, pickerCell, hoveredBuildingKey)
     : []
 
-  // FAB badge counts
-  const contractsReady = derived.activeContracts.filter((c) => {
-    if (!c.isUnlocked || c.isCompleted) return false
-    const { have, need } = getContractProgress(c, game)
-    return have >= need
-  }).length
+  // Secondary destination badges. Primary destinations now live in the
+  // persistent four-tab navigation shared by every screen.
   const staffReady = game.recruitmentPool.length > 0 ? 1 : 0
-  // Staff tab badge = employees near retirement (needs attention), distinct from
-  // the recruit-pool badge which now lives on the floating Recruit button.
-  const retiringStaff = game.employees.filter((e) => isNearRetirement(e, game.businessYear)).length
   const researchReady = derived.activeResearchItems.filter(
     (i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost
   ).length
 
-  const standaloneReady = STANDING_ORDER_BALANCE.filter((order) => {
-    if (game.refineryLevel < order.unlockLevel) return false
-    const key = order.key as keyof typeof game.standingOrderCooldowns
-    const pKey = order.productKey as keyof typeof game.productInventory
-    const cooldownAt = game.standingOrderCooldowns[key]
-    return !(cooldownAt !== undefined && cooldownAt > game.tickCount) &&
-      (game.productInventory[pKey] as number) >= order.required
-  }).length
-
-  // Bottom nav = the core always-visible tabs + a Menu button that opens the
-  // full grouped drawer. Less-used destinations (R&D, Company, Recruit) live in
-  // the drawer so the bar stays uncluttered.
-  const FAB_ITEMS: FabNavItem[] = [
-    { route: '/game',             icon: '🏭', label: t(text.nav.factory) },
-    { route: '/game/contracts',   icon: '📋', label: t(text.nav.contracts), badge: contractsReady || undefined },
-    { route: '/game/supply',      icon: '🛢',  label: t(text.nav.supply),    badge: standaloneReady || undefined },
-    { route: '/game/staff',       icon: '👥', label: t(text.nav.staff),     badge: retiringStaff || undefined },
-    { route: '__menu', icon: '☰', label: t(text.nav.menu), badge: researchReady || undefined, onPress: () => setMenuOpen(true) },
-  ]
-  // Full navigation map for the side drawer — grouped and collapsible.
+  // The drawer is intentionally only for secondary destinations. Primary
+  // navigation is never duplicated here.
   const MENU_SECTIONS: SideMenuSection[] = [
     {
-      key: 'operations',
-      title: t(text.nav.groupOperations),
+      key: 'company',
+      title: 'Company',
       items: [
-        { route: '/game',           icon: '🏭', label: t(text.nav.factory), desc: t(text.nav.factoryDesc) },
-        { route: '/game/supply',    icon: '🛢',  label: t(text.nav.supply),  desc: t(text.nav.supplyDesc), badge: standaloneReady || undefined },
+        { route: '/game/research', icon: 'research', label: t(text.nav.research), desc: t(text.nav.researchDesc), badge: researchReady || undefined },
+        { route: '/game/company', icon: 'company', label: t(text.nav.company), desc: t(text.nav.companyDesc) },
       ],
     },
     {
-      key: 'business',
-      title: t(text.nav.groupBusiness),
+      key: 'team',
+      title: 'Team',
       items: [
-        { route: '/game/contracts', icon: '📋', label: t(text.nav.contracts), desc: t(text.nav.contractsDesc), badge: contractsReady || undefined },
-        { route: '/game/company',   icon: '🏢', label: t(text.nav.company),   desc: t(text.nav.companyDesc) },
-      ],
-    },
-    {
-      key: 'people',
-      title: t(text.nav.groupPeople),
-      items: [
-        { route: '/game/staff',     icon: '👥', label: t(text.nav.staff),   desc: t(text.nav.staffDesc), badge: retiringStaff || undefined },
-        { route: '/game/recruit',   icon: '🧑‍💼', label: t(text.nav.recruit), desc: t(text.nav.recruitDesc), badge: staffReady ? game.recruitmentPool.length : undefined },
-      ],
-    },
-    {
-      key: 'progress',
-      title: t(text.nav.groupProgress),
-      items: [
-        { route: '/game/research',  icon: '🔬', label: t(text.nav.research), desc: t(text.nav.researchDesc), badge: researchReady || undefined },
+        { route: '/game/recruit', icon: 'recruit', label: t(text.nav.recruit), desc: t(text.nav.recruitDesc), badge: staffReady ? game.recruitmentPool.length : undefined },
       ],
     },
   ]
@@ -694,22 +650,24 @@ export default function RefineryScreen() {
 
         {/* ── Layer 2 + 3: Company block + Resource Dock + Goal ─────────── */}
 
-        {/* Company block — top left: name + title */}
+        {/* Company identity stays quiet so the world remains the focus. */}
         <View style={styles.companyBlock}>
-          <Text style={styles.companyName} numberOfLines={1}>{game.refineryName}</Text>
+          <View style={styles.companyNameRow}>
+            <Text style={styles.companyName} numberOfLines={1}>{game.refineryName}</Text>
+            <AnimatedPressable
+              style={[styles.lvBadge, canUpgrade && styles.lvBadgeReady, isMaxLevel && styles.lvBadgeMaxed]}
+              onPress={() => setUpgradeModalOpen(true)}
+            >
+              <Text style={styles.lvBadgeText}>
+                {isMaxLevel ? 'Lv20' : `Lv${game.refineryLevel}${canUpgrade ? ' ↑' : ''}`}
+              </Text>
+            </AnimatedPressable>
+          </View>
           <Text style={styles.companyTitle}>{refineryTitle}</Text>
         </View>
 
-        {/* Top right: Lv badge (tappable upgrade) + time + events bell */}
+        {/* Compact controls: time, speed, boost, alerts and one More menu. */}
         <View style={styles.topRightHud}>
-          <AnimatedPressable
-            style={[styles.lvBadge, canUpgrade && styles.lvBadgeReady, isMaxLevel && styles.lvBadgeMaxed]}
-            onPress={() => setUpgradeModalOpen(true)}
-          >
-            <Text style={styles.lvBadgeText}>
-              {isMaxLevel ? '🏆 Lv20' : `Lv${game.refineryLevel}${canUpgrade ? ' ↑' : ''}`}
-            </Text>
-          </AnimatedPressable>
           <View style={styles.timePill}>
             <Clock3 size={11} color={isDaytime ? colors.orangeDark : colors.blueDark} />
             <Text style={styles.timePillText}>{timeLabel}</Text>
@@ -739,52 +697,38 @@ export default function RefineryScreen() {
               </View>
             )}
           </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="More menu"
+            style={styles.menuBtn}
+            onPress={() => setMenuOpen(true)}
+          >
+            <Menu size={17} color={modernUi.text} strokeWidth={2.4} />
+            {researchReady > 0 && <View style={styles.menuAlertDot} />}
+          </Pressable>
         </View>
 
         {/* Resource dock — dark card straddling sky/yard boundary */}
         <View style={[styles.resourceDock, { top: resourceTop }]}>
           <View style={styles.dockStat}>
             <GameIcon name="money" size={22} />
-            <View style={styles.dockText}>
-              <Text style={styles.dockVal}>${formatCompactNumber(game.money)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.money)}</Text>
-            </View>
+            <Text style={styles.dockVal}>${formatCompactNumber(game.money)}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <GameIcon name="crude" size={22} />
-            <View style={styles.dockText}>
-              <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.crude)}</Text>
-            </View>
+            <Text style={[styles.dockVal, game.crudeOil === 0 && styles.dockValWarn]}>{game.crudeOil}</Text>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockStat}>
             <GameIcon name="gas" size={22} />
-            <View style={styles.dockText}>
-              <Text style={styles.dockVal}>{game.gasoline}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.gas)}</Text>
-            </View>
+            <Text style={styles.dockVal}>{game.gasoline}</Text>
           </View>
           <View style={styles.dockDivider} />
-          {/* ESG + Morale — the two hidden meters that actually bite (low ESG
-              throttles buyers, low morale cuts output), pulled out of More Info
-              so they're always in view. Value colour flags the danger zone. */}
-          <View style={styles.dockStat}>
-            <Text style={styles.dockEmoji}>🌱</Text>
-            <View style={styles.dockText}>
-              <Text style={[styles.dockVal, meterColorStyle(game.esgScore)]}>{Math.round(game.esgScore)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.esg)}</Text>
-            </View>
-          </View>
-          <View style={styles.dockDivider} />
-          <View style={styles.dockStat}>
-            <Text style={styles.dockEmoji}>🙂</Text>
-            <View style={styles.dockText}>
-              <Text style={[styles.dockVal, meterColorStyle(game.staffMorale)]}>{Math.round(game.staffMorale)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.morale)}</Text>
-            </View>
-          </View>
+          <Pressable style={styles.dockStat} onPress={() => setPowerPanelOpen(true)}>
+            <Zap size={21} color={powerDeficit ? modernUi.warning : modernUi.accent} fill={powerDeficit ? 'transparent' : modernUi.accentSoft} />
+            <Text style={[styles.dockVal, powerDeficit && styles.dockValWarn]}>{powerBd.supply}</Text>
+          </Pressable>
           <View style={styles.dockDivider} />
           {/* Rep doubles as the "More Info" toggle — Specialization / Feedstock /
               Power / Era / Prestige live one tap away to keep the dock focused.
@@ -794,10 +738,7 @@ export default function RefineryScreen() {
               <GameIcon name="reputation" size={22} />
               {secondaryAlert && <View style={styles.dockAlertDot} />}
             </View>
-            <View style={styles.dockText}>
-              <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
-              <Text style={styles.dockLabel}>{t(text.hud.rep)} ⋯</Text>
-            </View>
+            <Text style={styles.dockVal}>{Math.floor(game.reputation)}</Text>
           </Pressable>
         </View>
 
@@ -1662,21 +1603,7 @@ export default function RefineryScreen() {
         <OnboardingOverlay onDismiss={handleDismissOnboarding} />
       )}
 
-      {/* ── Floating Recruit button (bottom-right) — quick access to the
-          hiring pool without taking a bottom-nav slot. ──────────────────── */}
-      <Pressable
-        style={[styles.recruitFab, { bottom: 66 + insets.bottom + ACTION_DOCK_H + 10 }]}
-        onPress={() => router.push('/game/recruit')}
-      >
-        <Text style={styles.recruitFabIcon}>🧑‍💼</Text>
-        {staffReady ? <View style={styles.recruitFabBadge}><Text style={styles.recruitFabBadgeText}>{game.recruitmentPool.length}</Text></View> : null}
-        <Text style={styles.recruitFabLabel}>{t(text.nav.recruit)}</Text>
-      </Pressable>
-
-      {/* ── Persistent bottom navigation ──────────────────────────────── */}
-      <BottomNav items={FAB_ITEMS} />
-
-      {/* ── Grouped, collapsible side drawer (opened from the Menu tab) ── */}
+      {/* ── Secondary destinations, opened from the top More button. ──── */}
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} sections={MENU_SECTIONS} />
 
     </SafeAreaView>
@@ -1971,6 +1898,12 @@ const styles = StyleSheet.create({
     left: spacing.md,
     zIndex: 20,
   },
+  companyNameRow: {
+    maxWidth: 178,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
   companyName: {
     fontSize: 16,
     fontFamily: fonts.display,
@@ -1979,6 +1912,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
     letterSpacing: 0.2,
+    flexShrink: 1,
   },
   companyTitle: {
     fontSize: 9,
@@ -1990,10 +1924,12 @@ const styles = StyleSheet.create({
   },
   // Lv badge — standalone tappable pill, now in top-right
   lvBadge: {
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: modernUi.surfaceSoft,
     borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: modernUi.border,
   },
   lvBadgeReady: {
     backgroundColor: colors.green,
@@ -2003,7 +1939,7 @@ const styles = StyleSheet.create({
   },
   lvBadgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: fonts.heading,
     letterSpacing: 0.3,
   },
@@ -2087,6 +2023,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  menuBtn: {
+    width: 30,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: modernUi.surfaceSoft,
+    borderWidth: 1,
+    borderColor: modernUi.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuAlertDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: modernUi.warning,
+  },
   eventsBadge: {
     position: 'absolute',
     top: -3,
@@ -2115,27 +2070,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1C2634',
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: modernUi.surfaceSoft,
+    borderRadius: 12,
+    paddingHorizontal: 6,
     zIndex: 20,
     shadowColor: '#000',
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 8,
-    borderWidth: 1.5,
-    borderColor: '#2E3D50',
+    borderWidth: 1,
+    borderColor: modernUi.borderStrong,
   },
   dockStat: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-  },
-  dockText: {
-    alignItems: 'flex-start',
+    gap: 4,
   },
   dockToggleIconWrap: {
     position: 'relative',
@@ -2157,7 +2109,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   dockVal: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: fonts.heading,
     color: '#FFFFFF',
     letterSpacing: 0.2,
@@ -2165,21 +2117,11 @@ const styles = StyleSheet.create({
   dockValWarn: {
     color: colors.orange,
   },
-  dockLabel: {
-    fontSize: 8,
-    fontFamily: fonts.body,
-    // Brighter than the old #6B8099 — the 7px labels were nearly
-    // illegible on a real phone; bumped size + contrast together.
-    color: '#90A6BE',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
   dockDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: '#2E3D50',
+    height: 22,
+    backgroundColor: modernUi.border,
   },
-  dockEmoji: { fontSize: 17 },
   meterGood: { color: '#7CE38B' },
   meterWarn: { color: '#F2C12E' },
   meterDanger: { color: '#FF6B5A' },
@@ -2298,46 +2240,11 @@ const styles = StyleSheet.create({
   // ── Layer 4: Floating action buttons ──────────────────────────────────────
   // ── Unified Trade panel (Buy/Sell + Auto-trade, collapsible) ───────────
   // ── Action Dock (bottom, above tab bar) ──────────────────────────────────
-  recruitFab: {
-    position: 'absolute',
-    right: spacing.md,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: colors.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 25,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 10,
-  },
-  recruitFabIcon: { fontSize: 22 },
-  recruitFabLabel: { fontSize: 7.5, fontWeight: '900', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: -1 },
-  recruitFabBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    backgroundColor: colors.orange,
-    borderWidth: 1.5,
-    borderColor: '#1C2634',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recruitFabBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
   actionDock: {
     position: 'absolute',
     left: spacing.md,
     right: spacing.md,
-    bottom: FLOATING_TAB_BAR_CLEARANCE - 4,
+    bottom: spacing.sm,
     height: ACTION_DOCK_H,
     flexDirection: 'row',
     alignItems: 'center',

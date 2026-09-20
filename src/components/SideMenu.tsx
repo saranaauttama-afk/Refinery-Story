@@ -8,8 +8,9 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useRouter, usePathname } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Building2, FlaskConical, UserPlus, X } from 'lucide-react-native'
 
-import { colors, fonts } from '../theme'
+import { fonts, modernUi } from '../theme'
 import type { FabNavItem } from './FabNav'
 
 // Grouped, collapsible slide-out drawer (mockup-style navigation map). Opens
@@ -24,6 +25,17 @@ export type SideMenuSection = {
 }
 
 const PANEL_WIDTH = 274
+
+function MenuIcon({ route, active }: { route: string; active: boolean }) {
+  const props = {
+    size: 20,
+    color: active ? modernUi.accent : modernUi.textMuted,
+    strokeWidth: 2.1,
+  }
+  if (route.endsWith('/research')) return <FlaskConical {...props} />
+  if (route.endsWith('/recruit')) return <UserPlus {...props} />
+  return <Building2 {...props} />
+}
 
 function activeFor(pathname: string, route: string): boolean {
   const routeKey = route.split('/').pop() ?? ''
@@ -89,9 +101,12 @@ export default function SideMenu({
         ]}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Refinery</Text>
+          <View>
+            <Text style={styles.headerTitle}>More</Text>
+            <Text style={styles.headerSubtitle}>Refinery management</Text>
+          </View>
           <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
-            <Text style={styles.closeIcon}>✕</Text>
+            <X size={17} color={modernUi.textMuted} strokeWidth={2.4} />
           </Pressable>
         </View>
 
@@ -118,7 +133,7 @@ export default function SideMenu({
                         style={[styles.row, isActive && styles.rowActive]}
                         onPress={() => go(item.route)}
                       >
-                        <Text style={styles.rowIcon}>{item.icon}</Text>
+                        <View style={styles.rowIcon}><MenuIcon route={item.route} active={isActive} /></View>
                         <View style={styles.rowText}>
                           <Text style={[styles.rowLabel, isActive && styles.rowLabelActive]}>
                             {item.label}
@@ -157,9 +172,9 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18,25,36,0.99)',
+    backgroundColor: modernUi.surface,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.08)',
+    borderRightColor: modernUi.border,
     zIndex: 80,
     paddingHorizontal: 12,
     shadowColor: '#000',
@@ -176,13 +191,19 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: modernUi.border,
   },
   headerTitle: {
     fontSize: 18,
     fontFamily: fonts.display,
-    color: colors.gold,
+    color: modernUi.text,
     letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    marginTop: -2,
+    fontSize: 10,
+    fontFamily: fonts.body,
+    color: modernUi.textMuted,
   },
   closeBtn: {
     width: 30,
@@ -190,9 +211,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: modernUi.surfaceRaised,
   },
-  closeIcon: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '900' },
   scrollInner: { paddingBottom: 8 },
   section: { marginTop: 10 },
   sectionHead: {
@@ -206,11 +226,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: fonts.body,
     fontWeight: '900',
-    color: 'rgba(255,255,255,0.4)',
+    color: modernUi.textMuted,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  chevron: { fontSize: 11, color: 'rgba(255,255,255,0.35)' },
+  chevron: { fontSize: 11, color: modernUi.textMuted },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -221,21 +241,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   rowActive: {
-    backgroundColor: 'rgba(242,193,46,0.14)',
+    backgroundColor: modernUi.accentSoft,
   },
-  rowIcon: { fontSize: 20, width: 26, textAlign: 'center' },
+  rowIcon: { width: 26, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1 },
   rowLabel: {
     fontSize: 14,
     fontFamily: fonts.body,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
+    color: modernUi.text,
   },
-  rowLabelActive: { color: colors.gold },
+  rowLabelActive: { color: modernUi.accent },
   rowDesc: {
     fontSize: 10,
     fontFamily: fonts.body,
-    color: 'rgba(255,255,255,0.4)',
+    color: modernUi.textMuted,
     marginTop: 1,
   },
   badge: {
@@ -243,7 +263,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     paddingHorizontal: 5,
-    backgroundColor: colors.orange,
+    backgroundColor: modernUi.warning,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -37,7 +37,6 @@ export default function SupplyScreen() {
       <ScreenHeader
         title={t(ss.title)}
         badge={standaloneReady > 0 ? t(ss.ready(standaloneReady)) : undefined}
-        onClose={() => router.back()}
       />
 
       <ScrollView contentContainerStyle={styles.list}>

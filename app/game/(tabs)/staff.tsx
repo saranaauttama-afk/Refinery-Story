@@ -102,9 +102,6 @@ export default function StaffScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Pressable style={styles.closeBtn} onPress={() => router.back()}>
-            <Text style={styles.closeBtnText}>✕</Text>
-          </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={styles.companyName} numberOfLines={1}>{t(text.nav.staff)}</Text>
             <Text style={styles.companyTitle}>{t(cs.quick.staff)}</Text>

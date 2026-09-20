@@ -30,6 +30,25 @@ export const colors = {
   red: '#C0392B',
 } as const
 
+// Modern Pixel UI shell. The game world keeps its pixel-art palette while
+// navigation and HUD use a quieter, high-contrast layer that does not compete
+// with the refinery scene.
+export const modernUi = {
+  canvas: '#0C151E',
+  surface: '#12212D',
+  surfaceRaised: '#192B38',
+  surfaceSoft: 'rgba(18,33,45,0.92)',
+  border: 'rgba(221,235,243,0.10)',
+  borderStrong: 'rgba(221,235,243,0.18)',
+  text: '#F2F6F8',
+  textMuted: '#8FA4B1',
+  accent: '#F0B849',
+  accentSoft: 'rgba(240,184,73,0.14)',
+  success: '#66C78B',
+  warning: '#EF8B4A',
+  danger: '#E36B63',
+} as const
+
 // Custom display font (Baloo 2 -- friendly, rounded, readable) loaded at app
 // start in app/_layout.tsx. Until the font finishes loading these family
 // names fall back to the system font. Applied to the game's "hero" text
