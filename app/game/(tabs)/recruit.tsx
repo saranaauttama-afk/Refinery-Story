@@ -1,0 +1,222 @@
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate } from 'react-native-reanimated'
+import { useRouter } from 'expo-router'
+
+import AnimatedPressable from '../../../src/components/AnimatedPressable'
+import FloatingNumbers from '../../../src/components/FloatingNumbers'
+import GameIcon from '../../../src/components/GameIcon'
+import ScreenHeader from '../../../src/components/ScreenHeader'
+import StaffSkillList from '../../../src/components/StaffSkillList'
+import { useGame } from '../../../src/hooks/GameContext'
+import { useLang } from '../../../src/hooks/SettingsContext'
+import { useFloatingNumbers } from '../../../src/hooks/useFloatingNumbers'
+import { useHaptics } from '../../../src/hooks/useHaptics'
+import { colors, fonts, radii, spacing } from '../../../src/theme'
+import { text } from '../../../src/game/translations'
+import { WORKERS } from '../../../src/game/data/workers'
+import { getStaffTrait } from '../../../src/game/data/staffTraits'
+import { BUILDINGS } from '../../../src/game/data/buildings'
+import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
+import { getManualRefreshCost } from '../../../src/game/data/recruitment'
+import { TICK_MS, getMaxHireCount, getSpecialistPlantForWorker, formatCompactNumber } from '../../../src/game/utils/gameCalculations'
+import type { RecruitmentCandidate, RecruitmentTier } from '../../../src/game/types'
+
+const TIER_CONFIG: Record<RecruitmentTier, { label: string; bodyColor: string; legColor: string; headColor: string; borderColor: string }> = {
+  rookie:  { label: 'Rookie',  headColor: '#C8A882', bodyColor: '#8090A0', legColor: '#506070', borderColor: colors.creamBorder },
+  skilled: { label: 'Skilled', headColor: '#D4A070', bodyColor: '#4A7AAA', legColor: '#2A5A8A', borderColor: colors.blue },
+  expert:  { label: 'Expert',  headColor: '#C09060', bodyColor: '#C06A20', legColor: '#903A10', borderColor: colors.orange },
+  star:    { label: 'Star',    headColor: '#D4A860', bodyColor: '#8060B0', legColor: '#604090', borderColor: colors.gold },
+}
+
+function CandidateFigure({ candidate, selected, onPress }: { candidate: RecruitmentCandidate; selected: boolean; onPress: () => void }) {
+  const { t } = useLang()
+  const tc = TIER_CONFIG[candidate.tier]
+  const worker = WORKERS.find((w) => w.key === candidate.type)
+  const prog = useSharedValue(0)
+  useEffect(() => { prog.value = withSpring(selected ? 1 : 0, { damping: 18, stiffness: 220 }) }, [selected])
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(prog.value, [0, 1], [1, 1.12]) }, { translateY: interpolate(prog.value, [0, 1], [0, -4]) }],
+  }))
+  return (
+    <Pressable onPress={onPress}>
+      <Animated.View style={[figStyles.wrap, animStyle]}>
+        <View style={figStyles.bubble}><Text style={figStyles.bubbleName} numberOfLines={1}>{candidate.name}</Text>{getStaffTrait(candidate.trait) ? <Text style={figStyles.bubbleBadge}>{getStaffTrait(candidate.trait)!.badge}</Text> : null}</View>
+        <View style={[figStyles.head, { backgroundColor: tc.headColor }]} />
+        <View style={[figStyles.body, { backgroundColor: tc.bodyColor }]} />
+        <View style={figStyles.legs}><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /><View style={[figStyles.leg, { backgroundColor: tc.legColor }]} /></View>
+        {selected && <View style={figStyles.ring} />}
+        {candidate.isAce && <Text style={figStyles.aceMark}>★</Text>}
+        <Text style={figStyles.roleLabel} numberOfLines={1}>{worker ? t(worker.name) : candidate.type}</Text>
+      </Animated.View>
+    </Pressable>
+  )
+}
+const figStyles = StyleSheet.create({
+  wrap: { alignItems: 'center', paddingBottom: 8, paddingTop: 28, paddingHorizontal: 4, position: 'relative' },
+  bubble: { position: 'absolute', top: 4, flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(28,38,52,0.88)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3 },
+  bubbleName: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  bubbleBadge: { fontSize: 9 },
+  head: { width: 22, height: 22, borderRadius: 11, marginBottom: -2, zIndex: 2 },
+  body: { width: 20, height: 30, borderRadius: 4, zIndex: 2 },
+  legs: { flexDirection: 'row', gap: 3, marginTop: 1 },
+  leg: { width: 8, height: 14, borderRadius: 3 },
+  ring: { position: 'absolute', bottom: 6, width: 52, height: 14, borderRadius: 26, backgroundColor: 'rgba(242,193,46,0.35)' },
+  aceMark: { position: 'absolute', top: 26, right: 6, fontSize: 14, color: colors.gold, zIndex: 3 },
+  roleLabel: { fontSize: 8, color: 'rgba(255,255,255,0.55)', fontWeight: '700', marginTop: 4, textAlign: 'center', textTransform: 'uppercase' },
+})
+
+export default function RecruitScreen() {
+  const router = useRouter()
+  const { game, loaded, hireCandidate, refreshRecruitmentPool, claimHiddenEvent } = useGame()
+  const { t } = useLang()
+  const rs = text.recruitScreen
+  const { items: floatItems, spawn: spawnFloat, lifetimeMs: floatLifetimeMs } = useFloatingNumbers()
+  const haptics = useHaptics()
+  const [selectedSlot, setSelectedSlot] = useState(0)
+
+  if (!loaded || !game) {
+    return <SafeAreaView style={styles.loadingScreen}><ActivityIndicator color={colors.orange} size="large" /></SafeAreaView>
+  }
+
+  const cap = getMaxHireCount(game.refineryLevel)
+  const refreshCost = getManualRefreshCost(game.refineryLevel)
+  const canRefresh = game.money >= refreshCost
+  const refreshSecsLeft = Math.max(0, Math.round(((game.recruitmentRefreshAt - game.tickCount) * TICK_MS) / 1000))
+  const selectedCandidate = game.recruitmentPool[selectedSlot]
+  const selectedWorker = selectedCandidate ? WORKERS.find((w) => w.key === selectedCandidate.type) : null
+  const selectedTc = selectedCandidate ? TIER_CONFIG[selectedCandidate.tier] : null
+  const selectedTrait = selectedCandidate ? getStaffTrait(selectedCandidate.trait) : undefined
+  const atCap = selectedCandidate ? game.workerCounts[selectedCandidate.type] >= cap : false
+  const affordable = selectedCandidate ? game.money >= selectedCandidate.cost : false
+  const canHire = affordable && !atCap
+  const mentorBonus = selectedCandidate ? (game.mentorXpBonus?.[selectedCandidate.type] ?? 0) : 0
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
+
+      {/* Header */}
+      <ScreenHeader title={t(rs.title)} onClose={() => router.back()} />
+
+      {/* Scene */}
+      <View style={styles.scene}>
+        <View style={styles.sceneBuildingLarge} />
+        <View style={styles.sceneBuildingSmall} />
+        <View style={styles.sceneSign}><Text style={styles.sceneSignText}>{t(rs.hiringOffice)}</Text></View>
+        <View style={styles.candidatesStage}>
+          {HIDDEN_EVENTS.filter((e) => e.reward.kind === 'staff' && game.hiddenEventStatus[e.key] === 'unlocked').slice(0, 1).map((event) => (
+            <Pressable key={event.key} style={figStyles.wrap} onPress={() => claimHiddenEvent(event.key)}>
+              <View style={[figStyles.bubble, { backgroundColor: 'rgba(232,131,58,0.9)' }]}><Text style={figStyles.bubbleName}>???</Text></View>
+              <View style={{ width: 20, height: 50, backgroundColor: '#333', borderRadius: 4, opacity: 0.6 }} />
+              <View style={figStyles.legs}><View style={[figStyles.leg, { backgroundColor: '#444' }]} /><View style={[figStyles.leg, { backgroundColor: '#444' }]} /></View>
+              <Text style={[figStyles.roleLabel, { color: colors.orange }]}>{t(rs.mystery)}</Text>
+            </Pressable>
+          ))}
+          {game.recruitmentPool.map((candidate, slotIndex) => (
+            <CandidateFigure key={candidate.id} candidate={candidate} selected={selectedSlot === slotIndex} onPress={() => setSelectedSlot(slotIndex)} />
+          ))}
+        </View>
+      </View>
+
+      {/* Info panel */}
+      {selectedCandidate && selectedTc && (
+        <View style={[styles.infoPanel, { borderTopColor: selectedTc.borderColor }]}>
+          <View style={styles.infoTop}>
+            <View style={styles.infoRoleIcon}><GameIcon name={`worker-${selectedCandidate.type}`} size={40} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoName}>{selectedCandidate.name}{selectedTrait ? ` ${selectedTrait.badge}` : ''}</Text>
+              <Text style={styles.infoRole}>{selectedWorker ? t(selectedWorker.name) : selectedCandidate.type}{selectedTrait ? ` · ${t(selectedTrait.name)}` : ''}</Text>
+              {selectedTrait ? <Text style={styles.infoFlavor}>{t(selectedTrait.flavor)}</Text> : null}
+            </View>
+            <View style={[styles.tierBadge, { backgroundColor: selectedTc.borderColor }]}>
+              <Text style={styles.tierBadgeText}>{t(rs.tiers[selectedCandidate.tier])}</Text>
+            </View>
+          </View>
+          {(() => {
+            const specPlant = getSpecialistPlantForWorker(selectedCandidate.type)
+            return (
+              <View style={[styles.roleTag, specPlant ? styles.roleTagAssign : styles.roleTagGlobal]}>
+                <Text style={styles.roleTagText}>
+                  {specPlant ? t(text.staffRole.assignTo(BUILDINGS[specPlant].name)) : t(text.staffRole.global)}
+                </Text>
+              </View>
+            )
+          })()}
+          {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
+            <View style={styles.skillBlock}>
+              {selectedCandidate.isAce && <Text style={styles.aceRibbon}>★ {t(rs.ace)}</Text>}
+              <StaffSkillList skills={selectedCandidate.skills} isAce={selectedCandidate.isAce} />
+            </View>
+          )}
+          <View style={styles.infoStats}>
+            <View style={styles.iStat}><Text style={styles.iStatVal}>Lv{selectedCandidate.startingLevel}</Text><Text style={styles.iStatLabel}>{t(rs.starts)}</Text></View>
+            <View style={styles.iStatDiv} />
+            <View style={styles.iStat}><Text style={styles.iStatVal}>{game.workerCounts[selectedCandidate.type]}/{cap}</Text><Text style={styles.iStatLabel}>{t(rs.hired)}</Text></View>
+            {mentorBonus > 0 && <><View style={styles.iStatDiv} /><View style={styles.iStat}><Text style={[styles.iStatVal, { color: colors.green }]}>+{mentorBonus}</Text><Text style={styles.iStatLabel}>{t(rs.mentorXp)}</Text></View></>}
+          </View>
+          <AnimatedPressable
+            disabled={!canHire}
+            onPress={() => { if (canHire) { spawnFloat("-$" + formatCompactNumber(selectedCandidate.cost), 'expense'); haptics.confirm() }; hireCandidate(selectedSlot); setSelectedSlot(0) }}
+            style={[styles.hireBtn, canHire ? styles.hireBtnActive : styles.hireBtnOff]}
+          >
+            <Text style={styles.hireBtnLabel}>
+              {atCap ? t(rs.full(cap)) : !affordable ? t(rs.need(formatCompactNumber(selectedCandidate.cost))) : t(rs.hireName(selectedCandidate.name, formatCompactNumber(selectedCandidate.cost)))}
+            </Text>
+          </AnimatedPressable>
+        </View>
+      )}
+
+      {/* Refresh bar */}
+      <View style={styles.refreshBar}>
+        <Text style={styles.refreshTimer}>{refreshSecsLeft > 0 ? t(rs.newCandidatesIn(Math.ceil(refreshSecsLeft / 60))) : t(rs.candidatesReady)}</Text>
+        <AnimatedPressable disabled={!canRefresh}
+          onPress={() => { if (canRefresh) { spawnFloat("-$" + formatCompactNumber(refreshCost), 'expense'); haptics.tap() }; refreshRecruitmentPool(); setSelectedSlot(0) }}
+          style={[styles.refreshBtn, canRefresh ? styles.refreshBtnActive : styles.refreshBtnOff]}>
+          <Text style={styles.refreshBtnLabel}>{t(rs.refresh(formatCompactNumber(refreshCost)))}</Text>
+        </AnimatedPressable>
+      </View>
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#0D1520' },
+  loadingScreen: { flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
+  scene: { height: 200, backgroundColor: '#4A7A9A', position: 'relative', overflow: 'hidden', flexShrink: 0 },
+  sceneBuildingLarge: { position: 'absolute', right: 16, bottom: 0, width: 80, height: 110, backgroundColor: '#7A8A70', borderRadius: 4, opacity: 0.5 },
+  sceneBuildingSmall: { position: 'absolute', right: 90, bottom: 0, width: 50, height: 70, backgroundColor: '#6A7A60', borderRadius: 4, opacity: 0.4 },
+  sceneSign: { position: 'absolute', top: '45%', left: 14, backgroundColor: colors.cream, borderRadius: 6, borderWidth: 2, borderColor: '#8A7A5A', paddingHorizontal: 8, paddingVertical: 3 },
+  sceneSignText: { fontSize: 9, fontWeight: '800', color: colors.ink },
+  candidatesStage: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 20, paddingHorizontal: 20 },
+  infoPanel: { backgroundColor: '#1C2634', borderTopWidth: 3, padding: spacing.md, paddingBottom: spacing.sm, flexShrink: 0 },
+  infoTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  infoRoleIcon: { marginRight: spacing.sm },
+  infoName: { fontSize: 18, fontFamily: fonts.display, color: '#fff' },
+  infoRole: { fontSize: 11, fontFamily: fonts.body, color: '#8CA3BE', marginTop: 2 },
+  infoFlavor: { fontSize: 11, color: '#9FB3C8', fontStyle: 'italic', marginTop: 3 },
+  roleTag: { alignSelf: 'flex-start', borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4, marginTop: spacing.sm, borderWidth: 1 },
+  roleTagGlobal: { backgroundColor: 'rgba(124,179,66,0.15)', borderColor: 'rgba(124,179,66,0.5)' },
+  roleTagAssign: { backgroundColor: 'rgba(91,141,191,0.18)', borderColor: 'rgba(91,141,191,0.6)' },
+  roleTagText: { fontSize: 11.5, fontWeight: '700', color: '#DCE7F0' },
+  skillBlock: { marginTop: spacing.sm, gap: 6 },
+  aceRibbon: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '900', color: colors.gold, letterSpacing: 0.5 },
+  tierBadge: { borderRadius: 10, borderBottomWidth: 3, borderBottomColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 10, paddingVertical: 4 },
+  tierBadgeText: { fontSize: 10, fontFamily: fonts.heading, color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: radii.md, padding: spacing.sm, marginBottom: spacing.sm },
+  iStat: { flex: 1, alignItems: 'center' },
+  iStatVal: { fontSize: 17, fontFamily: fonts.heading, color: '#fff' },
+  iStatLabel: { fontSize: 8, color: '#8CA3BE', textTransform: 'uppercase', letterSpacing: 0.5 },
+  iStatDiv: { width: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 4 },
+  hireBtn: { borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderBottomWidth: 4 },
+  hireBtnActive: { backgroundColor: colors.green, borderBottomColor: colors.greenDark },
+  hireBtnOff: { backgroundColor: '#2E3D50', borderBottomColor: '#1B2532' },
+  hireBtnLabel: { fontSize: 15, fontFamily: fonts.display, color: '#fff', letterSpacing: 0.5 },
+  refreshBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#141E2A', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: '#2E3D50', flexShrink: 0 },
+  refreshTimer: { fontSize: 11, color: '#7C8FA6' },
+  refreshBtn: { borderRadius: 10, paddingHorizontal: spacing.md, paddingVertical: 7, borderBottomWidth: 3 },
+  refreshBtnActive: { backgroundColor: '#33496A', borderBottomColor: '#1B2A40' },
+  refreshBtnOff: { backgroundColor: '#1A2530', borderBottomColor: '#111922' },
+  refreshBtnLabel: { fontSize: 11, fontFamily: fonts.heading, color: '#CFDDEC' },
+})

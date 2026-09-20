@@ -1,0 +1,585 @@
+import { memo, useMemo } from 'react'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { ImageSourcePropType } from 'react-native'
+import Svg, { Polygon } from 'react-native-svg'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
+import type { SharedValue } from 'react-native-reanimated'
+
+import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_SURFACE, getTileStatusBadge } from '../buildingIdentity'
+import { BUILDINGS } from '../game/data/buildings'
+import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
+import { colors, radii } from '../theme'
+import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL, PLANT_IMAGE_SCALE } from '../config/factoryScene'
+import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
+import PlantSmoke from './PlantSmoke'
+import GameIcon from './GameIcon'
+
+// Categories whose plants visibly "work" (puff smoke/steam) while running.
+// Storage/research/support buildings don't process anything, so they stay
+// still. Power burns crude (sootier tint); production/waste give off pale
+// steam.
+// Per-tile row,col coordinate labels were a development aid for tuning the
+// isometric grid. Off for normal play -- flip to true if you need to debug
+// tile placement again.
+const SHOW_DEBUG_LABELS = false
+
+const SMOKING_CATEGORIES = new Set(['production', 'power', 'waste'])
+const SMOKE_COLOR_BY_CATEGORY: Record<string, string> = {
+  production: 'rgba(214, 206, 196, 1)',
+  power: 'rgba(120, 116, 110, 1)',
+  waste: 'rgba(208, 224, 220, 1)',
+}
+
+const TILE_SCALE = 1.5
+const TILE_WIDTH = 84 * TILE_SCALE
+const TILE_HEIGHT = 42 * TILE_SCALE
+// Spacing between cell centres (>1 opens walkway/road gaps; see isoX/isoY).
+// Tunable alongside the rest of the scene layout in src/config/factoryScene.ts.
+const SIDE_PADDING = 18 * TILE_SCALE
+const TOP_PADDING = 18 * TILE_SCALE
+const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
+const EMPTY_INSET_X = 14 * TILE_SCALE
+const EMPTY_INSET_Y = 8 * TILE_SCALE
+const OCCUPIED_INSET_X = 12 * TILE_SCALE
+const OCCUPIED_INSET_Y = 7 * TILE_SCALE
+const DISABLED_INSET_X = 14 * TILE_SCALE
+const DISABLED_INSET_Y = 8 * TILE_SCALE
+const PLUS_FONT_SIZE = 16 * TILE_SCALE
+const CODE_FONT_SIZE = 12 * TILE_SCALE
+const CODE_LETTER_SPACING = 0.4 * TILE_SCALE
+const LEVEL_BADGE_TOP = -4 * TILE_SCALE
+const LEVEL_BADGE_RIGHT = 6 * TILE_SCALE
+const LEVEL_BADGE_MIN_WIDTH = 24 * TILE_SCALE
+const LEVEL_BADGE_PADDING_X = 5 * TILE_SCALE
+const LEVEL_BADGE_PADDING_Y = 2 * TILE_SCALE
+const LEVEL_FONT_SIZE = 8 * TILE_SCALE
+const STAFF_BADGE_ICON = 22 * TILE_SCALE
+const DEBUG_FONT_SIZE = 7 * TILE_SCALE
+const TOP_CUT_DIAGONALS = 4
+const ACTIVE_ROW_BIAS = 0
+const ACTIVE_COL_BIAS = 0
+const PLANT_IMAGE_WIDTH = TILE_WIDTH
+
+// Spring config for snap-back at bounds
+const SPRING_CONFIG = { damping: 18, stiffness: 180 }
+
+// How many px of overscroll are allowed before snapping back
+const OVERSCROLL_LIMIT = 60
+
+type PlantImageSpec = {
+  source: ImageSourcePropType
+  aspectRatio: number
+}
+
+const SQUARE_PLANT_ASPECT_RATIO = 1
+
+const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, PlantImageSpec>>> = {
+  distillationUnit: {
+    1: { source: require('../../assets/plants/distillation_unit_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/distillation_unit_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/distillation_unit_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  crudeTank: {
+    1: { source: require('../../assets/plants/crude_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/crude_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/crude_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  productTank: {
+    1: { source: require('../../assets/plants/product_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/product_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/product_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  laboratory: {
+    1: { source: require('../../assets/plants/laboratory_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/laboratory_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/laboratory_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  maintenanceWorkshop: {
+    1: { source: require('../../assets/plants/maintenance_workshop_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/maintenance_workshop_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/maintenance_workshop_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  salesOffice: {
+    1: { source: require('../../assets/plants/sales_office_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/sales_office_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/sales_office_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  lubricantPlant: {
+    1: { source: require('../../assets/plants/lubricant_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/lubricant_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/lubricant_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  jetFuelPlant: {
+    1: { source: require('../../assets/plants/jet_fuel_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/jet_fuel_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/jet_fuel_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  petrochemicalPlant: {
+    1: { source: require('../../assets/plants/petrochemical_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/petrochemical_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/petrochemical_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  powerPlant: {
+    1: { source: require('../../assets/plants/power_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/power_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/power_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  wasteTreatmentPlant: {
+    1: { source: require('../../assets/plants/waste_treatment_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/waste_treatment_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/waste_treatment_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  polymerPlant: {
+    1: { source: require('../../assets/plants/polymer_plant_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/polymer_plant_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/polymer_plant_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  lubricantTank: {
+    1: { source: require('../../assets/plants/lubricant_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/lubricant_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/lubricant_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  jetFuelTank: {
+    1: { source: require('../../assets/plants/jet_fuel_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/jet_fuel_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/jet_fuel_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  petrochemicalTank: {
+    1: { source: require('../../assets/plants/petrochemical_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/petrochemical_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/petrochemical_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  recyclingBunker: {
+    1: { source: require('../../assets/plants/recycling_bunker_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/recycling_bunker_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/recycling_bunker_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+  pelletSilo: {
+    1: { source: require('../../assets/plants/pellet_silo_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: require('../../assets/plants/pellet_silo_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: require('../../assets/plants/pellet_silo_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  },
+}
+
+function getPlantImageSpec(cell: GridCell, level: number): PlantImageSpec | null {
+  if (!cell) return null
+  const imagesByLevel = PLANT_IMAGE_BY_BUILDING[cell]
+  if (!imagesByLevel) return null
+  return imagesByLevel[Math.max(1, Math.min(3, level))] ?? null
+}
+
+type FactoryDiamondGroundViewProps = {
+  game: GameState
+  derived: DerivedStats
+  grid: GridCell[]
+  gridLevels: number[]
+  containerWidth: number
+  viewportHeight?: number
+  displayGridSize?: number
+  anchorGridSize?: number
+  onCellPress?: (index: number) => void
+  isActive?: boolean
+  comboHintCells?: number[]
+  // Pushes the grid CONTENT down within the viewport (px) without shrinking the
+  // viewport itself — so moving the grid lower doesn't clip it / make it pannable
+  // (which caused the grid to jump around). See src/config/factoryScene GRID_DROP.
+  contentOffsetY?: number
+  // Optional output mirrors of the live pan offset (px). The grid keeps full
+  // control of its own pan; it just writes the current value here each frame so
+  // the parent can move the background in parallax with it (see index.tsx).
+  panOutX?: SharedValue<number>
+  panOutY?: SharedValue<number>
+}
+
+function diamondPoints(x: number, y: number, width: number, height: number) {
+  const halfWidth = width / 2
+  const halfHeight = height / 2
+  return `${x + halfWidth},${y} ${x + width},${y + halfHeight} ${x + halfWidth},${y + height} ${x},${y + halfHeight}`
+}
+
+function insetDiamondPoints(x: number, y: number, width: number, height: number, insetX: number, insetY: number) {
+  return diamondPoints(
+    x + insetX,
+    y + insetY,
+    Math.max(12, width - insetX * 2),
+    Math.max(8, height - insetY * 2),
+  )
+}
+
+// Cell pitch is spread slightly wider than the tile itself so neighbouring
+// diamonds no longer touch edge-to-edge — the gap reads as walkways/roads
+// between plants and stops the grid feeling cramped. 1.0 = old touching layout;
+// the tiles/plants keep their size, only the spacing between cell centres grows.
+function isoX(row: number, col: number, rows: number) {
+  return (col - row + rows - 1) * (TILE_WIDTH / 2) * GRID_SPREAD + SIDE_PADDING
+}
+
+function isoY(row: number, col: number) {
+  return (row + col) * (TILE_HEIGHT / 2) * GRID_SPREAD + TOP_PADDING
+}
+
+function clamp(value: number, min: number, max: number) {
+  'worklet'
+  return Math.min(max, Math.max(min, value))
+}
+
+// One grid tile, memoised so it only re-renders when ITS OWN props change.
+// The parent re-runs every game tick (200ms); without this, all 121 tiles
+// (SVGs + plant sprites + smoke) reconciled every tick, which is what made
+// panning stutter once the yard filled up. Props are kept primitive (worker
+// TYPE not the employee object, a stable onCellPress) so the shallow compare
+// actually skips: empty '+' tiles and steady plants no longer re-render — only
+// a tile whose smoke/synergy/level/worker just changed does.
+type DiamondCellProps = {
+  variant: 'disabled' | 'empty' | 'built'
+  index: number
+  x: number
+  y: number
+  zIndex: number
+  isComboHint?: boolean
+  cell?: BuildingType
+  level?: number
+  isSmoking?: boolean
+  synergy?: string | null
+  workerType?: string | null
+  debugLabel?: string
+  onCellPress?: (index: number) => void
+}
+
+const DiamondCell = memo(function DiamondCell({
+  variant, index, x, y, zIndex, isComboHint, cell, level = 1,
+  isSmoking, synergy, workerType, debugLabel, onCellPress,
+}: DiamondCellProps) {
+  if (variant === 'disabled') {
+    return (
+      <View style={[styles.cell, { left: x, top: y, zIndex }]}>
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="rgba(225, 215, 192, 0.36)" stroke="rgba(145, 126, 93, 0.18)" strokeWidth={1} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, DISABLED_INSET_X, DISABLED_INSET_Y)} fill="rgba(245, 239, 227, 0.22)" stroke="rgba(148, 128, 95, 0.12)" strokeWidth={0.8} />
+        </Svg>
+        {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabelDisabled}>{debugLabel}</Text> : null}
+      </View>
+    )
+  }
+
+  if (variant === 'empty') {
+    return (
+      <Pressable onPress={() => onCellPress?.(index)} style={[styles.cell, { left: x, top: y, zIndex }]}>
+        {SHOW_GRID || isComboHint ? (
+          <>
+            <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
+              <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'} stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'} strokeWidth={1} />
+            </Svg>
+            <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
+          </>
+        ) : null}
+        {SHOW_DEBUG_LABELS ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+      </Pressable>
+    )
+  }
+
+  // built
+  const category = BUILDING_CATEGORY_BY_TYPE[cell!]
+  const accentColor = BUILDING_CATEGORY_ACCENT[category]
+  const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
+  const code = BUILDINGS[cell!].shortName
+  const plantImage = getPlantImageSpec(cell!, level)
+  const plantImageWidth = PLANT_IMAGE_WIDTH * PLANT_IMAGE_SCALE
+  const plantImageHeight = plantImage ? plantImageWidth / plantImage.aspectRatio : 0
+  const plantImageLeft = (TILE_WIDTH - plantImageWidth) / 2
+
+  return (
+    <Pressable onPress={() => onCellPress?.(index)} style={[styles.cell, { left: x, top: y, zIndex }]}>
+      {!SHOW_GRID ? null : plantImage ? (
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill="rgba(238, 229, 211, 0.18)" stroke="rgba(148, 128, 95, 0.16)" strokeWidth={1} />
+        </Svg>
+      ) : (
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D4C19F" stroke="#8E7855" strokeWidth={1.25} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, OCCUPIED_INSET_X, OCCUPIED_INSET_Y)} fill={surfaceColor} stroke={accentColor} strokeWidth={1.1} />
+        </Svg>
+      )}
+      {synergy ? (
+        <Svg width={TILE_WIDTH} height={TILE_HEIGHT} style={styles.auraSvg}>
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={synergy === 'bonus' ? 'rgba(124,179,66,0.22)' : 'rgba(232,131,58,0.22)'} stroke={synergy === 'bonus' ? '#7CB342' : '#E8833A'} strokeWidth={2.5} strokeLinejoin="round" />
+        </Svg>
+      ) : null}
+      {plantImage ? (
+        <Image source={plantImage.source} style={[styles.plantImage, { width: plantImageWidth, height: plantImageHeight, left: plantImageLeft }]} resizeMode="contain" />
+      ) : (
+        <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
+      )}
+      {isSmoking ? (
+        <PlantSmoke width={TILE_WIDTH} topY={TILE_HEIGHT - (plantImage ? plantImageHeight : TILE_HEIGHT) + 8 * TILE_SCALE} color={SMOKE_COLOR_BY_CATEGORY[category] ?? SMOKE_COLOR_BY_CATEGORY.production} />
+      ) : null}
+      {SHOW_DEBUG_LABELS && !plantImage ? <Text style={styles.debugLabel}>{debugLabel}</Text> : null}
+      {!plantImage ? (
+        <View style={styles.levelBadge}><Text style={styles.levelText}>L{level}</Text></View>
+      ) : null}
+      {workerType ? (
+        <View style={styles.staffBadge}><GameIcon name={`worker-${workerType}`} size={STAFF_BADGE_ICON} /></View>
+      ) : null}
+    </Pressable>
+  )
+})
+
+function FactoryDiamondGroundView({
+  game,
+  derived,
+  grid,
+  gridLevels,
+  containerWidth,
+  viewportHeight,
+  displayGridSize,
+  anchorGridSize,
+  onCellPress,
+  isActive = true,
+  comboHintCells = [],
+  contentOffsetY = 0,
+  panOutX,
+  panOutY,
+}: FactoryDiamondGroundViewProps) {
+  // Grid geometry only depends on the layout inputs (grid size, container,
+  // offsets) — none of which change on a normal game tick — so memoise the
+  // whole 121-tile layout + world/viewport/pan-bounds math to stop it churning
+  // every 200ms while the economy ticks.
+  const layout = useMemo(() => {
+    const activeCols = Math.round(Math.sqrt(grid.length))
+    const activeRows = activeCols
+    const displayCols = Math.max(displayGridSize ?? activeCols, activeCols)
+    const displayRows = displayCols
+    const anchorCols = Math.min(anchorGridSize ?? activeCols, displayCols)
+    const anchorRows = anchorCols
+    const anchoredRowOffset = Math.floor((displayRows - anchorRows) / 2)
+    const activeRowOffset = Math.max(0, anchoredRowOffset - ACTIVE_ROW_BIAS)
+    const anchoredColOffset = Math.floor((displayCols - anchorCols) / 2)
+    const activeColOffset = Math.max(0, anchoredColOffset - ACTIVE_COL_BIAS)
+
+    const tileLayouts = Array.from({ length: displayCols * displayRows }, (_, displayIndex) => {
+      const row = Math.floor(displayIndex / displayCols)
+      const col = displayIndex % displayCols
+      const x = isoX(row, col, displayRows)
+      const y = isoY(row, col)
+      const withinActiveRows = row >= activeRowOffset && row < activeRowOffset + activeRows
+      const withinActiveCols = col >= activeColOffset && col < activeColOffset + activeCols
+      const activeIndex =
+        withinActiveRows && withinActiveCols
+          ? (row - activeRowOffset) * activeCols + (col - activeColOffset)
+          : null
+      return { displayIndex, row, col, diagonal: row + col, x, y, right: x + TILE_WIDTH, bottom: y + TILE_HEIGHT, activeIndex }
+    })
+
+    const visibleTiles = tileLayouts.filter((tile) => tile.diagonal >= TOP_CUT_DIAGONALS)
+    const minX = Math.min(...visibleTiles.map((tile) => tile.x))
+    const maxX = Math.max(...visibleTiles.map((tile) => tile.right))
+    const minY = Math.min(...visibleTiles.map((tile) => tile.y))
+    const maxY = Math.max(...visibleTiles.map((tile) => tile.bottom))
+    const worldWidth = maxX - minX
+    const worldHeight = maxY - minY
+    const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
+    const baseMapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
+    const mapHeight = baseMapHeight + contentOffsetY
+    const offsetX = (mapWidth - worldWidth) / 2 - minX
+    const offsetY = (baseMapHeight - worldHeight) / 2 - minY + contentOffsetY
+    const vpWidth = containerWidth
+    const vpHeight = viewportHeight ?? mapHeight
+    const minPanX = Math.min(0, vpWidth - mapWidth)
+    const minPanY = Math.min(0, vpHeight - mapHeight)
+    return { activeCols, visibleTiles, offsetX, offsetY, mapWidth, mapHeight, vpWidth, vpHeight, minPanX, maxPanX: 0, minPanY, maxPanY: 0 }
+  }, [grid.length, displayGridSize, anchorGridSize, containerWidth, viewportHeight, contentOffsetY])
+
+  const { activeCols, visibleTiles, offsetX, offsetY, mapWidth, mapHeight, vpWidth, vpHeight, minPanX, maxPanX, minPanY, maxPanY } = layout
+
+  // Shared values for pan offset
+  const translateX = useSharedValue((minPanX + maxPanX) / 2)
+  const translateY = useSharedValue((minPanY + maxPanY) / 2)
+  const savedX = useSharedValue(translateX.value)
+  const savedY = useSharedValue(translateY.value)
+
+  const pan = Gesture.Pan()
+    // Require deliberate movement before the pan activates. Without this, the
+    // slight finger jitter of a real tap immediately activated the pan, which
+    // stole the touch so the cell's onPress never fired — you couldn't place a
+    // building on a device (a synthetic zero-movement web tap worked, hiding it).
+    .activeOffsetX([-14, 14])
+    .activeOffsetY([-14, 14])
+    .onStart(() => {
+      'worklet'
+      savedX.value = translateX.value
+      savedY.value = translateY.value
+    })
+    .onUpdate((e) => {
+      'worklet'
+      const rawX = savedX.value + e.translationX
+      const rawY = savedY.value + e.translationY
+      // Allow slight overscroll, rubber-band style
+      translateX.value = clamp(rawX, minPanX - OVERSCROLL_LIMIT, maxPanX + OVERSCROLL_LIMIT)
+      translateY.value = clamp(rawY, minPanY - OVERSCROLL_LIMIT, maxPanY + OVERSCROLL_LIMIT)
+    })
+    .onEnd(() => {
+      'worklet'
+      // Snap back into bounds with spring
+      translateX.value = withSpring(clamp(translateX.value, minPanX, maxPanX), SPRING_CONFIG)
+      translateY.value = withSpring(clamp(translateY.value, minPanY, maxPanY), SPRING_CONFIG)
+    })
+
+  const animatedStyle = useAnimatedStyle(() => {
+    // Mirror the live pan out to the parent (for background parallax) every
+    // frame — including the spring snap-back — so the bg tracks 1:1 in feel.
+    if (panOutX) panOutX.value = translateX.value
+    if (panOutY) panOutY.value = translateY.value
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    }
+  })
+
+  return (
+    <View style={[styles.viewport, { width: vpWidth, height: vpHeight }]}>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.map, { width: mapWidth, height: mapHeight }, animatedStyle]}>
+          {visibleTiles.map((tile) => {
+            const activeIndex = tile.activeIndex
+            const x = tile.x + offsetX
+            const y = tile.y + offsetY
+            const zIndex = 10 + tile.row + tile.col
+            const debugLabel = `${tile.row + 1},${tile.col + 1}`
+
+            if (activeIndex === null) {
+              if (!SHOW_SHELL) return null // only the active grid is drawn
+              return (
+                <DiamondCell key={`disabled-${tile.displayIndex}`} variant="disabled" index={tile.displayIndex} x={x} y={y} zIndex={zIndex} debugLabel={debugLabel} />
+              )
+            }
+
+            const cell = grid[activeIndex]
+            if (!cell) {
+              return (
+                <DiamondCell key={activeIndex} variant="empty" index={activeIndex} x={x} y={y} zIndex={zIndex}
+                  isComboHint={comboHintCells.includes(activeIndex)} debugLabel={debugLabel} onCellPress={onCellPress} />
+              )
+            }
+
+            const category = BUILDING_CATEGORY_BY_TYPE[cell]
+            // Per-tick data the memoised cell needs, kept primitive so its
+            // shallow compare skips unchanged tiles: smoke (production state),
+            // synergy, and the assigned worker's TYPE (not the employee object).
+            const assignedWorker = cellAcceptsSpecialist(cell) ? getEmployeeAssignedToCell(game, activeIndex) : null
+            const isSmoking =
+              isActive &&
+              SMOKING_CATEGORIES.has(category) &&
+              getTileStatusBadge(cell, activeIndex, game, derived) === null
+
+            return (
+              <DiamondCell
+                key={activeIndex}
+                variant="built"
+                index={activeIndex}
+                x={x}
+                y={y}
+                zIndex={zIndex}
+                cell={cell}
+                level={gridLevels[activeIndex] ?? 1}
+                isSmoking={isSmoking}
+                synergy={getCellSynergy(grid, activeIndex)}
+                workerType={assignedWorker ? assignedWorker.type : null}
+                debugLabel={debugLabel}
+                onCellPress={onCellPress}
+              />
+            )
+          })}
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  viewport: {
+    overflow: 'hidden',
+  },
+  map: {
+    position: 'relative',
+  },
+  cell: {
+    position: 'absolute',
+    width: TILE_WIDTH,
+    height: TILE_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusLabel: {
+    position: 'absolute',
+    color: 'rgba(86, 71, 50, 0.62)',
+    fontSize: PLUS_FONT_SIZE,
+    fontWeight: '700',
+  },
+  codeLabel: {
+    position: 'absolute',
+    fontSize: CODE_FONT_SIZE,
+    fontWeight: '900',
+    letterSpacing: CODE_LETTER_SPACING,
+  },
+  debugLabel: {
+    position: 'absolute',
+    bottom: 8 * TILE_SCALE,
+    left: 10 * TILE_SCALE,
+    color: 'rgba(86, 71, 50, 0.72)',
+    fontSize: DEBUG_FONT_SIZE,
+    fontWeight: '700',
+  },
+  debugLabelDisabled: {
+    position: 'absolute',
+    bottom: 8 * TILE_SCALE,
+    left: 10 * TILE_SCALE,
+    color: 'rgba(110, 95, 72, 0.34)',
+    fontSize: DEBUG_FONT_SIZE,
+    fontWeight: '700',
+  },
+  plantImage: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    width: PLANT_IMAGE_WIDTH,
+  },
+  levelBadge: {
+    position: 'absolute',
+    top: LEVEL_BADGE_TOP,
+    right: LEVEL_BADGE_RIGHT,
+    minWidth: LEVEL_BADGE_MIN_WIDTH,
+    borderRadius: radii.pill,
+    paddingHorizontal: LEVEL_BADGE_PADDING_X,
+    paddingVertical: LEVEL_BADGE_PADDING_Y,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+  },
+  levelText: {
+    color: colors.white,
+    fontSize: LEVEL_FONT_SIZE,
+    fontWeight: '800',
+  },
+  auraSvg: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  staffBadge: {
+    position: 'absolute',
+    top: LEVEL_BADGE_TOP,
+    left: 6 * TILE_SCALE,
+    borderRadius: radii.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
+  },
+})
+
+export default FactoryDiamondGroundView

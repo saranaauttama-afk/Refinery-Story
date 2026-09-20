@@ -1,0 +1,219 @@
+# Refinery Story — Game Roadmap
+
+Last updated: 2026-06-25  
+Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-hidden-routes` → `feature/diamond-shell-camera`
+
+---
+
+## สถานะปัจจุบัน (Done)
+
+### Session 2 — June 2026 (major update)
+- [x] FAB navigation — tab bar hidden, floating action button bottom-right
+- [x] 3-screen regroup: Factory / Business / Company (จาก 5 screens)
+- [x] Factory screen redesign: company block, resource dock, action dock
+- [x] Staff screen: recruitment scene (pixel characters), Recruitment|Team toggle
+- [x] Production screen: live status grid, product cards, compact automation
+- [x] Business screen: 4→3 tabs (Contracts / Supply / Recruit)
+- [x] Company screen: Team / Grow / Settings
+- [x] Build sheet redesign: grouped cards + plant art thumbnails
+- [x] Building info sheet: plant art hero + upgrade panel + before/after stats
+- [x] Upgrade refinery modal: level strip + unlocks preview + requirements checklist
+- [x] Level cap Lv20 + win condition rebalance (Lv15 + rep 400)
+- [x] Pool refresh 600 → 3600 ticks (~12 min = 1 business day)
+
+### Infrastructure
+- [x] Expo / React Native project structure
+- [x] GameContext + useGameLoop (tick-based simulation)
+- [x] AsyncStorage save/load with sanitizer
+- [x] TypeScript strict — circular dep แก้แล้ว (`employeeUtils.ts`)
+- [x] Dead code cleanup (renderers, boost vars, buildingIcons)
+
+### Core Loop
+- [x] Crude → Gasoline production chain
+- [x] Feedstock layer (Distillation Unit → downstream plants)
+- [x] 5 secondary products: Asphalt, Lubricants, Jet Fuel, Petrochemicals, (Recycled/Pellets defined แต่ยังไม่ active)
+- [x] Auto-trade ครบ 5 products
+- [x] Contracts (37 contracts across all product lines)
+- [x] Standing Orders (4 repeatable orders)
+- [x] Grid Expansion (3×3 → 6×6)
+- [x] Hidden combo system (5 combos)
+- [x] Choice events + Random events
+
+### Progression
+- [x] Refinery levels + perk tree (3 branches × 3 tiers)
+- [x] Tech eras (Foundation → Expansion → Modern → Energy Transition)
+- [x] Research (10 items)
+- [x] Milestones (16)
+- [x] Annual Awards + rival ranking
+- [x] ESG / Safety axis
+- [x] Individual staff (hire, train, veteran trait, specialist assignment)
+- [x] Seasonal gasoline demand
+
+### UI / Navigation
+- [x] 5-tab navigation: Factory, Production, Staff, Business, HQ
+- [x] HQ ครอบทุกอย่างที่เคยซ่อนใน Stats (expansion, activity log, ESG, settings, store)
+- [x] Production มี Asphalt production section
+- [x] Stats tab ถูกเอาออกจาก tab bar
+- [x] Diamond Ground isometric renderer (11×11 shell, flat-top)
+- [x] Pan camera บน diamond shell (GestureDetector + Reanimated)
+- [x] Floating HUD (resource bar, goal chip, trade pill)
+- [x] Bottom sheets (Build, Building Info, More Info, Events)
+
+---
+
+## Phase 1 — Gameplay Depth (เพิ่ม content ที่ยังขาด)
+
+### 1A: Recycled Material + Plastic Pellets Chain
+**Priority: สูง** — art assets พร้อมแล้ว (`recycling_bunker`, `pellet_silo`), types ใน codebase มีแล้ว
+
+- [x] `recyclingBunker` → ผลิต `recycledMaterial` จาก waste byproduct
+- [x] `pelletSilo` → ผลิต `plasticPellets` จาก `recycledMaterial`
+- [x] Contracts สำหรับทั้ง 2 products (IDs 27-32)
+- [x] Standing Orders: recyclingContract + pelletExport
+- [x] Production/Factory screen แสดง inventory + sell button
+- [x] Unlock levels: wasteTreatmentPlant Lv8, polymerPlant Lv20
+- [x] waste → recycledMaterial, petrochemicals → plasticPellets
+
+### 1B: Staff Hiring Cap + Retirement
+**Priority: สูง** — ตอนนี้จ้างได้ไม่จำกัด ทำให้ late game ไม่มี tension
+
+- [x] Max per type = floor(2 + refineryLevel/3) (เช่น max 5 per type หรือ total 20)
+- [x] Retirement mechanic: พนักงานสูงอายุ retire หลัง N ปี (ออก event ให้รู้ล่วงหน้า)
+- [x] Slot ว่างทันที + mentor XP bonus จาก high-level retiree
+- [x] Severance pay + mentoring XP legacy
+
+### 1C: Contracts Panel UX
+**Priority: กลาง** — panel ยาวมาก ที่ level สูงๆ
+
+- [x] Collapse completed contracts
+- [x] Filter: All / Ready / Gas / Asphalt / Jet / Lube / Petrochem / Recycled / Pellets
+- [x] Badge count บน Business tab + FAB
+
+---
+
+## Phase 2 — Visual & Feel
+
+### 2A: Building Visual Identity (Diamond Ground)
+**Priority: กลาง** — ตอนนี้ buildings ที่ไม่มี plant art ใช้แค่ shortcode
+
+- [x] Plant art (lv1-3) บน diamond tile ทุก building
+- [x] Level badge + category badge ในinfo sheet
+- [x] Status badge มีอยู่แล้ว
+
+### 2B: Factory Atmosphere
+**Priority: ต่ำ** — ขึ้นอยู่กับ art direction
+
+- [ ] Road / pipe layer บน diamond ground
+- [ ] Smoke particle บน active buildings
+- [ ] Day/night cycle ที่มีผลกับ scene จริง (ไม่ใช่แค่ tint)
+
+### 2C: Sound & Haptics Pass
+**Priority: ต่ำ**
+
+- [ ] Production tick sound
+- [ ] Contract fulfill sound
+- [ ] Level up fanfare
+- [ ] Haptic feedback ครบทุก action สำคัญ
+
+---
+
+## Phase 3 — Meta & Retention
+
+### 3A: Award History Screen
+**Priority: กลาง** — ข้อมูลมีแล้วใน `game.awardHistory` แค่ต้องทำ UI
+
+- [x] Company/Grow tab แสดง last award + activity log
+- [x] Grade, score, rank, payroll, net profit ใน Grow tab
+- [ ] Chart แสดง score trend (ยังไม่ทำ)
+
+### 3B: Save Export / Import
+**Priority: กลาง** — ป้องกัน data loss เมื่อ reinstall
+
+- [ ] Export save เป็น JSON file (share sheet)
+- [ ] Import จาก file picker
+- [ ] Validate + migrate format ก่อน import
+
+### 3C: Onboarding / First-Run Guide
+**Priority: กลาง** — มือใหม่ไม่รู้ต้องทำอะไร
+
+- [ ] First-run overlay แนะนำ 3 steps แรก
+- [ ] Highlight ปุ่มที่ต้องกดครั้งแรก
+- [ ] ปิดได้ ไม่รบกวนผู้เล่นเก่า
+
+---
+
+## Phase 4 — Kairosoft Feel (Long-term)
+
+- [ ] Workers เดินใน factory scene
+- [ ] Trucks เคลื่อนที่เมื่อ shipment มาถึง
+- [ ] Production feedback animation บน tiles (spark, pulse)
+- [ ] Rival refinery cameo ใน award ceremony (แสดงชื่อ + building count)
+
+---
+
+## Phase 5 — Gameplay Feel (Proposed)
+
+### 5A: Crisis Events
+**Priority: สูง** — เพิ่ม active decision making ที่ขาดอยู่ใน mid-late game
+
+ตอนนี้ random events เป็น passive "เกิดขึ้น → รับผล" ไม่มี player agency
+
+- [ ] Event บางอย่างให้เวลา N วัน (game time) ก่อนถูก penalty
+- [ ] ตัวอย่าง: "equipment กำลังพัง — จ่าย $X ซ่อมตอนนี้ หรือรอเสี่ยง production หยุด"
+- [ ] Timer แสดงใน Factory screen (เหมือน choice event แต่มี countdown)
+- [ ] ระดับความเร่งด่วน: low / medium / high — ส่งผลต่อ penalty ถ้าปล่อยทิ้ง
+- [ ] Design: ไม่ควรมีพร้อมกันมากกว่า 1-2 crisis พร้อมกัน
+
+### 5B: Grid Combo Hints
+**Priority: กลาง** — ช่วย new player เรียนรู้ layout โดยไม่ spoil
+
+ตอนนี้ hidden combo มี 5 อัน แต่ผู้เล่นส่วนใหญ่ไม่รู้ว่ามีอยู่
+
+- [ ] เมื่อกด build mode บน tile ให้ highlight tiles ข้างๆ ที่จะ complete combo ถ้าวางถูก
+- [ ] แสดงเป็น subtle glow ไม่บอกชื่อ combo — แค่บอกว่า "placement นี้ดี"
+- [ ] ทำงานบน diamond ground renderer ปัจจุบัน
+- [ ] ไม่แสดงถ้า combo นั้น discover แล้ว
+
+### 5C: Milestone Narrative Headlines
+**Priority: กลาง** — ทำให้ progression มีน้ำหนักมากขึ้น
+
+ตอนนี้ milestone เป็นแค่ checklist reward ไม่มี sense of story
+
+- [ ] Milestone สำคัญ (level 5, 10, 15, era change) trigger "news headline" modal
+- [ ] Flavor text เปลี่ยนตาม `game.refineryName` — เช่น "Sunrise Refinery คว้าสถานะ Regional Supplier"
+- [ ] ใช้ pattern เดียวกับ EraBanner (auto-dismiss toast) ไม่ block gameplay
+- [ ] สร้าง headline template ต่อ milestone key ใน translations.ts
+
+---
+
+## Deferred / Needs Design Discussion
+
+| หัวข้อ | เหตุผลที่ defer |
+|---|---|
+| Multi-cut process chain (naphtha/distillate/residue) | complexity สูงเกินสำหรับ Kairosoft style |
+| Per-plant module picker | ต้องออกแบบ UX ใหม่ทั้งหมด |
+| Mixed-product contracts | ต้องแก้ completion logic |
+| Multiplayer / leaderboard | out of scope สำหรับ solo dev |
+| Web version | focus mobile ก่อน |
+
+---
+
+## Branch Convention
+
+```
+feature/<system>-<description>   เช่น feature/recycled-material-chain
+fix/<what>                        เช่น fix/contracts-panel-overflow
+cleanup/<what>                    เช่น cleanup/dead-code-and-deps
+```
+
+Branch ใหม่ทุกอันแตกจาก branch ล่าสุดที่ clean + typecheck pass
+
+---
+
+## Rules (ไม่เปลี่ยนโดยไม่มีเหตุผลชัดเจน)
+
+1. `npx tsc --noEmit` ต้อง pass ก่อน commit ทุกครั้ง
+2. ไม่เปลี่ยน save format โดยไม่มี migration ใน `sanitizeLoadedGameState`
+3. ไม่เพิ่ม renderer ใหม่โดยไม่ตัดของเก่าออกก่อน
+4. Balance constants อยู่ใน `balance.ts` เท่านั้น ห้าม hardcode ใน component
+5. Art assets ใหม่ต้องมี lv1/lv2/lv3 ครบก่อน implement
