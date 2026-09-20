@@ -85,7 +85,7 @@ import FactorySkiaView from '../../../src/components/FactorySkiaView'
 // Skia needs CanvasKit on web, so the web build keeps the View renderer. Flip
 // the flag to false to fall back to the old renderer on device too.
 const USE_SKIA_SCENE = Platform.OS !== 'web'
-import { FACTORY_BG, BG_OFFSET_X, BG_OFFSET_Y, BG_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
+import { FACTORY_BG, BG_OFFSET_X, BG_OFFSET_Y, BG_PARALLAX, BG_ZOOM_PARALLAX, GRID_DROP } from '../../../src/config/factoryScene'
 
 
 // The cleaned diamond-ground renderer is now the live review surface for
@@ -323,9 +323,12 @@ export default function RefineryScreen() {
   // BG_PARALLAX so the whole scene pans together.
   const bgPanX      = useSharedValue(0)
   const bgPanY      = useSharedValue(0)
-  // Background transform: static framing offset + live parallax pan (no scale).
+  const bgZoom      = useSharedValue(1)
+  // Background derives from the same camera as the playable world. Reduced
+  // pan/zoom factors preserve depth without allowing the two layers to drift.
   const bgAnimStyle = useAnimatedStyle(() => ({
     transform: [
+      { scale: 1 + (bgZoom.value - 1) * BG_ZOOM_PARALLAX },
       { translateX: BG_OFFSET_X + bgPanX.value * BG_PARALLAX },
       { translateY: BG_OFFSET_Y + bgPanY.value * BG_PARALLAX },
     ],
@@ -638,6 +641,7 @@ export default function RefineryScreen() {
               onCellPress={handleCellPress}
               panOutX={bgPanX}
               panOutY={bgPanY}
+              zoomOut={bgZoom}
             />
           ) : (
             <FactoryDiamondGroundView

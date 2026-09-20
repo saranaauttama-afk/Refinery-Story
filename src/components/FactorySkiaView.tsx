@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 import {
@@ -118,6 +118,7 @@ export type FactorySkiaViewProps = {
   onCellPress?: (index: number) => void
   panOutX?: SharedValue<number>
   panOutY?: SharedValue<number>
+  zoomOut?: SharedValue<number>
 }
 
 function FactorySkiaView({
@@ -131,6 +132,7 @@ function FactorySkiaView({
   onCellPress,
   panOutX,
   panOutY,
+  zoomOut,
 }: FactorySkiaViewProps) {
   // Same geometry as the View renderer — memoised so it never churns on a tick.
   const layout = useMemo(() => {
@@ -161,10 +163,14 @@ function FactorySkiaView({
       tiles.push({ activeIndex, x, y, diagonal })
     }
 
-    const minX = Math.min(...tiles.map((t) => t.x))
-    const maxX = Math.max(...tiles.map((t) => t.x + TILE_WIDTH))
-    const minY = Math.min(...tiles.map((t) => t.y))
-    const maxY = Math.max(...tiles.map((t) => t.y + TILE_HEIGHT))
+    // Camera bounds must follow the world that is actually drawn. The old
+    // implementation measured the full invisible 11x11 shell while rendering
+    // only active cells, which left large blank pan regions around the yard.
+    const activeTiles = tiles.filter((t) => t.activeIndex !== null)
+    const minX = Math.min(...activeTiles.map((t) => t.x))
+    const maxX = Math.max(...activeTiles.map((t) => t.x + TILE_WIDTH))
+    const minY = Math.min(...activeTiles.map((t) => t.y))
+    const maxY = Math.max(...activeTiles.map((t) => t.y + TILE_HEIGHT))
     const worldWidth = maxX - minX
     const worldHeight = maxY - minY
     const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
@@ -175,8 +181,7 @@ function FactorySkiaView({
     const vpWidth = containerWidth
     const vpHeight = viewportHeight
     // Absolute (offset-applied) tile positions used for both drawing and hit-test.
-    const placed = tiles
-      .filter((t) => t.activeIndex !== null)
+    const placed = activeTiles
       .map((t) => ({ activeIndex: t.activeIndex as number, x: t.x + offsetX, y: t.y + offsetY, diagonal: t.diagonal }))
       .sort((a, b) => a.diagonal - b.diagonal)
     return { placed, mapWidth, mapHeight, vpWidth, vpHeight, offsetX, offsetY }
@@ -218,9 +223,25 @@ function FactorySkiaView({
   const savedY = useSharedValue(0)
   const savedScale = useSharedValue(1)
 
+  const centeredX = (Math.min(0, vpWidth - mapWidth)) / 2
+  const centeredY = (Math.min(0, vpHeight - mapHeight)) / 2
+
+  // Recenter deterministically when the viewport or playable grid changes.
+  // Shared-value initializers only run on mount, so without this an expansion
+  // or orientation change keeps offsets that belong to the previous layout.
+  useEffect(() => {
+    tx.value = centeredX
+    ty.value = centeredY
+    savedX.value = centeredX
+    savedY.value = centeredY
+  }, [centeredX, centeredY, savedX, savedY, tx, ty])
+
   const transform = useDerivedValue(() => {
-    if (panOutX) panOutX.value = tx.value
-    if (panOutY) panOutY.value = ty.value
+    // Expose movement relative to the centered camera. Consumers such as the
+    // background should not inherit the map's private initial centering offset.
+    if (panOutX) panOutX.value = tx.value - centeredX
+    if (panOutY) panOutY.value = ty.value - centeredY
+    if (zoomOut) zoomOut.value = scale.value
     return [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }]
   })
 

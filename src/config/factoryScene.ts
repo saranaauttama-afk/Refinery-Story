@@ -30,6 +30,11 @@ export const BG_OFFSET_Y = 0
 //   a depth feel. Kept modest so panning stays within the offset slack.
 export const BG_PARALLAX = 0.5
 
+// BG_ZOOM_PARALLAX : how much of the world-camera zoom the painted background
+// follows. Keeping this below 1 preserves depth, while still preventing the
+// background from feeling completely detached from the grid during a pinch.
+export const BG_ZOOM_PARALLAX = 0.18
+
 // ── Isometric grid placement ──
 // GRID_DROP   : how many px the grid is pushed DOWN from the HUD. Increase to
 //               move the plants further down onto the dirt/land (away from the
