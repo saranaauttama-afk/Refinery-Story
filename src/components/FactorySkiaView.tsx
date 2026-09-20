@@ -14,7 +14,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import {
   useSharedValue,
   useDerivedValue,
-  withSpring,
   runOnJS,
 } from 'react-native-reanimated'
 import type { SharedValue } from 'react-native-reanimated'
@@ -42,10 +41,12 @@ const EMPTY_INSET_Y = 8 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
 const PLANT_IMAGE_WIDTH = TILE_WIDTH
 
-const MIN_SCALE = 0.55
+// Mobile camera v2: keep enough of the yard visible that it can never be
+// pinched into a tiny, apparently-lost speck.  The old 0.55 floor combined
+// with overscroll made it possible to move the whole playable grid offscreen.
+const MIN_SCALE = 0.72
 const MAX_SCALE = 2.4
-const OVERSCROLL = 60
-const SPRING = { damping: 18, stiffness: 180 }
+const CAMERA_MARGIN = 56
 
 function isoX(row: number, col: number, rows: number) {
   return (col - row + rows - 1) * (TILE_WIDTH / 2) * GRID_SPREAD + SIDE_PADDING
@@ -62,9 +63,15 @@ function axisBounds(viewportSize: number, contentSize: number, scale: number) {
   const scaledSize = contentSize * scale
   if (scaledSize <= viewportSize) {
     const centered = (viewportSize - scaledSize) / 2
-    return { min: centered, max: centered }
+    // A small, deterministic travel range makes the camera feel draggable even
+    // when an early-game 3x3 yard is smaller than the phone viewport.
+    return { min: centered - CAMERA_MARGIN, max: centered + CAMERA_MARGIN }
   }
-  return { min: viewportSize - scaledSize, max: 0 }
+  // Keep at least CAMERA_MARGIN of world content visible on either edge.
+  return {
+    min: viewportSize - scaledSize - CAMERA_MARGIN,
+    max: CAMERA_MARGIN,
+  }
 }
 
 // Absolute-coord diamond path (Skia). x,y = tile top-left in scene space.
@@ -249,24 +256,25 @@ function FactorySkiaView({
     savedY.value = centeredY
   }, [cameraResetKey, centeredX, centeredY, savedScale, savedX, savedY, scale, tx, ty])
 
-  const transform = useDerivedValue(() => {
+  const translateTransform = useDerivedValue(() => {
     // Expose movement relative to the centered camera. Consumers such as the
     // background should not inherit the map's private initial centering offset.
     if (panOutX) panOutX.value = tx.value - centeredX
     if (panOutY) panOutY.value = ty.value - centeredY
     if (zoomOut) zoomOut.value = scale.value
-    return [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }]
+    return [{ translateX: tx.value }, { translateY: ty.value }]
   })
+  const zoomTransform = useDerivedValue(() => [{ scale: scale.value }])
 
   const boundX = (v: number, s: number) => {
     'worklet'
     const bounds = axisBounds(vpWidth, mapWidth, s)
-    return clampW(v, bounds.min - OVERSCROLL, bounds.max + OVERSCROLL)
+    return clampW(v, bounds.min, bounds.max)
   }
   const boundY = (v: number, s: number) => {
     'worklet'
     const bounds = axisBounds(vpHeight, mapHeight, s)
-    return clampW(v, bounds.min - OVERSCROLL, bounds.max + OVERSCROLL)
+    return clampW(v, bounds.min, bounds.max)
   }
 
   const pan = Gesture.Pan()
@@ -282,13 +290,6 @@ function FactorySkiaView({
       'worklet'
       tx.value = boundX(savedX.value + e.translationX, scale.value)
       ty.value = boundY(savedY.value + e.translationY, scale.value)
-    })
-    .onEnd(() => {
-      'worklet'
-      const xBounds = axisBounds(vpWidth, mapWidth, scale.value)
-      const yBounds = axisBounds(vpHeight, mapHeight, scale.value)
-      tx.value = withSpring(clampW(tx.value, xBounds.min, xBounds.max), SPRING)
-      ty.value = withSpring(clampW(ty.value, yBounds.min, yBounds.max), SPRING)
     })
 
   const pinch = Gesture.Pinch()
@@ -306,13 +307,6 @@ function FactorySkiaView({
       tx.value = boundX(e.focalX - (e.focalX - savedX.value) * ratio, next)
       ty.value = boundY(e.focalY - (e.focalY - savedY.value) * ratio, next)
       scale.value = next
-    })
-    .onEnd(() => {
-      'worklet'
-      const xBounds = axisBounds(vpWidth, mapWidth, scale.value)
-      const yBounds = axisBounds(vpHeight, mapHeight, scale.value)
-      tx.value = withSpring(clampW(tx.value, xBounds.min, xBounds.max), SPRING)
-      ty.value = withSpring(clampW(ty.value, yBounds.min, yBounds.max), SPRING)
     })
 
   const pickCell = (px: number, py: number) => {
@@ -346,19 +340,24 @@ function FactorySkiaView({
     <View style={[styles.viewport, { width: vpWidth, height: vpHeight }]}>
       <GestureDetector gesture={gesture}>
         <Canvas style={{ width: vpWidth, height: vpHeight }}>
-          <Group transform={transform}>
-            {/* ground: outer + inset diamonds */}
-            {ground.map((g) => (
-              <Group key={`gnd-${g.key}`}>
-                <Path path={g.outer} color={g.occupied ? '#D4C19F' : '#D9CCB1'} />
-                <Path path={g.outer} color={g.occupied ? '#8E7855' : '#9C8764'} style="stroke" strokeWidth={1.2} />
-                <Path path={g.inner} color={g.occupied ? 'rgba(238,229,211,0.18)' : '#EEE5D3'} />
-              </Group>
-            ))}
-            {/* building sprites, back-to-front */}
-            {ground.map((g) => (g.sprite ? (
-              <PlantSprite key={`spr-${g.key}`} source={g.sprite.source} x={g.sprite.x} y={g.sprite.y} size={g.sprite.size} />
-            ) : null))}
+          {/* Deliberately nested: screen = world * scale + translation.  A
+              single mixed transform array was interpreted differently by
+              Skia than the hit-test/pinch maths and caused zoom jumps. */}
+          <Group transform={translateTransform}>
+            <Group transform={zoomTransform}>
+              {/* ground: outer + inset diamonds */}
+              {ground.map((g) => (
+                <Group key={`gnd-${g.key}`}>
+                  <Path path={g.outer} color={g.occupied ? '#D4C19F' : '#D9CCB1'} />
+                  <Path path={g.outer} color={g.occupied ? '#8E7855' : '#9C8764'} style="stroke" strokeWidth={1.2} />
+                  <Path path={g.inner} color={g.occupied ? 'rgba(238,229,211,0.18)' : '#EEE5D3'} />
+                </Group>
+              ))}
+              {/* building sprites, back-to-front */}
+              {ground.map((g) => (g.sprite ? (
+                <PlantSprite key={`spr-${g.key}`} source={g.sprite.source} x={g.sprite.x} y={g.sprite.y} size={g.sprite.size} />
+              ) : null))}
+            </Group>
           </Group>
         </Canvas>
       </GestureDetector>

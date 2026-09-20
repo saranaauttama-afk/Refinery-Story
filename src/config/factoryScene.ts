@@ -28,12 +28,15 @@ export const BG_OFFSET_Y = 0
 // BG_PARALLAX : how much the background follows the grid when you pan. 0 = the
 //   bg is fixed; 1 = it moves 1:1 with the plants (one camera); in between gives
 //   a depth feel. Kept modest so panning stays within the offset slack.
-export const BG_PARALLAX = 0.5
+export const BG_PARALLAX = 1
 
 // BG_ZOOM_PARALLAX : how much of the world-camera zoom the painted background
 // follows. Keeping this below 1 preserves depth, while still preventing the
 // background from feeling completely detached from the grid during a pinch.
-export const BG_ZOOM_PARALLAX = 0.18
+// Keep the full-bleed painted backdrop at cover size. Scaling this layer down
+// exposed the edge of the image on tall phones; the interactive yard still
+// zooms fully while both layers pan together 1:1.
+export const BG_ZOOM_PARALLAX = 0
 
 // ── Isometric grid placement ──
 // GRID_DROP   : how many px the grid is pushed DOWN from the HUD. Increase to
