@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - release/refinery-story-v1
+      - build/cam-u1-clean-install
 
 jobs:
   build-apk:
