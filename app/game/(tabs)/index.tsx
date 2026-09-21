@@ -22,7 +22,7 @@ import { useRouter } from 'expo-router'
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
-import { Bell, Clock3, LocateFixed, Menu, Zap } from 'lucide-react-native'
+import { Bell, Clock3, Hammer, LocateFixed, Menu, Zap } from 'lucide-react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
@@ -128,9 +128,9 @@ const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 
 // Plant art thumbnails used in build + info sheets
 const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSourcePropType>>> = {
-  crudeTank:           { 1: require('../../../assets/plants/crude_tank_lv1.png'), 2: require('../../../assets/plants/crude_tank_lv2.png'), 3: require('../../../assets/plants/crude_tank_lv3.png') },
-  distillationUnit:    { 1: require('../../../assets/plants/distillation_unit_lv1.png'), 2: require('../../../assets/plants/distillation_unit_lv2.png'), 3: require('../../../assets/plants/distillation_unit_lv3.png') },
-  productTank:         { 1: require('../../../assets/plants/product_tank_lv1.png'), 2: require('../../../assets/plants/product_tank_lv2.png'), 3: require('../../../assets/plants/product_tank_lv3.png') },
+  crudeTank:           { 1: require('../../../assets/plants/crude_tank_lv1_v3.png'), 2: require('../../../assets/plants/crude_tank_lv2.png'), 3: require('../../../assets/plants/crude_tank_lv3.png') },
+  distillationUnit:    { 1: require('../../../assets/plants/distillation_unit_lv1_v3.png'), 2: require('../../../assets/plants/distillation_unit_lv2.png'), 3: require('../../../assets/plants/distillation_unit_lv3.png') },
+  productTank:         { 1: require('../../../assets/plants/product_tank_lv1_v3.png'), 2: require('../../../assets/plants/product_tank_lv2.png'), 3: require('../../../assets/plants/product_tank_lv3.png') },
   laboratory:          { 1: require('../../../assets/plants/laboratory_lv1.png'), 2: require('../../../assets/plants/laboratory_lv2.png'), 3: require('../../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice:         { 1: require('../../../assets/plants/sales_office_lv1.png'), 2: require('../../../assets/plants/sales_office_lv2.png'), 3: require('../../../assets/plants/sales_office_lv3.png') },
@@ -149,9 +149,9 @@ const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSou
 
 // Plant art thumbnails (lv1) used in build sheet
 const PLANT_THUMB: Partial<Record<BuildingType, ReturnType<typeof require>>> = {
-  crudeTank:           require('../../../assets/plants/crude_tank_lv1.png'),
-  distillationUnit:    require('../../../assets/plants/distillation_unit_lv1.png'),
-  productTank:         require('../../../assets/plants/product_tank_lv1.png'),
+  crudeTank:           require('../../../assets/plants/crude_tank_lv1_v3.png'),
+  distillationUnit:    require('../../../assets/plants/distillation_unit_lv1_v3.png'),
+  productTank:         require('../../../assets/plants/product_tank_lv1_v3.png'),
   laboratory:          require('../../../assets/plants/laboratory_lv1.png'),
   maintenanceWorkshop: require('../../../assets/plants/maintenance_workshop_lv1.png'),
   salesOffice:         require('../../../assets/plants/sales_office_lv1.png'),
@@ -265,6 +265,7 @@ export default function RefineryScreen() {
   const insets = useSafeAreaInsets()
 
   const [pickerCell, setPickerCell] = useState<number | null>(null)
+  const [buildModeOpen, setBuildModeOpen] = useState(false)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
   const [hoveredBuildingKey, setHoveredBuildingKey] = useState<BuildingType | null>(null)
   const [buildCategory, setBuildCategory] = useState<BuildCategory>('storage')
@@ -345,13 +346,13 @@ export default function RefineryScreen() {
       setGridEditMode(null)
       return
     }
-    if (game.grid[index] === null) {
+    if (game.grid[index] === null && buildModeOpen) {
       setPickerCell(index)
       setSelectedBuildKey(null)
     }
     else                           setInfoCell(index)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gridEditMode, gameGrid, moveBuilding, swapBuildings])
+  }, [buildModeOpen, gridEditMode, gameGrid, moveBuilding, swapBuildings])
 
   if (!loaded || !game || !derived) {
     return (
@@ -580,6 +581,7 @@ export default function RefineryScreen() {
               anchorGridSize={EXPANSION_BALANCE[0].size}
               onCellPress={handleCellPress}
               selectedCellIndex={pickerCell}
+              showPlacementGrid={buildModeOpen || pickerCell !== null}
               panOutX={bgPanX}
               panOutY={bgPanY}
               zoomOut={bgZoom}
@@ -604,6 +606,23 @@ export default function RefineryScreen() {
           )}
           {USE_SKIA_SCENE && (
             <View style={styles.cameraControlStack}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open build mode"
+                disabled={firstEmptyCellIndex < 0}
+                style={[styles.buildModeButton, buildModeOpen && styles.buildModeButtonActive]}
+                onPress={() => {
+                  if (firstEmptyCellIndex < 0) return
+                  const next = !buildModeOpen
+                  setBuildModeOpen(next)
+                  setSelectedBuildKey(null)
+                  setPickerCell(null)
+                  setHoveredBuildingKey(null)
+                }}
+              >
+                <Hammer size={16} color={buildModeOpen ? '#071E31' : '#FFD447'} strokeWidth={2.8} />
+                <Text style={[styles.buildModeButtonText, buildModeOpen && styles.buildModeButtonTextActive]}>BUILD</Text>
+              </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Center factory camera"
@@ -1109,6 +1128,7 @@ export default function RefineryScreen() {
                   if (event.reward.kind === 'staff')    { router.push('/game/recruit');   return }
                   if (event.reward.kind === 'contract') { router.push('/game/contracts'); return }
                   if (firstEmptyCellIndex >= 0) {
+                    setBuildModeOpen(true)
                     setSelectedBuildKey(null)
                     setPickerCell(firstEmptyCellIndex)
                   }
@@ -1284,6 +1304,7 @@ export default function RefineryScreen() {
               setPickerCell(null)
               setSelectedBuildKey(null)
               setHoveredBuildingKey(null)
+              setBuildModeOpen(false)
             }}
           >
             <Text style={styles.buildCancelText}>Cancel</Text>
@@ -1299,6 +1320,7 @@ export default function RefineryScreen() {
               setPickerCell(null)
               setSelectedBuildKey(null)
               setHoveredBuildingKey(null)
+              setBuildModeOpen(false)
             }}
           >
             <Text style={styles.buildPlaceText}>Place</Text>
@@ -1694,6 +1716,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     zIndex: 4,
+  },
+  buildModeButton: {
+    height: 40,
+    minWidth: 88,
+    paddingHorizontal: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: pixelRadii.control,
+    backgroundColor: 'rgba(10,35,56,0.94)',
+    borderWidth: 2,
+    borderColor: '#176197',
+  },
+  buildModeButtonActive: {
+    backgroundColor: '#FFD447',
+    borderColor: '#FFF0A3',
+  },
+  buildModeButtonText: {
+    fontFamily: fonts.display,
+    fontSize: 12,
+    color: '#FFD447',
+    letterSpacing: 0.8,
+  },
+  buildModeButtonTextActive: {
+    color: '#071E31',
   },
   centerCameraButton: {
     width: 40,

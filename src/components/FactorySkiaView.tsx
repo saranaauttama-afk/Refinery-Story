@@ -23,14 +23,22 @@ import {
 import type { SharedValue } from 'react-native-reanimated'
 
 import type { BuildingType, GridCell } from '../game/types'
-import { GRID_SPREAD, PLANT_IMAGE_SCALE } from '../config/factoryScene'
 import {
+  BUILD_ZONE_CENTER_X,
+  BUILD_ZONE_FOCUS_Y,
+  BUILD_ZONE_TOP_Y,
+  FACTORY_WORLD_VIEWPORT_SCALE,
+  GRID_SPREAD,
+  PLANT_IMAGE_SCALE,
+} from '../config/factoryScene'
+import {
+  FACTORY_INITIAL_SCALE,
   FACTORY_MAX_SCALE,
   FACTORY_MIN_SCALE,
   FACTORY_WORLD_BLEED,
   clampCameraValue,
-  getCameraAxisBounds,
   getMinimumWorldExtent,
+  getWorldCameraAxisBounds,
   screenPointToWorld,
 } from '../factoryCamera'
 
@@ -76,9 +84,9 @@ function diamondPath(x: number, y: number, w: number, h: number): SkPath {
 }
 
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataSourceParam>>> = {
-  distillationUnit: { 1: require('../../assets/plants/distillation_unit_lv1.png'), 2: require('../../assets/plants/distillation_unit_lv2.png'), 3: require('../../assets/plants/distillation_unit_lv3.png') },
-  crudeTank: { 1: require('../../assets/plants/crude_tank_lv1.png'), 2: require('../../assets/plants/crude_tank_lv2.png'), 3: require('../../assets/plants/crude_tank_lv3.png') },
-  productTank: { 1: require('../../assets/plants/product_tank_lv1.png'), 2: require('../../assets/plants/product_tank_lv2.png'), 3: require('../../assets/plants/product_tank_lv3.png') },
+  distillationUnit: { 1: require('../../assets/plants/distillation_unit_lv1_v3.png'), 2: require('../../assets/plants/distillation_unit_lv2.png'), 3: require('../../assets/plants/distillation_unit_lv3.png') },
+  crudeTank: { 1: require('../../assets/plants/crude_tank_lv1_v3.png'), 2: require('../../assets/plants/crude_tank_lv2.png'), 3: require('../../assets/plants/crude_tank_lv3.png') },
+  productTank: { 1: require('../../assets/plants/product_tank_lv1_v3.png'), 2: require('../../assets/plants/product_tank_lv2.png'), 3: require('../../assets/plants/product_tank_lv3.png') },
   laboratory: { 1: require('../../assets/plants/laboratory_lv1.png'), 2: require('../../assets/plants/laboratory_lv2.png'), 3: require('../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice: { 1: require('../../assets/plants/sales_office_lv1.png'), 2: require('../../assets/plants/sales_office_lv2.png'), 3: require('../../assets/plants/sales_office_lv3.png') },
@@ -94,10 +102,23 @@ const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataS
   recyclingBunker: { 1: require('../../assets/plants/recycling_bunker_lv1.png'), 2: require('../../assets/plants/recycling_bunker_lv2.png'), 3: require('../../assets/plants/recycling_bunker_lv3.png') },
   pelletSilo: { 1: require('../../assets/plants/pellet_silo_lv1.png'), 2: require('../../assets/plants/pellet_silo_lv2.png'), 3: require('../../assets/plants/pellet_silo_lv3.png') },
 }
-function plantSource(cell: BuildingType, level: number): DataSourceParam | null {
+type PlantVisual = { source: DataSourceParam; anchorY: number; scale: number }
+
+function plantVisual(cell: BuildingType, level: number): PlantVisual | null {
   const byLevel = PLANT_IMAGE_BY_BUILDING[cell]
   if (!byLevel) return null
-  return byLevel[level] ?? byLevel[1] ?? null
+  const source = byLevel[level] ?? byLevel[1]
+  if (!source) return null
+  const isNewStarter = level === 1 && (
+    cell === 'distillationUnit' || cell === 'crudeTank' || cell === 'productTank'
+  )
+  return {
+    source,
+    anchorY: isNewStarter ? 0.88 : 0.94,
+    scale: isNewStarter
+      ? (cell === 'distillationUnit' ? 1.08 : 1)
+      : PLANT_IMAGE_SCALE,
+  }
 }
 
 // One building sprite — its own useImage so the source can vary per tile.
@@ -122,6 +143,7 @@ export type FactorySkiaViewProps = {
   anchorGridSize?: number
   onCellPress?: (index: number) => void
   selectedCellIndex?: number | null
+  showPlacementGrid?: boolean
   panOutX?: SharedValue<number>
   panOutY?: SharedValue<number>
   zoomOut?: SharedValue<number>
@@ -139,6 +161,7 @@ function FactorySkiaView({
   anchorGridSize,
   onCellPress,
   selectedCellIndex = null,
+  showPlacementGrid = false,
   panOutX,
   panOutY,
   zoomOut,
@@ -192,20 +215,17 @@ function FactorySkiaView({
     // rectangle. It is large enough to cover the viewport at minimum zoom.
     const mapWidth = Math.max(
       getMinimumWorldExtent(vpWidth),
+      vpWidth * FACTORY_WORLD_VIEWPORT_SCALE,
       worldWidth + SIDE_PADDING * 2 + FACTORY_WORLD_BLEED * 2,
     )
     const mapHeight = Math.max(
       getMinimumWorldExtent(vpHeight),
+      vpHeight * FACTORY_WORLD_VIEWPORT_SCALE,
       MIN_VIEWPORT_HEIGHT,
       worldHeight + TOP_PADDING * 2 + FACTORY_WORLD_BLEED * 2,
     )
-    const worldInsetX = (mapWidth - vpWidth) / 2
-    const worldInsetY = (mapHeight - vpHeight) / 2
-    const desiredGridLeft = (vpWidth - worldWidth) / 2
-    const offsetX = worldInsetX + desiredGridLeft - minX
-    // contentOffsetY is the desired on-screen top of the playable grid when
-    // the camera is centered. worldInsetY cancels the initial camera offset.
-    const offsetY = worldInsetY + contentOffsetY - minY
+    const offsetX = mapWidth * BUILD_ZONE_CENTER_X - worldWidth / 2 - minX
+    const offsetY = mapHeight * BUILD_ZONE_TOP_Y - minY
     // Absolute (offset-applied) tile positions used for both drawing and hit-test.
     const placed = activeTiles
       .map((t) => ({ activeIndex: t.activeIndex as number, x: t.x + offsetX, y: t.y + offsetY, diagonal: t.diagonal }))
@@ -237,8 +257,6 @@ function FactorySkiaView({
 
   // Ground diamonds — rebuilt only when the grid contents change, not per tick.
   const ground = useMemo(() => {
-    const imgSize = PLANT_IMAGE_WIDTH * PLANT_IMAGE_SCALE
-    const imgLeft = (TILE_WIDTH - imgSize) / 2
     return placed.map((t) => {
       const cell = grid[t.activeIndex]
       const outer = diamondPath(t.x, t.y, TILE_WIDTH, TILE_HEIGHT)
@@ -248,7 +266,8 @@ function FactorySkiaView({
         TILE_WIDTH - EMPTY_INSET_X * 2,
         TILE_HEIGHT - EMPTY_INSET_Y * 2,
       )
-      const src = cell ? plantSource(cell, gridLevels[t.activeIndex] ?? 1) : null
+      const visual = cell ? plantVisual(cell, gridLevels[t.activeIndex] ?? 1) : null
+      const imgSize = PLANT_IMAGE_WIDTH * (visual?.scale ?? PLANT_IMAGE_SCALE)
       return {
         key: t.activeIndex,
         outer,
@@ -258,39 +277,53 @@ function FactorySkiaView({
         cx: t.x + TILE_WIDTH / 2,
         cy: t.y + TILE_HEIGHT / 2,
         occupied: !!cell,
-        sprite: src ? { source: src, x: t.x + imgLeft, y: t.y + TILE_HEIGHT - imgSize + EMPTY_INSET_Y, size: imgSize } : null,
+        sprite: visual ? {
+          source: visual.source,
+          x: t.x + TILE_WIDTH / 2 - imgSize / 2,
+          y: t.y + TILE_HEIGHT / 2 - imgSize * visual.anchorY,
+          size: imgSize,
+        } : null,
       }
     })
   }, [placed, grid, gridLevels])
 
   // ── Pan / zoom shared values (UI thread) ──────────────────────────────────
-  const tx = useSharedValue((Math.min(0, vpWidth - mapWidth)) / 2)
-  const ty = useSharedValue((Math.min(0, vpHeight - mapHeight)) / 2)
-  const scale = useSharedValue(1)
+  const focusWorldX = (playableMinX + playableMaxX) / 2
+  const focusWorldY = (playableMinY + playableMaxY) / 2
+  const initialXBounds = getWorldCameraAxisBounds(vpWidth, mapWidth, FACTORY_INITIAL_SCALE)
+  const initialYBounds = getWorldCameraAxisBounds(vpHeight, mapHeight, FACTORY_INITIAL_SCALE)
+  const initialX = clampCameraValue(
+    vpWidth / 2 - focusWorldX * FACTORY_INITIAL_SCALE,
+    initialXBounds.min,
+    initialXBounds.max,
+  )
+  const initialY = clampCameraValue(
+    vpHeight * BUILD_ZONE_FOCUS_Y - focusWorldY * FACTORY_INITIAL_SCALE,
+    initialYBounds.min,
+    initialYBounds.max,
+  )
+  const tx = useSharedValue(initialX)
+  const ty = useSharedValue(initialY)
+  const scale = useSharedValue(FACTORY_INITIAL_SCALE)
   const savedX = useSharedValue(0)
   const savedY = useSharedValue(0)
-  const savedScale = useSharedValue(1)
-
-  const centeredX = (Math.min(0, vpWidth - mapWidth)) / 2
-  const centeredY = (Math.min(0, vpHeight - mapHeight)) / 2
+  const savedScale = useSharedValue(FACTORY_INITIAL_SCALE)
 
   // Recenter deterministically when the viewport or playable grid changes.
   // Shared-value initializers only run on mount, so without this an expansion
   // or orientation change keeps offsets that belong to the previous layout.
   useEffect(() => {
-    scale.value = 1
-    savedScale.value = 1
-    tx.value = centeredX
-    ty.value = centeredY
-    savedX.value = centeredX
-    savedY.value = centeredY
-  }, [cameraResetKey, centeredX, centeredY, savedScale, savedX, savedY, scale, tx, ty])
+    scale.value = FACTORY_INITIAL_SCALE
+    savedScale.value = FACTORY_INITIAL_SCALE
+    tx.value = initialX
+    ty.value = initialY
+    savedX.value = initialX
+    savedY.value = initialY
+  }, [cameraResetKey, initialX, initialY, savedScale, savedX, savedY, scale, tx, ty])
 
   const translateTransform = useDerivedValue(() => {
-    // Expose movement relative to the centered camera. Consumers such as the
-    // background should not inherit the map's private initial centering offset.
-    if (panOutX) panOutX.value = tx.value - centeredX
-    if (panOutY) panOutY.value = ty.value - centeredY
+    if (panOutX) panOutX.value = tx.value - initialX
+    if (panOutY) panOutY.value = ty.value - initialY
     if (zoomOut) zoomOut.value = scale.value
     return [{ translateX: tx.value }, { translateY: ty.value }]
   })
@@ -298,12 +331,12 @@ function FactorySkiaView({
 
   const boundX = (v: number, s: number) => {
     'worklet'
-    const bounds = getCameraAxisBounds(vpWidth, mapWidth, s, playableMinX, playableMaxX)
+    const bounds = getWorldCameraAxisBounds(vpWidth, mapWidth, s)
     return clampCameraValue(v, bounds.min, bounds.max)
   }
   const boundY = (v: number, s: number) => {
     'worklet'
-    const bounds = getCameraAxisBounds(vpHeight, mapHeight, s, playableMinY, playableMaxY)
+    const bounds = getWorldCameraAxisBounds(vpHeight, mapHeight, s)
     return clampCameraValue(v, bounds.min, bounds.max)
   }
 
@@ -352,6 +385,7 @@ function FactorySkiaView({
     // Front-most first (reverse diagonal order) so overlapping picks the top tile.
     for (let i = ground.length - 1; i >= 0; i--) {
       const g = ground[i]
+      if (!showPlacementGrid && !g.occupied) continue
       if (Math.abs(worldPoint.x - g.cx) / hw + Math.abs(worldPoint.y - g.cy) / hh <= 1) {
         onCellPress?.(g.key)
         return
@@ -392,7 +426,7 @@ function FactorySkiaView({
                 />
               ) : null}
               {/* ground: outer + inset diamonds */}
-              {ground.map((g) => (
+              {ground.map((g) => (showPlacementGrid ? (
                 <Group key={`gnd-${g.key}`}>
                   <Path path={g.outer} color={g.occupied ? '#56636B' : '#495760'} />
                   <Path
@@ -412,7 +446,7 @@ function FactorySkiaView({
                     </>
                   ) : null}
                 </Group>
-              ))}
+              ) : null))}
               {/* building sprites, back-to-front */}
               {ground.map((g) => (g.sprite ? (
                 <PlantSprite key={`spr-${g.key}`} source={g.sprite.source} x={g.sprite.x} y={g.sprite.y} size={g.sprite.size} />

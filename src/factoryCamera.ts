@@ -1,5 +1,6 @@
-export const FACTORY_MIN_SCALE = 0.72
+export const FACTORY_MIN_SCALE = 0.58
 export const FACTORY_MAX_SCALE = 2.4
+export const FACTORY_INITIAL_SCALE = 0.68
 
 // The backdrop is deliberately larger than the viewport even at minimum zoom.
 // This lets the camera move without ever revealing the View behind the world.
@@ -18,6 +19,22 @@ export function clampCameraValue(value: number, min: number, max: number) {
 
 export function getMinimumWorldExtent(viewportSize: number) {
   return viewportSize / FACTORY_MIN_SCALE + FACTORY_WORLD_BLEED * 2
+}
+
+/** Free-exploration bounds. The world may move on both axes until its outer
+ * edge reaches the viewport, without forcing the refinery grid to stay visible. */
+export function getWorldCameraAxisBounds(
+  viewportSize: number,
+  worldSize: number,
+  scale: number,
+): CameraAxisBounds {
+  'worklet'
+  const scaledWorld = worldSize * scale
+  if (scaledWorld <= viewportSize) {
+    const centered = (viewportSize - scaledWorld) / 2
+    return { min: centered, max: centered }
+  }
+  return { min: viewportSize - scaledWorld, max: 0 }
 }
 
 /**
@@ -71,4 +88,3 @@ export function screenPointToWorld(
     y: (screenY - translateY) / scale,
   }
 }
-
