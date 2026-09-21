@@ -1,9 +1,12 @@
 import { memo, useEffect, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
+import type { ImageSourcePropType } from 'react-native'
 
 import {
   Canvas,
+  FilterMode,
   Group,
+  MipmapMode,
   Path,
   Image as SkiaImage,
   Skia,
@@ -20,6 +23,15 @@ import type { SharedValue } from 'react-native-reanimated'
 
 import type { BuildingType, GridCell } from '../game/types'
 import { GRID_SPREAD, PLANT_IMAGE_SCALE } from '../config/factoryScene'
+import {
+  FACTORY_MAX_SCALE,
+  FACTORY_MIN_SCALE,
+  FACTORY_WORLD_BLEED,
+  clampCameraValue,
+  getCameraAxisBounds,
+  getMinimumWorldExtent,
+  screenPointToWorld,
+} from '../factoryCamera'
 
 // GPU scene renderer (Direction C). Draws the whole isometric yard on a single
 // Skia canvas so pan + pinch-zoom are a matrix transform driven by Reanimated
@@ -41,12 +53,7 @@ const EMPTY_INSET_Y = 8 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
 const PLANT_IMAGE_WIDTH = TILE_WIDTH
 
-// Mobile camera v2: keep enough of the yard visible that it can never be
-// pinched into a tiny, apparently-lost speck.  The old 0.55 floor combined
-// with overscroll made it possible to move the whole playable grid offscreen.
-const MIN_SCALE = 0.72
-const MAX_SCALE = 2.4
-const CAMERA_MARGIN = 56
+const PIXEL_SAMPLING = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const
 
 function isoX(row: number, col: number, rows: number) {
   return (col - row + rows - 1) * (TILE_WIDTH / 2) * GRID_SPREAD + SIDE_PADDING
@@ -54,26 +61,6 @@ function isoX(row: number, col: number, rows: number) {
 function isoY(row: number, col: number) {
   return (row + col) * (TILE_HEIGHT / 2) * GRID_SPREAD + TOP_PADDING
 }
-function clampW(v: number, min: number, max: number) {
-  'worklet'
-  return Math.min(max, Math.max(min, v))
-}
-function axisBounds(viewportSize: number, contentSize: number, scale: number) {
-  'worklet'
-  const scaledSize = contentSize * scale
-  if (scaledSize <= viewportSize) {
-    const centered = (viewportSize - scaledSize) / 2
-    // A small, deterministic travel range makes the camera feel draggable even
-    // when an early-game 3x3 yard is smaller than the phone viewport.
-    return { min: centered - CAMERA_MARGIN, max: centered + CAMERA_MARGIN }
-  }
-  // Keep at least CAMERA_MARGIN of world content visible on either edge.
-  return {
-    min: viewportSize - scaledSize - CAMERA_MARGIN,
-    max: CAMERA_MARGIN,
-  }
-}
-
 // Absolute-coord diamond path (Skia). x,y = tile top-left in scene space.
 function diamondPath(x: number, y: number, w: number, h: number): SkPath {
   const p = Skia.Path.Make()
@@ -118,7 +105,7 @@ const PlantSprite = memo(function PlantSprite({
 }: { source: DataSourceParam; x: number; y: number; size: number }) {
   const image = useImage(source)
   if (!image) return null
-  return <SkiaImage image={image} x={x} y={y} width={size} height={size} fit="contain" />
+  return <SkiaImage image={image} x={x} y={y} width={size} height={size} fit="contain" sampling={PIXEL_SAMPLING} />
 })
 
 type Tile = { activeIndex: number | null; x: number; y: number; diagonal: number }
@@ -126,6 +113,7 @@ type Tile = { activeIndex: number | null; x: number; y: number; diagonal: number
 export type FactorySkiaViewProps = {
   grid: GridCell[]
   gridLevels: number[]
+  backgroundSource: ImageSourcePropType
   containerWidth: number
   viewportHeight: number
   contentOffsetY?: number
@@ -141,6 +129,7 @@ export type FactorySkiaViewProps = {
 function FactorySkiaView({
   grid,
   gridLevels,
+  backgroundSource,
   containerWidth,
   viewportHeight,
   contentOffsetY = 0,
@@ -152,6 +141,8 @@ function FactorySkiaView({
   zoomOut,
   cameraResetKey = 0,
 }: FactorySkiaViewProps) {
+  const backgroundImage = useImage(backgroundSource as DataSourceParam)
+
   // Same geometry as the View renderer — memoised so it never churns on a tick.
   const layout = useMemo(() => {
     const activeCols = Math.round(Math.sqrt(grid.length))
@@ -189,23 +180,57 @@ function FactorySkiaView({
     const maxX = Math.max(...activeTiles.map((t) => t.x + TILE_WIDTH))
     const minY = Math.min(...activeTiles.map((t) => t.y))
     const maxY = Math.max(...activeTiles.map((t) => t.y + TILE_HEIGHT))
-    const worldWidth = maxX - minX
-    const worldHeight = maxY - minY
-    const mapWidth = Math.max(containerWidth, worldWidth + SIDE_PADDING * 2)
-    const baseMapHeight = Math.max(MIN_VIEWPORT_HEIGHT, worldHeight + TOP_PADDING * 2)
-    const mapHeight = baseMapHeight + contentOffsetY
-    const offsetX = (mapWidth - worldWidth) / 2 - minX
-    const offsetY = (baseMapHeight - worldHeight) / 2 - minY + contentOffsetY
     const vpWidth = containerWidth
     const vpHeight = viewportHeight
+    const worldWidth = maxX - minX
+    const worldHeight = maxY - minY
+
+    // The backdrop, ground, sprites, and hit testing now share this one world
+    // rectangle. It is large enough to cover the viewport at minimum zoom.
+    const mapWidth = Math.max(
+      getMinimumWorldExtent(vpWidth),
+      worldWidth + SIDE_PADDING * 2 + FACTORY_WORLD_BLEED * 2,
+    )
+    const mapHeight = Math.max(
+      getMinimumWorldExtent(vpHeight),
+      MIN_VIEWPORT_HEIGHT,
+      worldHeight + TOP_PADDING * 2 + FACTORY_WORLD_BLEED * 2,
+    )
+    const worldInsetX = (mapWidth - vpWidth) / 2
+    const worldInsetY = (mapHeight - vpHeight) / 2
+    const desiredGridLeft = (vpWidth - worldWidth) / 2
+    const offsetX = worldInsetX + desiredGridLeft - minX
+    // contentOffsetY is the desired on-screen top of the playable grid when
+    // the camera is centered. worldInsetY cancels the initial camera offset.
+    const offsetY = worldInsetY + contentOffsetY - minY
     // Absolute (offset-applied) tile positions used for both drawing and hit-test.
     const placed = activeTiles
       .map((t) => ({ activeIndex: t.activeIndex as number, x: t.x + offsetX, y: t.y + offsetY, diagonal: t.diagonal }))
       .sort((a, b) => a.diagonal - b.diagonal)
-    return { placed, mapWidth, mapHeight, vpWidth, vpHeight, offsetX, offsetY }
+    return {
+      placed,
+      mapWidth,
+      mapHeight,
+      vpWidth,
+      vpHeight,
+      playableMinX: minX + offsetX,
+      playableMaxX: maxX + offsetX,
+      playableMinY: minY + offsetY,
+      playableMaxY: maxY + offsetY,
+    }
   }, [grid.length, displayGridSize, anchorGridSize, containerWidth, viewportHeight, contentOffsetY])
 
-  const { placed, mapWidth, mapHeight, vpWidth, vpHeight } = layout
+  const {
+    placed,
+    mapWidth,
+    mapHeight,
+    vpWidth,
+    vpHeight,
+    playableMinX,
+    playableMaxX,
+    playableMinY,
+    playableMaxY,
+  } = layout
 
   // Ground diamonds — rebuilt only when the grid contents change, not per tick.
   const ground = useMemo(() => {
@@ -268,13 +293,13 @@ function FactorySkiaView({
 
   const boundX = (v: number, s: number) => {
     'worklet'
-    const bounds = axisBounds(vpWidth, mapWidth, s)
-    return clampW(v, bounds.min, bounds.max)
+    const bounds = getCameraAxisBounds(vpWidth, mapWidth, s, playableMinX, playableMaxX)
+    return clampCameraValue(v, bounds.min, bounds.max)
   }
   const boundY = (v: number, s: number) => {
     'worklet'
-    const bounds = axisBounds(vpHeight, mapHeight, s)
-    return clampW(v, bounds.min, bounds.max)
+    const bounds = getCameraAxisBounds(vpHeight, mapHeight, s, playableMinY, playableMaxY)
+    return clampCameraValue(v, bounds.min, bounds.max)
   }
 
   const pan = Gesture.Pan()
@@ -301,7 +326,7 @@ function FactorySkiaView({
     })
     .onUpdate((e) => {
       'worklet'
-      const next = clampW(savedScale.value * e.scale, MIN_SCALE, MAX_SCALE)
+      const next = clampCameraValue(savedScale.value * e.scale, FACTORY_MIN_SCALE, FACTORY_MAX_SCALE)
       const ratio = next / savedScale.value
       // Keep the pinch focal point pinned under the fingers.
       tx.value = boundX(e.focalX - (e.focalX - savedX.value) * ratio, next)
@@ -309,15 +334,20 @@ function FactorySkiaView({
       scale.value = next
     })
 
-  const pickCell = (px: number, py: number) => {
-    const sx = (px - tx.value) / scale.value
-    const sy = (py - ty.value) / scale.value
+  const pickCell = (
+    px: number,
+    py: number,
+    cameraX: number,
+    cameraY: number,
+    cameraScale: number,
+  ) => {
+    const worldPoint = screenPointToWorld(px, py, cameraX, cameraY, cameraScale)
     const hw = TILE_WIDTH / 2
     const hh = TILE_HEIGHT / 2
     // Front-most first (reverse diagonal order) so overlapping picks the top tile.
     for (let i = ground.length - 1; i >= 0; i--) {
       const g = ground[i]
-      if (Math.abs(sx - g.cx) / hw + Math.abs(sy - g.cy) / hh <= 1) {
+      if (Math.abs(worldPoint.x - g.cx) / hw + Math.abs(worldPoint.y - g.cy) / hh <= 1) {
         onCellPress?.(g.key)
         return
       }
@@ -328,7 +358,7 @@ function FactorySkiaView({
     .maxDistance(14)
     .onEnd((e) => {
       'worklet'
-      runOnJS(pickCell)(e.x, e.y)
+      runOnJS(pickCell)(e.x, e.y, tx.value, ty.value, scale.value)
     })
 
   // Movement gestures get priority after crossing their activation threshold;
@@ -345,6 +375,17 @@ function FactorySkiaView({
               Skia than the hit-test/pinch maths and caused zoom jumps. */}
           <Group transform={translateTransform}>
             <Group transform={zoomTransform}>
+              {backgroundImage ? (
+                <SkiaImage
+                  image={backgroundImage}
+                  x={0}
+                  y={0}
+                  width={mapWidth}
+                  height={mapHeight}
+                  fit="cover"
+                  sampling={PIXEL_SAMPLING}
+                />
+              ) : null}
               {/* ground: outer + inset diamonds */}
               {ground.map((g) => (
                 <Group key={`gnd-${g.key}`}>

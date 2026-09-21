@@ -1,4 +1,5 @@
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import Constants from 'expo-constants'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -44,6 +45,8 @@ export default function SettingsScreen() {
   const { resetGame } = useGame()
   const { t } = useLang()
   const ss = text.settingsScreen
+  const version = Constants.expoConfig?.version ?? '0.1.1'
+  const buildLabel = Constants.expoConfig?.extra?.buildLabel as string | undefined
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -128,7 +131,9 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title={t(ss.about)}>
-          <Text style={styles.note}>Refinery Story · v0.1.0</Text>
+          <Text style={styles.note}>
+            Refinery Story · v{version}{buildLabel ? ` · ${buildLabel}` : ''}
+          </Text>
           <Text style={styles.note}>{t(ss.aboutTagline)}</Text>
         </Section>
       </ScrollView>

@@ -568,16 +568,18 @@ export default function RefineryScreen() {
       <View style={styles.scene}>
 
         {/* ── Layer 0: Background (absoluteFill, no pointer events) ─────── */}
-        <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
-          <Animated.Image
-            source={FACTORY_BG}
-            style={[
-              { position: 'absolute', top: -bgOverscan, left: -bgOverscan, right: -bgOverscan, bottom: -bgOverscan },
-              bgAnimStyle,
-            ]}
-            resizeMode="cover"
-          />
-        </View>
+        {!USE_SKIA_SCENE && (
+          <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+            <Animated.Image
+              source={FACTORY_BG}
+              style={[
+                { position: 'absolute', top: -bgOverscan, left: -bgOverscan, right: -bgOverscan, bottom: -bgOverscan },
+                bgAnimStyle,
+              ]}
+              resizeMode="cover"
+            />
+          </View>
+        )}
 
         {/* Night veil */}
         {!isDaytime && (
@@ -585,14 +587,15 @@ export default function RefineryScreen() {
         )}
 
         {/* ── Layer 1: Grid (absolute, pushed down from HUD by GRID_DROP) ── */}
-        <View style={[styles.gridLayer, { top: yardTop }]}>
+        <View style={[styles.gridLayer, { top: USE_SKIA_SCENE ? 0 : yardTop }]}>
           {USE_SKIA_SCENE ? (
             <FactorySkiaView
               grid={game.grid}
               gridLevels={game.gridLevels}
+              backgroundSource={FACTORY_BG}
               containerWidth={width}
-              viewportHeight={sceneHeight - yardTop}
-              contentOffsetY={GRID_DROP}
+              viewportHeight={sceneHeight}
+              contentOffsetY={yardTop + GRID_DROP}
               displayGridSize={11}
               anchorGridSize={EXPANSION_BALANCE[0].size}
               onCellPress={handleCellPress}
@@ -619,14 +622,17 @@ export default function RefineryScreen() {
             />
           )}
           {USE_SKIA_SCENE && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Center factory camera"
-              style={styles.centerCameraButton}
-              onPress={() => setCameraResetKey((key) => key + 1)}
-            >
-              <LocateFixed size={19} color="#EAF1F8" strokeWidth={2.5} />
-            </Pressable>
+            <View style={styles.cameraControlStack}>
+              <Text style={styles.cameraBuildLabel}>CAM U1</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Center factory camera, camera build U1"
+                style={styles.centerCameraButton}
+                onPress={() => setCameraResetKey((key) => key + 1)}
+              >
+                <LocateFixed size={19} color="#EAF1F8" strokeWidth={2.5} />
+              </Pressable>
+            </View>
           )}
           {gridEditMode && (
             <Pressable style={styles.hintOverlay} onPress={() => setGridEditMode(null)}>
@@ -1648,10 +1654,27 @@ const styles = StyleSheet.create({
     left: 0, right: 0, bottom: 0,
     zIndex: 10,
   },
-  centerCameraButton: {
+  cameraControlStack: {
     position: 'absolute',
     right: spacing.md,
     bottom: FLOATING_TAB_BAR_CLEARANCE + 72,
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 4,
+  },
+  cameraBuildLabel: {
+    color: '#EAF1F8',
+    backgroundColor: 'rgba(19,29,42,0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    fontFamily: fonts.heading,
+    fontSize: 8,
+    letterSpacing: 0.5,
+  },
+  centerCameraButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -1660,7 +1683,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(19,29,42,0.88)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.24)',
-    zIndex: 4,
   },
   hintOverlay: {
     position: 'absolute',
