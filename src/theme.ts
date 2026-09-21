@@ -49,6 +49,43 @@ export const modernUi = {
   danger: '#E36B63',
 } as const
 
+// UI V2 pixel foundation. Keep this separate from the legacy palettes while
+// screens are migrated so gameplay surfaces can move one verified slice at a
+// time without silently changing every existing component.
+export const pixelUi = {
+  canvas: '#061827',
+  surface: '#082A48',
+  surfaceRaised: '#0B365B',
+  surfacePressed: '#0D426C',
+  border: '#0E5E96',
+  borderSoft: '#123F62',
+  shadow: '#03111D',
+  text: '#F5F7F2',
+  textMuted: '#9CB4C8',
+  accent: '#FFD33D',
+  accentDark: '#C98A0A',
+  success: '#63DF79',
+  warning: '#FF9B32',
+  danger: '#F05B57',
+  crude: '#A96F4F',
+  gasoline: '#83DC70',
+  rp: '#74D9F0',
+} as const
+
+export const pixelSpacing = {
+  micro: 2,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+} as const
+
+export const pixelRadii = {
+  control: 3,
+  panel: 4,
+} as const
+
 // Custom display font (Baloo 2 -- friendly, rounded, readable) loaded at app
 // start in app/_layout.tsx. Until the font finishes loading these family
 // names fall back to the system font. Applied to the game's "hero" text

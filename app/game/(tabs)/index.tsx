@@ -26,8 +26,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import DeliveryTruck from '../../../src/components/DeliveryTruck'
-import { type FabNavItem } from '../../../src/components/FabNav'
-import SideMenu, { type SideMenuSection } from '../../../src/components/SideMenu'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
 import CrisisBanner from '../../../src/components/CrisisBanner'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
@@ -40,7 +38,7 @@ import { useGame } from '../../../src/hooks/GameContext'
 import { useHaptics } from '../../../src/hooks/useHaptics'
 import { useSound } from '../../../src/hooks/useSound'
 import { useLang } from '../../../src/hooks/SettingsContext'
-import { colors, radii, spacing, fonts, modernUi, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { colors, radii, spacing, fonts, modernUi, pixelRadii, pixelUi, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import GameIcon from '../../../src/components/GameIcon'
 import HistoryGraph from '../../../src/components/HistoryGraph'
 import SaturationBars from '../../../src/components/SaturationBars'
@@ -306,7 +304,6 @@ export default function RefineryScreen() {
     updateAutoTrade({ productSellThresholds: { ...autoTrade.productSellThresholds, [key]: next } })
   }
   const [secondaryOpen, setSecondaryOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
   // Drives the delivery-truck flyby on the yard: bump the counter on a trade
   // and stamp the direction (crude in / gasoline out).
@@ -453,30 +450,9 @@ export default function RefineryScreen() {
 
   // Secondary destination badges. Primary destinations now live in the
   // persistent four-tab navigation shared by every screen.
-  const staffReady = game.recruitmentPool.length > 0 ? 1 : 0
   const researchReady = derived.activeResearchItems.filter(
     (i) => !i.isUnlocked && i.isVisible && game.researchPoints >= i.cost
   ).length
-
-  // The drawer is intentionally only for secondary destinations. Primary
-  // navigation is never duplicated here.
-  const MENU_SECTIONS: SideMenuSection[] = [
-    {
-      key: 'company',
-      title: 'Company',
-      items: [
-        { route: '/game/research', icon: 'research', label: t(text.nav.research), desc: t(text.nav.researchDesc), badge: researchReady || undefined },
-        { route: '/game/company', icon: 'company', label: t(text.nav.company), desc: t(text.nav.companyDesc) },
-      ],
-    },
-    {
-      key: 'team',
-      title: 'Team',
-      items: [
-        { route: '/game/recruit', icon: 'recruit', label: t(text.nav.recruit), desc: t(text.nav.recruitDesc), badge: staffReady ? game.recruitmentPool.length : undefined },
-      ],
-    },
-  ]
   // The slow-moving meters live in the "More Info" sheet (one tap on the Rep
   // stat) so the always-on dock can stay focused on the core economic loop.
   // Their *effect* is still visible at a glance via the flow-rate bar.
@@ -656,6 +632,10 @@ export default function RefineryScreen() {
 
         {/* ── Layer 2 + 3: Company block + Resource Dock + Goal ─────────── */}
 
+        {/* One hard-edged HUD plate keeps the controls readable without
+            turning every value into a separate floating pill. */}
+        <View pointerEvents="none" style={[styles.topHudPlate, { height: resourceTop + RESOURCE_DOCK_H }]} />
+
         {/* Company identity stays quiet so the world remains the focus. */}
         <View style={styles.companyBlock}>
           <View style={styles.companyNameRow}>
@@ -707,7 +687,7 @@ export default function RefineryScreen() {
             accessibilityRole="button"
             accessibilityLabel="More menu"
             style={styles.menuBtn}
-            onPress={() => setMenuOpen(true)}
+            onPress={() => router.push('/game/management')}
           >
             <Menu size={17} color={modernUi.text} strokeWidth={2.4} />
             {researchReady > 0 && <View style={styles.menuAlertDot} />}
@@ -1609,9 +1589,6 @@ export default function RefineryScreen() {
         <OnboardingOverlay onDismiss={handleDismissOnboarding} />
       )}
 
-      {/* ── Secondary destinations, opened from the top More button. ──── */}
-      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} sections={MENU_SECTIONS} />
-
     </SafeAreaView>
   )
 }
@@ -1759,14 +1736,15 @@ const styles = StyleSheet.create({
   // ── Build Sheet ─────────────────────────────────────────────────────────────
   buildCategory: {
     marginBottom: spacing.md,
+    paddingTop: spacing.xs,
   },
   buildCategoryLabel: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: fonts.heading,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     marginBottom: spacing.xs,
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
   },
   buildGrid: {
     flexDirection: 'row',
@@ -1775,21 +1753,17 @@ const styles = StyleSheet.create({
   },
   buildCard: {
     width: '47%',
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
+    backgroundColor: pixelUi.surfaceRaised,
+    borderRadius: pixelRadii.control,
     borderWidth: 2,
     overflow: 'hidden',
   },
   buildCardLocked: {
-    backgroundColor: '#F5F0E8',
-    opacity: 0.6,
+    backgroundColor: pixelUi.surface,
+    opacity: 0.52,
   },
   buildCardAffordable: {
-    shadowColor: colors.green,
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderBottomWidth: 4,
   },
   buildThumbWrap: {
     height: 72,
@@ -1804,15 +1778,15 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     paddingHorizontal: 4,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    backgroundColor: '#fff',
+    borderRadius: pixelRadii.control,
+    borderWidth: 2,
+    backgroundColor: pixelUi.canvas,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buildCountBadgeText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontFamily: fonts.heading,
   },
   buildThumb: {
     width: 64,
@@ -1820,12 +1794,12 @@ const styles = StyleSheet.create({
   },
   buildThumbCode: {
     fontSize: 22,
-    fontWeight: '900',
+    fontFamily: fonts.heading,
     letterSpacing: 1,
   },
   buildLockOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(200,190,175,0.55)',
+    backgroundColor: 'rgba(3,17,29,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1838,27 +1812,27 @@ const styles = StyleSheet.create({
   },
   buildCardName: {
     fontSize: 12,
-    fontWeight: '800',
-    color: colors.ink,
+    fontFamily: fonts.heading,
+    color: pixelUi.text,
     lineHeight: 16,
   },
   buildCardNameLocked: {
-    color: colors.inkMuted,
+    color: pixelUi.textMuted,
   },
   buildTag: {
-    borderRadius: radii.pill,
+    borderRadius: pixelRadii.control,
     paddingHorizontal: 7,
     paddingVertical: 3,
     alignSelf: 'flex-start',
   },
   buildTagText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: colors.white,
+    fontFamily: fonts.heading,
+    color: pixelUi.text,
   },
   buildReqHint: {
     fontSize: 9,
-    color: colors.inkMuted,
+    color: pixelUi.textMuted,
     lineHeight: 13,
   },
 
@@ -1914,6 +1888,17 @@ const styles = StyleSheet.create({
   },
 
   // ── Layer 2: Company block + top-right HUD ───────────────────────────────
+  topHudPlate: {
+    position: 'absolute',
+    top: 4,
+    left: spacing.sm,
+    right: spacing.sm,
+    zIndex: 19,
+    backgroundColor: pixelUi.surface,
+    borderWidth: 2,
+    borderColor: pixelUi.border,
+    borderRadius: pixelRadii.panel,
+  },
   companyBlock: {
     position: 'absolute',
     top: spacing.sm + 2,
@@ -1930,9 +1915,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.display,
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.55)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
     letterSpacing: 0.2,
     flexShrink: 1,
   },
@@ -1946,12 +1928,12 @@ const styles = StyleSheet.create({
   },
   // Lv badge — standalone tappable pill, now in top-right
   lvBadge: {
-    backgroundColor: modernUi.surfaceSoft,
-    borderRadius: radii.pill,
+    backgroundColor: pixelUi.surfaceRaised,
+    borderRadius: pixelRadii.control,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: modernUi.border,
+    borderColor: pixelUi.border,
   },
   lvBadgeReady: {
     backgroundColor: colors.green,
@@ -1978,8 +1960,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    borderRadius: radii.pill,
+    backgroundColor: pixelUi.canvas,
+    borderRadius: pixelRadii.control,
+    borderWidth: 2,
+    borderColor: pixelUi.borderSoft,
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
@@ -1992,8 +1976,10 @@ const styles = StyleSheet.create({
     minWidth: 30,
     height: 28,
     paddingHorizontal: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.gold,
+    borderRadius: pixelRadii.control,
+    backgroundColor: pixelUi.accent,
+    borderWidth: 2,
+    borderColor: '#FFE77C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2004,7 +1990,7 @@ const styles = StyleSheet.create({
     height: 28,
     minWidth: 30,
     paddingHorizontal: 8,
-    borderRadius: radii.pill,
+    borderRadius: pixelRadii.control,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -2040,18 +2026,20 @@ const styles = StyleSheet.create({
   eventsBtn: {
     width: 28,
     height: 28,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(0,0,0,0.38)',
+    borderRadius: pixelRadii.control,
+    backgroundColor: pixelUi.canvas,
+    borderWidth: 2,
+    borderColor: pixelUi.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuBtn: {
     width: 30,
     height: 28,
-    borderRadius: 9,
-    backgroundColor: modernUi.surfaceSoft,
-    borderWidth: 1,
-    borderColor: modernUi.border,
+    borderRadius: pixelRadii.control,
+    backgroundColor: pixelUi.surfaceRaised,
+    borderWidth: 2,
+    borderColor: pixelUi.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2086,23 +2074,18 @@ const styles = StyleSheet.create({
   // top set dynamically (= resourceTop)
   resourceDock: {
     position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
+    left: spacing.sm + 2,
+    right: spacing.sm + 2,
     height: RESOURCE_DOCK_H,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: modernUi.surfaceSoft,
-    borderRadius: 12,
+    backgroundColor: pixelUi.surface,
+    borderRadius: 0,
     paddingHorizontal: 6,
     zIndex: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: modernUi.borderStrong,
+    borderTopWidth: 2,
+    borderTopColor: pixelUi.borderSoft,
   },
   dockStat: {
     flex: 1,
@@ -2142,7 +2125,7 @@ const styles = StyleSheet.create({
   dockDivider: {
     width: 1,
     height: 22,
-    backgroundColor: modernUi.border,
+    backgroundColor: pixelUi.borderSoft,
   },
   meterGood: { color: '#7CE38B' },
   meterWarn: { color: '#F2C12E' },

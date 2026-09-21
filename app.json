@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Refinery Story",
+    "name": "Refinery Story U2",
     "slug": "refinery-story",
     "version": "0.1.1",
     "orientation": "portrait",
@@ -14,8 +14,8 @@
       "bundleIdentifier": "com.refinerystory.app"
     },
     "android": {
-      "package": "com.refinerystory.app",
-      "versionCode": 2,
+      "package": "com.refinerystory.u2",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#F4EAD7"
       }
@@ -32,7 +32,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "buildLabel": "CAM-U1",
+      "buildLabel": "UI-V2-U2",
       "router": {},
       "eas": {
         "projectId": "e41dff26-bfd6-486d-86a9-fb9b3b74ae7c"
