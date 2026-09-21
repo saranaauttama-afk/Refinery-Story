@@ -269,8 +269,8 @@ const DiamondCell = memo(function DiamondCell({
         {SHOW_GRID || isComboHint ? (
           <>
             <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#D9CCB1'} stroke={isComboHint ? '#7AB050' : '#9C8764'} strokeWidth={isComboHint ? 2 : 1.2} />
-              <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#EEE5D3'} stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(148, 128, 95, 0.24)'} strokeWidth={1} />
+              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#A68E6B'} stroke={isComboHint ? '#7AB050' : '#66533B'} strokeWidth={isComboHint ? 2 : 1.8} />
+              <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#CDBA94'} stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(102,83,59,0.42)'} strokeWidth={1} />
             </Svg>
             <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
           </>

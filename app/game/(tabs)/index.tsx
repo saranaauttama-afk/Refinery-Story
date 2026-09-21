@@ -67,8 +67,6 @@ import {
   getUpgradeBlockers,
   getUpgradeReputationRequirement,
   getUpgradeResearchRequirement,
-  getRefineryTitle,
-  getSeasonForecast,
   formatCompactNumber,
   TICK_MS,
 } from '../../../src/game/utils/gameCalculations'
@@ -175,6 +173,9 @@ const CATEGORY_LABEL: Record<string, string> = {
   support: 'Support', power: 'Power', waste: 'Recycling',
 }
 
+type BuildCategory = 'storage' | 'production' | 'power' | 'waste' | 'research' | 'support'
+const BUILD_CATEGORIES: readonly BuildCategory[] = ['storage', 'production', 'power', 'waste', 'research', 'support']
+
 // Extra build requirements (beyond level and cost)
 const BUILD_REQUIRES: Partial<Record<BuildingType, string>> = {
   lubricantPlant:      'Needs feedstock from Distillation Unit',
@@ -265,6 +266,8 @@ export default function RefineryScreen() {
   const [pickerCell, setPickerCell] = useState<number | null>(null)
   const [infoCell,   setInfoCell]   = useState<number | null>(null)
   const [hoveredBuildingKey, setHoveredBuildingKey] = useState<BuildingType | null>(null)
+  const [buildCategory, setBuildCategory] = useState<BuildCategory>('storage')
+  const [selectedBuildKey, setSelectedBuildKey] = useState<BuildingType | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
@@ -341,7 +344,10 @@ export default function RefineryScreen() {
       setGridEditMode(null)
       return
     }
-    if (game.grid[index] === null) setPickerCell(index)
+    if (game.grid[index] === null) {
+      setPickerCell(index)
+      setSelectedBuildKey(null)
+    }
     else                           setInfoCell(index)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gridEditMode, gameGrid, moveBuilding, swapBuildings])
@@ -384,8 +390,6 @@ export default function RefineryScreen() {
   const seasonPct          = Math.round(derived.seasonalGasolineMultiplier * 100)
   // Forecast the seasonal gasoline-demand wave so the player can time stockpiling
   // vs selling (pairs with the crude price wave on the Supply tab).
-  const seasonFc           = getSeasonForecast(game.tickCount, game.yearStartTick)
-  const seasonFcMins       = Math.max(1, Math.round((seasonFc.ticksToExtreme * TICK_MS) / 60000))
   // 🔥 Boost button state: active (running), ready (tappable), or cooling down.
   const boostActive        = isBoostActive(game)
   const boostReady         = canActivateBoost(game) && !boostActive
@@ -404,7 +408,7 @@ export default function RefineryScreen() {
   const powerDeficit = derived.buildingCounts.powerPlant > 0 && powerBd.supply < powerBd.demand
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
-  const timeLabel          = `${formatGameClockTime(derived.gameClock)} · Day ${derived.gameClock.dayOfMonth + 1}`
+  const timeLabel          = `${formatGameClockTime(derived.gameClock)} · D${derived.gameClock.dayOfMonth + 1}`
   const isDaytime          = derived.gameClock.isDaytime
 
   // ── Flow-rate strip (net $/min + output/min) ──────────────────────────────
@@ -441,7 +445,6 @@ export default function RefineryScreen() {
     : flowState === 'loss' ? t(text.hud.flowLoss)
     : idleReason
 
-  const refineryTitle = t(getRefineryTitle(game.refineryLevel))
 
   // Combo hint cells — tiles that would complete an undiscovered combo
   const comboHintCells = hoveredBuildingKey && pickerCell !== null
@@ -599,10 +602,9 @@ export default function RefineryScreen() {
           )}
           {USE_SKIA_SCENE && (
             <View style={styles.cameraControlStack}>
-              <Text style={styles.cameraBuildLabel}>CAM U1</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Center factory camera, camera build U1"
+                accessibilityLabel="Center factory camera"
                 style={styles.centerCameraButton}
                 onPress={() => setCameraResetKey((key) => key + 1)}
               >
@@ -649,10 +651,9 @@ export default function RefineryScreen() {
               </Text>
             </AnimatedPressable>
           </View>
-          <Text style={styles.companyTitle}>{refineryTitle}</Text>
         </View>
 
-        {/* Compact controls: time, speed, boost, alerts and one More menu. */}
+        {/* Compact controls: time, speed, alerts and one More menu. */}
         <View style={styles.topRightHud}>
           <View style={styles.timePill}>
             <Clock3 size={11} color={isDaytime ? colors.orangeDark : colors.blueDark} />
@@ -664,16 +665,6 @@ export default function RefineryScreen() {
             onPress={() => { haptics.tap(); cycleSpeed() }}
           >
             <Text style={[styles.speedPillText, speed === 0 && styles.speedPillTextPaused]}>{speed === 0 ? '⏸' : `${speed}×`}</Text>
-          </Pressable>
-          {/* 🔥 Boost — active-tap temporary 2× gasoline production (BOOST_BALANCE) */}
-          <Pressable
-            style={[styles.boostPill, boostActive ? styles.boostPillActive : boostReady ? styles.boostPillReady : styles.boostPillCooldown]}
-            disabled={!boostReady}
-            onPress={() => { haptics.confirm(); sound.play('tap'); activateBoost() }}
-          >
-            <Text style={[styles.boostPillText, !boostReady && !boostActive && styles.boostPillTextDim]}>
-              🔥{boostActive ? ` ${boostSecs}s` : boostReady ? '' : ` ${boostSecs}s`}
-            </Text>
           </Pressable>
           <Pressable style={styles.eventsBtn} onPress={() => setEventModalOpen(true)}>
             <Bell size={13} color={colors.white} />
@@ -764,15 +755,17 @@ export default function RefineryScreen() {
               </>
             )}
           </Pressable>
-          {/* Season price forecast — gasoline's seasonal price direction + ETA
-              to the next peak/trough, so buy/sell timing is readable at a glance. */}
-          <View style={styles.flowItem}>
-            <Text style={styles.flowIcon}>{seasonFc.rising ? '📈' : '📉'}</Text>
-            <Text style={[styles.flowVal, seasonFc.rising ? styles.flowValUp : styles.flowValDown]}>
-              {seasonFc.rising ? '+' : '−'}{seasonFc.swingPct}%
+          {/* Boost lives in the status rail so its countdown can never collide
+              with the refinery name on compact phones. */}
+          <Pressable
+            style={[styles.flowBoostButton, boostActive ? styles.boostPillActive : boostReady ? styles.boostPillReady : styles.boostPillCooldown]}
+            disabled={!boostReady}
+            onPress={() => { haptics.confirm(); sound.play('tap'); activateBoost() }}
+          >
+            <Text style={[styles.boostPillText, !boostReady && !boostActive && styles.boostPillTextDim]}>
+              🔥{boostActive ? ` ${boostSecs}s` : boostReady ? ' BOOST' : ` ${boostSecs}s`}
             </Text>
-            <Text style={styles.flowUnit}>~{seasonFcMins}m</Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Goal banner — slim, sits just inside yard */}
@@ -1113,7 +1106,10 @@ export default function RefineryScreen() {
                   setEventModalOpen(false)
                   if (event.reward.kind === 'staff')    { router.push('/game/recruit');   return }
                   if (event.reward.kind === 'contract') { router.push('/game/contracts'); return }
-                  if (firstEmptyCellIndex >= 0)         setPickerCell(firstEmptyCellIndex)
+                  if (firstEmptyCellIndex >= 0) {
+                    setSelectedBuildKey(null)
+                    setPickerCell(firstEmptyCellIndex)
+                  }
                 }}
               />
             )
@@ -1129,7 +1125,16 @@ export default function RefineryScreen() {
           was lost by removing this duplicate. */}
 
       {/* ── Build picker ─────────────────────────────────────────────────── */}
-      <Sheet visible={pickerCell !== null} title="Build" onClose={() => setPickerCell(null)}>
+      <Sheet
+        visible={pickerCell !== null}
+        title="Build"
+        maxHeight="66%"
+        onClose={() => {
+          setPickerCell(null)
+          setSelectedBuildKey(null)
+          setHoveredBuildingKey(null)
+        }}
+      >
         {/* Mystery building events */}
         {HIDDEN_EVENTS.filter(
           (e) => e.reward.kind === 'building' && game.hiddenEventStatus[e.key] === 'unlocked',
@@ -1145,19 +1150,32 @@ export default function RefineryScreen() {
           />
         ))}
 
-        {/* Group buildings by category */}
-        {(['storage', 'production', 'power', 'waste', 'research', 'support'] as const).map((category) => {
-          const categoryBuildings = BUILDING_KEYS.filter(
-            (key) => BUILDING_CATEGORY_BY_TYPE[key] === category,
-          )
-          if (categoryBuildings.length === 0) return null
-          const accentColor = BUILDING_CATEGORY_ACCENT[category]
+        {/* One category at a time keeps the picker compact and scannable. */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.buildTabs}>
+          {BUILD_CATEGORIES.map((category) => {
+            const active = buildCategory === category
+            return (
+              <Pressable
+                key={category}
+                style={[styles.buildTab, active && styles.buildTabActive]}
+                onPress={() => {
+                  setBuildCategory(category)
+                  setSelectedBuildKey(null)
+                  setHoveredBuildingKey(null)
+                }}
+              >
+                <Text style={[styles.buildTabText, active && styles.buildTabTextActive]}>{CATEGORY_LABEL[category]}</Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+
+        {(() => {
+          const categoryBuildings = BUILDING_KEYS.filter((key) => BUILDING_CATEGORY_BY_TYPE[key] === buildCategory)
+          const accentColor = BUILDING_CATEGORY_ACCENT[buildCategory]
           return (
-            <View key={category} style={styles.buildCategory}>
-              <Text style={[styles.buildCategoryLabel, { color: accentColor }]}>
-                {CATEGORY_LABEL[category]}
-              </Text>
-              <View style={styles.buildGrid}>
+            <View style={styles.buildCategory}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.buildGrid}>
                 {categoryBuildings.map((key) => {
                   const b = BUILDINGS[key]
                   const unlockLevel    = b.unlockLevel ?? 1
@@ -1168,27 +1186,29 @@ export default function RefineryScreen() {
                   const canBuild       = !locked && affordable
                   const thumb          = PLANT_THUMB[key]
                   const extraReq       = BUILD_REQUIRES[key]
-                  const surfaceColor   = BUILDING_CATEGORY_SURFACE[category]
+                  const surfaceColor   = BUILDING_CATEGORY_SURFACE[buildCategory]
                   const builtCount     = derived.buildingCounts[key] ?? 0
+                  const selected       = selectedBuildKey === key
 
                   return (
                     <Pressable
                       key={key}
                       style={[
                         styles.buildCard,
-                        { borderColor: canBuild ? accentColor : locked ? '#D0C8BC' : '#C5D5B0' },
+                        { borderColor: selected ? pixelUi.accent : canBuild ? accentColor : pixelUi.textMuted },
                         locked && styles.buildCardLocked,
                         canBuild && affordable && styles.buildCardAffordable,
+                        selected && styles.buildCardSelected,
                       ]}
-                      onPressIn={() => setHoveredBuildingKey(key)}
+                      onPressIn={() => {
+                        if (canBuild) setHoveredBuildingKey(key)
+                      }}
                       onPressOut={() => setHoveredBuildingKey(null)}
                       onPress={() => {
                         if (locked || !affordable) return
-                        if (pickerCell !== null) placeBuilding(pickerCell, key)
-                        haptics.confirm()
-                        sound.play('build')
-                        setPickerCell(null)
-                        setHoveredBuildingKey(null)
+                        haptics.tap()
+                        setSelectedBuildKey(key)
+                        setHoveredBuildingKey(key)
                       }}
                     >
                       {/* Thumbnail */}
@@ -1244,10 +1264,44 @@ export default function RefineryScreen() {
                     </Pressable>
                   )
                 })}
-              </View>
+              </ScrollView>
             </View>
           )
-        })}
+        })()}
+
+        <View style={styles.buildFooter}>
+          <View style={styles.buildSelectionCopy}>
+            <Text style={styles.buildSelectionLabel}>{selectedBuildKey ? 'SELECTED' : 'CHOOSE A BUILDING'}</Text>
+            <Text style={styles.buildSelectionName} numberOfLines={1}>
+              {selectedBuildKey ? t(BUILDINGS[selectedBuildKey].name) : CATEGORY_LABEL[buildCategory]}
+            </Text>
+          </View>
+          <Pressable
+            style={styles.buildCancelButton}
+            onPress={() => {
+              setPickerCell(null)
+              setSelectedBuildKey(null)
+              setHoveredBuildingKey(null)
+            }}
+          >
+            <Text style={styles.buildCancelText}>Cancel</Text>
+          </Pressable>
+          <Pressable
+            disabled={!selectedBuildKey}
+            style={[styles.buildPlaceButton, !selectedBuildKey && styles.buildPlaceButtonDisabled]}
+            onPress={() => {
+              if (pickerCell === null || !selectedBuildKey) return
+              placeBuilding(pickerCell, selectedBuildKey)
+              haptics.confirm()
+              sound.play('build')
+              setPickerCell(null)
+              setSelectedBuildKey(null)
+              setHoveredBuildingKey(null)
+            }}
+          >
+            <Text style={styles.buildPlaceText}>Place</Text>
+          </Pressable>
+        </View>
       </Sheet>
 
       {/* ── Building info ─────────────────────────────────────────────────── */}
@@ -1639,18 +1693,6 @@ const styles = StyleSheet.create({
     gap: 4,
     zIndex: 4,
   },
-  cameraBuildLabel: {
-    color: '#EAF1F8',
-    backgroundColor: 'rgba(19,29,42,0.88)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    fontFamily: fonts.heading,
-    fontSize: 8,
-    letterSpacing: 0.5,
-  },
   centerCameraButton: {
     width: 40,
     height: 40,
@@ -1734,25 +1776,49 @@ const styles = StyleSheet.create({
   upgradeActionBtnLabel: { fontSize: 14, fontWeight: '900', color: '#fff' },
 
   // ── Build Sheet ─────────────────────────────────────────────────────────────
-  buildCategory: {
-    marginBottom: spacing.md,
-    paddingTop: spacing.xs,
+  buildTabs: {
+    gap: 6,
+    paddingVertical: 8,
+    paddingRight: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: pixelUi.borderSoft,
   },
-  buildCategoryLabel: {
-    fontSize: 10,
+  buildTab: {
+    minHeight: 36,
+    paddingHorizontal: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: pixelUi.surface,
+    borderWidth: 2,
+    borderColor: pixelUi.borderSoft,
+    borderRadius: pixelRadii.control,
+  },
+  buildTabActive: {
+    backgroundColor: pixelUi.surfaceRaised,
+    borderColor: pixelUi.accent,
+    borderBottomWidth: 4,
+  },
+  buildTabText: {
+    fontSize: 9,
     fontFamily: fonts.heading,
+    color: pixelUi.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: spacing.xs,
-    paddingHorizontal: 4,
+    letterSpacing: 0.4,
+  },
+  buildTabTextActive: {
+    color: pixelUi.accent,
+  },
+  buildCategory: {
+    marginBottom: spacing.sm,
+    paddingTop: spacing.sm,
   },
   buildGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
+    paddingRight: spacing.md,
   },
   buildCard: {
-    width: '47%',
+    width: 126,
     backgroundColor: pixelUi.surfaceRaised,
     borderRadius: pixelRadii.control,
     borderWidth: 2,
@@ -1765,8 +1831,12 @@ const styles = StyleSheet.create({
   buildCardAffordable: {
     borderBottomWidth: 4,
   },
+  buildCardSelected: {
+    backgroundColor: pixelUi.surfacePressed,
+    borderBottomWidth: 5,
+  },
   buildThumbWrap: {
-    height: 72,
+    height: 68,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -1789,8 +1859,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.heading,
   },
   buildThumb: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
   },
   buildThumbCode: {
     fontSize: 22,
@@ -1807,8 +1877,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   buildCardBody: {
-    padding: spacing.sm,
+    padding: 7,
     gap: 4,
+    minHeight: 76,
   },
   buildCardName: {
     fontSize: 12,
@@ -1834,6 +1905,68 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: pixelUi.textMuted,
     lineHeight: 13,
+  },
+  buildFooter: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    borderTopWidth: 2,
+    borderTopColor: pixelUi.borderSoft,
+    paddingTop: 9,
+  },
+  buildSelectionCopy: {
+    flex: 1,
+    minWidth: 72,
+  },
+  buildSelectionLabel: {
+    fontFamily: fonts.heading,
+    fontSize: 8,
+    color: pixelUi.textMuted,
+    letterSpacing: 0.5,
+  },
+  buildSelectionName: {
+    marginTop: 2,
+    fontFamily: fonts.heading,
+    fontSize: 10,
+    color: pixelUi.text,
+  },
+  buildCancelButton: {
+    minWidth: 68,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    backgroundColor: pixelUi.surface,
+    borderWidth: 2,
+    borderColor: pixelUi.border,
+    borderRadius: pixelRadii.control,
+  },
+  buildCancelText: {
+    fontFamily: fonts.heading,
+    fontSize: 10,
+    color: pixelUi.text,
+  },
+  buildPlaceButton: {
+    minWidth: 74,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    backgroundColor: pixelUi.accent,
+    borderWidth: 2,
+    borderColor: pixelUi.warning,
+    borderRadius: pixelRadii.control,
+  },
+  buildPlaceButtonDisabled: {
+    backgroundColor: pixelUi.surfacePressed,
+    borderColor: pixelUi.borderSoft,
+    opacity: 0.48,
+  },
+  buildPlaceText: {
+    fontFamily: fonts.heading,
+    fontSize: 11,
+    color: pixelUi.canvas,
   },
 
   // Upgrade refinery modal
@@ -1906,7 +2039,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   companyNameRow: {
-    maxWidth: 178,
+    maxWidth: 166,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -1985,15 +2118,6 @@ const styles = StyleSheet.create({
   },
   speedPillPaused: {
     backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  boostPill: {
-    height: 28,
-    minWidth: 30,
-    paddingHorizontal: 8,
-    borderRadius: pixelRadii.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
   },
   boostPillReady: {
     backgroundColor: 'rgba(232,131,58,0.9)',
@@ -2156,8 +2280,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: 'rgba(28,38,52,0.62)',
-    borderRadius: radii.sm,
+    backgroundColor: pixelUi.surface,
+    borderRadius: pixelRadii.control,
+    borderWidth: 2,
+    borderColor: pixelUi.borderSoft,
     paddingHorizontal: spacing.sm,
     zIndex: 20,
   },
@@ -2165,6 +2291,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  flowBoostButton: {
+    minWidth: 38,
+    height: 18,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: pixelRadii.control,
   },
   flowDot: {
     width: 7,
@@ -2224,8 +2359,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(28,38,52,0.72)',
-    borderRadius: radii.sm,
+    backgroundColor: pixelUi.surface,
+    borderRadius: pixelRadii.control,
+    borderWidth: 2,
+    borderColor: pixelUi.borderSoft,
     paddingHorizontal: spacing.sm,
     zIndex: 20,
   },
@@ -2254,17 +2391,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(28,38,52,0.92)',
-    borderRadius: radii.md,
+    backgroundColor: pixelUi.surface,
+    borderRadius: pixelRadii.panel,
     paddingHorizontal: spacing.md,
     zIndex: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
-    elevation: 6,
+    borderWidth: 2,
+    borderColor: pixelUi.border,
   },
   actionDockLeft: {
     gap: 1,

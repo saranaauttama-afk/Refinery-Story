@@ -8,11 +8,12 @@ import { formatCompactNumber, formatGameClockTime } from '../../../src/game/util
 import { fonts, pixelRadii, pixelSpacing, pixelUi } from '../../../src/theme'
 
 type Destination = {
-  route: '/game/company' | '/game/research' | '/game/recruit' | '/game/achievements' | '/game/settings'
+  route?: '/game/company' | '/game/research' | '/game/recruit' | '/game/achievements' | '/game/settings'
   title: string
   description: string
   icon: string
   badge?: number
+  disabled?: boolean
 }
 
 function Resource({ icon, value, warn }: { icon: string; value: string; warn?: boolean }) {
@@ -65,6 +66,7 @@ export default function ManagementScreen() {
     { route: '/game/research', title: 'R&D', description: 'Unlock technology and install perks', icon: 'building-laboratory', badge: readyResearch || undefined },
     { route: '/game/recruit', title: 'Recruit', description: 'Find and hire refinery specialists', icon: 'worker-operator', badge: game.recruitmentPool.length || undefined },
     { route: '/game/achievements', title: 'Achievements', description: 'Milestones and company records', icon: 'award' },
+    { title: 'Statistics', description: 'Production history and refinery trends', icon: 'statistics', disabled: true },
     { route: '/game/settings', title: 'Settings', description: 'Language, audio and game data', icon: 'settings' },
   ]
 
@@ -109,23 +111,37 @@ export default function ManagementScreen() {
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {destinations.map((item, index) => (
           <Pressable
-            key={item.route}
+            key={item.route ?? item.title}
             accessibilityRole="button"
-            style={({ pressed }) => [styles.destination, pressed && styles.destinationPressed]}
-            onPress={() => router.push(item.route)}
+            accessibilityState={{ disabled: item.disabled }}
+            disabled={item.disabled}
+            style={({ pressed }) => [styles.destination, item.disabled && styles.destinationDisabled, pressed && styles.destinationPressed]}
+            onPress={() => {
+              if (item.route) router.push(item.route)
+            }}
           >
             <View style={styles.destinationIndex}><Text style={styles.destinationIndexText}>{String(index + 1).padStart(2, '0')}</Text></View>
             <View style={styles.destinationIcon}>
               {item.icon === 'award' || item.icon === 'settings'
                 ? <BlockGlyph kind={item.icon} />
-                : <GameIcon name={item.icon} size={42} />}
+                : item.icon === 'statistics'
+                  ? <View style={styles.statisticsGlyph}>
+                      <View style={[styles.statisticsBar, styles.statisticsBarShort]} />
+                      <View style={[styles.statisticsBar, styles.statisticsBarMedium]} />
+                      <View style={[styles.statisticsBar, styles.statisticsBarTall]} />
+                    </View>
+                  : <GameIcon name={item.icon} size={42} />}
             </View>
             <View style={styles.destinationCopy}>
               <Text style={styles.destinationTitle}>{item.title}</Text>
               <Text style={styles.destinationDescription} numberOfLines={1}>{item.description}</Text>
             </View>
-            {item.badge ? <View style={styles.badge}><Text style={styles.badgeText}>{item.badge}</Text></View> : null}
-            <Text style={styles.arrow}>›</Text>
+            {item.disabled
+              ? <View style={styles.laterBadge}><Text style={styles.laterBadgeText}>LATER</Text></View>
+              : item.badge
+                ? <View style={styles.badge}><Text style={styles.badgeText}>{item.badge}</Text></View>
+                : null}
+            <Text style={[styles.arrow, item.disabled && styles.arrowDisabled]}>{item.disabled ? '■' : '›'}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -158,6 +174,7 @@ const styles = StyleSheet.create({
   reputation: { color: pixelUi.rp, fontFamily: fonts.heading, fontSize: 11, paddingBottom: 4 },
   list: { paddingHorizontal: pixelSpacing.sm, paddingBottom: 24 },
   destination: { minHeight: 76, flexDirection: 'row', alignItems: 'center', marginBottom: pixelSpacing.sm, backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, paddingRight: pixelSpacing.sm },
+  destinationDisabled: { opacity: 0.42, borderColor: pixelUi.borderSoft },
   destinationPressed: { backgroundColor: pixelUi.surfacePressed, transform: [{ translateX: 1 }, { translateY: 1 }] },
   destinationIndex: { width: 31, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfaceRaised, borderRightWidth: 2, borderRightColor: pixelUi.borderSoft },
   destinationIndexText: { color: pixelUi.textMuted, fontFamily: fonts.heading, fontSize: 9, transform: [{ rotate: '-90deg' }] },
@@ -167,7 +184,10 @@ const styles = StyleSheet.create({
   destinationDescription: { color: pixelUi.textMuted, fontFamily: fonts.body, fontSize: 10 },
   badge: { minWidth: 25, height: 25, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.warning, borderWidth: 2, borderColor: pixelUi.canvas },
   badgeText: { color: pixelUi.text, fontFamily: fonts.heading, fontSize: 10 },
+  laterBadge: { minHeight: 22, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfacePressed, borderWidth: 2, borderColor: pixelUi.borderSoft },
+  laterBadgeText: { color: pixelUi.textMuted, fontFamily: fonts.heading, fontSize: 8, letterSpacing: 0.5 },
   arrow: { width: 25, color: pixelUi.accent, fontFamily: fonts.heading, fontSize: 28, textAlign: 'right' },
+  arrowDisabled: { color: pixelUi.textMuted, fontSize: 8 },
   awardGlyph: { width: 30, height: 34, alignItems: 'center' },
   awardCup: { width: 24, height: 17, backgroundColor: pixelUi.accent, borderWidth: 2, borderColor: pixelUi.accentDark },
   awardStem: { width: 6, height: 8, backgroundColor: pixelUi.accent },
@@ -179,4 +199,9 @@ const styles = StyleSheet.create({
   toothBottom: { bottom: 0 },
   toothLeft: { left: 0 },
   toothRight: { right: 0 },
+  statisticsGlyph: { width: 34, height: 34, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 3 },
+  statisticsBar: { width: 7, backgroundColor: pixelUi.text },
+  statisticsBarShort: { height: 11 },
+  statisticsBarMedium: { height: 20 },
+  statisticsBarTall: { height: 29 },
 })

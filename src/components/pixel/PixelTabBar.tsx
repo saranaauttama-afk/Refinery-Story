@@ -3,7 +3,6 @@ import { Tabs } from 'expo-router'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import GameIcon from '../GameIcon'
 import { fonts, pixelUi } from '../../theme'
 
 const VISIBLE_ROUTES = ['index', 'supply', 'contracts', 'staff'] as const
@@ -27,7 +26,15 @@ function NavGlyph({ route, active }: { route: string; active: boolean }) {
       />
     )
   }
-  if (route === 'contracts') return <GameIcon name="money" size={25} />
+  if (route === 'contracts') {
+    return (
+      <View style={styles.businessGlyph}>
+        <View style={[styles.coin, { borderColor: color }]} />
+        <View style={[styles.coin, styles.coinMiddle, { borderColor: color }]} />
+        <View style={[styles.coin, styles.coinTop, { borderColor: color }]} />
+      </View>
+    )
+  }
   if (route === 'supply') {
     return (
       <View style={styles.operationsGlyph}>
@@ -94,7 +101,7 @@ const styles = StyleSheet.create({
     borderTopColor: pixelUi.border,
   },
   topRail: { height: 2, backgroundColor: pixelUi.shadow },
-  row: { height: 62, flexDirection: 'row' },
+  row: { height: 54, flexDirection: 'row' },
   item: {
     flex: 1,
     minWidth: 44,
@@ -108,22 +115,34 @@ const styles = StyleSheet.create({
     color: pixelUi.textMuted,
     fontFamily: fonts.heading,
     fontSize: 10,
-    marginTop: -2,
+    marginTop: -1,
   },
   labelActive: { color: pixelUi.accent },
-  factoryGlyph: { width: 36, height: 32 },
+  factoryGlyph: { width: 31, height: 27 },
   glyphDim: { opacity: 0.58 },
   operationsGlyph: { width: 28, height: 28, justifyContent: 'center', gap: 3 },
   pipe: { width: 27, height: 4 },
   pipeMid: { width: 20 },
   pipeShort: { width: 13 },
+  businessGlyph: { width: 30, height: 25, position: 'relative' },
+  coin: {
+    position: 'absolute',
+    left: 5,
+    bottom: 2,
+    width: 20,
+    height: 7,
+    borderWidth: 2,
+    backgroundColor: pixelUi.surface,
+  },
+  coinMiddle: { bottom: 8 },
+  coinTop: { bottom: 14 },
   teamGlyph: { width: 34, height: 28, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
   worker: { width: 11, alignItems: 'center' },
   workerHead: { width: 7, height: 7 },
   workerBody: { width: 10, height: 12, borderWidth: 2, borderBottomWidth: 0, marginTop: 2 },
   badge: {
     position: 'absolute',
-    top: 4,
+    top: 2,
     right: 14,
     minWidth: 18,
     height: 18,

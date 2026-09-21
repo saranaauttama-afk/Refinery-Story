@@ -389,9 +389,9 @@ function FactorySkiaView({
               {/* ground: outer + inset diamonds */}
               {ground.map((g) => (
                 <Group key={`gnd-${g.key}`}>
-                  <Path path={g.outer} color={g.occupied ? '#D4C19F' : '#D9CCB1'} />
-                  <Path path={g.outer} color={g.occupied ? '#8E7855' : '#9C8764'} style="stroke" strokeWidth={1.2} />
-                  <Path path={g.inner} color={g.occupied ? 'rgba(238,229,211,0.18)' : '#EEE5D3'} />
+                  <Path path={g.outer} color={g.occupied ? '#C7B18A' : '#A68E6B'} />
+                  <Path path={g.outer} color={g.occupied ? '#806A49' : '#66533B'} style="stroke" strokeWidth={1.8} />
+                  <Path path={g.inner} color={g.occupied ? 'rgba(229,216,189,0.14)' : '#CDBA94'} />
                 </Group>
               ))}
               {/* building sprites, back-to-front */}

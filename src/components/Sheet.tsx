@@ -1,3 +1,4 @@
+import type { DimensionValue } from 'react-native'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { fonts, pixelRadii, pixelSpacing, pixelUi } from '../theme'
 import { useLang } from '../hooks/SettingsContext'
@@ -8,14 +9,15 @@ type SheetProps = {
   title: string
   onClose: () => void
   children: React.ReactNode
+  maxHeight?: DimensionValue
 }
 
-function Sheet({ visible, title, onClose, children }: SheetProps) {
+function Sheet({ visible, title, onClose, children, maxHeight = '78%' }: SheetProps) {
   const { t } = useLang()
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { maxHeight }]}>
         <View style={styles.handleRow}>
           <Text style={styles.title}>{title}</Text>
           <Pressable
@@ -45,7 +47,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderBottomWidth: 0,
     borderColor: pixelUi.border,
-    maxHeight: '78%',
     paddingBottom: pixelSpacing.xl,
   },
   handleRow: {
