@@ -8,6 +8,7 @@ import {
   Group,
   MipmapMode,
   Path,
+  Rect,
   Image as SkiaImage,
   Skia,
   useImage,
@@ -48,8 +49,8 @@ const TILE_HEIGHT = 42 * TILE_SCALE
 const SIDE_PADDING = 18 * TILE_SCALE
 const TOP_PADDING = 18 * TILE_SCALE
 const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
-const EMPTY_INSET_X = 14 * TILE_SCALE
-const EMPTY_INSET_Y = 8 * TILE_SCALE
+const EMPTY_INSET_X = 9 * TILE_SCALE
+const EMPTY_INSET_Y = 5 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
 const PLANT_IMAGE_WIDTH = TILE_WIDTH
 
@@ -120,6 +121,7 @@ export type FactorySkiaViewProps = {
   displayGridSize?: number
   anchorGridSize?: number
   onCellPress?: (index: number) => void
+  selectedCellIndex?: number | null
   panOutX?: SharedValue<number>
   panOutY?: SharedValue<number>
   zoomOut?: SharedValue<number>
@@ -136,6 +138,7 @@ function FactorySkiaView({
   displayGridSize,
   anchorGridSize,
   onCellPress,
+  selectedCellIndex = null,
   panOutX,
   panOutY,
   zoomOut,
@@ -250,6 +253,8 @@ function FactorySkiaView({
         key: t.activeIndex,
         outer,
         inner,
+        x: t.x,
+        y: t.y,
         cx: t.x + TILE_WIDTH / 2,
         cy: t.y + TILE_HEIGHT / 2,
         occupied: !!cell,
@@ -389,9 +394,23 @@ function FactorySkiaView({
               {/* ground: outer + inset diamonds */}
               {ground.map((g) => (
                 <Group key={`gnd-${g.key}`}>
-                  <Path path={g.outer} color={g.occupied ? '#C7B18A' : '#A68E6B'} />
-                  <Path path={g.outer} color={g.occupied ? '#806A49' : '#66533B'} style="stroke" strokeWidth={1.8} />
-                  <Path path={g.inner} color={g.occupied ? 'rgba(229,216,189,0.14)' : '#CDBA94'} />
+                  <Path path={g.outer} color={g.occupied ? '#56636B' : '#495760'} />
+                  <Path
+                    path={g.outer}
+                    color={g.key === selectedCellIndex ? '#63DF79' : '#172A38'}
+                    style="stroke"
+                    strokeWidth={g.key === selectedCellIndex ? 3.6 : 2.4}
+                  />
+                  <Path path={g.inner} color={g.occupied ? '#A89470' : '#BDAA82'} />
+                  <Path path={g.inner} color={g.occupied ? '#D7B83C' : '#7B6A50'} style="stroke" strokeWidth={1.4} />
+                  {!g.occupied ? (
+                    <>
+                      <Rect x={g.cx - 10} y={g.cy - 2} width={20} height={4} color="#746248" />
+                      <Rect x={g.cx - 2} y={g.cy - 10} width={4} height={20} color="#746248" />
+                      <Rect x={g.cx - 8} y={g.y + 6} width={16} height={3} color="#F0B936" />
+                      <Rect x={g.cx - 8} y={g.y + TILE_HEIGHT - 9} width={16} height={3} color="#F0B936" />
+                    </>
+                  ) : null}
                 </Group>
               ))}
               {/* building sprites, back-to-front */}

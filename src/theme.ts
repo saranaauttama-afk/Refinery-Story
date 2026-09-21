@@ -93,8 +93,9 @@ export const pixelRadii = {
 // UI a cozy game identity instead of the default system typeface. Roll out
 // to more screens by swapping a style's fontWeight for one of these.
 export const fonts = {
-  display: 'Baloo2_800ExtraBold', // big celebratory titles
-  heading: 'Baloo2_700Bold', // section headers, badges, values
+  display: 'PixelifySans_700Bold', // hero titles: unmistakable modern pixel silhouette
+  heading: 'PixelifySans_600SemiBold', // section headers, badges, values
+  pixelBody: 'PixelifySans_500Medium', // compact labels and game read-outs
   body: 'Baloo2_500Medium', // labels, body copy
   regular: 'Baloo2_400Regular',
 } as const

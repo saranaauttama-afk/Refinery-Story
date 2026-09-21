@@ -9,7 +9,7 @@ import type { ImageSourcePropType } from 'react-native'
 // The full-bleed background painting (sky / sea / land). Swap this file to
 // reskin the whole scene. Keep it large enough that the crop + overscan below
 // still cover the screen.
-export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/ground_day_1.png')
+export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/factory_harbor_pixel_v2.png')
 
 // ── Background framing ──
 // The image is drawn at an EXPLICIT pixel size computed to always cover the
@@ -22,7 +22,7 @@ export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/ground_d
 //               never uncovered.
 // BG_OFFSET_Y : vertical nudge, in px. NEGATIVE moves the scene UP (shows more
 //               of the lower land), positive DOWN.
-export const BG_OFFSET_X = -60
+export const BG_OFFSET_X = 0
 export const BG_OFFSET_Y = 0
 
 // BG_PARALLAX : how much the background follows the grid when you pan. 0 = the
@@ -45,8 +45,8 @@ export const BG_ZOOM_PARALLAX = 0
 // GRID_SPREAD : spacing between cell centres. 1.0 = diamonds touch edge-to-edge
 //               (cramped); >1 opens a walkway/road gap between cells. Tiles and
 //               plant sprites keep their size — only the spacing grows.
-export const GRID_DROP = 262
-export const GRID_SPREAD = 1.22
+export const GRID_DROP = 278
+export const GRID_SPREAD = 1.12
 
 // PLANT_IMAGE_SCALE : size of the plant sprites relative to their tile. 1.0 =
 //   sprite spans the tile width (the old look). LESS than 1 shrinks the plant
@@ -54,7 +54,7 @@ export const GRID_SPREAD = 1.22
 //   oversized on the smaller ground. Only the drawn sprite (and its smoke)
 //   shrinks; the tile, grid spacing, and tap targets are untouched. The sprite
 //   stays bottom-centred on its tile.
-export const PLANT_IMAGE_SCALE = 0.75
+export const PLANT_IMAGE_SCALE = 0.82
 
 // SHOW_GRID : draw the diamond tile art for the ACTIVE (playable) cells — the
 //             cream tiles, outlines, "+" markers on empty cells, and the tile

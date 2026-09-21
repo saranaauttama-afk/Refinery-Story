@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { ImageSourcePropType } from 'react-native'
-import Svg, { Polygon } from 'react-native-svg'
+import Svg, { Polygon, Rect } from 'react-native-svg'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import type { SharedValue } from 'react-native-reanimated'
@@ -39,8 +39,8 @@ const TILE_HEIGHT = 42 * TILE_SCALE
 const SIDE_PADDING = 18 * TILE_SCALE
 const TOP_PADDING = 18 * TILE_SCALE
 const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
-const EMPTY_INSET_X = 14 * TILE_SCALE
-const EMPTY_INSET_Y = 8 * TILE_SCALE
+const EMPTY_INSET_X = 9 * TILE_SCALE
+const EMPTY_INSET_Y = 5 * TILE_SCALE
 const OCCUPIED_INSET_X = 12 * TILE_SCALE
 const OCCUPIED_INSET_Y = 7 * TILE_SCALE
 const DISABLED_INSET_X = 14 * TILE_SCALE
@@ -269,8 +269,12 @@ const DiamondCell = memo(function DiamondCell({
         {SHOW_GRID || isComboHint ? (
           <>
             <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#D4E8B0' : '#A68E6B'} stroke={isComboHint ? '#7AB050' : '#66533B'} strokeWidth={isComboHint ? 2 : 1.8} />
-              <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={isComboHint ? 'rgba(122,176,80,0.25)' : '#CDBA94'} stroke={isComboHint ? 'rgba(122,176,80,0.5)' : 'rgba(102,83,59,0.42)'} strokeWidth={1} />
+              <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill={isComboHint ? '#667A62' : '#495760'} stroke={isComboHint ? '#7AB050' : '#172A38'} strokeWidth={isComboHint ? 2.4 : 2.4} />
+              <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill={isComboHint ? '#AFC692' : '#BDAA82'} stroke={isComboHint ? '#7AB050' : '#7B6A50'} strokeWidth={1.4} />
+              {!isComboHint ? <>
+                <Rect x={TILE_WIDTH / 2 - 8} y={6} width={16} height={3} fill="#F0B936" />
+                <Rect x={TILE_WIDTH / 2 - 8} y={TILE_HEIGHT - 9} width={16} height={3} fill="#F0B936" />
+              </> : null}
             </Svg>
             <Text style={styles.plusLabel}>{isComboHint ? '✨' : '+'}</Text>
           </>
@@ -294,8 +298,8 @@ const DiamondCell = memo(function DiamondCell({
     <Pressable onPress={() => onCellPress?.(index)} style={[styles.cell, { left: x, top: y, zIndex }]}>
       {!SHOW_GRID ? null : plantImage ? (
         <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
-          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#D9CCB1" stroke="#9C8764" strokeWidth={1.2} />
-          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill="rgba(238, 229, 211, 0.18)" stroke="rgba(148, 128, 95, 0.16)" strokeWidth={1} />
+          <Polygon points={diamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT)} fill="#56636B" stroke="#172A38" strokeWidth={2.4} />
+          <Polygon points={insetDiamondPoints(0, 0, TILE_WIDTH, TILE_HEIGHT, EMPTY_INSET_X, EMPTY_INSET_Y)} fill="#A89470" stroke="#D7B83C" strokeWidth={1.4} />
         </Svg>
       ) : (
         <Svg width={TILE_WIDTH} height={TILE_HEIGHT}>
@@ -516,9 +520,9 @@ const styles = StyleSheet.create({
   },
   plusLabel: {
     position: 'absolute',
-    color: 'rgba(86, 71, 50, 0.62)',
+    color: '#746248',
     fontSize: PLUS_FONT_SIZE,
-    fontWeight: '700',
+    fontFamily: 'PixelifySans_700Bold',
   },
   codeLabel: {
     position: 'absolute',

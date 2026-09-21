@@ -14,6 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native'
+import type { ImageSourcePropType } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated'
 import { useRouter } from 'expo-router'
@@ -126,7 +127,7 @@ function getNextLevelUnlocks(nextLevel: number): string[] {
 const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 
 // Plant art thumbnails used in build + info sheets
-const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ReturnType<typeof require>>>> = {
+const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSourcePropType>>> = {
   crudeTank:           { 1: require('../../../assets/plants/crude_tank_lv1.png'), 2: require('../../../assets/plants/crude_tank_lv2.png'), 3: require('../../../assets/plants/crude_tank_lv3.png') },
   distillationUnit:    { 1: require('../../../assets/plants/distillation_unit_lv1.png'), 2: require('../../../assets/plants/distillation_unit_lv2.png'), 3: require('../../../assets/plants/distillation_unit_lv3.png') },
   productTank:         { 1: require('../../../assets/plants/product_tank_lv1.png'), 2: require('../../../assets/plants/product_tank_lv2.png'), 3: require('../../../assets/plants/product_tank_lv3.png') },
@@ -578,6 +579,7 @@ export default function RefineryScreen() {
               displayGridSize={11}
               anchorGridSize={EXPANSION_BALANCE[0].size}
               onCellPress={handleCellPress}
+              selectedCellIndex={pickerCell}
               panOutX={bgPanX}
               panOutY={bgPanY}
               zoomOut={bgZoom}
@@ -1318,7 +1320,7 @@ export default function RefineryScreen() {
           const config      = BUILDINGS[cell]
           const effectLines = getBuildingEffectLines(cell, level, game, derived, infoCell)
           const nextEffectLines = getBuildingEffectLines(cell, level + 1, game, derived, infoCell)
-          const isUpgradeable = UPGRADEABLE.includes(cell)
+          const isUpgradeable = Boolean(UPGRADEABLE.includes(cell))
           const maxed       = level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
           const upgradeCost = level === 1 ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
           const canAffordUpgrade = game.money >= upgradeCost
@@ -1359,16 +1361,16 @@ export default function RefineryScreen() {
                   </View>
 
                   {/* Level progress dots */}
-                  {isUpgradeable && (
+                  {isUpgradeable ? (
                     <View style={styles.infoLevelDots}>
                       {Array.from({ length: maxLevel }).map((_, i) => (
                         <View key={i} style={[styles.infoDot, i < level ? { backgroundColor: accent } : styles.infoDotEmpty]} />
                       ))}
                     </View>
-                  )}
+                  ) : null}
 
                   {/* Next level art preview (if not maxed) */}
-                  {isUpgradeable && !maxed && thumbNext && (
+                  {isUpgradeable && !maxed && Boolean(thumbNext) && (
                     <View style={styles.infoNextPreview}>
                       <Text style={styles.infoNextArrow}>→</Text>
                       <View style={styles.infoNextArtWrap}>

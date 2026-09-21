@@ -32,7 +32,7 @@ export function PixelButton({ label, variant = 'secondary', disabled, style, ...
         variant === 'danger' && styles.buttonDanger,
         pressed && !disabled && styles.buttonPressed,
         disabled && styles.buttonDisabled,
-        typeof style === 'function' ? style({ pressed }) : style,
+        typeof style === 'function' ? style({ pressed, hovered: false } as any) : style,
       ]}
     >
       <PixelText style={[styles.buttonLabel, variant === 'primary' && styles.buttonLabelPrimary]}>

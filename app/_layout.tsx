@@ -9,6 +9,11 @@ import {
   Baloo2_700Bold,
   Baloo2_800ExtraBold,
 } from '@expo-google-fonts/baloo-2'
+import {
+  PixelifySans_500Medium,
+  PixelifySans_600SemiBold,
+  PixelifySans_700Bold,
+} from '@expo-google-fonts/pixelify-sans'
 
 import AwardModal from '../src/components/AwardModal'
 import ErrorBoundary from '../src/components/ErrorBoundary'
@@ -165,6 +170,9 @@ export default function RootLayout() {
     Baloo2_500Medium,
     Baloo2_700Bold,
     Baloo2_800ExtraBold,
+    PixelifySans_500Medium,
+    PixelifySans_600SemiBold,
+    PixelifySans_700Bold,
   })
   if (!fontsLoaded && !fontError) return null
 
