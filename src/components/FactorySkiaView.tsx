@@ -250,6 +250,12 @@ function FactorySkiaView({
   const ground = useMemo(() => {
     return placed.map((t) => {
       const cell = grid[t.activeIndex]
+      const road = diamondPath(
+        t.x - ROAD_EDGE,
+        t.y - ROAD_EDGE / 2,
+        TILE_WIDTH + ROAD_EDGE * 2,
+        TILE_HEIGHT + ROAD_EDGE,
+      )
       const outer = diamondPath(t.x, t.y, TILE_WIDTH, TILE_HEIGHT)
       const inner = diamondPath(
         t.x + EMPTY_INSET_X,
@@ -270,6 +276,7 @@ function FactorySkiaView({
         : null
       return {
         key: t.activeIndex,
+        road,
         outer,
         inner,
         x: t.x,
@@ -428,6 +435,8 @@ function FactorySkiaView({
               {/* ground: outer + inset diamonds */}
               {ground.map((g) => (showPlacementGrid ? (
                 <Group key={`gnd-${g.key}`}>
+                  <Path path={g.road} color="#334148" />
+                  <Path path={g.road} color="#1B262C" style="stroke" strokeWidth={2} />
                   <Path path={g.outer} color={g.occupied ? '#56636B' : '#495760'} />
                   <Path
                     path={g.outer}
