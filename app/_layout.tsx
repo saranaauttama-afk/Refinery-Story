@@ -126,17 +126,28 @@ function GlobalOverlays() {
     if (pendingHiddenEventUnlock) haptics.success()
   }, [pendingHiddenEventUnlock, haptics])
 
+  // Only one blocking modal may own touch input at a time. Previously a
+  // choice event, award, and celebration could mount in the same render; on
+  // Android that could leave an invisible Modal backdrop above the visible
+  // dialog and make the game look frozen. Banners wait while a modal is open.
+  const blockingModal =
+    pendingChoiceEvent ? 'choice' :
+    pendingAward ? 'award' :
+    pendingWinCelebration ? 'win' :
+    pendingLegendCelebration ? 'legend' : null
+  const allowBanners = blockingModal === null
+
   return (
     <>
-      <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} />
-      <MilestoneHeadline headline={pendingMilestoneHeadline} onDismiss={dismissMilestoneHeadline} />
-      <ComboDiscoveryBanner combo={pendingComboDiscovery} onDismiss={dismissComboDiscovery} />
-      <SynergyToast triggerKey={synergyToastKey} />
-      <HiddenEventBanner event={pendingHiddenEventUnlock} onDismiss={dismissHiddenEventUnlock} />
-      <ChoiceEventModal event={pendingChoiceEvent} onChoose={chooseEventOption} />
-      <AwardModal record={pendingAward} onDismiss={dismissAward} />
-      <WinCelebrationModal visible={pendingWinCelebration} game={game} onDismiss={dismissWinCelebration} />
-      <LegendCelebrationModal visible={pendingLegendCelebration} game={game} onDismiss={dismissLegendCelebration} />
+      {allowBanners ? <EraBanner era={pendingEraBanner} onDismiss={dismissEraBanner} /> : null}
+      {allowBanners ? <MilestoneHeadline headline={pendingMilestoneHeadline} onDismiss={dismissMilestoneHeadline} /> : null}
+      {allowBanners ? <ComboDiscoveryBanner combo={pendingComboDiscovery} onDismiss={dismissComboDiscovery} /> : null}
+      {allowBanners ? <SynergyToast triggerKey={synergyToastKey} /> : null}
+      {allowBanners ? <HiddenEventBanner event={pendingHiddenEventUnlock} onDismiss={dismissHiddenEventUnlock} /> : null}
+      <ChoiceEventModal event={blockingModal === 'choice' ? pendingChoiceEvent : null} onChoose={chooseEventOption} />
+      <AwardModal record={blockingModal === 'award' ? pendingAward : null} onDismiss={dismissAward} />
+      <WinCelebrationModal visible={blockingModal === 'win'} game={game} onDismiss={dismissWinCelebration} />
+      <LegendCelebrationModal visible={blockingModal === 'legend'} game={game} onDismiss={dismissLegendCelebration} />
       <Confetti burstKey={confettiKey} />
     </>
   )
