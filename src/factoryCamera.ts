@@ -1,6 +1,6 @@
 export const FACTORY_MIN_SCALE = 0.58
 export const FACTORY_MAX_SCALE = 2.4
-export const FACTORY_INITIAL_SCALE = 0.68
+export const FACTORY_INITIAL_SCALE = 0.74
 
 // The backdrop is deliberately larger than the viewport even at minimum zoom.
 // This lets the camera move without ever revealing the View behind the world.
