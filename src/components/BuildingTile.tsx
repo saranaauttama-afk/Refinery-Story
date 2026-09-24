@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { ImageSourcePropType } from 'react-native'
 
 import {
   BUILDING_CATEGORY_ACCENT,
@@ -12,6 +13,26 @@ import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType } from '../game/types'
 import { colors, radii } from '../theme'
 import BuildingSilhouette from './BuildingSilhouette'
+
+const PLANT_TILE_PREVIEW: Partial<Record<BuildingType, ImageSourcePropType>> = {
+  distillationUnit: require('../../assets/plants/distillation_unit_lv1_v3.png'),
+  crudeTank: require('../../assets/plants/crude_tank_lv1_v3.png'),
+  productTank: require('../../assets/plants/product_tank_lv1_v3.png'),
+  laboratory: require('../../assets/plants/laboratory_lv1.png'),
+  maintenanceWorkshop: require('../../assets/plants/maintenance_workshop_lv1.png'),
+  salesOffice: require('../../assets/plants/sales_office_lv1.png'),
+  lubricantPlant: require('../../assets/plants/lubricant_plant_lv1.png'),
+  jetFuelPlant: require('../../assets/plants/jet_fuel_plant_lv1.png'),
+  petrochemicalPlant: require('../../assets/plants/petrochemical_plant_lv1.png'),
+  powerPlant: require('../../assets/plants/power_plant_lv1.png'),
+  wasteTreatmentPlant: require('../../assets/plants/waste_treatment_plant_lv1.png'),
+  polymerPlant: require('../../assets/plants/polymer_plant_lv1.png'),
+  lubricantTank: require('../../assets/plants/lubricant_tank_lv1.png'),
+  jetFuelTank: require('../../assets/plants/jet_fuel_tank_lv1.png'),
+  petrochemicalTank: require('../../assets/plants/petrochemical_tank_lv1.png'),
+  recyclingBunker: require('../../assets/plants/recycling_bunker_lv1.png'),
+  pelletSilo: require('../../assets/plants/pellet_silo_lv1.png'),
+}
 
 type BuildingTileProps = {
   type: BuildingType | null
@@ -57,6 +78,7 @@ function BuildingTile({ type, level, size, onPress, active, staffBadge, statusBa
   const accentColor = BUILDING_CATEGORY_ACCENT[category]
   const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
   const Icon = BUILDING_TILE_ICONS[type]
+  const preview = PLANT_TILE_PREVIEW[type]
 
   return (
     <Pressable
@@ -79,13 +101,17 @@ function BuildingTile({ type, level, size, onPress, active, staffBadge, statusBa
       <View style={styles.pipeStrip} />
       <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
       <View style={styles.content}>
-        <BuildingSilhouette
-          type={type}
-          size={size}
-          accentColor={accentColor}
-          surfaceColor={surfaceColor}
-          Icon={Icon}
-        />
+        {preview ? (
+          <Image source={preview} resizeMode="contain" style={styles.plantPreview} />
+        ) : (
+          <BuildingSilhouette
+            type={type}
+            size={size}
+            accentColor={accentColor}
+            surfaceColor={surfaceColor}
+            Icon={Icon}
+          />
+        )}
       </View>
       {statusBadge ? (
         <View
@@ -203,6 +229,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     backgroundColor: 'rgba(255,255,255,0.14)',
   },
+  plantPreview: { width: '108%', height: '108%', marginTop: -2 },
   padShadow: {
     position: 'absolute',
     top: 10,
