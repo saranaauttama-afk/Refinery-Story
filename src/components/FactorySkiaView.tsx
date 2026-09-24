@@ -1,6 +1,15 @@
 import { memo, useEffect, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import type { ImageSourcePropType } from 'react-native'
+import distillationUnitLv1 from '../assets/generated/distillationUnitLv1'
+import distillationUnitLv2 from '../assets/generated/distillationUnitLv2'
+import distillationUnitLv3 from '../assets/generated/distillationUnitLv3'
+import crudeTankLv1 from '../assets/generated/crudeTankLv1'
+import crudeTankLv2 from '../assets/generated/crudeTankLv2'
+import crudeTankLv3 from '../assets/generated/crudeTankLv3'
+import productTankLv1 from '../assets/generated/productTankLv1'
+import productTankLv2 from '../assets/generated/productTankLv2'
+import productTankLv3 from '../assets/generated/productTankLv3'
 
 import {
   Canvas,
@@ -85,9 +94,9 @@ function diamondPath(x: number, y: number, w: number, h: number): SkPath {
 }
 
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataSourceParam>>> = {
-  distillationUnit: { 1: require('../../assets/plants/distillation_unit_lv1_v3.png'), 2: require('../../assets/plants/distillation_unit_lv2.png'), 3: require('../../assets/plants/distillation_unit_lv3.png') },
-  crudeTank: { 1: require('../../assets/plants/crude_tank_lv1_v3.png'), 2: require('../../assets/plants/crude_tank_lv2.png'), 3: require('../../assets/plants/crude_tank_lv3.png') },
-  productTank: { 1: require('../../assets/plants/product_tank_lv1_v3.png'), 2: require('../../assets/plants/product_tank_lv2.png'), 3: require('../../assets/plants/product_tank_lv3.png') },
+  distillationUnit: { 1: distillationUnitLv1, 2: distillationUnitLv2, 3: distillationUnitLv3 },
+  crudeTank: { 1: crudeTankLv1, 2: crudeTankLv2, 3: crudeTankLv3 },
+  productTank: { 1: productTankLv1, 2: productTankLv2, 3: productTankLv3 },
   laboratory: { 1: require('../../assets/plants/laboratory_lv1.png'), 2: require('../../assets/plants/laboratory_lv2.png'), 3: require('../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice: { 1: require('../../assets/plants/sales_office_lv1.png'), 2: require('../../assets/plants/sales_office_lv2.png'), 3: require('../../assets/plants/sales_office_lv3.png') },
