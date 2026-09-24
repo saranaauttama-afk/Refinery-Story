@@ -330,6 +330,39 @@ export default function ContractsScreen() {
           </View>
         </View>
 
+        <View style={styles.productDesk}>
+          <View style={styles.productDeskHeading}>
+            <View>
+              <Text style={styles.productDeskTitle}>Product Warehouse</Text>
+              <Text style={styles.productDeskSub}>Stock on hand and the next contract that can use it.</Text>
+            </View>
+            <GameIcon name="product-gasoline" size={28} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productRail}>
+            {PRODUCT_GROUPS.filter((group) => {
+              const stock = group.key === 'gasoline' ? game.gasoline : (game.productInventory[group.key] ?? 0)
+              return stock > 0 || unlockedContracts.some((contract) => (contract[group.field] as number ?? 0) > 0)
+            }).map((group) => {
+              const stock = group.key === 'gasoline' ? game.gasoline : (game.productInventory[group.key] ?? 0)
+              const related = unlockedContracts.filter((contract) => !contract.isCompleted && (contract[group.field] as number ?? 0) > 0)
+              const nextNeed = related.length > 0 ? Math.min(...related.map((contract) => contract[group.field] as number)) : 0
+              const contractReady = nextNeed > 0 && stock >= nextNeed
+              return (
+                <View key={group.key} style={[styles.productStockCard, contractReady && styles.productStockReady]}>
+                  <View style={styles.productStockTop}>
+                    <GameIcon name={\`product-\${group.key}\`} size={25} />
+                    <Text style={styles.productStockName} numberOfLines={1}>{t(sc.groups[group.key])}</Text>
+                  </View>
+                  <Text style={styles.productStockValue}>{formatCompactNumber(stock)}</Text>
+                  <Text style={[styles.productStockHint, contractReady && styles.productStockHintReady]}>
+                    {nextNeed > 0 ? (contractReady ? 'READY FOR DEAL' : \`NEXT DEAL: \${formatCompactNumber(nextNeed)}\`) : 'NO ACTIVE DEAL'}
+                  </Text>
+                </View>
+              )
+            })}
+          </ScrollView>
+        </View>
+
         <View style={styles.contractContent}>
           <View style={styles.contractHeadingRow}>
             <View>
@@ -500,6 +533,18 @@ const styles = StyleSheet.create({
   quickAction: { flex: 1, minHeight: 77, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#245E87', backgroundColor: '#0B3557', paddingHorizontal: 4 },
   quickActionTitle: { marginTop: 5, fontSize: 9, fontFamily: fonts.heading, color: '#FFFFFF' },
   quickActionSub: { marginTop: 3, fontSize: 7.5, color: '#86A3BA', textAlign: 'center' },
+  productDesk: { marginHorizontal: spacing.md, marginTop: spacing.md, padding: spacing.md, backgroundColor: '#0B2840', borderWidth: 1, borderColor: '#27688E', borderBottomWidth: 4, borderBottomColor: '#061622', borderRadius: 12 },
+  productDeskHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  productDeskTitle: { fontSize: 15, fontFamily: fonts.heading, color: '#FFFFFF' },
+  productDeskSub: { marginTop: 2, fontSize: 11, fontFamily: fonts.body, color: '#8FA8BB' },
+  productRail: { gap: 8, paddingRight: spacing.xs },
+  productStockCard: { width: 132, minHeight: 94, padding: 10, borderRadius: 9, backgroundColor: '#123A57', borderWidth: 1, borderColor: '#2B6489', borderBottomWidth: 3, borderBottomColor: '#071A2A' },
+  productStockReady: { backgroundColor: '#164B40', borderColor: '#48B980', borderBottomColor: '#0C2A25' },
+  productStockTop: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  productStockName: { flex: 1, fontSize: 10, fontFamily: fonts.heading, color: '#D9E8F2', textTransform: 'uppercase' },
+  productStockValue: { marginTop: 8, fontSize: 22, fontFamily: fonts.display, color: '#FFFFFF' },
+  productStockHint: { marginTop: 3, fontSize: 9, fontFamily: fonts.heading, color: '#91B6CE' },
+  productStockHintReady: { color: '#7CEDAA' },
   contractContent: { marginHorizontal: spacing.md, marginTop: 11, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: '#1E415D', backgroundColor: '#0C1C2A' },
   contractHeadingRow: { marginBottom: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   contractHeading: { fontSize: 15, fontFamily: fonts.heading, color: '#FFFFFF' },
