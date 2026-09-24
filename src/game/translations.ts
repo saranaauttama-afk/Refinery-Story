@@ -356,49 +356,31 @@ export const text = {
     start: bilingual("Let's go! 🚀", 'ลุยเลย! 🚀'),
     steps: [
       {
-        icon: '🛢',
-        title: bilingual('Buy Crude Oil', 'ซื้อน้ำมันดิบ'),
-        body: bilingual(
-          'Open the Supply tab to order your first crude shipment. No crude = no production.',
-          'เปิดแท็บ "จัดหา" เพื่อสั่งน้ำมันดิบล็อตแรก ไม่มีน้ำมันดิบ = ผลิตไม่ได้',
-        ),
-        highlight: bilingual('Supply tab', 'แท็บจัดหา'),
-      },
-      {
         icon: '🏭',
-        title: bilingual('Build Your First Plants', 'สร้างโรงงานแรก'),
+        title: bilingual('Your First Shift', 'กะแรกของคุณ'),
         body: bilingual(
-          'Tap an empty tile on the factory grid to build. Start with a Crude Tank + Distillation Unit.',
-          'แตะช่องว่างบนผังโรงงานเพื่อสร้าง เริ่มด้วยถังน้ำมันดิบ + หน่วยกลั่น',
+          'Your starter refinery is already running. Watch crude become gasoline, then react when a tank runs low or fills up.',
+          'โรงกลั่นเริ่มต้นทำงานแล้ว ดูน้ำมันดิบเปลี่ยนเป็นเบนซิน แล้วแก้ปัญหาเมื่อถังใกล้หมดหรือเต็ม',
         ),
-        highlight: bilingual('Tap empty tile', 'แตะช่องว่าง'),
-      },
-      {
-        icon: '💰',
-        title: bilingual('Sell Gasoline', 'ขายน้ำมันเบนซิน'),
-        body: bilingual(
-          'Once gasoline fills up, tap Trade in the action bar to sell. Complete contracts for bonus rewards.',
-          'พอเบนซินเต็ม แตะปุ่ม Trade ในแถบล่างเพื่อขาย ทำสัญญาให้สำเร็จเพื่อรับโบนัส',
-        ),
-        highlight: bilingual('Trade button', 'ปุ่ม Trade'),
-      },
-      {
-        icon: '🧭',
-        title: bilingual('Explore the Tabs', 'สำรวจแท็บต่าง ๆ'),
-        body: bilingual(
-          'Use the bottom bar: Contracts to deliver products, Recruit to hire specialists, R&D for research & perks, and Company for your team.',
-          'ใช้แถบล่าง: สัญญา (ส่งมอบสินค้า), จ้างงาน (จ้างผู้เชี่ยวชาญ), วิจัย (งานวิจัย & เพิร์ก), และบริษัท (ทีมงาน)',
-        ),
-        highlight: bilingual('Bottom navigation', 'แถบเมนูล่าง'),
+        highlight: bilingual('Follow the live flow', 'ดูสายการผลิตแบบสด'),
       },
       {
         icon: '📈',
-        title: bilingual('Grow & Specialize', 'เติบโต & เลือกแนวทาง'),
+        title: bilingual('Buy Low, Deliver High', 'ซื้อถูก ส่งมอบให้คุ้ม'),
         body: bilingual(
-          'Level up your refinery to unlock more. At Level 5 you pick a permanent path (Green or Industrial); reach Industry Legend to unlock Prestige for permanent bonuses.',
-          'อัปเกรดโรงกลั่นเพื่อปลดล็อกเพิ่ม พอเลเวล 5 เลือกแนวทางถาวร (สีเขียว/อุตสาหกรรม) พิชิต Industry Legend เพื่อปลดล็อก Prestige รับโบนัสถาวร',
+          'Operations shows bottlenecks and market prices. Sell for quick cash or save stock for a higher-paying Business contract.',
+          'หน้า Operations แสดงคอขวดและราคาตลาด เลือกขายรับเงินทันที หรือเก็บสินค้าไว้ส่งสัญญาที่จ่ายมากกว่า',
         ),
-        highlight: bilingual("What's ahead", 'สิ่งที่รออยู่'),
+        highlight: bilingual('Operations + Business', 'Operations + Business'),
+      },
+      {
+        icon: '🔧',
+        title: bilingual('Make It Your Refinery', 'สร้างโรงกลั่นในแบบของคุณ'),
+        body: bilingual(
+          'Build storage or processing, recruit a crew, and upgrade the weak link. Auto Trade unlocks at Lv3 after you learn the core loop.',
+          'สร้างถังหรือสายผลิต จ้างทีม และอัปเกรดจุดอ่อน Auto Trade จะปลดล็อกที่ Lv3 หลังเรียนรู้ระบบหลัก',
+        ),
+        highlight: bilingual('Build + Team', 'Build + Team'),
       },
     ],
   },

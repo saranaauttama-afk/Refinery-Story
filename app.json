@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Refinery Story U2",
+    "name": "Refinery Story",
     "slug": "refinery-story",
-    "version": "0.1.6",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#F4EAD7"
+      "backgroundColor": "#061827"
     },
     "ios": {
       "supportsTablet": false,
@@ -15,9 +15,9 @@
     },
     "android": {
       "package": "com.refinerystory.u2",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
-        "backgroundColor": "#F4EAD7"
+        "backgroundColor": "#061827"
       }
     },
     "web": {
@@ -32,7 +32,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "buildLabel": "UI-V2-U2.7-COMMERCIAL-OFFICE",
+      "buildLabel": "REFINERY-STORY-1.0-RC",
       "router": {},
       "eas": {
         "projectId": "e41dff26-bfd6-486d-86a9-fb9b3b74ae7c"

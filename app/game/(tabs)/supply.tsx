@@ -177,7 +177,6 @@ export default function SupplyScreen() {
             <View style={styles.sceneStatDivider} />
             <View><Text style={styles.sceneStatLabel}>EFFICIENCY</Text><Text style={[styles.sceneStatValue, { color: statusColor }]}>{lineEfficiency}%</Text></View>
             <View style={styles.sceneStatDivider} />
-            <View><Text style={styles.sceneStatLabel}>SPEED</Text><Text style={styles.sceneStatValue}>{speed === 0 ? 'PAUSE' : `${speed}×`}</Text></View>
           </View>
         </ImageBackground>
 
@@ -218,9 +217,9 @@ export default function SupplyScreen() {
               <Wrench size={15} color={activeTab === 'process' ? '#0A3152' : '#8DA6BD'} />
               <Text style={[styles.tabText, activeTab === 'process' && styles.tabTextActive]}>Process</Text>
             </Pressable>
-            <Pressable style={[styles.tabButton, activeTab === 'automation' && styles.tabButtonActive]} onPress={() => setActiveTab('automation')}>
+            <Pressable style={[styles.tabButton, activeTab === 'automation' && styles.tabButtonActive, game.refineryLevel < 3 && styles.tabButtonLocked]} onPress={() => setActiveTab('automation')}>
               <Settings2 size={15} color={activeTab === 'automation' ? '#0A3152' : '#8DA6BD'} />
-              <Text style={[styles.tabText, activeTab === 'automation' && styles.tabTextActive]}>Automation</Text>
+              <Text style={[styles.tabText, activeTab === 'automation' && styles.tabTextActive]}>Automation{game.refineryLevel < 3 ? ' · Lv3' : ''}</Text>
             </Pressable>
           </View>
 
@@ -266,6 +265,13 @@ export default function SupplyScreen() {
             </View>
           ) : (
             <View style={styles.automationCard}>
+              {game.refineryLevel < 3 ? (
+                <View style={styles.automationLocked}>
+                  <Text style={styles.automationLockedIcon}>🔒</Text>
+                  <Text style={styles.automationLockedTitle}>LEARN THE LINE FIRST</Text>
+                  <Text style={styles.automationLockedText}>Reach Refinery Lv3 to unlock Auto Trade. Until then, time crude purchases and gasoline sales in Supply & Orders.</Text>
+                </View>
+              ) : (<>
               <View style={styles.automationHeader}>
                 <View style={{ flex: 1 }}><Text style={styles.automationTitle}>Auto Trade</Text><Text style={styles.automationSub}>Keep crude stocked and sell full storage automatically.</Text></View>
                 <Switch value={autoTrade.enabled} onValueChange={(enabled) => updateAutoTrade({ enabled })}
@@ -288,6 +294,7 @@ export default function SupplyScreen() {
                     onMinus={() => adjustProductThreshold(product.key, -5)} onPlus={() => adjustProductThreshold(product.key, 5)} />
                 })}
               </View>}
+              </>)}
             </View>
           )}
         </View>
@@ -397,6 +404,7 @@ const styles = StyleSheet.create({
   tabRow: { marginTop: 11, flexDirection: 'row', borderWidth: 1, borderColor: '#1D5C8B', borderRadius: 8, overflow: 'hidden' },
   tabButton: { flex: 1, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: '#0B3557' },
   tabButtonActive: { backgroundColor: '#FFD447' },
+  tabButtonLocked: { opacity: 0.7 },
   tabText: { fontSize: 10, fontFamily: fonts.heading, color: '#8DA6BD' },
   tabTextActive: { color: '#0A3152' },
   unitCard: { marginTop: 9, borderRadius: 9, borderWidth: 1, borderColor: '#215D89', backgroundColor: '#081F35', padding: 10 },
@@ -430,6 +438,10 @@ const styles = StyleSheet.create({
   upgradeHint: { marginTop: 2, fontSize: 7.5, color: '#42536A' },
   actionDisabled: { opacity: 0.42 },
   automationCard: { marginTop: 9, borderRadius: 9, borderWidth: 1, borderColor: '#215D89', backgroundColor: '#081F35', padding: 10 },
+  automationLocked: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 12 },
+  automationLockedIcon: { fontSize: 26, marginBottom: 5 },
+  automationLockedTitle: { fontSize: 11, fontFamily: fonts.heading, color: '#FFD447', letterSpacing: 0.8 },
+  automationLockedText: { marginTop: 5, fontSize: 10, lineHeight: 15, color: '#91ABC1', textAlign: 'center' },
   automationHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   automationTitle: { fontSize: 13, fontFamily: fonts.heading, color: '#FFF' },
   automationSub: { marginTop: 2, fontSize: 8.5, color: '#82A3BD' },

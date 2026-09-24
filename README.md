@@ -187,16 +187,12 @@
 >     when its live countdown matters most; next-goal already has a
 >     conflicting tap-to-navigate-to-Achievements behavior).
 >
-> **What's next (2026-09-24)**: finish the approved UI V2 sequence before the
-> gameplay redesign. `U2.5 — Compact Factory UI` cleared the refinery scene.
-> `U2.6B — Operations Visual Rebuild` added the pixel-art control room,
-> real plant sprites, process detail, crew, efficiency, Pause/Upgrade, and a
-> dedicated Automation tab. `U2.7 — Business` now adds a pixel-art commercial
-> office, live deal summary, quick business actions, and a cleaner Contract
-> Board. After device review, implement `U2.8 — Team`, followed by the remaining
-> secondary-screen passes. Read
-> [CURRENT_TASK.md](CURRENT_TASK.md). The later gameplay redesign is preserved
-> in [FUN_BLUEPRINT.md](FUN_BLUEPRINT.md); do not start U3 until UI V2 is done.
+> **Current release (2026-09-24)**: Refinery Story 1.0 Release Candidate. The
+> approved UI V2 now covers Factory, Operations, Business, Team, Recruit,
+> Research, Achievements, Company, and Settings. The first Fun Pass gives new
+> games a working starter refinery, rewrites onboarding around production
+> decisions, delays Auto Trade until Lv3, and preserves existing saves. Read
+> [CURRENT_TASK.md](CURRENT_TASK.md) for the final release gates.
 > The remaining historical suggestions below stay deferred:
 > - **Time balancing**: the user explicitly said "เดี๋ยวค่อยบาลานซ์ทีหลัง"
 >   (balance it later) about CALENDAR_BALANCE.dayLengthTicks (currently

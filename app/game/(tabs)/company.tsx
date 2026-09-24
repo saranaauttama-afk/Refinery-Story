@@ -17,7 +17,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import ListRow from '../../../src/components/ListRow'
-import ArtSlot from '../../../src/components/ArtSlot'
 import GameIcon from '../../../src/components/GameIcon'
 import StaffSkillList from '../../../src/components/StaffSkillList'
 import { SKILL_CHANNELS } from '../../../src/game/data/staffSkills'
@@ -95,10 +94,10 @@ function StatRow({ label, value, accent }: { label: string; value: string; accen
   )
 }
 const statStyles = StyleSheet.create({
-  row:    { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: colors.creamBorder },
-  label:  { fontSize: 12, color: colors.inkMuted, flex: 1 },
-  value:  { fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'right', flexShrink: 1, marginLeft: spacing.sm },
-  accent: { color: colors.green },
+  row:    { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#284763' },
+  label:  { fontSize: 12, color: '#8FA4B1', flex: 1 },
+  value:  { fontSize: 12, fontFamily: fonts.heading, color: '#F2F6F8', textAlign: 'right', flexShrink: 1, marginLeft: spacing.sm },
+  accent: { color: '#70E985' },
 })
 
 export default function CompanyScreen() {
@@ -257,15 +256,16 @@ export default function CompanyScreen() {
           </View>
 
           <Text style={styles.sectionLabel}>{t(cs.saveAccess)}</Text>
-          <ListRow title={t(cs.manualSave)} subtitle={t(cs.manualSaveSub)} actionLabel={t(cs.save)} onPress={() => manualSave()} />
+          <ListRow dark title={t(cs.manualSave)} subtitle={t(cs.manualSaveSub)} actionLabel={t(cs.save)} onPress={() => manualSave()} />
           <ListRow
+            dark
             title={t(cs.exportSave)}
             subtitle={t(cs.exportSaveSub)}
             actionLabel={t(cs.export)}
             onPress={async () => {
               try {
                 const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default
-                const raw = await AsyncStorage.getItem('refinery_save')
+                const raw = await AsyncStorage.getItem('refinery-story-save')
                 if (!raw) { Alert.alert(t(cs.noSaveFound)); return }
                 await Share.share({ message: raw, title: 'Refinery Story Save' })
               } catch (e) {
@@ -273,13 +273,14 @@ export default function CompanyScreen() {
               }
             }}
           />
-          <ListRow title={t(cs.settingsRow)} subtitle={t(cs.settingsRowSub)} actionLabel={t(cs.open)} onPress={() => router.push('/settings')} />
-          <ListRow title={t(cs.store)} subtitle={t(cs.storeSub)} actionLabel={t(cs.open)} onPress={() => router.push('/store')} />
-          <ListRow title={t(cs.mainMenu)} subtitle={t(cs.mainMenuSub)} actionLabel={t(cs.go)} onPress={() => router.replace('/')} />
+          <ListRow dark title={t(cs.settingsRow)} subtitle={t(cs.settingsRowSub)} actionLabel={t(cs.open)} onPress={() => router.push('/settings')} />
+          <ListRow dark title={t(cs.store)} subtitle={t(cs.storeSub)} actionLabel="LATER" disabled onPress={() => {}} />
+          <ListRow dark title={t(cs.mainMenu)} subtitle={t(cs.mainMenuSub)} actionLabel={t(cs.go)} onPress={() => router.replace('/')} />
 
           <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.prestigeHeader)}</Text>
           {game.legendAchieved ? (
             <ListRow
+              dark
               title={t(cs.prestigeTitle(game.prestigeLevel + 1))}
               subtitle={t(cs.prestigeSub(Math.round((game.prestigeLevel + 1) * PRESTIGE_BALANCE.bonusPerLevel * 100)))}
               actionLabel={t(cs.prestigeAction)}
@@ -298,6 +299,7 @@ export default function CompanyScreen() {
             />
           ) : (
             <ListRow
+              dark
               title={t(cs.prestigeTitle(game.prestigeLevel + 1))}
               subtitle={t(cs.prestigeLockedSub)}
               actionLabel={t(cs.prestigeLocked)}
@@ -308,6 +310,7 @@ export default function CompanyScreen() {
 
           <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>{t(cs.dangerZone)}</Text>
           <ListRow
+            dark
             title={t(cs.resetSave)}
             subtitle={t(cs.resetSaveSub)}
             actionLabel={t(cs.reset)}
@@ -373,26 +376,26 @@ export default function CompanyScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#111820' },
   loadingScreen: { flex: 1, backgroundColor: '#111820', alignItems: 'center', justifyContent: 'center' },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 4 },
+  closeBtn: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#173B59', borderWidth: 1, borderColor: '#416783', alignItems: 'center', justifyContent: 'center', marginRight: 4 },
   closeBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-  header: { backgroundColor: '#1C2634', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs, gap: spacing.sm },
+  header: { backgroundColor: '#0B2943', paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, gap: spacing.sm, borderBottomWidth: 4, borderBottomColor: '#0C6A9B' },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  companyName: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 0.2 },
-  companyTitle: { fontSize: 10, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 2 },
+  companyName: { fontSize: 24, fontFamily: fonts.display, color: '#fff', letterSpacing: 0.2 },
+  companyTitle: { fontSize: 9, fontFamily: fonts.heading, color: '#7ECDF0', textTransform: 'uppercase', letterSpacing: 1.3, marginTop: 1 },
   headerRight: { flexDirection: 'row', gap: spacing.xs },
-  gradeBadge: { backgroundColor: colors.gold, borderRadius: radii.sm, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
+  gradeBadge: { backgroundColor: '#F7D44B', borderRadius: 7, borderBottomWidth: 4, borderBottomColor: '#A87412', paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
   gradeText: { fontSize: 16, fontWeight: '900', color: colors.ink },
   gradeLabel: { fontSize: 8, color: colors.ink, fontWeight: '700' },
-  quickStats: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: radii.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, alignItems: 'center' },
+  quickStats: { flexDirection: 'row', backgroundColor: '#071C2D', borderWidth: 1, borderColor: '#315D7B', borderRadius: 8, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, alignItems: 'center' },
   qStat: { flex: 1, alignItems: 'center' },
-  qVal: { fontSize: 13, fontWeight: '900', color: '#fff' },
-  qLbl: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.3 },
+  qVal: { fontSize: 14, fontFamily: fonts.heading, color: '#fff' },
+  qLbl: { fontSize: 7.5, color: '#8FA4B1', textTransform: 'uppercase', letterSpacing: 0.5 },
   qDiv: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.08)' },
-  tabBar: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: radii.pill, padding: 3, gap: 2, marginBottom: spacing.xs },
-  tabBtn: { flex: 1, paddingVertical: 7, borderRadius: radii.pill, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 },
-  tabBtnActive: { backgroundColor: '#fff' },
+  tabBar: { flexDirection: 'row', backgroundColor: '#061522', borderRadius: 8, padding: 3, gap: 3 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 6, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 },
+  tabBtnActive: { backgroundColor: '#F7D44B' },
   tabLabel: { fontSize: 12, fontWeight: '700', color: '#6B8099' },
-  tabLabelActive: { color: '#1C2634' },
+  tabLabelActive: { color: '#0A2943' },
   tabBadge: { backgroundColor: colors.orange, borderRadius: radii.pill, minWidth: 16, height: 16, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   tabBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
   list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
@@ -417,7 +420,7 @@ const styles = StyleSheet.create({
   perkOwned: { fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: spacing.xs },
   perkCancel: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   perkCancelText: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
-  card: { backgroundColor: '#1B2534', borderRadius: 14, borderTopWidth: 2, borderTopColor: '#2C3D54', borderBottomWidth: 3, borderBottomColor: '#0C131C', padding: spacing.md },
+  card: { backgroundColor: '#102B45', borderRadius: 10, borderWidth: 2, borderColor: '#285A7D', borderBottomWidth: 5, borderBottomColor: '#061522', padding: spacing.md },
   emptyState: { alignItems: 'center', paddingTop: 48, gap: 8 },
   emptyIcon: { fontSize: 40 },
   emptyTitle: { fontSize: 16, fontFamily: fonts.heading, color: '#EAF1F8' },
@@ -449,9 +452,9 @@ const styles = StyleSheet.create({
   pickerTitle: { fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '700', marginBottom: 4 },
   pickerOption: { paddingVertical: 7, paddingHorizontal: spacing.sm, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radii.sm, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   pickerLabel: { fontSize: 12, fontWeight: '700', color: '#EAF1F8' },
-  expandBtn: { marginTop: spacing.md, backgroundColor: colors.green, borderRadius: 12, borderBottomWidth: 4, borderBottomColor: colors.greenDark, paddingVertical: 12, alignItems: 'center' },
+  expandBtn: { marginTop: spacing.md, backgroundColor: '#F7D44B', borderRadius: 8, borderBottomWidth: 4, borderBottomColor: '#A87412', paddingVertical: 12, alignItems: 'center' },
   expandBtnOff: { backgroundColor: '#2E3D50', borderBottomColor: '#1B2532' },
-  expandBtnLabel: { fontSize: 13, fontFamily: fonts.display, color: '#fff' },
+  expandBtnLabel: { fontSize: 13, fontFamily: fonts.display, color: '#0A2943' },
   branchLabel: { fontSize: 11, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, paddingHorizontal: spacing.xs, marginTop: spacing.xs, marginBottom: 2 },
   logEntry: { fontSize: 11, color: 'rgba(255,255,255,0.5)', paddingVertical: 3, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   linkBtn: { paddingVertical: spacing.xs, alignItems: 'flex-end' },

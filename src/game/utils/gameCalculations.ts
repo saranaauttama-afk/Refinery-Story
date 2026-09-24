@@ -141,6 +141,14 @@ export const REPUTATION_TIERS: ReputationTier[] = [
 ]
 
 export function createInitialGameState(): GameState {
+  // A new run begins with a tiny refinery that already operates. The player
+  // sees output immediately and chooses how to expand, instead of spending the
+  // opening minute reconstructing a mandatory recipe. Existing saves are not
+  // changed by this new-game preset.
+  const starterGrid: GameState['grid'] = Array(EXPANSION_BALANCE[0].cells).fill(null)
+  starterGrid[3] = 'crudeTank'
+  starterGrid[4] = 'distillationUnit'
+
   return {
     money: STARTING_MONEY,
     researchPoints: 0,
@@ -210,7 +218,7 @@ export function createInitialGameState(): GameState {
     yearStartTick: 0,
     yearStats: { gasolineProduced: 0, moneyEarned: 0, contractsCompleted: 0 },
     awardHistory: [],
-    grid: Array(EXPANSION_BALANCE[0].cells).fill(null),
+    grid: starterGrid,
     gridLevels: Array(EXPANSION_BALANCE[0].cells).fill(1),
     gridExpansionLevel: 0,
     prototypeCompleted: false,

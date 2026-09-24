@@ -9,6 +9,7 @@
  */
 import { runPlaythrough } from './full-loop-sim'
 import { ENDGAME_GOALS, LEGEND_LIFETIME_GASOLINE } from '../src/game/data/endgameGoals'
+import { createInitialGameState } from '../src/game/utils/gameCalculations'
 
 // Direction A targets Industry Legend around ~200k ticks (~11h at 1x).
 // Budget generously at 320,000 ticks (~18h) — exceeding it means something
@@ -19,6 +20,13 @@ const LEGEND_TICK_BUDGET = 320_000
 const failures: string[] = []
 const check = (cond: boolean, msg: string) => { if (!cond) failures.push(msg) }
 const finite = (n: number) => Number.isFinite(n)
+
+// Opening experience: a fresh run must visibly produce immediately. This is
+// intentionally checked separately from the long automated playthrough.
+const fresh = createInitialGameState()
+check(fresh.grid.includes('crudeTank'), 'new game is missing its starter Crude Tank')
+check(fresh.grid.includes('distillationUnit'), 'new game is missing its starter Distillation Unit')
+check(fresh.crudeOil > 0, 'new game has no crude for its first production cycle')
 
 console.log('Running balance regression check (full playthrough)...\n')
 const { game: g, goalTick, yearScores } = runPlaythrough()

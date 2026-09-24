@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   ActivityIndicator,
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
-import ArtSlot from '../../../src/components/ArtSlot'
 import GameIcon from '../../../src/components/GameIcon'
 import StaffSkillList from '../../../src/components/StaffSkillList'
 import { SKILL_CHANNELS } from '../../../src/game/data/staffSkills'
@@ -99,34 +99,52 @@ export default function StaffScreen() {
     <SafeAreaView style={styles.screen}>
       <FloatingNumbers items={floatItems} lifetimeMs={floatLifetimeMs} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.companyName} numberOfLines={1}>{t(text.nav.staff)}</Text>
-            <Text style={styles.companyTitle}>{t(cs.quick.staff)}</Text>
+      <ImageBackground
+        source={require('../../../assets/bg/team_crew_room_v1.png')}
+        resizeMode="cover"
+        style={styles.hero}
+        imageStyle={styles.heroImage}
+      >
+        <View style={styles.heroShade} />
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.eyebrow}>REFINERY CREW ROOM</Text>
+            <Text style={styles.companyName}>{t(text.nav.staff)}</Text>
+          </View>
+          <View style={styles.dutyBadge}>
+            <View style={styles.dutyDot} />
+            <Text style={styles.dutyText}>{assignedCount} ON DUTY</Text>
+          </View>
+        </View>
+        <View style={styles.heroBottom}>
+          <View style={styles.quickStats}>
+            <View style={styles.qStat}><Text style={styles.qVal}>{game.employees.length}</Text><Text style={styles.qLbl}>CREW</Text></View>
+            <View style={styles.qDiv} />
+            <View style={styles.qStat}><Text style={styles.qVal}>{assignedCount}</Text><Text style={styles.qLbl}>ASSIGNED</Text></View>
+            <View style={styles.qDiv} />
+            <View style={styles.qStat}><Text style={[styles.qVal, retiringCount > 0 && styles.qWarn]}>{retiringCount}</Text><Text style={styles.qLbl}>RETIRING</Text></View>
+            <View style={styles.qDiv} />
+            <View style={styles.qStat}><Text style={styles.qVal}>{cap * WORKERS.length}</Text><Text style={styles.qLbl}>CAPACITY</Text></View>
           </View>
           <Pressable style={styles.recruitBtn} onPress={() => router.push('/game/recruit')}>
-            <Text style={styles.recruitBtnText}>👥 {t(text.nav.recruit)}</Text>
+            <GameIcon name="worker-operator" size={20} />
+            <Text style={styles.recruitBtnText}>{t(text.nav.recruit)}</Text>
+            <Text style={styles.recruitArrow}>›</Text>
           </Pressable>
         </View>
-        <View style={styles.quickStats}>
-          <View style={styles.qStat}><Text style={styles.qVal}>{game.employees.length}/{cap*WORKERS.length}</Text><Text style={styles.qLbl}>{t(cs.quick.staff)}</Text></View>
-          <View style={styles.qDiv} />
-          <View style={styles.qStat}><Text style={styles.qVal}>{assignedCount}</Text><Text style={styles.qLbl}>{t(cs.assigned)}</Text></View>
-          <View style={styles.qDiv} />
-          <View style={styles.qStat}><Text style={[styles.qVal, retiringCount > 0 && { color: colors.orange }]}>{retiringCount}</Text><Text style={styles.qLbl}>🕰</Text></View>
-        </View>
-      </View>
+      </ImageBackground>
 
       {/* Staff roster */}
       {(
         <ScrollView contentContainerStyle={styles.list}>
           {game.employees.length === 0 && (
             <View style={styles.emptyState}>
-              <ArtSlot id="team_empty" width={140} height={140} spec="480×480" radius={70} caption="Empty desks / hiring sign" />
+              <View style={styles.emptyIconWrap}><GameIcon name="worker-operator" size={52} /></View>
               <Text style={styles.emptyTitle}>{t(cs.noEmployees)}</Text>
               <Text style={styles.emptyHint}>{t(cs.hireHint)}</Text>
+              <Pressable style={styles.emptyRecruitBtn} onPress={() => router.push('/game/recruit')}>
+                <Text style={styles.emptyRecruitText}>{t(text.nav.recruit)}</Text>
+              </Pressable>
             </View>
           )}
           {/* Team skill totals — the aggregated bonus every hire adds up to. */}
@@ -250,23 +268,29 @@ export default function StaffScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#111820' },
   loadingScreen: { flex: 1, backgroundColor: '#111820', alignItems: 'center', justifyContent: 'center' },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 4 },
-  closeBtnText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-  recruitBtn: { backgroundColor: colors.blue, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 7 },
-  recruitBtnText: { fontSize: 12, fontWeight: '900', color: '#fff' },
-  header: { backgroundColor: '#1C2634', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs, gap: spacing.sm },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  companyName: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 0.2 },
-  companyTitle: { fontSize: 10, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 2 },
+  hero: { height: 282, justifyContent: 'space-between', overflow: 'hidden', borderBottomWidth: 4, borderBottomColor: '#0C6A9B' },
+  heroImage: { top: -18 },
+  heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(3,16,31,0.22)' },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  eyebrow: { fontSize: 9, fontFamily: fonts.heading, color: '#D7EBFA', letterSpacing: 2.2, textShadowColor: '#05101D', textShadowOffset: { width: 1, height: 2 }, textShadowRadius: 0 },
+  companyName: { fontSize: 34, fontFamily: fonts.display, color: '#fff', letterSpacing: 0.5, textShadowColor: '#07101A', textShadowOffset: { width: 2, height: 3 }, textShadowRadius: 0 },
+  dutyBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(7,24,43,0.84)', borderWidth: 1, borderColor: '#54789B', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 9 },
+  dutyDot: { width: 10, height: 10, borderRadius: 2, backgroundColor: '#70E985' },
+  dutyText: { fontSize: 9, fontFamily: fonts.heading, color: '#fff', letterSpacing: 0.7 },
+  heroBottom: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm, gap: 8 },
+  recruitBtn: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F7D44B', borderWidth: 2, borderColor: '#FFE475', borderBottomWidth: 5, borderBottomColor: '#A87412', borderRadius: 10, paddingHorizontal: 14 },
+  recruitBtnText: { flex: 1, fontSize: 15, fontFamily: fonts.display, color: '#0A2943' },
+  recruitArrow: { fontSize: 28, fontWeight: '900', color: '#0A2943', marginTop: -3 },
   headerRight: { flexDirection: 'row', gap: spacing.xs },
   gradeBadge: { backgroundColor: colors.gold, borderRadius: radii.sm, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center' },
   gradeText: { fontSize: 16, fontWeight: '900', color: colors.ink },
   gradeLabel: { fontSize: 8, color: colors.ink, fontWeight: '700' },
-  quickStats: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: radii.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, alignItems: 'center' },
+  quickStats: { flexDirection: 'row', backgroundColor: 'rgba(5,25,47,0.91)', borderWidth: 1, borderColor: '#456987', borderRadius: 10, paddingVertical: 9, paddingHorizontal: spacing.xs, alignItems: 'center' },
   qStat: { flex: 1, alignItems: 'center' },
-  qVal: { fontSize: 13, fontWeight: '900', color: '#fff' },
-  qLbl: { fontSize: 8, color: '#6B8099', textTransform: 'uppercase', letterSpacing: 0.3 },
-  qDiv: { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.08)' },
+  qVal: { fontSize: 15, fontFamily: fonts.heading, color: '#fff' },
+  qWarn: { color: '#FF9D55' },
+  qLbl: { fontSize: 7.5, color: '#91AEC7', textTransform: 'uppercase', letterSpacing: 0.6 },
+  qDiv: { width: 1, height: 27, backgroundColor: '#35526D' },
   tabBar: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: radii.pill, padding: 3, gap: 2, marginBottom: spacing.xs },
   tabBtn: { flex: 1, paddingVertical: 7, borderRadius: radii.pill, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 },
   tabBtnActive: { backgroundColor: '#fff' },
@@ -274,10 +298,10 @@ const styles = StyleSheet.create({
   tabLabelActive: { color: '#1C2634' },
   tabBadge: { backgroundColor: colors.orange, borderRadius: radii.pill, minWidth: 16, height: 16, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   tabBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
-  list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
+  list: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.sm },
   sectionLabel: { fontSize: 11, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, marginTop: spacing.xs, paddingHorizontal: spacing.xs },
   empSkills: { marginTop: 8 },
-  teamSkillPanel: { backgroundColor: '#1C2634', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.sm },
+  teamSkillPanel: { backgroundColor: '#0B2943', borderRadius: 12, borderWidth: 2, borderColor: '#176797', borderBottomWidth: 5, borderBottomColor: '#061522', padding: spacing.md, marginBottom: spacing.sm },
   teamSkillTitle: { fontSize: 11, fontWeight: '900', color: '#8FA3B8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: spacing.sm },
   teamSkillRow: { flexDirection: 'row' },
   teamSkillStat: { flex: 1, alignItems: 'center', gap: 2 },
@@ -297,12 +321,15 @@ const styles = StyleSheet.create({
   perkCancel: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   perkCancelText: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
   card: { backgroundColor: '#1B2534', borderRadius: 14, borderTopWidth: 2, borderTopColor: '#2C3D54', borderBottomWidth: 3, borderBottomColor: '#0C131C', padding: spacing.md },
-  emptyState: { alignItems: 'center', paddingTop: 48, gap: 8 },
+  emptyState: { alignItems: 'center', backgroundColor: '#0B2943', borderWidth: 2, borderColor: '#176797', borderBottomWidth: 5, borderBottomColor: '#061522', borderRadius: 12, padding: 24, gap: 8 },
+  emptyIconWrap: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#123B5D', borderWidth: 2, borderColor: '#2A7DAA', alignItems: 'center', justifyContent: 'center' },
+  emptyRecruitBtn: { marginTop: 8, minWidth: 180, backgroundColor: '#F7D44B', borderBottomWidth: 4, borderBottomColor: '#A87412', borderRadius: 8, paddingVertical: 11, alignItems: 'center' },
+  emptyRecruitText: { fontSize: 14, fontFamily: fonts.display, color: '#0A2943' },
   emptyIcon: { fontSize: 40 },
   emptyTitle: { fontSize: 16, fontFamily: fonts.heading, color: '#EAF1F8' },
   emptyHint: { fontSize: 13, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
   emptyNote: { fontSize: 12, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', paddingVertical: 4 },
-  empCard: { backgroundColor: '#1B2534', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 3, borderBottomColor: '#0C131C', padding: spacing.sm },
+  empCard: { backgroundColor: '#102B45', borderRadius: 12, borderWidth: 2, borderColor: '#285A7D', borderBottomWidth: 5, borderBottomColor: '#061522', padding: spacing.md },
   empCardRetiring: { borderColor: 'rgba(232,131,58,0.6)', borderBottomColor: '#5A3417', backgroundColor: 'rgba(232,131,58,0.08)' },
   empTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   empRoleIcon: { marginRight: spacing.sm },

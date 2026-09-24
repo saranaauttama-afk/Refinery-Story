@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGame } from '../src/hooks/GameContext'
 import { useLang } from '../src/hooks/SettingsContext'
-import ArtSlot from '../src/components/ArtSlot'
 import ProgressBar from '../src/components/ProgressBar'
-import { colors, radii, spacing } from '../src/theme'
+import ScreenHeader from '../src/components/ScreenHeader'
+import { colors, fonts, spacing, modernUi, FLOATING_TAB_BAR_CLEARANCE } from '../src/theme'
 import { text } from '../src/game/translations'
 import { HIDDEN_COMBOS } from '../src/game/data/hiddenCombos'
 import { ENDGAME_GOALS } from '../src/game/data/endgameGoals'
@@ -60,18 +60,15 @@ export default function AchievementsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{t(as.back)}</Text>
-        </Pressable>
-        <Text style={styles.title}>{t(as.title)}</Text>
+      <ScreenHeader title={t(as.title)} badge={`${completedCount}/${milestones.length}`} onClose={() => router.back()} />
+      <View style={styles.hero}>
+        <View style={styles.trophy}><Text style={styles.trophyText}>★</Text></View>
+        <View style={styles.heroCopy}>
+          <Text style={styles.heroEyebrow}>COMPANY RECORDS</Text>
+          <Text style={styles.summary}>{t(as.completed(completedCount, milestones.length))}</Text>
+          <View style={styles.summaryTrack}><View style={[styles.summaryFill, { width: `${Math.round((completedCount / Math.max(1, milestones.length)) * 100)}%` as any }]} /></View>
+        </View>
       </View>
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-        <ArtSlot id="achievements_hero" width="100%" height={72} spec="1080×240" caption="Trophy shelf / podium banner" />
-      </View>
-      <Text style={styles.summary}>
-        {t(as.completed(completedCount, milestones.length))}
-      </Text>
 
       {game.prototypeCompleted && (
         <View style={styles.winBanner}>
@@ -80,7 +77,7 @@ export default function AchievementsScreen() {
       )}
 
       {/* Endgame spine: Industry Legend goal ladder */}
-      <View style={[styles.comboCard, { borderColor: colors.gold }]}>
+      <View style={[styles.comboCard, styles.legendCard]}>
         <Text style={styles.comboTitle}>
           {game.legendAchieved ? t(as.legendComplete) :
             t(as.endgameProgress(ENDGAME_GOALS.filter((gl) => gl.isComplete(game)).length, ENDGAME_GOALS.length))}
@@ -119,7 +116,7 @@ export default function AchievementsScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {milestones.map((milestone) => (
           <MilestoneRow key={milestone.key} milestone={milestone} />
         ))}
@@ -131,38 +128,25 @@ export default function AchievementsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: modernUi.canvas,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  back: {
-    fontSize: 15,
-    color: colors.blue,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.ink,
-  },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, margin: spacing.md, marginBottom: spacing.sm, backgroundColor: '#0B2D4B', borderWidth: 2, borderColor: '#176797', borderBottomWidth: 5, borderBottomColor: '#04111C', borderRadius: 12, padding: spacing.md },
+  trophy: { width: 66, height: 66, borderRadius: 10, backgroundColor: '#F7D44B', borderWidth: 2, borderColor: '#FFE67D', borderBottomWidth: 5, borderBottomColor: '#A87412', alignItems: 'center', justifyContent: 'center' },
+  trophyText: { fontSize: 38, color: '#0A2943' },
+  heroCopy: { flex: 1, gap: 4 },
+  heroEyebrow: { fontSize: 9, fontFamily: fonts.heading, color: '#7ECDF0', letterSpacing: 1.8 },
   summary: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
-    color: colors.inkMuted,
-    fontWeight: '700',
-    fontSize: 13,
+    color: '#F4F7F9',
+    fontFamily: fonts.heading,
+    fontSize: 14,
   },
+  summaryTrack: { height: 7, backgroundColor: '#061B2C', borderWidth: 1, borderColor: '#315D7B', overflow: 'hidden' },
+  summaryFill: { height: '100%', backgroundColor: '#70E985' },
   winBanner: {
-    marginHorizontal: spacing.lg,
+    marginHorizontal: spacing.md,
     marginBottom: spacing.sm,
     backgroundColor: colors.gold,
-    borderRadius: radii.md,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: colors.ink,
     padding: spacing.sm,
@@ -174,21 +158,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   comboCard: {
-    marginHorizontal: spacing.lg,
+    marginHorizontal: spacing.md,
     marginBottom: spacing.sm,
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
+    backgroundColor: '#102B45',
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: colors.teal,
+    borderColor: '#285A7D',
+    borderBottomWidth: 5,
+    borderBottomColor: '#061522',
     padding: spacing.sm,
   },
   comboTitle: {
     fontWeight: '800',
-    color: colors.ink,
+    color: '#F2F6F8',
+    fontFamily: fonts.heading,
     fontSize: 13,
   },
   comboName: {
-    color: colors.ink,
+    color: '#D7E5F0',
     fontSize: 12,
     marginTop: 2,
   },
@@ -196,15 +183,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   legendName: {
-    color: colors.inkMuted,
+    color: '#9CB4C8',
     fontSize: 12,
     fontWeight: '700',
   },
   legendNameDone: {
-    color: colors.ink,
+    color: '#70E985',
   },
   legendDesc: {
-    color: colors.inkMuted,
+    color: '#8FA4B1',
     fontSize: 11,
     fontWeight: '400',
   },
@@ -212,26 +199,30 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   comboHint: {
-    color: colors.inkMuted,
+    color: '#8FA4B1',
     fontSize: 12,
     marginTop: 2,
   },
   list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE,
     gap: spacing.sm,
   },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
+    backgroundColor: '#102B45',
+    borderRadius: 10,
     borderWidth: 2,
     padding: spacing.sm,
   },
   cardCompleted: {
-    borderColor: colors.green,
+    borderColor: '#4EAE6B',
+    borderBottomWidth: 5,
+    borderBottomColor: '#174A2B',
   },
   cardLocked: {
-    borderColor: colors.creamBorder,
+    borderColor: '#285A7D',
+    borderBottomWidth: 5,
+    borderBottomColor: '#061522',
     opacity: 0.85,
   },
   cardHeader: {
@@ -247,17 +238,18 @@ const styles = StyleSheet.create({
   },
   cardName: {
     fontWeight: '800',
-    color: colors.inkMuted,
+    color: '#9CB4C8',
     fontSize: 14,
   },
   cardNameCompleted: {
-    color: colors.ink,
+    color: '#F2F6F8',
   },
   cardRequirement: {
-    color: colors.inkMuted,
+    color: '#8FA4B1',
     fontSize: 12,
     marginTop: 2,
   },
+  legendCard: { borderColor: '#D7AD2C', borderBottomColor: '#674B09' },
   cardReward: {
     fontWeight: '700',
     fontSize: 12,

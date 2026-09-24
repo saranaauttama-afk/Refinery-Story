@@ -453,7 +453,11 @@ export function useGameLoop() {
           setPendingAward(record)
         }
 
-        next = applyAutoTrade(next, autoTradeRef.current, derivedForTick)
+        // Auto Trade is earned after the player has learned the core loop.
+        // The saved setting is preserved and resumes automatically at Lv3.
+        if (next.refineryLevel >= 3) {
+          next = applyAutoTrade(next, autoTradeRef.current, derivedForTick)
+        }
         next = applyRecruitmentRefresh(next)
 
         // Crude shipments now arrive on the game clock (tick-based), so they

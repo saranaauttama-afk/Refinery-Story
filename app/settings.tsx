@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGame } from '../src/hooks/GameContext'
 import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
-import { colors, radii, spacing } from '../src/theme'
+import ScreenHeader from '../src/components/ScreenHeader'
+import { colors, fonts, spacing, modernUi } from '../src/theme'
 import { text } from '../src/game/translations'
 
 function Row({
@@ -50,12 +51,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{t(text.common.back)}</Text>
-        </Pressable>
-        <Text style={styles.title}>{t(ss.title)}</Text>
-      </View>
+      <ScreenHeader title={t(ss.title)} onClose={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.list}>
         <Section title={t(ss.language)}>
@@ -101,11 +97,11 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title={t(ss.store)}>
-          <Pressable style={styles.linkRow} onPress={() => router.push('/store')}>
+          <Pressable style={[styles.linkRow, styles.linkRowDisabled]} disabled>
             <Text style={styles.linkLabel}>
               {settings.adsRemoved ? t(ss.adsRemoved) : t(ss.removeAds)}
             </Text>
-            <Text style={styles.linkChevron}>›</Text>
+            <Text style={styles.laterBadge}>LATER</Text>
           </Pressable>
         </Section>
 
@@ -144,42 +140,27 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.cream,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-  },
-  back: {
-    fontSize: 15,
-    color: colors.blue,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.ink,
+    backgroundColor: modernUi.canvas,
   },
   list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: spacing.lg,
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
+    backgroundColor: '#102B45',
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: colors.creamBorder,
+    borderColor: '#285A7D',
+    borderBottomWidth: 5,
+    borderBottomColor: '#061522',
     padding: spacing.md,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
+    fontFamily: fonts.heading,
+    color: '#F2F6F8',
     marginBottom: spacing.xs,
   },
   row: {
@@ -194,16 +175,16 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontWeight: '700',
-    color: colors.ink,
+    color: '#F2F6F8',
     fontSize: 14,
   },
   rowDescription: {
-    color: colors.inkMuted,
+    color: '#8FA4B1',
     fontSize: 12,
     marginTop: 2,
   },
   note: {
-    color: colors.inkMuted,
+    color: '#8FA4B1',
     fontSize: 12,
     marginTop: spacing.xs,
     fontStyle: 'italic',
@@ -215,22 +196,22 @@ const styles = StyleSheet.create({
   langButton: {
     flex: 1,
     borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: radii.sm,
+    borderColor: '#3B617E',
+    borderRadius: 8,
     paddingVertical: spacing.sm,
     alignItems: 'center',
-    backgroundColor: colors.cream,
+    backgroundColor: '#071C2D',
   },
   langButtonActive: {
-    backgroundColor: colors.green,
-    borderColor: colors.ink,
+    backgroundColor: '#F7D44B',
+    borderColor: '#A87412',
   },
   langButtonLabel: {
     fontWeight: '700',
-    color: colors.inkMuted,
+    color: '#9CB4C8',
   },
   langButtonLabelActive: {
-    color: colors.ink,
+    color: '#0A2943',
   },
   linkRow: {
     flexDirection: 'row',
@@ -238,20 +219,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
+  linkRowDisabled: { opacity: 0.55 },
   linkLabel: {
     fontWeight: '700',
-    color: colors.ink,
+    color: '#F2F6F8',
     fontSize: 14,
   },
   linkChevron: {
-    color: colors.inkMuted,
+    color: '#8FA4B1',
     fontSize: 18,
   },
+  laterBadge: { fontSize: 9, fontFamily: fonts.heading, color: '#FFD447', borderWidth: 1, borderColor: '#8F7628', borderRadius: 5, paddingHorizontal: 7, paddingVertical: 4 },
   dangerRow: {
     backgroundColor: colors.red,
-    borderRadius: radii.sm,
+    borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.ink,
+    borderColor: '#FF7A71',
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
