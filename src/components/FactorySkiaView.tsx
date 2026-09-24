@@ -99,9 +99,9 @@ function diamondPath(x: number, y: number, w: number, h: number): SkPath {
 }
 
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataSourceParam>>> = {
-  distillationUnit: { 1: distillationUnitLv1, 2: distillationUnitLv2, 3: distillationUnitLv3 },
-  crudeTank: { 1: crudeTankLv1, 2: crudeTankLv2, 3: crudeTankLv3 },
-  productTank: { 1: productTankLv1, 2: productTankLv2, 3: productTankLv3 },
+  distillationUnit: { 1: distillationUnitLv1 as unknown as DataSourceParam, 2: distillationUnitLv2 as unknown as DataSourceParam, 3: distillationUnitLv3 as unknown as DataSourceParam },
+  crudeTank: { 1: crudeTankLv1 as unknown as DataSourceParam, 2: crudeTankLv2 as unknown as DataSourceParam, 3: crudeTankLv3 as unknown as DataSourceParam },
+  productTank: { 1: productTankLv1 as unknown as DataSourceParam, 2: productTankLv2 as unknown as DataSourceParam, 3: productTankLv3 as unknown as DataSourceParam },
   laboratory: { 1: require('../../assets/plants/laboratory_lv1.png'), 2: require('../../assets/plants/laboratory_lv2.png'), 3: require('../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice: { 1: require('../../assets/plants/sales_office_lv1.png'), 2: require('../../assets/plants/sales_office_lv2.png'), 3: require('../../assets/plants/sales_office_lv3.png') },
