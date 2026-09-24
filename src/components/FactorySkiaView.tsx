@@ -69,8 +69,13 @@ const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
 const EMPTY_INSET_X = 9 * TILE_SCALE
 const EMPTY_INSET_Y = 5 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
-const PLANT_IMAGE_WIDTH = TILE_WIDTH
-const ROAD_EDGE = 16 * TILE_SCALE
+// Every build lot remains equal; the margin around it is a non-buildable service road.
+const LOT_WIDTH = TILE_WIDTH * 0.78
+const LOT_HEIGHT = TILE_HEIGHT * 0.78
+const LOT_OFFSET_X = (TILE_WIDTH - LOT_WIDTH) / 2
+const LOT_OFFSET_Y = (TILE_HEIGHT - LOT_HEIGHT) / 2
+const PLANT_IMAGE_WIDTH = LOT_WIDTH * 1.08
+const ROAD_EDGE = 12 * TILE_SCALE
 
 const PIXEL_SAMPLING = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const
 
@@ -266,20 +271,22 @@ function FactorySkiaView({
         TILE_WIDTH + ROAD_EDGE * 2,
         TILE_HEIGHT + ROAD_EDGE,
       )
-      const outer = diamondPath(t.x, t.y, TILE_WIDTH, TILE_HEIGHT)
+      const lotX = t.x + LOT_OFFSET_X
+      const lotY = t.y + LOT_OFFSET_Y
+      const outer = diamondPath(lotX, lotY, LOT_WIDTH, LOT_HEIGHT)
       const inner = diamondPath(
-        t.x + EMPTY_INSET_X,
-        t.y + EMPTY_INSET_Y,
-        TILE_WIDTH - EMPTY_INSET_X * 2,
-        TILE_HEIGHT - EMPTY_INSET_Y * 2,
+        lotX + EMPTY_INSET_X,
+        lotY + EMPTY_INSET_Y,
+        LOT_WIDTH - EMPTY_INSET_X * 2,
+        LOT_HEIGHT - EMPTY_INSET_Y * 2,
       )
       const visual = cell ? plantVisual(cell, gridLevels[t.activeIndex] ?? 1) : null
       const spriteRect = cell && visual
         ? getPlantSpriteRect(
-            t.x,
-            t.y,
-            TILE_WIDTH,
-            TILE_HEIGHT,
+            lotX,
+            lotY,
+            LOT_WIDTH,
+            LOT_HEIGHT,
             PLANT_IMAGE_WIDTH,
             getPlantSpriteProfile(cell, gridLevels[t.activeIndex] ?? 1),
           )
@@ -289,10 +296,10 @@ function FactorySkiaView({
         road,
         outer,
         inner,
-        x: t.x,
-        y: t.y,
-        cx: t.x + TILE_WIDTH / 2,
-        cy: t.y + TILE_HEIGHT / 2,
+        x: lotX,
+        y: lotY,
+        cx: lotX + LOT_WIDTH / 2,
+        cy: lotY + LOT_HEIGHT / 2,
         occupied: !!cell,
         sprite: visual && spriteRect ? {
           source: visual.source,
@@ -461,7 +468,7 @@ function FactorySkiaView({
                       <Rect x={g.cx - 10} y={g.cy - 2} width={20} height={4} color="#746248" />
                       <Rect x={g.cx - 2} y={g.cy - 10} width={4} height={20} color="#746248" />
                       <Rect x={g.cx - 8} y={g.y + 6} width={16} height={3} color="#F0B936" />
-                      <Rect x={g.cx - 8} y={g.y + TILE_HEIGHT - 9} width={16} height={3} color="#F0B936" />
+                      <Rect x={g.cx - 8} y={g.y + LOT_HEIGHT - 9} width={16} height={3} color="#F0B936" />
                     </>
                   ) : null}
                 </Group>
