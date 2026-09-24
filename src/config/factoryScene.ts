@@ -47,7 +47,7 @@ export const BG_ZOOM_PARALLAX = 0
 //               (cramped); >1 opens a walkway/road gap between cells. Tiles and
 //               plant sprites keep their size — only the spacing grows.
 export const GRID_DROP = 278
-export const GRID_SPREAD = 1.08
+export const GRID_SPREAD = 1.28
 
 // U2.3 large-world camera. The painted world is intentionally much larger
 // than one phone screen so the harbor can be explored in all four directions.
