@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { ArrowRight, Building2, FlaskConical, Ship, TrendingUp } from 'lucide-react-native'
 
 import ArtSlot from '../../../src/components/ArtSlot'
 import GameIcon from '../../../src/components/GameIcon'
 import ListRow from '../../../src/components/ListRow'
-import ScreenHeader from '../../../src/components/ScreenHeader'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, fonts, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
@@ -16,6 +16,8 @@ import { getContractProgress, TICK_MS } from '../../../src/game/utils/gameCalcul
 import { getRotatingContractHave } from '../../../src/game/data/rotatingContracts'
 import { text } from '../../../src/game/translations'
 import type { ActiveContract } from '../../../src/game/types'
+
+const COMMERCIAL_OFFICE = require('../../../assets/bg/business_commercial_office_v1.png')
 
 // Product group config
 type ProductKey = 'gasoline' | 'asphalt' | 'jetFuel' | 'lubricants' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
@@ -79,9 +81,9 @@ const sectionStyles = StyleSheet.create({
   wrap: { marginBottom: spacing.sm },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#243348', borderRadius: 12,
-    borderTopWidth: 2, borderTopColor: '#33496A',
-    borderBottomWidth: 3, borderBottomColor: '#101823',
+    backgroundColor: '#123552', borderRadius: 10,
+    borderWidth: 1, borderColor: '#28668F',
+    borderBottomWidth: 3, borderBottomColor: '#071725',
     paddingHorizontal: spacing.md, paddingVertical: 10,
   },
   titleIcon: { marginRight: 8 },
@@ -195,33 +197,33 @@ function ContractCard({
 
 const cardStyles = StyleSheet.create({
   card: {
-    backgroundColor: '#EFE4CC',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#C9B896',
-    borderBottomWidth: 5,
-    borderBottomColor: '#B7A883',
+    backgroundColor: '#0D2A43',
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#24638F',
+    borderBottomWidth: 4,
+    borderBottomColor: '#061522',
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  cardDone: { opacity: 0.6 },
+  cardDone: { opacity: 0.5 },
   row: { flexDirection: 'row', gap: spacing.md },
   thumb: {
     width: 58,
     height: 58,
     borderRadius: 12,
-    backgroundColor: '#2A3446',
+    backgroundColor: '#071B2C',
     borderWidth: 2,
-    borderColor: '#161E2A',
+    borderColor: '#1D5B84',
     borderBottomWidth: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: { flex: 1, gap: 4 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { flex: 1, fontSize: 15, fontFamily: fonts.heading, color: colors.ink },
+  title: { flex: 1, fontSize: 14, fontFamily: fonts.heading, color: '#FFFFFF' },
   badge: {
-    backgroundColor: '#B7A883',
+    backgroundColor: '#39516A',
     borderRadius: radii.pill,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -229,16 +231,16 @@ const cardStyles = StyleSheet.create({
   badgeReady: { backgroundColor: colors.green },
   badgeText: { fontSize: 9, fontFamily: fonts.heading, color: '#fff', letterSpacing: 0.5 },
   progText: { flexDirection: 'row', alignItems: 'baseline' },
-  haveNum: { fontSize: 15, fontFamily: fonts.heading, color: colors.inkMuted },
-  haveNumReady: { color: colors.greenDark },
-  needNum: { fontSize: 13, fontFamily: fonts.body, color: colors.inkMuted },
-  progTrack: { height: 7, borderRadius: radii.pill, backgroundColor: '#D8C8A8', overflow: 'hidden' },
+  haveNum: { fontSize: 15, fontFamily: fonts.heading, color: '#AFC3D4' },
+  haveNumReady: { color: '#78ED87' },
+  needNum: { fontSize: 13, fontFamily: fonts.body, color: '#7892A8' },
+  progTrack: { height: 7, borderRadius: radii.pill, backgroundColor: '#17384F', overflow: 'hidden' },
   progFill: { height: '100%', borderRadius: radii.pill },
   rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  reward: { fontSize: 14, fontFamily: fonts.heading, color: colors.orangeDark, marginRight: spacing.sm },
+  reward: { fontSize: 14, fontFamily: fonts.heading, color: '#FFD447', marginRight: spacing.sm },
   rpWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rp: { fontSize: 13, fontFamily: fonts.heading, color: colors.blueDark },
-  hint: { fontSize: 11, fontFamily: fonts.body, color: colors.orangeDark, fontStyle: 'italic', marginTop: spacing.sm },
+  rp: { fontSize: 13, fontFamily: fonts.heading, color: '#8ED6FF' },
+  hint: { fontSize: 11, fontFamily: fonts.body, color: '#FFB873', fontStyle: 'italic', marginTop: spacing.sm },
   btn: {
     marginTop: spacing.md,
     borderRadius: 11,
@@ -247,9 +249,9 @@ const cardStyles = StyleSheet.create({
     borderBottomWidth: 4,
   },
   btnReady: { backgroundColor: colors.green, borderBottomColor: colors.greenDark },
-  btnOff: { backgroundColor: '#D5C7A8', borderBottomColor: '#C0B08C' },
+  btnOff: { backgroundColor: '#263D50', borderBottomColor: '#142838' },
   btnText: { fontSize: 15, fontFamily: fonts.display, color: '#fff', letterSpacing: 1 },
-  btnTextOff: { color: '#9A8C6E' },
+  btnTextOff: { color: '#7890A4' },
 })
 
 export default function ContractsScreen() {
@@ -274,24 +276,68 @@ export default function ContractsScreen() {
   // Rotating Rush Orders — soonest-to-expire first so the urgent ones lead.
   const rushOrders = [...game.rotatingContracts].sort((a, b) => a.expiresAtTick - b.expiresAtTick)
   const hasAnyContent = mysteryEvents.length > 0 || unlockedContracts.length > 0 || rushOrders.length > 0
+  const openContractCount = unlockedContracts.filter((contract) => !contract.isCompleted).length
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScreenHeader
-        title={t(sc.title)}
-        badge={totalReady > 0 ? t(sc.ready(totalReady)) : undefined}
-      />
-
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.list}>
-        {/* Hero banner — code-drawn beveled panel so the screen reads finished
-            without pixel art (illustrated art can be dropped in later). */}
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}><GameIcon name="gas" size={34} /></View>
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>{t(sc.heroTitle)}</Text>
-            <Text style={styles.heroSub}>{t(sc.heroSub)}</Text>
+        <ImageBackground source={COMMERCIAL_OFFICE} resizeMode="cover" style={styles.commercialOffice} imageStyle={styles.commercialOfficeImage}>
+          <View style={styles.sceneShade} />
+          <View style={styles.sceneTopRow}>
+            <View>
+              <Text style={styles.sceneEyebrow}>COMMERCIAL OFFICE</Text>
+              <Text style={styles.sceneTitle}>Business</Text>
+            </View>
+            {totalReady > 0 ? (
+              <View style={styles.readyPill}><View style={styles.readyDot} /><Text style={styles.readyPillText}>{totalReady} READY</Text></View>
+            ) : (
+              <View style={styles.quietPill}><Text style={styles.quietPillText}>DEAL DESK</Text></View>
+            )}
+          </View>
+          <View style={styles.sceneStats}>
+            <View><Text style={styles.sceneStatLabel}>READY</Text><Text style={[styles.sceneStatValue, totalReady > 0 && styles.sceneStatReady]}>{totalReady}</Text></View>
+            <View style={styles.sceneStatDivider} />
+            <View><Text style={styles.sceneStatLabel}>OPEN</Text><Text style={styles.sceneStatValue}>{openContractCount}</Text></View>
+            <View style={styles.sceneStatDivider} />
+            <View><Text style={styles.sceneStatLabel}>RUSH</Text><Text style={[styles.sceneStatValue, rushOrders.length > 0 && styles.sceneStatRush]}>{rushOrders.length}</Text></View>
+          </View>
+        </ImageBackground>
+
+        <View style={styles.dealDesk}>
+          <View style={styles.dealDeskHeader}>
+            <View style={styles.dealDeskIcon}><TrendingUp size={22} color="#FFD447" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dealDeskTitle}>Deal Desk</Text>
+              <Text style={styles.dealDeskSub}>{totalReady > 0 ? `${totalReady} contract${totalReady === 1 ? '' : 's'} ready to complete.` : 'Build inventory, then close the best available contracts.'}</Text>
+            </View>
+          </View>
+          <View style={styles.quickActions}>
+            <Pressable style={styles.quickAction} onPress={() => router.push('/game/research')}>
+              <FlaskConical size={20} color="#8ED6FF" />
+              <Text style={styles.quickActionTitle}>Research</Text>
+              <Text style={styles.quickActionSub}>{game.researchPoints} RP</Text>
+            </Pressable>
+            <Pressable style={styles.quickAction} onPress={() => router.push('/game/supply')}>
+              <Ship size={20} color="#FFD447" />
+              <Text style={styles.quickActionTitle}>Market</Text>
+              <Text style={styles.quickActionSub}>Supply & trade</Text>
+            </Pressable>
+            <Pressable style={styles.quickAction} onPress={() => router.push('/game/company')}>
+              <Building2 size={20} color="#78ED87" />
+              <Text style={styles.quickActionTitle}>Company</Text>
+              <Text style={styles.quickActionSub}>Plan growth</Text>
+            </Pressable>
           </View>
         </View>
+
+        <View style={styles.contractContent}>
+          <View style={styles.contractHeadingRow}>
+            <View>
+              <Text style={styles.contractHeading}>Contract Board</Text>
+              <Text style={styles.contractHeadingSub}>Complete ready deals first, then work toward the active tier.</Text>
+            </View>
+            <ArrowRight size={20} color="#52718C" />
+          </View>
 
         {!hasAnyContent && (
           <View style={styles.emptyState}>
@@ -418,37 +464,46 @@ export default function ContractsScreen() {
             </Section>
           )
         })}
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#111820' },
-  loadingScreen: { flex: 1, backgroundColor: '#111820', alignItems: 'center', justifyContent: 'center' },
-  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: '#1C3A34',
-    borderRadius: 14,
-    borderTopWidth: 2,
-    borderTopColor: '#2E5A4F',
-    borderBottomWidth: 3,
-    borderBottomColor: '#0C1F1B',
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  heroIcon: {
-    width: 52, height: 52, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  heroText: { flex: 1 },
-  heroTitle: { fontSize: 19, fontFamily: fonts.display, color: '#F2F6FB', letterSpacing: 0.3 },
-  heroSub: { fontSize: 12, fontFamily: fonts.body, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
+  screen: { flex: 1, backgroundColor: '#09131E' },
+  loadingScreen: { flex: 1, backgroundColor: '#09131E', alignItems: 'center', justifyContent: 'center' },
+  list: { paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 10 },
+  commercialOffice: { height: 238, justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: 16, paddingBottom: 20 },
+  commercialOfficeImage: { opacity: 0.96 },
+  sceneShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(2,15,30,0.18)' },
+  sceneTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  sceneEyebrow: { fontSize: 8, fontFamily: fonts.heading, letterSpacing: 1.4, color: '#A7D6FA', textShadowColor: '#06192B', textShadowRadius: 2 },
+  sceneTitle: { marginTop: 3, fontSize: 28, fontFamily: fonts.heading, color: '#FFFFFF', textShadowColor: '#06192B', textShadowRadius: 4 },
+  readyPill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(120,237,135,0.55)', backgroundColor: 'rgba(5,44,49,0.88)', paddingHorizontal: 9, paddingVertical: 7 },
+  readyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#78ED87' },
+  readyPillText: { fontSize: 8, fontFamily: fonts.heading, color: '#FFFFFF' },
+  quietPill: { borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.36)', backgroundColor: 'rgba(5,31,54,0.82)', paddingHorizontal: 9, paddingVertical: 7 },
+  quietPillText: { fontSize: 8, fontFamily: fonts.heading, color: '#FFFFFF' },
+  sceneStats: { alignSelf: 'center', minWidth: '84%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', borderRadius: 11, borderWidth: 1, borderColor: 'rgba(118,184,232,0.55)', backgroundColor: 'rgba(3,29,52,0.88)', paddingVertical: 10, paddingHorizontal: 12 },
+  sceneStatLabel: { textAlign: 'center', fontSize: 7, fontFamily: fonts.heading, color: '#82AAC8', letterSpacing: 0.7 },
+  sceneStatValue: { marginTop: 3, textAlign: 'center', fontSize: 15, fontFamily: fonts.heading, color: '#FFFFFF' },
+  sceneStatReady: { color: '#78ED87' },
+  sceneStatRush: { color: '#FFD447' },
+  sceneStatDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.16)' },
+  dealDesk: { marginHorizontal: spacing.md, marginTop: -12, borderRadius: 14, borderWidth: 2, borderColor: '#176AA4', backgroundColor: '#092844', padding: 12, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
+  dealDeskHeader: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  dealDeskIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#2A6B98', backgroundColor: '#0B3557' },
+  dealDeskTitle: { fontSize: 17, fontFamily: fonts.heading, color: '#FFFFFF' },
+  dealDeskSub: { marginTop: 3, fontSize: 9.5, color: '#93B1C9' },
+  quickActions: { marginTop: 11, flexDirection: 'row', gap: 7 },
+  quickAction: { flex: 1, minHeight: 77, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#245E87', backgroundColor: '#0B3557', paddingHorizontal: 4 },
+  quickActionTitle: { marginTop: 5, fontSize: 9, fontFamily: fonts.heading, color: '#FFFFFF' },
+  quickActionSub: { marginTop: 3, fontSize: 7.5, color: '#86A3BA', textAlign: 'center' },
+  contractContent: { marginHorizontal: spacing.md, marginTop: 11, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: '#1E415D', backgroundColor: '#0C1C2A' },
+  contractHeadingRow: { marginBottom: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  contractHeading: { fontSize: 15, fontFamily: fonts.heading, color: '#FFFFFF' },
+  contractHeadingSub: { marginTop: 3, fontSize: 8.5, color: '#7894A9' },
   emptyState: { alignItems: 'center', paddingTop: 56, paddingHorizontal: spacing.lg, gap: 10 },
   emptyIcon: { fontSize: 44 },
   emptyTitle: { fontSize: 16, fontFamily: fonts.heading, color: '#EAF1F8' },
