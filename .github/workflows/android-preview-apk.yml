@@ -37,6 +37,9 @@ jobs:
       - name: Verify TypeScript
         run: npm run typecheck
 
+      - name: Materialize pixel refinery launcher icon
+        run: node scripts/refresh-app-icon.cjs
+
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install --non-interactive
 
