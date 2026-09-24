@@ -1,20 +1,38 @@
 import { useState } from 'react'
-import type { ComponentType } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native'
+import type { ImageSourcePropType } from 'react-native'
+import {
+  ActivityIndicator, Image, ImageBackground, Pressable, ScrollView, StyleSheet,
+  Switch, Text, useWindowDimensions, View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
-import { ArrowRight, Factory, Fuel, Gauge, Play, Settings2, Warehouse } from 'lucide-react-native'
+import {
+  AlertTriangle, ArrowRight, ChevronDown, ChevronUp, Gauge, Pause, Play,
+  Settings2, UserRound, Wrench,
+} from 'lucide-react-native'
 
+import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import ListRow from '../../../src/components/ListRow'
 import MarketGraph from '../../../src/components/MarketGraph'
-import ScreenHeader from '../../../src/components/ScreenHeader'
-import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
-import { colors, fonts, radii, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
-import { PRODUCTION_BALANCE, SHIPMENT_BALANCE, STANDING_ORDER_BALANCE } from '../../../src/game/data/balance'
+import {
+  BUILDING_UPGRADE_BALANCE, FEEDSTOCK_BALANCE, PRODUCTION_BALANCE,
+  SHIPMENT_BALANCE, STANDING_ORDER_BALANCE,
+} from '../../../src/game/data/balance'
 import { CRUDE_COST, TICK_MS, formatCompactNumber } from '../../../src/game/utils/gameCalculations'
 import { text } from '../../../src/game/translations'
+import { colors, fonts, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+
+const CONTROL_ROOM = require('../../../assets/bg/operations_control_room_v1.png')
+const CRUDE_TANK = require('../../../assets/plants/crude_tank_lv1_v3.png')
+const DISTILLATION_LEVELS: Record<number, ImageSourcePropType> = {
+  1: require('../../../assets/plants/distillation_unit_lv1_v3.png'),
+  2: require('../../../assets/plants/distillation_unit_lv2.png'),
+  3: require('../../../assets/plants/distillation_unit_lv3.png'),
+}
+const PRODUCT_TANK = require('../../../assets/plants/product_tank_lv1_v3.png')
+
+type Tone = 'good' | 'warn' | 'bad' | 'idle'
 
 type AutomationRowProps = {
   enabled: boolean
@@ -28,15 +46,9 @@ type AutomationRowProps = {
 function AutomationRow({ enabled, label, value, onToggle, onMinus, onPlus }: AutomationRowProps) {
   return (
     <View style={styles.automationRow}>
-      <Switch
-        style={styles.rowSwitch}
-        value={enabled}
-        onValueChange={onToggle}
-        trackColor={{ false: '#39495C', true: colors.green }}
-      />
-      <Text style={[styles.automationRowLabel, !enabled && styles.automationRowLabelOff]} numberOfLines={2}>
-        {label}
-      </Text>
+      <Switch style={styles.rowSwitch} value={enabled} onValueChange={onToggle}
+        trackColor={{ false: '#39495C', true: colors.green }} />
+      <Text style={[styles.automationRowLabel, !enabled && styles.off]} numberOfLines={2}>{label}</Text>
       <View style={styles.stepper}>
         <Pressable style={styles.stepperButton} onPress={onMinus}><Text style={styles.stepperButtonText}>−</Text></Pressable>
         <Text style={styles.stepperValue}>{value}%</Text>
@@ -46,52 +58,50 @@ function AutomationRow({ enabled, label, value, onToggle, onMinus, onPlus }: Aut
   )
 }
 
-type FlowNodeProps = {
-  icon: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
-  label: string
-  value: string
+function PlantFlowNode({ image, title, stock, status, tone, large = false }: {
+  image: ImageSourcePropType
+  title: string
+  stock: string
   status: string
-  tone: 'good' | 'warn' | 'bad' | 'idle'
-}
-
-function FlowNode({ icon: Icon, label, value, status, tone }: FlowNodeProps) {
+  tone: Tone
+  large?: boolean
+}) {
   return (
-    <View style={[styles.flowNode, styles[`flowNode_${tone}`]]}>
-      <Icon size={21} color={tone === 'good' ? '#7CE38B' : tone === 'warn' ? '#FFD447' : tone === 'bad' ? '#FF8B78' : '#90A6BE'} strokeWidth={2.3} />
-      <Text style={styles.flowNodeLabel}>{label}</Text>
-      <Text style={styles.flowNodeValue}>{value}</Text>
-      <Text style={[styles.flowNodeStatus, styles[`flowText_${tone}`]]}>{status}</Text>
+    <View style={[styles.plantNode, large && styles.plantNodeLarge, styles[`plantNode_${tone}`]]}>
+      <Image source={image} resizeMode="contain" style={[styles.plantImage, large && styles.plantImageLarge]} />
+      <Text style={styles.plantTitle} numberOfLines={1}>{title}</Text>
+      <Text style={styles.plantStock}>{stock}</Text>
+      <Text style={[styles.plantStatus, styles[`toneText_${tone}`]]}>{status}</Text>
     </View>
   )
 }
 
 export default function SupplyScreen() {
-  const router = useRouter()
   const {
-    game, loaded, derived,
-    buyCrude, sellGasoline, buyShipment, fulfillStandingOrder,
-    autoTrade, updateAutoTrade,
-    speed, cycleSpeed, flowRates,
+    game, loaded, derived, buyCrude, sellGasoline, buyShipment, fulfillStandingOrder,
+    autoTrade, updateAutoTrade, speed, cycleSpeed, flowRates, upgradeBuilding,
   } = useGame()
   const { t } = useLang()
   const ss = text.supplyScreen
   const { width: screenWidth } = useWindowDimensions()
-  const [automationOpen, setAutomationOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'process' | 'automation'>('process')
+  const [supplyOpen, setSupplyOpen] = useState(false)
 
   if (!loaded || !game || !derived) {
     return <SafeAreaView style={styles.loadingScreen}><ActivityIndicator color={colors.orange} size="large" /></SafeAreaView>
   }
 
-  const standaloneReady = STANDING_ORDER_BALANCE.filter((order) => {
+  const readyOrders = STANDING_ORDER_BALANCE.filter((order) => {
     if (game.refineryLevel < order.unlockLevel) return false
-    const key = order.key as keyof typeof game.standingOrderCooldowns
-    const cooldownAt = game.standingOrderCooldowns[key]
-    const pKey = order.productKey as keyof typeof game.productInventory
-    return !(cooldownAt !== undefined && cooldownAt > game.tickCount) &&
-      (game.productInventory[pKey] as number) >= order.required
+    const cooldownAt = game.standingOrderCooldowns[order.key as keyof typeof game.standingOrderCooldowns]
+    const have = game.productInventory[order.productKey as keyof typeof game.productInventory] as number
+    return !(cooldownAt !== undefined && cooldownAt > game.tickCount) && have >= order.required
   }).length
 
+  const distillationIndex = game.grid.findIndex((cell) => cell === 'distillationUnit')
   const distillationCount = derived.buildingCounts.distillationUnit
+  const distillationLevel = distillationIndex >= 0 ? game.gridLevels[distillationIndex] ?? 1 : 1
+  const distillationImage = DISTILLATION_LEVELS[distillationLevel] ?? DISTILLATION_LEVELS[1]
   const crudePct = derived.maxCrudeStorage > 0 ? game.crudeOil / derived.maxCrudeStorage : 0
   const gasPct = derived.maxGasolineStorage > 0 ? game.gasoline / derived.maxGasolineStorage : 0
   const powerStarved = derived.buildingCounts.powerPlant > 0 &&
@@ -99,20 +109,34 @@ export default function SupplyScreen() {
     game.crudeOil > 0 && game.gasoline < derived.maxGasolineStorage
 
   const bottleneck = speed === 0
-    ? { title: 'Production paused', detail: 'Resume the clock to restart every production line.', tone: 'idle' as const }
+    ? { title: 'Production paused', detail: 'Resume the refinery clock to restart the line.', tone: 'idle' as const }
     : distillationCount === 0
-      ? { title: 'No distillation unit', detail: 'Build a Distillation Unit on the Factory screen.', tone: 'bad' as const }
+      ? { title: 'Distillation unit required', detail: 'Build the first process unit on the Factory screen.', tone: 'bad' as const }
       : game.crudeOil <= 0
-        ? { title: 'Crude supply empty', detail: 'Buy spot crude or order a shipment below.', tone: 'bad' as const }
+        ? { title: 'Low crude — production stopped', detail: 'Open Supply & Orders below to restock crude.', tone: 'bad' as const }
         : game.gasoline >= derived.maxGasolineStorage
           ? { title: 'Gas storage full', detail: 'Sell gasoline or increase Product Tank capacity.', tone: 'warn' as const }
           : powerStarved
-            ? { title: 'Electricity too low', detail: 'The gasoline line is waiting for more power.', tone: 'warn' as const }
-            : { title: 'Production line healthy', detail: `Gasoline output ${flowRates.gasPerMin > 0 ? '+' : ''}${flowRates.gasPerMin}/min.`, tone: 'good' as const }
+            ? { title: 'Electricity too low', detail: 'The production line is waiting for more power.', tone: 'warn' as const }
+            : { title: 'Production line running', detail: 'Crude is moving through the refinery normally.', tone: 'good' as const }
 
-  const crudeTone: FlowNodeProps['tone'] = game.crudeOil <= 0 ? 'bad' : crudePct < 0.25 ? 'warn' : 'good'
-  const processTone: FlowNodeProps['tone'] = speed === 0 || distillationCount === 0 ? 'idle' : powerStarved ? 'warn' : game.crudeOil <= 0 || gasPct >= 1 ? 'bad' : 'good'
-  const storageTone: FlowNodeProps['tone'] = gasPct >= 1 ? 'bad' : gasPct >= 0.8 ? 'warn' : 'good'
+  const crudeTone: Tone = game.crudeOil <= 0 ? 'bad' : crudePct < 0.25 ? 'warn' : 'good'
+  const processTone: Tone = speed === 0 || distillationCount === 0 ? 'idle' :
+    powerStarved ? 'warn' : game.crudeOil <= 0 || gasPct >= 1 ? 'bad' : 'good'
+  const storageTone: Tone = gasPct >= 1 ? 'bad' : gasPct >= 0.8 ? 'warn' : 'good'
+  const processStatus = speed === 0 ? 'PAUSED' : distillationCount === 0 ? 'MISSING' :
+    powerStarved ? 'LOW POWER' : game.crudeOil <= 0 || gasPct >= 1 ? 'BLOCKED' : 'RUNNING'
+  const lineEfficiency = speed === 0 || distillationCount === 0 || game.crudeOil <= 0 || gasPct >= 1 ? 0 :
+    powerStarved ? 60 : game.productionPenalty && game.tickCount < game.productionPenalty.untilTick
+      ? Math.round(game.productionPenalty.multiplier * 100) : 100
+  const crudeInputPerMin = processStatus === 'RUNNING'
+    ? distillationCount * FEEDSTOCK_BALANCE.crudePerDistillationCycle * 60 * Math.max(1, speed) : 0
+  const operator = game.employees.find((employee) => employee.type === 'operator')
+  const upgradeCost = distillationLevel === 1
+    ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
+  const maxed = distillationLevel >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
+  const canUpgrade = distillationIndex >= 0 && !maxed && game.money >= upgradeCost
+  const nextBonus = BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel[Math.min(3, distillationLevel + 1)] ?? 0
 
   const secondaryProducts = [
     { key: 'lubricants' as const, label: 'Lubricants', building: 'lubricantPlant' as const },
@@ -124,370 +148,326 @@ export default function SupplyScreen() {
 
   const adjustProductThreshold = (key: typeof secondaryProducts[number]['key'], delta: number) => {
     const current = autoTrade.productSellThresholds[key] ?? 80
-    updateAutoTrade({
-      productSellThresholds: {
-        ...autoTrade.productSellThresholds,
-        [key]: Math.min(100, Math.max(0, current + delta)),
-      },
-    })
+    updateAutoTrade({ productSellThresholds: {
+      ...autoTrade.productSellThresholds,
+      [key]: Math.min(100, Math.max(0, current + delta)),
+    } })
   }
 
+  const statusColor = bottleneck.tone === 'good' ? '#78ED87' : bottleneck.tone === 'warn' ? '#FFD447' :
+    bottleneck.tone === 'bad' ? '#FF8976' : '#A1B4C8'
+
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScreenHeader
-        title="Operations"
-        badge={standaloneReady > 0 ? t(ss.ready(standaloneReady)) : undefined}
-      />
-
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.list}>
-        <View style={[styles.healthBanner, styles[`healthBanner_${bottleneck.tone}`]]}>
-          <View style={[styles.healthDot, styles[`healthDot_${bottleneck.tone}`]]} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.healthTitle}>{bottleneck.title}</Text>
-            <Text style={styles.healthDetail}>{bottleneck.detail}</Text>
-          </View>
-          <Text style={styles.healthRate}>{flowRates.gasPerMin > 0 ? '+' : ''}{flowRates.gasPerMin}/min</Text>
-        </View>
-
-        <View style={styles.flowCard}>
-          <View style={styles.flowHeader}>
+        <ImageBackground source={CONTROL_ROOM} resizeMode="cover" style={styles.controlRoom} imageStyle={styles.controlRoomImage}>
+          <View style={styles.sceneShade} />
+          <View style={styles.sceneTopRow}>
             <View>
-              <Text style={styles.flowTitle}>Production Flow</Text>
-              <Text style={styles.flowSubtitle}>Live status from your refinery</Text>
+              <Text style={styles.sceneEyebrow}>REFINERY CONTROL ROOM</Text>
+              <Text style={styles.sceneTitle}>Operations</Text>
             </View>
-            <Gauge size={19} color="#FFD447" strokeWidth={2.3} />
+            <View style={styles.liveBadge}>
+              <View style={[styles.liveDot, { backgroundColor: statusColor }]} />
+              <Text style={styles.liveText}>{processStatus}</Text>
+            </View>
           </View>
-          <View style={styles.flowRow}>
-            <FlowNode
-              icon={Warehouse}
-              label="CRUDE"
-              value={`${game.crudeOil}/${derived.maxCrudeStorage}`}
-              status={game.crudeOil <= 0 ? 'EMPTY' : crudePct < 0.25 ? 'LOW' : 'READY'}
-              tone={crudeTone}
-            />
-            <ArrowRight size={17} color="#617B96" strokeWidth={2.5} />
-            <FlowNode
-              icon={Factory}
-              label="PROCESS"
-              value={`${distillationCount} UNIT${distillationCount === 1 ? '' : 'S'}`}
-              status={speed === 0 ? 'PAUSED' : distillationCount === 0 ? 'MISSING' : powerStarved ? 'LOW POWER' : game.crudeOil <= 0 || gasPct >= 1 ? 'BLOCKED' : 'RUNNING'}
-              tone={processTone}
-            />
-            <ArrowRight size={17} color="#617B96" strokeWidth={2.5} />
-            <FlowNode
-              icon={Fuel}
-              label="GAS"
-              value={`${game.gasoline}/${derived.maxGasolineStorage}`}
-              status={gasPct >= 1 ? 'FULL' : gasPct >= 0.8 ? 'NEAR FULL' : 'SPACE OK'}
-              tone={storageTone}
-            />
+          <View style={styles.sceneStats}>
+            <View><Text style={styles.sceneStatLabel}>OUTPUT</Text><Text style={styles.sceneStatValue}>{flowRates.gasPerMin}/min</Text></View>
+            <View style={styles.sceneStatDivider} />
+            <View><Text style={styles.sceneStatLabel}>EFFICIENCY</Text><Text style={[styles.sceneStatValue, { color: statusColor }]}>{lineEfficiency}%</Text></View>
+            <View style={styles.sceneStatDivider} />
+            <View><Text style={styles.sceneStatLabel}>SPEED</Text><Text style={styles.sceneStatValue}>{speed === 0 ? 'PAUSE' : `${speed}×`}</Text></View>
           </View>
-        </View>
+        </ImageBackground>
 
-        <View style={styles.controlRow}>
-          <Pressable style={styles.controlButton} onPress={cycleSpeed}>
-            {speed === 0 ? <Play size={17} color="#FFD447" /> : <Gauge size={17} color="#FFD447" />}
-            <Text style={styles.controlButtonText}>{speed === 0 ? 'Resume' : `${speed}× Speed`}</Text>
-          </Pressable>
-          <Pressable style={styles.controlButton} onPress={() => router.push('/game')}>
-            <Factory size={17} color="#FFD447" />
-            <Text style={styles.controlButtonText}>Factory</Text>
-          </Pressable>
-          <Pressable style={[styles.controlButton, autoTrade.enabled && styles.controlButtonActive]} onPress={() => setAutomationOpen((open) => !open)}>
-            <Settings2 size={17} color={autoTrade.enabled ? '#7CE38B' : '#FFD447'} />
-            <Text style={styles.controlButtonText}>{autoTrade.enabled ? 'Auto On' : 'Auto Off'}</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.inventoryCard}>
-          <View style={styles.inventoryItem}>
-            <Text style={styles.inventoryValue}>{game.feedstock}/{derived.maxFeedstockStorage}</Text>
-            <Text style={styles.inventoryLabel}>FEEDSTOCK</Text>
-          </View>
-          <View style={styles.inventoryDivider} />
-          <View style={styles.inventoryItem}>
-            <Text style={styles.inventoryValue}>{game.electricity}/{derived.maxElectricityStorage}</Text>
-            <Text style={styles.inventoryLabel}>POWER</Text>
-          </View>
-          <View style={styles.inventoryDivider} />
-          <View style={styles.inventoryItem}>
-            <Text style={styles.inventoryValue}>{Math.floor(game.waste)}/{derived.maxWasteStorage}</Text>
-            <Text style={styles.inventoryLabel}>WASTE</Text>
-          </View>
-        </View>
-
-        <Text style={styles.sectionLabel}>Spot Trade</Text>
-        <View style={styles.tradeRow}>
-          <AnimatedPressable
-            style={[styles.tradeButton, styles.buyButton]}
-            onPress={() => buyCrude(10)}
-          >
-            <Text style={styles.tradeButtonTitle}>Buy 10 Crude</Text>
-            <Text style={styles.tradeButtonSub}>${derived.crudePrice}/unit</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={[styles.tradeButton, styles.sellButton]}
-            onPress={() => sellGasoline(10)}
-          >
-            <Text style={styles.tradeButtonTitle}>Sell 10 Gas</Text>
-            <Text style={styles.tradeButtonSub}>${derived.sellPrice}/unit</Text>
-          </AnimatedPressable>
-        </View>
-
-        <View style={styles.automationCard}>
-          <Pressable style={styles.automationHeader} onPress={() => setAutomationOpen((open) => !open)}>
+        <View style={styles.operationsPanel}>
+          <View style={styles.panelHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.automationTitle}>Auto Trade</Text>
-              <Text style={styles.automationSub}>{automationOpen ? 'Tap to hide detailed thresholds.' : 'Tap to configure stock thresholds.'}</Text>
+              <Text style={styles.panelTitle}>Production Flow</Text>
+              <Text style={styles.panelSubtitle}>{bottleneck.title}</Text>
             </View>
-            <Text style={styles.automationChevron}>{automationOpen ? '▴' : '▾'}</Text>
-            <Switch
-              value={autoTrade.enabled}
-              onValueChange={(enabled) => updateAutoTrade({ enabled })}
-              trackColor={{ false: '#39495C', true: colors.green }}
-            />
-          </Pressable>
+            <Pressable style={[styles.speedButton, speed === 0 && styles.speedButtonPaused]} onPress={cycleSpeed}>
+              {speed === 0 ? <Play size={16} color="#0A3152" fill="#0A3152" /> : <Gauge size={17} color="#0A3152" />}
+              <Text style={styles.speedButtonText}>{speed === 0 ? 'RESUME' : `${speed}×`}</Text>
+            </Pressable>
+          </View>
 
-          {automationOpen && autoTrade.enabled && (
-            <View style={styles.automationRows}>
-              <AutomationRow
-                enabled={autoTrade.crudeBuyEnabled}
-                label="Buy crude below"
-                value={autoTrade.buyThreshold}
-                onToggle={(crudeBuyEnabled) => updateAutoTrade({ crudeBuyEnabled })}
-                onMinus={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}
-                onPlus={() => updateAutoTrade({ buyThreshold: Math.min(95, autoTrade.buyThreshold + 5) })}
-              />
-              <AutomationRow
-                enabled={autoTrade.gasolineSellEnabled}
-                label="Sell gasoline above"
-                value={autoTrade.sellThreshold}
-                onToggle={(gasolineSellEnabled) => updateAutoTrade({ gasolineSellEnabled })}
-                onMinus={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}
-                onPlus={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}
-              />
-              {secondaryProducts.map((product) => {
-                const enabled = autoTrade.productSellEnabled[product.key] !== false
-                const value = autoTrade.productSellThresholds[product.key] ?? 80
-                return (
-                  <AutomationRow
-                    key={product.key}
-                    enabled={enabled}
-                    label={`Sell ${product.label} above`}
-                    value={value}
-                    onToggle={(next) => updateAutoTrade({
-                      productSellEnabled: { ...autoTrade.productSellEnabled, [product.key]: next },
-                    })}
-                    onMinus={() => adjustProductThreshold(product.key, -5)}
-                    onPlus={() => adjustProductThreshold(product.key, 5)}
-                  />
-                )
-              })}
+          <View style={[styles.alertStrip, styles[`alertStrip_${bottleneck.tone}`]]}>
+            {bottleneck.tone === 'good' ? <View style={[styles.alertDot, { backgroundColor: statusColor }]} /> :
+              <AlertTriangle size={16} color={statusColor} />}
+            <Text style={styles.alertText}>{bottleneck.detail}</Text>
+          </View>
+
+          <View style={styles.flowRow}>
+            <PlantFlowNode image={CRUDE_TANK} title="Crude Tank"
+              stock={`${game.crudeOil}/${derived.maxCrudeStorage}`}
+              status={game.crudeOil <= 0 ? 'EMPTY' : crudePct < 0.25 ? 'LOW' : 'READY'} tone={crudeTone} />
+            <View style={styles.flowArrow}><ArrowRight size={18} color={crudeTone === 'bad' ? '#FF8976' : '#FFD447'} /><Text style={styles.flowRate}>{crudeInputPerMin}/m</Text></View>
+            <PlantFlowNode image={distillationImage} title="Distillation"
+              stock={distillationCount > 0 ? `Lv ${distillationLevel}` : '—'}
+              status={processStatus} tone={processTone} large />
+            <View style={styles.flowArrow}><ArrowRight size={18} color={storageTone === 'bad' ? '#FF8976' : '#78ED87'} /><Text style={styles.flowRate}>{flowRates.gasPerMin}/m</Text></View>
+            <PlantFlowNode image={PRODUCT_TANK} title="Gas Storage"
+              stock={`${game.gasoline}/${derived.maxGasolineStorage}`}
+              status={gasPct >= 1 ? 'FULL' : gasPct >= 0.8 ? 'NEAR FULL' : 'SPACE OK'} tone={storageTone} />
+          </View>
+
+          <View style={styles.tabRow}>
+            <Pressable style={[styles.tabButton, activeTab === 'process' && styles.tabButtonActive]} onPress={() => setActiveTab('process')}>
+              <Wrench size={15} color={activeTab === 'process' ? '#0A3152' : '#8DA6BD'} />
+              <Text style={[styles.tabText, activeTab === 'process' && styles.tabTextActive]}>Process</Text>
+            </Pressable>
+            <Pressable style={[styles.tabButton, activeTab === 'automation' && styles.tabButtonActive]} onPress={() => setActiveTab('automation')}>
+              <Settings2 size={15} color={activeTab === 'automation' ? '#0A3152' : '#8DA6BD'} />
+              <Text style={[styles.tabText, activeTab === 'automation' && styles.tabTextActive]}>Automation</Text>
+            </Pressable>
+          </View>
+
+          {activeTab === 'process' ? (
+            <View style={styles.unitCard}>
+              <View style={styles.unitTitleRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.unitTitle}>{distillationCount > 0 ? `Distillation Unit · Lv ${distillationLevel}` : 'No Distillation Unit'}</Text>
+                  <Text style={styles.unitSubtitle}>{distillationCount > 1 ? `${distillationCount} units operating across the refinery` : 'Primary gasoline process line'}</Text>
+                </View>
+                <View style={[styles.unitStatus, styles[`unitStatus_${processTone}`]]}>
+                  <Text style={[styles.unitStatusText, { color: statusColor }]}>{processStatus}</Text>
+                </View>
+              </View>
+              <View style={styles.ioRow}>
+                <View style={styles.ioBox}><Text style={styles.ioLabel}>INPUT</Text><Text style={styles.ioValue}>{crudeInputPerMin} crude/min</Text></View>
+                <ArrowRight size={17} color="#59748E" />
+                <View style={styles.ioBox}><Text style={styles.ioLabel}>OUTPUT</Text><Text style={styles.ioValue}>{flowRates.gasPerMin} gas/min</Text></View>
+              </View>
+              <View style={styles.staffRow}>
+                <View style={styles.avatar}><UserRound size={29} color="#D8E7F3" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.staffName}>{operator ? `${operator.name} · Operator` : 'Operations Crew'}</Text>
+                  <Text style={styles.staffBonus}>{operator ? `Level ${operator.level} · supporting refinery output` : 'Hire an Operator to strengthen production'}</Text>
+                </View>
+              </View>
+              <View style={styles.efficiencyRow}>
+                <Text style={styles.efficiencyLabel}>Line efficiency</Text>
+                <View style={styles.efficiencyTrack}><View style={[styles.efficiencyFill, { width: `${lineEfficiency}%`, backgroundColor: statusColor }]} /></View>
+                <Text style={[styles.efficiencyValue, { color: statusColor }]}>{lineEfficiency}%</Text>
+              </View>
+              <View style={styles.actionRow}>
+                <Pressable style={styles.pauseButton} onPress={cycleSpeed}>
+                  {speed === 0 ? <Play size={18} color="#FFF" fill="#FFF" /> : <Pause size={18} color="#FFF" fill="#FFF" />}
+                  <Text style={styles.pauseButtonText}>{speed === 0 ? 'Resume' : 'Pause'}</Text>
+                </Pressable>
+                <Pressable style={[styles.upgradeButton, (!canUpgrade || maxed) && styles.actionDisabled]}
+                  disabled={!canUpgrade || maxed} onPress={() => distillationIndex >= 0 && upgradeBuilding(distillationIndex)}>
+                  <Text style={styles.upgradeButtonText}>{maxed ? 'MAX LEVEL' : `Upgrade · $${formatCompactNumber(upgradeCost)}`}</Text>
+                  {!maxed && <Text style={styles.upgradeHint}>Next: +{Math.round(nextBonus * 100)}% throughput</Text>}
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.automationCard}>
+              <View style={styles.automationHeader}>
+                <View style={{ flex: 1 }}><Text style={styles.automationTitle}>Auto Trade</Text><Text style={styles.automationSub}>Keep crude stocked and sell full storage automatically.</Text></View>
+                <Switch value={autoTrade.enabled} onValueChange={(enabled) => updateAutoTrade({ enabled })}
+                  trackColor={{ false: '#39495C', true: colors.green }} />
+              </View>
+              {autoTrade.enabled && <View style={styles.automationRows}>
+                <AutomationRow enabled={autoTrade.crudeBuyEnabled} label="Buy crude below" value={autoTrade.buyThreshold}
+                  onToggle={(crudeBuyEnabled) => updateAutoTrade({ crudeBuyEnabled })}
+                  onMinus={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}
+                  onPlus={() => updateAutoTrade({ buyThreshold: Math.min(95, autoTrade.buyThreshold + 5) })} />
+                <AutomationRow enabled={autoTrade.gasolineSellEnabled} label="Sell gasoline above" value={autoTrade.sellThreshold}
+                  onToggle={(gasolineSellEnabled) => updateAutoTrade({ gasolineSellEnabled })}
+                  onMinus={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}
+                  onPlus={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })} />
+                {secondaryProducts.map((product) => {
+                  const enabled = autoTrade.productSellEnabled[product.key] !== false
+                  const value = autoTrade.productSellThresholds[product.key] ?? 80
+                  return <AutomationRow key={product.key} enabled={enabled} label={`Sell ${product.label} above`} value={value}
+                    onToggle={(next) => updateAutoTrade({ productSellEnabled: { ...autoTrade.productSellEnabled, [product.key]: next } })}
+                    onMinus={() => adjustProductThreshold(product.key, -5)} onPlus={() => adjustProductThreshold(product.key, 5)} />
+                })}
+              </View>}
             </View>
           )}
         </View>
 
-        {/* Crude price chart — history + deterministic forecast so you can time the dip */}
-        <View style={styles.marketCard}>
-          <View style={styles.marketTop}>
-            <Text style={styles.marketTitle}>{t(ss.marketTitle)}</Text>
-            <Text style={[styles.marketPrice, derived.crudePrice <= CRUDE_COST ? styles.marketPriceCheap : styles.marketPriceHigh]}>
-              ${derived.crudePrice}/u
-            </Text>
-          </View>
-          <MarketGraph tickCount={game.tickCount} width={screenWidth - spacing.lg * 2 - spacing.md * 2} height={110} nowLabel={t(ss.now)} />
-          <Text style={styles.marketHint}>{derived.crudePrice <= CRUDE_COST ? t(ss.buyHintCheap) : t(ss.buyHintHigh)}</Text>
+        <View style={styles.inventoryCard}>
+          <View style={styles.inventoryItem}><Text style={styles.inventoryValue}>{game.feedstock}/{derived.maxFeedstockStorage}</Text><Text style={styles.inventoryLabel}>FEEDSTOCK</Text></View>
+          <View style={styles.inventoryDivider} />
+          <View style={styles.inventoryItem}><Text style={styles.inventoryValue}>{game.electricity}/{derived.maxElectricityStorage}</Text><Text style={styles.inventoryLabel}>POWER</Text></View>
+          <View style={styles.inventoryDivider} />
+          <View style={styles.inventoryItem}><Text style={styles.inventoryValue}>{Math.floor(game.waste)}/{derived.maxWasteStorage}</Text><Text style={styles.inventoryLabel}>WASTE</Text></View>
         </View>
 
-        {game.pendingShipments.length > 0 && (
-          <View style={styles.pendingBox}>
-            <Text style={styles.pendingTitle}>{t(ss.incoming)}</Text>
-            {game.pendingShipments.map((s) => {
-              // arrivesAt is a tickCount now; 5 ticks/sec at 200ms.
-              const secsLeft = Math.max(0, Math.ceil((s.arrivesAt - game.tickCount) / 5))
-              return <Text key={s.id} style={styles.pendingRow}>{t(ss.crudeIn(s.amount, secsLeft))}</Text>
+        <View style={styles.supplyDrawer}>
+          <Pressable style={styles.supplyDrawerHeader} onPress={() => setSupplyOpen((open) => !open)}>
+            <View style={{ flex: 1 }}><Text style={styles.supplyDrawerTitle}>Supply & Orders</Text><Text style={styles.supplyDrawerSub}>Spot trade, shipments and standing orders</Text></View>
+            {readyOrders > 0 && <View style={styles.readyBadge}><Text style={styles.readyBadgeText}>{readyOrders} READY</Text></View>}
+            {supplyOpen ? <ChevronUp size={20} color="#FFD447" /> : <ChevronDown size={20} color="#FFD447" />}
+          </Pressable>
+
+          {supplyOpen && <View style={styles.supplyBody}>
+            <Text style={styles.sectionLabel}>Spot Trade</Text>
+            <View style={styles.tradeRow}>
+              <AnimatedPressable style={[styles.tradeButton, styles.buyButton]} onPress={() => buyCrude(10)}><Text style={styles.tradeButtonTitle}>Buy 10 Crude</Text><Text style={styles.tradeButtonSub}>${derived.crudePrice}/unit</Text></AnimatedPressable>
+              <AnimatedPressable style={[styles.tradeButton, styles.sellButton]} onPress={() => sellGasoline(10)}><Text style={styles.tradeButtonTitle}>Sell 10 Gas</Text><Text style={styles.tradeButtonSub}>${derived.sellPrice}/unit</Text></AnimatedPressable>
+            </View>
+            <View style={styles.marketCard}>
+              <View style={styles.marketTop}><Text style={styles.marketTitle}>{t(ss.marketTitle)}</Text><Text style={[styles.marketPrice, derived.crudePrice <= CRUDE_COST ? styles.marketPriceCheap : styles.marketPriceHigh]}>${derived.crudePrice}/u</Text></View>
+              <MarketGraph tickCount={game.tickCount} width={screenWidth - spacing.lg * 2 - spacing.md * 4} height={92} nowLabel={t(ss.now)} />
+            </View>
+            {game.pendingShipments.length > 0 && <View style={styles.pendingBox}>
+              <Text style={styles.pendingTitle}>{t(ss.incoming)}</Text>
+              {game.pendingShipments.map((s) => {
+                const secsLeft = Math.max(0, Math.ceil((s.arrivesAt - game.tickCount) / 5))
+                return <Text key={s.id} style={styles.pendingRow}>{t(ss.crudeIn(s.amount, secsLeft))}</Text>
+              })}
+            </View>}
+            <Text style={styles.sectionLabel}>{t(ss.orderCrude)}</Text>
+            {SHIPMENT_BALANCE.map((option) => <ListRow key={option.key} dark
+              title={t(text.shipments.names[option.key]) + t(ss.plusCrude(option.amount))}
+              subtitle={t(ss.shipmentSub(formatCompactNumber(option.cost), option.delayMs / 1000))}
+              actionLabel={t(ss.order)} disabled={game.money < option.cost} onPress={() => buyShipment(option)} />)}
+            <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>{t(ss.standingOrders)}</Text>
+            {STANDING_ORDER_BALANCE.filter((order) => game.refineryLevel >= order.unlockLevel).map((order) => {
+              const key = order.key as keyof typeof game.standingOrderCooldowns
+              const cooldownAt = game.standingOrderCooldowns[key]
+              const onCooldown = cooldownAt !== undefined && cooldownAt > game.tickCount
+              const ticksLeft = onCooldown ? cooldownAt! - game.tickCount : 0
+              const have = game.productInventory[order.productKey as keyof typeof game.productInventory] as number
+              const ready = have >= order.required && !onCooldown
+              return <ListRow key={order.key} dark title={t(text.standingOrders.orders[order.key].name)}
+                subtitle={onCooldown ? t(ss.cooldown(Math.ceil((ticksLeft * TICK_MS) / 1000))) : `${have}/${order.required} ${order.productKey} +$${formatCompactNumber(order.reward)} +${order.rpReward}RP`}
+                actionLabel={t(ss.fulfill)} disabled={!ready} onPress={() => fulfillStandingOrder(order.key)} />
             })}
-          </View>
-        )}
-
-        <Text style={styles.sectionLabel}>{t(ss.orderCrude)}</Text>
-        {SHIPMENT_BALANCE.map((option) => (
-          <ListRow key={option.key} dark
-            title={t(text.shipments.names[option.key]) + t(ss.plusCrude(option.amount))}
-            subtitle={t(ss.shipmentSub(formatCompactNumber(option.cost), option.delayMs / 1000))}
-            actionLabel={t(ss.order)} disabled={game.money < option.cost}
-            onPress={() => buyShipment(option)} />
-        ))}
-
-        <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>{t(ss.standingOrders)}</Text>
-        {STANDING_ORDER_BALANCE.filter((o) => game.refineryLevel >= o.unlockLevel).map((order) => {
-          const key = order.key as keyof typeof game.standingOrderCooldowns
-          const cooldownAt = game.standingOrderCooldowns[key]
-          const onCooldown = cooldownAt !== undefined && cooldownAt > game.tickCount
-          const ticksLeft = onCooldown ? cooldownAt! - game.tickCount : 0
-          const pKey = order.productKey as keyof typeof game.productInventory
-          const have = game.productInventory[pKey] as number
-          const ready = have >= order.required && !onCooldown
-          const orderText = text.standingOrders.orders[order.key]
-          return (
-            <ListRow key={order.key} dark title={t(orderText.name)}
-              subtitle={onCooldown
-                ? t(ss.cooldown(Math.ceil((ticksLeft * TICK_MS) / 1000)))
-                : have + "/" + order.required + " " + order.productKey + " +$" + formatCompactNumber(order.reward) + " +" + order.rpReward + "RP"}
-              actionLabel={t(ss.fulfill)} disabled={!ready}
-              onPress={() => fulfillStandingOrder(order.key)} />
-          )
-        })}
+          </View>}
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#111820' },
-  loadingScreen: { flex: 1, backgroundColor: '#111820', alignItems: 'center', justifyContent: 'center' },
-  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: FLOATING_TAB_BAR_CLEARANCE, gap: spacing.xs },
-  healthBanner: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  healthBanner_good: { backgroundColor: 'rgba(77,151,88,0.14)', borderColor: 'rgba(124,227,139,0.45)' },
-  healthBanner_warn: { backgroundColor: 'rgba(255,212,71,0.11)', borderColor: 'rgba(255,212,71,0.42)' },
-  healthBanner_bad: { backgroundColor: 'rgba(255,107,90,0.11)', borderColor: 'rgba(255,139,120,0.44)' },
-  healthBanner_idle: { backgroundColor: 'rgba(107,128,153,0.12)', borderColor: 'rgba(144,166,190,0.38)' },
-  healthDot: { width: 9, height: 9, borderRadius: 5 },
-  healthDot_good: { backgroundColor: '#7CE38B' },
-  healthDot_warn: { backgroundColor: '#FFD447' },
-  healthDot_bad: { backgroundColor: '#FF8B78' },
-  healthDot_idle: { backgroundColor: '#90A6BE' },
-  healthTitle: { fontSize: 12, fontFamily: fonts.heading, color: '#F2F6FB' },
-  healthDetail: { marginTop: 2, fontSize: 9.5, color: 'rgba(255,255,255,0.50)' },
-  healthRate: { fontSize: 11, fontFamily: fonts.heading, color: '#AFC2D4' },
-  flowCard: {
-    backgroundColor: '#172333',
-    borderRadius: 14,
-    borderTopWidth: 2,
-    borderTopColor: '#2C3D54',
-    borderBottomWidth: 3,
-    borderBottomColor: '#0A111A',
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  flowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  flowTitle: { fontSize: 14, fontFamily: fonts.heading, color: '#EAF1F8' },
-  flowSubtitle: { marginTop: 2, fontSize: 9.5, color: 'rgba(255,255,255,0.42)' },
-  flowRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  flowNode: {
-    flex: 1,
-    minHeight: 94,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 9,
-    borderWidth: 1,
-    paddingHorizontal: 3,
-  },
-  flowNode_good: { backgroundColor: 'rgba(77,151,88,0.10)', borderColor: 'rgba(124,227,139,0.35)' },
-  flowNode_warn: { backgroundColor: 'rgba(255,212,71,0.08)', borderColor: 'rgba(255,212,71,0.34)' },
-  flowNode_bad: { backgroundColor: 'rgba(255,107,90,0.08)', borderColor: 'rgba(255,139,120,0.36)' },
-  flowNode_idle: { backgroundColor: 'rgba(107,128,153,0.08)', borderColor: 'rgba(144,166,190,0.28)' },
-  flowNodeLabel: { marginTop: 5, fontSize: 8, fontFamily: fonts.heading, color: '#8FA8BF', letterSpacing: 0.6 },
-  flowNodeValue: { marginTop: 3, fontSize: 11, fontFamily: fonts.heading, color: '#FFFFFF' },
-  flowNodeStatus: { marginTop: 4, fontSize: 7.5, fontFamily: fonts.heading, letterSpacing: 0.35 },
-  flowText_good: { color: '#7CE38B' },
-  flowText_warn: { color: '#FFD447' },
-  flowText_bad: { color: '#FF8B78' },
-  flowText_idle: { color: '#90A6BE' },
-  controlRow: { flexDirection: 'row', gap: 6, marginBottom: spacing.sm },
-  controlButton: {
-    flex: 1,
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 8,
-    backgroundColor: '#1B2A3C',
-    borderWidth: 1,
-    borderColor: '#344B63',
-  },
-  controlButtonActive: { borderColor: 'rgba(124,227,139,0.55)', backgroundColor: 'rgba(77,151,88,0.14)' },
-  controlButtonText: { fontSize: 9.5, fontFamily: fonts.heading, color: '#DCE7F2' },
-  inventoryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0D3655',
-    borderWidth: 2,
-    borderColor: '#176197',
-    borderRadius: 10,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  inventoryItem: { flex: 1, alignItems: 'center' },
-  inventoryValue: { fontSize: 14, fontFamily: fonts.heading, color: '#FFFFFF' },
-  inventoryLabel: { marginTop: 2, fontSize: 8, fontFamily: fonts.heading, color: '#8FB2CE', letterSpacing: 0.5 },
-  inventoryDivider: { width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.18)' },
-  autoOn: { color: '#7CE38B' },
-  autoOff: { color: '#90A6BE' },
-  tradeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  tradeButton: {
-    flex: 1,
-    minHeight: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  buyButton: { backgroundColor: 'rgba(91,141,191,0.18)', borderColor: 'rgba(91,141,191,0.65)' },
-  sellButton: { backgroundColor: 'rgba(127,174,116,0.18)', borderColor: 'rgba(127,174,116,0.65)' },
-  tradeButtonTitle: { fontSize: 12, fontFamily: fonts.heading, color: '#EAF1F8' },
-  tradeButtonSub: { marginTop: 3, fontSize: 10, color: 'rgba(255,255,255,0.55)' },
-  automationCard: {
-    backgroundColor: '#1B2534',
-    borderRadius: 14,
-    borderTopWidth: 2,
-    borderTopColor: '#2C3D54',
-    borderBottomWidth: 3,
-    borderBottomColor: '#0C131C',
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  automationHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  automationTitle: { fontSize: 14, fontFamily: fonts.heading, color: '#EAF1F8' },
-  automationSub: { marginTop: 3, fontSize: 10, color: 'rgba(255,255,255,0.48)' },
-  automationChevron: { fontSize: 13, color: '#90A6BE' },
-  automationRows: { marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  screen: { flex: 1, backgroundColor: '#09131E' },
+  loadingScreen: { flex: 1, backgroundColor: '#09131E', alignItems: 'center', justifyContent: 'center' },
+  list: { paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 10 },
+  controlRoom: { height: 238, justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: 16, paddingBottom: 20 },
+  controlRoomImage: { opacity: 0.95 },
+  sceneShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(2,15,30,0.20)' },
+  sceneTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  sceneEyebrow: { fontSize: 8, fontFamily: fonts.heading, letterSpacing: 1.4, color: '#A7D6FA', textShadowColor: '#06192B', textShadowRadius: 2 },
+  sceneTitle: { marginTop: 3, fontSize: 28, fontFamily: fonts.heading, color: '#FFF', textShadowColor: '#06192B', textShadowRadius: 4 },
+  liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.36)', backgroundColor: 'rgba(5,31,54,0.82)', paddingHorizontal: 9, paddingVertical: 7 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  liveText: { fontSize: 8, fontFamily: fonts.heading, color: '#FFF' },
+  sceneStats: { alignSelf: 'center', minWidth: '84%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', borderRadius: 11, borderWidth: 1, borderColor: 'rgba(118,184,232,0.55)', backgroundColor: 'rgba(3,29,52,0.88)', paddingVertical: 10, paddingHorizontal: 12 },
+  sceneStatLabel: { textAlign: 'center', fontSize: 7, fontFamily: fonts.heading, color: '#82AAC8', letterSpacing: 0.7 },
+  sceneStatValue: { marginTop: 3, textAlign: 'center', fontSize: 13, fontFamily: fonts.heading, color: '#FFF' },
+  sceneStatDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.16)' },
+  operationsPanel: { marginHorizontal: spacing.md, marginTop: -12, borderRadius: 14, borderWidth: 2, borderColor: '#176AA4', backgroundColor: '#092844', padding: 12, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
+  panelHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  panelTitle: { fontSize: 19, fontFamily: fonts.heading, color: '#FFF' },
+  panelSubtitle: { marginTop: 3, fontSize: 9.5, color: '#93B1C9' },
+  speedButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 8, backgroundColor: '#FFD447', paddingHorizontal: 10, paddingVertical: 8 },
+  speedButtonPaused: { backgroundColor: '#78ED87' },
+  speedButtonText: { fontSize: 9, fontFamily: fonts.heading, color: '#0A3152' },
+  alertStrip: { marginTop: 10, minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 7, borderWidth: 1, paddingHorizontal: 10 },
+  alertStrip_good: { backgroundColor: 'rgba(58,151,82,0.17)', borderColor: 'rgba(120,237,135,0.35)' },
+  alertStrip_warn: { backgroundColor: 'rgba(255,212,71,0.12)', borderColor: 'rgba(255,212,71,0.38)' },
+  alertStrip_bad: { backgroundColor: 'rgba(255,88,72,0.12)', borderColor: 'rgba(255,137,118,0.42)' },
+  alertStrip_idle: { backgroundColor: 'rgba(136,160,185,0.10)', borderColor: 'rgba(161,180,200,0.30)' },
+  alertDot: { width: 9, height: 9, borderRadius: 5 },
+  alertText: { flex: 1, fontSize: 9.5, color: '#D9E7F2' },
+  flowRow: { marginTop: 11, flexDirection: 'row', alignItems: 'center' },
+  plantNode: { flex: 1, minHeight: 128, alignItems: 'center', justifyContent: 'flex-end', borderRadius: 9, borderWidth: 1, paddingHorizontal: 3, paddingBottom: 7, overflow: 'hidden' },
+  plantNodeLarge: { flex: 1.13, minHeight: 138 },
+  plantNode_good: { backgroundColor: 'rgba(31,91,75,0.26)', borderColor: 'rgba(120,237,135,0.46)' },
+  plantNode_warn: { backgroundColor: 'rgba(106,85,23,0.24)', borderColor: 'rgba(255,212,71,0.48)' },
+  plantNode_bad: { backgroundColor: 'rgba(102,38,38,0.24)', borderColor: 'rgba(255,137,118,0.48)' },
+  plantNode_idle: { backgroundColor: 'rgba(60,78,96,0.24)', borderColor: 'rgba(161,180,200,0.36)' },
+  plantImage: { width: 74, height: 74, marginBottom: -3 },
+  plantImageLarge: { width: 88, height: 88, marginBottom: -7 },
+  plantTitle: { fontSize: 8.5, fontFamily: fonts.heading, color: '#FFF' },
+  plantStock: { marginTop: 3, fontSize: 10, fontFamily: fonts.heading, color: '#DCEAF4' },
+  plantStatus: { marginTop: 3, fontSize: 6.5, fontFamily: fonts.heading, letterSpacing: 0.45 },
+  toneText_good: { color: '#78ED87' }, toneText_warn: { color: '#FFD447' }, toneText_bad: { color: '#FF8976' }, toneText_idle: { color: '#A1B4C8' },
+  flowArrow: { width: 25, alignItems: 'center', gap: 2 },
+  flowRate: { fontSize: 6.5, fontFamily: fonts.heading, color: '#88A4BC' },
+  tabRow: { marginTop: 11, flexDirection: 'row', borderWidth: 1, borderColor: '#1D5C8B', borderRadius: 8, overflow: 'hidden' },
+  tabButton: { flex: 1, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: '#0B3557' },
+  tabButtonActive: { backgroundColor: '#FFD447' },
+  tabText: { fontSize: 10, fontFamily: fonts.heading, color: '#8DA6BD' },
+  tabTextActive: { color: '#0A3152' },
+  unitCard: { marginTop: 9, borderRadius: 9, borderWidth: 1, borderColor: '#215D89', backgroundColor: '#081F35', padding: 10 },
+  unitTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  unitTitle: { fontSize: 13, fontFamily: fonts.heading, color: '#FFF' },
+  unitSubtitle: { marginTop: 2, fontSize: 8.5, color: '#82A3BD' },
+  unitStatus: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 5 },
+  unitStatus_good: { backgroundColor: 'rgba(63,153,78,0.14)', borderColor: 'rgba(120,237,135,0.38)' },
+  unitStatus_warn: { backgroundColor: 'rgba(255,212,71,0.12)', borderColor: 'rgba(255,212,71,0.36)' },
+  unitStatus_bad: { backgroundColor: 'rgba(255,88,72,0.12)', borderColor: 'rgba(255,137,118,0.38)' },
+  unitStatus_idle: { backgroundColor: 'rgba(136,160,185,0.10)', borderColor: 'rgba(161,180,200,0.30)' },
+  unitStatusText: { fontSize: 7.5, fontFamily: fonts.heading },
+  ioRow: { marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ioBox: { flex: 1, borderRadius: 7, borderWidth: 1, borderColor: '#1D547D', backgroundColor: '#0B2B48', padding: 8 },
+  ioLabel: { fontSize: 7, fontFamily: fonts.heading, color: '#7D9DB8' },
+  ioValue: { marginTop: 3, fontSize: 9.5, fontFamily: fonts.heading, color: '#FFF' },
+  staffRow: { marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 9, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)', paddingTop: 9 },
+  avatar: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 7, borderWidth: 1, borderColor: '#2872A7', backgroundColor: '#0E3B60' },
+  staffName: { fontSize: 10.5, fontFamily: fonts.heading, color: '#FFF' },
+  staffBonus: { marginTop: 3, fontSize: 8.5, color: '#90ADC4' },
+  efficiencyRow: { marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  efficiencyLabel: { fontSize: 8.5, color: '#A2B7C9' },
+  efficiencyTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: '#17364E', overflow: 'hidden' },
+  efficiencyFill: { height: '100%', borderRadius: 4 },
+  efficiencyValue: { width: 32, textAlign: 'right', fontSize: 9, fontFamily: fonts.heading },
+  actionRow: { marginTop: 10, flexDirection: 'row', gap: 8 },
+  pauseButton: { flex: 0.8, minHeight: 47, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 7, backgroundColor: '#176FC1' },
+  pauseButtonText: { fontSize: 11, fontFamily: fonts.heading, color: '#FFF' },
+  upgradeButton: { flex: 1.45, minHeight: 47, alignItems: 'center', justifyContent: 'center', borderRadius: 7, backgroundColor: '#FFD447' },
+  upgradeButtonText: { fontSize: 10.5, fontFamily: fonts.heading, color: '#0A3152' },
+  upgradeHint: { marginTop: 2, fontSize: 7.5, color: '#42536A' },
+  actionDisabled: { opacity: 0.42 },
+  automationCard: { marginTop: 9, borderRadius: 9, borderWidth: 1, borderColor: '#215D89', backgroundColor: '#081F35', padding: 10 },
+  automationHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  automationTitle: { fontSize: 13, fontFamily: fonts.heading, color: '#FFF' },
+  automationSub: { marginTop: 2, fontSize: 8.5, color: '#82A3BD' },
+  automationRows: { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   automationRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   rowSwitch: { transform: [{ scaleX: 0.76 }, { scaleY: 0.76 }], marginHorizontal: -5 },
-  automationRowLabel: { flex: 1, fontSize: 10.5, color: '#DCE7F2', fontWeight: '700' },
-  automationRowLabelOff: { color: 'rgba(255,255,255,0.32)' },
+  automationRowLabel: { flex: 1, fontSize: 9.5, color: '#DCE7F2', fontWeight: '700' },
+  off: { color: 'rgba(255,255,255,0.32)' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   stepperButton: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: '#26364A', borderWidth: 1, borderColor: '#41566F' },
   stepperButtonText: { fontSize: 16, fontFamily: fonts.heading, color: '#EAF1F8' },
-  stepperValue: { width: 34, textAlign: 'center', fontSize: 10, fontFamily: fonts.heading, color: '#FFD447' },
-  sectionLabel: { fontSize: 11, fontFamily: fonts.heading, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs, marginTop: spacing.xs },
-  marketCard: {
-    backgroundColor: '#1B2534', borderRadius: 14,
-    borderTopWidth: 2, borderTopColor: '#2C3D54',
-    borderBottomWidth: 3, borderBottomColor: '#0C131C',
-    padding: spacing.md, marginBottom: spacing.sm,
-  },
+  stepperValue: { width: 34, textAlign: 'center', fontSize: 9, fontFamily: fonts.heading, color: '#FFD447' },
+  inventoryCard: { marginHorizontal: spacing.md, marginTop: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: '#0D3655', borderWidth: 1, borderColor: '#176197', borderRadius: 10, paddingVertical: 10 },
+  inventoryItem: { flex: 1, alignItems: 'center' },
+  inventoryValue: { fontSize: 12, fontFamily: fonts.heading, color: '#FFF' },
+  inventoryLabel: { marginTop: 2, fontSize: 7, fontFamily: fonts.heading, color: '#8FB2CE', letterSpacing: 0.5 },
+  inventoryDivider: { width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.18)' },
+  supplyDrawer: { marginHorizontal: spacing.md, marginTop: 10, borderRadius: 12, borderWidth: 1, borderColor: '#27455F', backgroundColor: '#101F2E', overflow: 'hidden' },
+  supplyDrawerHeader: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
+  supplyDrawerTitle: { fontSize: 13, fontFamily: fonts.heading, color: '#FFF' },
+  supplyDrawerSub: { marginTop: 3, fontSize: 8.5, color: '#8099AE' },
+  readyBadge: { borderRadius: 5, backgroundColor: '#29784A', paddingHorizontal: 6, paddingVertical: 4 },
+  readyBadgeText: { fontSize: 7, fontFamily: fonts.heading, color: '#FFF' },
+  supplyBody: { borderTopWidth: 1, borderTopColor: '#27455F', padding: 12, gap: 7 },
+  sectionLabel: { fontSize: 9, fontFamily: fonts.heading, color: '#7F99AF', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 3 },
+  tradeRow: { flexDirection: 'row', gap: 8 },
+  tradeButton: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1 },
+  buyButton: { backgroundColor: 'rgba(91,141,191,0.18)', borderColor: 'rgba(91,141,191,0.65)' },
+  sellButton: { backgroundColor: 'rgba(127,174,116,0.18)', borderColor: 'rgba(127,174,116,0.65)' },
+  tradeButtonTitle: { fontSize: 10.5, fontFamily: fonts.heading, color: '#EAF1F8' },
+  tradeButtonSub: { marginTop: 3, fontSize: 9, color: 'rgba(255,255,255,0.55)' },
+  marketCard: { backgroundColor: '#172333', borderRadius: 9, padding: 10 },
   marketTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  marketTitle: { fontSize: 13, fontFamily: fonts.heading, color: '#EAF1F8', textTransform: 'uppercase', letterSpacing: 0.5 },
-  marketPrice: { fontSize: 16, fontFamily: fonts.heading },
+  marketTitle: { fontSize: 10.5, fontFamily: fonts.heading, color: '#EAF1F8', textTransform: 'uppercase', letterSpacing: 0.5 },
+  marketPrice: { fontSize: 13, fontFamily: fonts.heading },
   marketPriceCheap: { color: colors.green },
   marketPriceHigh: { color: colors.orange },
-  marketHint: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4, fontStyle: 'italic' },
-  pendingBox: {
-    backgroundColor: 'rgba(91,141,191,0.14)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(91,141,191,0.5)',
-    padding: spacing.sm, gap: 4, marginBottom: spacing.sm,
-  },
-  pendingTitle: { fontSize: 12, fontFamily: fonts.heading, color: '#9CC2EC' },
-  pendingRow: { fontSize: 12, color: '#B9D4F2' },
+  pendingBox: { backgroundColor: 'rgba(91,141,191,0.14)', borderRadius: 9, borderWidth: 1, borderColor: 'rgba(91,141,191,0.5)', padding: 9, gap: 4 },
+  pendingTitle: { fontSize: 10.5, fontFamily: fonts.heading, color: '#9CC2EC' },
+  pendingRow: { fontSize: 10, color: '#B9D4F2' },
 })

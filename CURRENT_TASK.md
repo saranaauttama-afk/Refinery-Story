@@ -1,24 +1,25 @@
-# CURRENT TASK — U2.6 Operations Flow UI
+# CURRENT TASK — U2.6B Operations Visual Rebuild
 
 ## Goal
 
-Turn Operations into a readable live production dashboard without changing
-production balance, save data, or the established Factory scene.
+Bring Operations materially closer to the approved pixel-art control-room
+mockup without changing production balance or save data.
 
 ## Active Phase
 
-`U2.6 — implementation complete, device review deferred to the next APK`
+`U2.6B — implementation complete, device review deferred to the next APK`
 
 ## Shipped in This Pass
 
-1. Added a live Crude → Process → Gas production flow.
-2. Added real bottleneck diagnosis for paused production, missing
-   distillation, empty crude, full gasoline storage, and low electricity.
-3. Added live node status and output-per-minute feedback.
-4. Added compact speed, Factory, and Auto Trade controls.
-5. Added feedstock, electricity, and waste process inventory.
-6. Collapsed detailed Auto Trade thresholds by default.
-7. Preserved all economy, balance, and save behavior.
+1. Added a new pixel-art refinery control-room background.
+2. Replaced generic flow icons with the existing Crude Tank, Distillation Unit,
+   and Product Tank sprites.
+3. Added a focused Process card with live input/output, crew, efficiency,
+   Pause/Resume, and a real building Upgrade action.
+4. Moved automation into a dedicated tab in the main Operations panel.
+5. Collapsed spot trade, market, shipments, and standing orders into a secondary
+   Supply & Orders drawer so the production scene remains dominant.
+6. Preserved live bottleneck diagnosis and all existing economy/save behavior.
 
 ## Release Gates
 
