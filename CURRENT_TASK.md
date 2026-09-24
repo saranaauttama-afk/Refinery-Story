@@ -35,3 +35,5 @@ existing saves, verify the full progression loop, then publish one final APK.
 ## Release Policy
 
 No milestone APKs. Build once after every release gate passes.
+
+Build marker: `REFINERY-STORY-1.0-RC`.
