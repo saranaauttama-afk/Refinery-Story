@@ -1,5 +1,6 @@
 import type { ChoiceEvent } from '../game/types'
 import Dialog, { DialogButton } from './Dialog'
+import { useLang } from '../hooks/SettingsContext'
 
 type ChoiceEventModalProps = {
   event: ChoiceEvent | null
@@ -7,18 +8,19 @@ type ChoiceEventModalProps = {
 }
 
 function ChoiceEventModal({ event, onChoose }: ChoiceEventModalProps) {
+  const { t } = useLang()
   return (
     <Dialog
       visible={!!event}
       dismissOnBackdrop={false}
       icon="📣"
-      title={event?.title.en}
-      subtitle={event?.description.en}
+      title={event ? t(event.title) : undefined}
+      subtitle={event ? t(event.description) : undefined}
       footer={
         event ? (
           <>
-            <DialogButton label={event.optionA.en} variant="primary" onPress={() => onChoose('A')} />
-            <DialogButton label={event.optionB.en} variant="secondary" onPress={() => onChoose('B')} />
+            <DialogButton label={t(event.optionA)} variant="primary" onPress={() => onChoose('A')} />
+            <DialogButton label={t(event.optionB)} variant="secondary" onPress={() => onChoose('B')} />
           </>
         ) : null
       }
