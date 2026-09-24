@@ -15,6 +15,7 @@ import AnimatedPressable from '../../../src/components/AnimatedPressable'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
 import GameIcon from '../../../src/components/GameIcon'
 import StaffSkillList from '../../../src/components/StaffSkillList'
+import StaffPortrait from '../../../src/components/StaffPortrait'
 import { SKILL_CHANNELS } from '../../../src/game/data/staffSkills'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
@@ -188,7 +189,7 @@ export default function StaffScreen() {
             return (
               <View key={employee.id} style={[styles.empCard, nearRetire && styles.empCardRetiring]}>
                 <View style={styles.empTop}>
-                  <View style={styles.empRoleIcon}><GameIcon name={`worker-${employee.type}`} size={34} /></View>
+                  <View style={styles.empRoleIcon}><StaffPortrait type={employee.type} size={58} /></View>
                   <View style={styles.empNameBlock}>
                     <Text style={styles.empName}>{employee.name}{trait ? ` ${trait.badge}` : ''}{nearRetire ? ' 🕰' : ''}</Text>
                     <Text style={styles.empRole}>
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
   empCard: { backgroundColor: '#102B45', borderRadius: 12, borderWidth: 2, borderColor: '#285A7D', borderBottomWidth: 5, borderBottomColor: '#061522', padding: spacing.md },
   empCardRetiring: { borderColor: 'rgba(232,131,58,0.6)', borderBottomColor: '#5A3417', backgroundColor: 'rgba(232,131,58,0.08)' },
   empTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  empRoleIcon: { marginRight: spacing.sm },
+  empRoleIcon: { width: 62, height: 62, overflow: 'hidden', marginRight: spacing.sm, borderRadius: 8, borderWidth: 1, borderColor: '#326F99', backgroundColor: '#F4EAD7', alignItems: 'center', justifyContent: 'center' },
   empNameBlock: { flex: 1, marginRight: spacing.sm },
   empName: { fontSize: 14, fontFamily: fonts.heading, color: '#EAF1F8' },
   empRole: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
