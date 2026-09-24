@@ -23,11 +23,11 @@ import type { RecruitmentCandidate, RecruitmentTier } from '../../../src/game/ty
 
 const CREW_ROOM = require('../../../assets/bg/team_crew_room_v1.png')
 
-const TIER_CONFIG: Record<RecruitmentTier, { label: string; color: string; dark: string }> = {
-  rookie: { label: 'ROOKIE', color: '#AFC1D0', dark: '#435A6D' },
-  skilled: { label: 'SKILLED', color: '#8ED6FF', dark: '#24658F' },
-  expert: { label: 'EXPERT', color: '#FFB873', dark: '#A95824' },
-  star: { label: 'STAR', color: '#FFD447', dark: '#9A7414' },
+const TIER_CONFIG: Record<RecruitmentTier, { label: keyof typeof text.recruitScreen.tiers; color: string; dark: string }> = {
+  rookie: { label: 'rookie', color: '#AFC1D0', dark: '#435A6D' },
+  skilled: { label: 'skilled', color: '#8ED6FF', dark: '#24658F' },
+  expert: { label: 'expert', color: '#FFB873', dark: '#A95824' },
+  star: { label: 'star', color: '#FFD447', dark: '#9A7414' },
 }
 
 function CandidateCard({ candidate, selected, canHire, atCap, onSelect, onHire }: {
@@ -43,7 +43,7 @@ function CandidateCard({ candidate, selected, canHire, atCap, onSelect, onHire }
       <View style={styles.candidateBody}>
         <View style={styles.nameRow}><Text style={styles.candidateName} numberOfLines={1}>{candidate.name}{trait ? ` ${trait.badge}` : ''}</Text>{candidate.isAce ? <Text style={styles.aceStar}>★</Text> : null}</View>
         <Text style={styles.candidateRole} numberOfLines={1}>{worker ? t(worker.name) : candidate.type} · Lv{candidate.startingLevel}</Text>
-        <View style={[styles.tierChip, { borderColor: tier.dark, backgroundColor: `${tier.dark}55` }]}><Text style={[styles.tierChipText, { color: tier.color }]}>{tier.label}</Text></View>
+        <View style={[styles.tierChip, { borderColor: tier.dark, backgroundColor: `${tier.dark}55` }]}><Text style={[styles.tierChipText, { color: tier.color }]}>{t(text.recruitScreen.tiers[tier.label])}</Text></View>
         {candidate.skills?.length ? <StaffSkillList skills={candidate.skills.slice(0, 2)} isAce={candidate.isAce} compact /> : null}
       </View>
       <View style={styles.priceColumn}>
