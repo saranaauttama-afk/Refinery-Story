@@ -2,13 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   ActivityIndicator,
   Image,
-  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   UIManager,
   View,
@@ -26,7 +24,6 @@ import { Bell, Clock3, Hammer, LocateFixed, Menu, Zap } from 'lucide-react-nativ
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedPressable from '../../../src/components/AnimatedPressable'
-import DeliveryTruck from '../../../src/components/DeliveryTruck'
 import OnboardingOverlay from '../../../src/components/OnboardingOverlay'
 import CrisisBanner from '../../../src/components/CrisisBanner'
 import FloatingNumbers from '../../../src/components/FloatingNumbers'
@@ -42,16 +39,14 @@ import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, fonts, modernUi, pixelRadii, pixelUi, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
 import GameIcon from '../../../src/components/GameIcon'
 import HistoryGraph from '../../../src/components/HistoryGraph'
-import SaturationBars from '../../../src/components/SaturationBars'
 import { text } from '../../../src/game/translations'
 import { BUILDINGS } from '../../../src/game/data/buildings'
 import { ENDGAME_GOALS } from '../../../src/game/data/endgameGoals'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
 import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, PRODUCTION_BALANCE, POWER_PLANT_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
-import type { BilingualTextValue, BuildingType, DerivedStats } from '../../../src/game/types'
+import type { BilingualTextValue, BuildingType } from '../../../src/game/types'
 import {
-  CRUDE_COST,
   getBuildingEffectLines,
   getCellAssignedToEmployee,
   getCellStaffBonus,
@@ -59,7 +54,6 @@ import {
   getPowerBreakdown,
   getComboHintCells,
   getEmployeeAssignedToCell,
-  getProductMarketLevel,
   getProductSellPrice,
   formatGameClockTime,
   getSeasonLabel,
@@ -204,38 +198,14 @@ const UPGRADEABLE: BuildingType[] = [
   'polymerPlant',
 ]
 
-const PRODUCT_PLANT_BUILDING: Record<
-  'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
-  BuildingType
-> = {
-  lubricants: 'lubricantPlant',
-  jetFuel: 'jetFuelPlant',
-  petrochemicals: 'petrochemicalPlant',
-  recycledMaterial: 'wasteTreatmentPlant',
-  plasticPellets: 'polymerPlant',
-}
-
-function PRODUCT_MAX_STORAGE(
-  derived: DerivedStats,
-  key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
-): number {
-  switch (key) {
-    case 'lubricants':      return derived.maxLubricantsStorage
-    case 'jetFuel':         return derived.maxJetFuelStorage
-    case 'petrochemicals':  return derived.maxPetrochemicalsStorage
-    case 'recycledMaterial':return derived.maxRecycledMaterialStorage
-    case 'plasticPellets':  return derived.maxPlasticPelletsStorage
-  }
-}
-
 // ── Scene geometry constants ──────────────────────────────────────────────────
 const SKY_RATIO    = 0.08   // สัดส่วนความสูงฟ้า (0.0–1.0) → กำหนดตำแหน่ง HUD + Grid
 const HORIZON_H    = 8    // px — ความสูง horizon strip (ถ้าไม่ใช้ bg รูปก็ set 0 ได้)
-const RESOURCE_H   = 48    // px — resource dock height
+const RESOURCE_H   = 40    // px — compact resource dock height
 const FLOW_H       = 22    // px — slim flow-rate strip (net $/min + output/min)
-const GOAL_H       = 26    // px — slim goal banner height
-const RESOURCE_DOCK_H = 52 // px — dark resource dock card height
-const ACTION_DOCK_H   = 48 // px — bottom action dock height
+const GOAL_H       = 26    // retained for the legacy goal style
+const RESOURCE_DOCK_H = 40 // px — compact resource dock card height
+const ACTION_DOCK_H = 48   // retained by legacy style definitions
 
 // ── Layout tweaks (ปรับ UI position ตรงนี้ได้เลย) ───────────────────────────
 const HUD_OFFSET_UP  = 4  // px — HUD (resource dock) ขยับขึ้นจาก yardTop
@@ -250,10 +220,9 @@ export default function RefineryScreen() {
   const sound = useSound()
   const {
     game, loaded, derived,
-    buyCrude, sellGasoline,
     placeBuilding, demolishBuilding, moveBuilding, swapBuildings,
     claimHiddenEvent, upgradeBuilding, upgradeRefinery,
-    autoTrade, updateAutoTrade, activateBoost,
+    activateBoost,
     adjustFeedstockPriority, assignEmployeeToCell, unassignCell,
     speed, cycleSpeed, flowRates, moneyHistory,
   } = useGame()
@@ -284,37 +253,9 @@ export default function RefineryScreen() {
   }
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [gridEditMode, setGridEditMode] = useState<{ type: 'move' | 'swap'; fromIndex: number } | null>(null)
-  // Drives the unified Trade panel's expand/collapse (Buy/Sell + Auto-
-  // trade combined into one floating panel above the tab bar -- replaces
-  // the old separate "Automation" sheet, which was dead code ({false &&
-  // ...}) on this branch, and the old always-expanded Buy/Sell button
-  // pair). Starts collapsed.
-  const [tradePanelOpen, setTradePanelOpen] = useState(false)
   const [powerPanelOpen, setPowerPanelOpen] = useState(false)
-  const toggleTradePanel = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    setTradePanelOpen((v) => !v)
-  }
-
-  // updateAutoTrade does a shallow merge ({ ...current, ...partial }), so
-  // passing a fresh productSellThresholds object would WIPE OUT every
-  // other product's customized threshold, not just set this one -- this
-  // helper merges into the existing per-product map first.
-  const adjustProductSellThreshold = (
-    key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets',
-    delta: number,
-  ) => {
-    const current = autoTrade.productSellThresholds[key] ?? 80
-    const next = Math.min(100, Math.max(0, current + delta))
-    updateAutoTrade({ productSellThresholds: { ...autoTrade.productSellThresholds, [key]: next } })
-  }
   const [secondaryOpen, setSecondaryOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
-  // Drives the delivery-truck flyby on the yard: bump the counter on a trade
-  // and stamp the direction (crude in / gasoline out).
-  const [truck, setTruck] = useState<{ key: number; direction: 'in' | 'out' }>({ key: 0, direction: 'in' })
-  const sendTruck = (direction: 'in' | 'out') =>
-    setTruck((t) => ({ key: t.key + 1, direction }))
 
   // Background parallax shared values + style. MUST stay above the early
   // return below so the hook order is identical on every render (React #310).
@@ -385,7 +326,6 @@ export default function RefineryScreen() {
   // Flow-rate strip sits directly under the resource dock...
   const flowTop     = resourceTop + RESOURCE_H + 6
   // ...and the goal panel sits just below that, inside the yard
-  const goalTop     = flowTop + FLOW_H + 6
 
   // ── Derived game values ───────────────────────────────────────────────────
   const seasonLabel        = getSeasonLabel(game.tickCount, game.yearStartTick)
@@ -508,28 +448,6 @@ export default function RefineryScreen() {
   const nextGoal: { name: BilingualTextValue; progress?: { current: number; target: number } | null } | undefined =
     activeMilestone ?? (nextEndgameGoal ? { name: nextEndgameGoal.name, progress: nextEndgameGoal.progress(game) } : undefined)
 
-  const products: {
-    key: 'lubricants' | 'jetFuel' | 'petrochemicals' | 'recycledMaterial' | 'plasticPellets'
-    label: string; color: string
-  }[] = [
-    { key: 'lubricants',       label: 'Lubricants',  color: colors.goldDark },
-    { key: 'jetFuel',          label: 'Jet Fuel',    color: colors.blue },
-    { key: 'petrochemicals',   label: 'Petrochem',   color: colors.purple },
-    { key: 'recycledMaterial', label: 'Recycled',    color: colors.greenDark },
-    { key: 'plasticPellets',   label: 'Pellets',     color: colors.teal },
-  ]
-
-  // Inventory strip (bottom dock): crude + gas + every product the player has a
-  // plant for, each shown as have/max — so quantities are visible at a glance
-  // and a new product's row appears the moment its plant is built.
-  const inventoryItems: { key: string; label: string; color: string; have: number; max: number }[] = [
-    { key: 'crude', label: 'Crude', color: colors.goldDark, have: game.crudeOil, max: derived.maxCrudeStorage },
-    { key: 'gasoline', label: 'Gas', color: colors.orange, have: game.gasoline, max: derived.maxGasolineStorage },
-    ...products
-      .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
-      .map((p) => ({ key: p.key, label: p.label, color: p.color, have: game.productInventory[p.key] ?? 0, max: PRODUCT_MAX_STORAGE(derived, p.key) })),
-  ]
-
   const safeGame    = game
   const safeDerived = derived
 
@@ -540,7 +458,7 @@ export default function RefineryScreen() {
   // Layer 1 (z:10) — Grid: absolute, top=yardTop, ScrollView inside
   // Layer 2 (z:20) — HUD: name/level top-left; time/events top-right
   // Layer 3 (z:20) — Resource strip + goal panel, straddle sky/yard boundary
-  // Layer 4 (z:20) — Buy/Sell floating above bottom nav
+  // Operations owns Buy/Sell and Auto Trade; the Factory has no bottom dock.
   // ═══════════════════════════════════════════════════════════════════════════
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -620,8 +538,7 @@ export default function RefineryScreen() {
                   setHoveredBuildingKey(null)
                 }}
               >
-                <Hammer size={16} color={buildModeOpen ? '#071E31' : '#FFD447'} strokeWidth={2.8} />
-                <Text style={[styles.buildModeButtonText, buildModeOpen && styles.buildModeButtonTextActive]}>BUILD</Text>
+                <Hammer size={20} color={buildModeOpen ? '#071E31' : '#FFD447'} strokeWidth={2.8} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -645,19 +562,7 @@ export default function RefineryScreen() {
           )}
         </View>
 
-        {/* Delivery truck flyby — crude in / gasoline out on each trade */}
-        <DeliveryTruck
-          triggerKey={truck.key}
-          direction={truck.direction}
-          sceneWidth={width}
-          y={sceneHeight * 0.6}
-        />
-
         {/* ── Layer 2 + 3: Company block + Resource Dock + Goal ─────────── */}
-
-        {/* One hard-edged HUD plate keeps the controls readable without
-            turning every value into a separate floating pill. */}
-        <View pointerEvents="none" style={[styles.topHudPlate, { height: resourceTop + RESOURCE_DOCK_H }]} />
 
         {/* Company identity stays quiet so the world remains the focus. */}
         <View style={styles.companyBlock}>
@@ -723,15 +628,7 @@ export default function RefineryScreen() {
             <Text style={styles.dockVal}>{game.gasoline}</Text>
           </View>
           <View style={styles.dockDivider} />
-          <Pressable style={styles.dockStat} onPress={() => setPowerPanelOpen(true)}>
-            <Zap size={21} color={powerDeficit ? modernUi.warning : modernUi.accent} fill={powerDeficit ? 'transparent' : modernUi.accentSoft} />
-            <Text style={[styles.dockVal, powerDeficit && styles.dockValWarn]}>{powerBd.supply}</Text>
-          </Pressable>
-          <View style={styles.dockDivider} />
-          {/* Rep doubles as the "More Info" toggle — Specialization / Feedstock /
-              Power / Era / Prestige live one tap away to keep the dock focused.
-              Alert dot flags a meter that needs eyes. */}
-          <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen((v) => !v)}>
+          <Pressable style={styles.dockStat} onPress={() => setSecondaryOpen(true)}>
             <View style={styles.dockToggleIconWrap}>
               <GameIcon name="reputation" size={22} />
               {secondaryAlert && <View style={styles.dockAlertDot} />}
@@ -788,241 +685,6 @@ export default function RefineryScreen() {
             </Text>
           </Pressable>
         </View>
-
-        {/* Goal banner — slim, sits just inside yard */}
-        {nextGoal && (
-          <Pressable
-            style={[styles.goalBanner, { top: goalTop }]}
-            onPress={() => router.push('/achievements')}
-          >
-            <Text style={styles.goalBannerText} numberOfLines={1}>
-              🎯 {t(nextGoal.name)}
-            </Text>
-            {nextGoal.progress ? (
-              <Text style={styles.goalBannerProgress}>
-                {formatCompactNumber(nextGoal.progress.current)}/{formatCompactNumber(nextGoal.progress.target)}
-              </Text>
-            ) : null}
-          </Pressable>
-        )}
-
-        {/* ── Layer 4: Unified Trade panel (Buy/Sell + Auto-trade) ──────────
-            Replaces the old always-full-size Buy/Sell button pair. Per
-            feedback: those buttons are only really needed in the first
-            few minutes before Auto-trade gets turned on, after which
-            they're just large dead space sitting above the tab bar. Now
-            collapses to a small pill (shows the Auto-trade on/off status
-            even collapsed, so that's still glanceable) and expands
-            upward into the full panel -- smaller Buy/Sell buttons plus
-            the Auto-trade toggle/thresholds in the same place, instead
-            of a separate Automation sheet.
-
-            The expanded panel renders inside a Modal (not just another
-            absolutely-positioned View) -- per feedback that expanding it
-            covered up other floating buttons/menus behind it. React
-            Navigation's tab bar (and possibly other screen-level
-            absolutely-positioned HUD) doesn't reliably respect zIndex
-            against a plain View, a known cross-platform RN/React
-            Navigation quirk; Modal always renders in its own top-level
-            layer above the navigator, which is why Sheet.tsx already
-            uses one for the build/info sheets. Made transparent with no
-            backdrop dimming (unlike Sheet's full-screen takeover) and
-            its content positioned to visually sit right above the pill,
-            so it still reads as "this panel belongs to that pill" rather
-            than a disconnected modal. */}
-        {/* ── Action Dock — gasoline context + AUTO badge + trade toggle ── */}
-        {/* Sits just above the persistent BottomNav (height 56 + safe-area). */}
-        <View style={[styles.actionDock, { bottom: 66 + insets.bottom }]} pointerEvents="box-none">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.invStrip}
-            contentContainerStyle={styles.invStripContent}
-          >
-            {inventoryItems.map((item) => {
-              const full = item.max > 0 && item.have >= item.max
-              return (
-                <View key={item.key} style={styles.invChip}>
-                  <View style={[styles.invDot, { backgroundColor: item.color }]} />
-                  <View>
-                    <Text style={[styles.invVal, full && styles.invValFull]}>{item.have}/{item.max}</Text>
-                    <Text style={styles.invLabel}>{item.label}</Text>
-                  </View>
-                </View>
-              )
-            })}
-          </ScrollView>
-          <View style={styles.actionDockRight}>
-            {autoTrade.enabled && (
-              <View style={styles.autoBadge}>
-                <Text style={styles.autoBadgeText}>AUTO</Text>
-              </View>
-            )}
-            <Pressable style={styles.tradeDockBtn} onPress={toggleTradePanel}>
-              <Text style={styles.tradeDockBtnText}>Trade {tradePanelOpen ? '▾' : '▴'}</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <Modal visible={tradePanelOpen} transparent animationType="fade" onRequestClose={toggleTradePanel}>
-          <Pressable style={styles.tradeModalBackdrop} onPress={toggleTradePanel}>
-            <View style={styles.tradeModalAnchor}>
-              <Pressable style={styles.tradePanel} onPress={(e) => e.stopPropagation()}>
-                <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.tradeActionsRow}>
-                <AnimatedPressable
-                  style={[styles.tradeActionBtn, styles.buyBtn]}
-                  onPress={() => {
-                    const actualBuy = Math.min(
-                      10,
-                      Math.floor(game.money / derived.crudePrice),
-                      derived.maxCrudeStorage - game.crudeOil,
-                    )
-                    if (actualBuy > 0) {
-                      spawnFloat(`-$${(actualBuy * derived.crudePrice).toLocaleString()}`, 'expense')
-                      haptics.tap()
-                      sound.play('tap')
-                      sendTruck('in')
-                    }
-                    buyCrude(10)
-                  }}
-                >
-                  <Text style={styles.tradeActionLabel}>Buy 10 Crude</Text>
-                  {/* Dynamic Market: live spot price + cheap/pricey hint vs base */}
-                  <Text style={styles.tradeActionSub}>
-                    ${derived.crudePrice}/unit{' '}
-                    <Text style={derived.crudePrice <= CRUDE_COST ? styles.priceCheap : styles.pricePricey}>
-                      {derived.crudePrice <= CRUDE_COST ? '↓ cheap' : '↑ high'}
-                    </Text>
-                  </Text>
-                </AnimatedPressable>
-                <AnimatedPressable
-                  style={[styles.tradeActionBtn, styles.sellBtn]}
-                  onPress={() => {
-                    const actualSell = Math.min(10, game.gasoline)
-                    if (actualSell > 0) {
-                      spawnFloat(`+$${(actualSell * derived.sellPrice).toLocaleString()}`, 'income')
-                      haptics.tap()
-                      sound.play('sell')
-                      sendTruck('out')
-                    }
-                    sellGasoline(10)
-                  }}
-                >
-                  <Text style={styles.tradeActionLabel}>Sell 10 Gas</Text>
-                  <Text style={styles.tradeActionSub}>
-                    ${derived.sellPrice}/unit{' '}
-                    {getProductMarketLevel(game, 'gasoline') < 0.9 ? (
-                      <Text style={styles.pricePricey}>↓ low</Text>
-                    ) : null}
-                  </Text>
-                </AnimatedPressable>
-              </View>
-
-              <View style={styles.tradeDivider} />
-
-              {/* Demand saturation — which products are flooded (low = dumping
-                  it further just tanks its own price). */}
-              <Text style={styles.tradeSectionTitle}>{t(text.hud.demandTitle)}</Text>
-              <SaturationBars
-                rows={[
-                  { label: 'Gasoline', level: getProductMarketLevel(game, 'gasoline') },
-                  ...products
-                    .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
-                    .map((p) => ({ label: p.label, level: getProductMarketLevel(game, p.key) })),
-                ]}
-              />
-
-              <View style={styles.tradeDivider} />
-
-              <View style={styles.autoTradeHeaderRow}>
-                <Text style={styles.autoTradeRowTitle}>🔄 Auto-trade</Text>
-                <Switch
-                  value={autoTrade.enabled}
-                  onValueChange={(v) => updateAutoTrade({ enabled: v })}
-                  trackColor={{ false: colors.creamBorder, true: colors.green }}
-                />
-              </View>
-              {autoTrade.enabled && (
-                <>
-                  <View style={styles.thresholdRow}>
-                    <Switch
-                      style={styles.rowSwitch}
-                      value={autoTrade.crudeBuyEnabled}
-                      onValueChange={(v) => updateAutoTrade({ crudeBuyEnabled: v })}
-                      trackColor={{ false: colors.creamBorder, true: colors.green }}
-                    />
-                    <Text style={[styles.thresholdLabel, !autoTrade.crudeBuyEnabled && styles.thresholdLabelOff]}>Buy crude below {autoTrade.buyThreshold}%</Text>
-                    <View style={styles.stepper}>
-                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.max(0, autoTrade.buyThreshold - 5) })}>
-                        <Text style={styles.stepperLabel}>−</Text>
-                      </Pressable>
-                      <Text style={styles.stepperValue}>{autoTrade.buyThreshold}%</Text>
-                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ buyThreshold: Math.min(95, autoTrade.buyThreshold + 5) })}>
-                        <Text style={styles.stepperLabel}>+</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                  <View style={styles.thresholdRow}>
-                    <Switch
-                      style={styles.rowSwitch}
-                      value={autoTrade.gasolineSellEnabled}
-                      onValueChange={(v) => updateAutoTrade({ gasolineSellEnabled: v })}
-                      trackColor={{ false: colors.creamBorder, true: colors.green }}
-                    />
-                    <Text style={[styles.thresholdLabel, !autoTrade.gasolineSellEnabled && styles.thresholdLabelOff]}>Sell gasoline above {autoTrade.sellThreshold}%</Text>
-                    <View style={styles.stepper}>
-                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.max(0, autoTrade.sellThreshold - 5) })}>
-                        <Text style={styles.stepperLabel}>−</Text>
-                      </Pressable>
-                      <Text style={styles.stepperValue}>{autoTrade.sellThreshold}%</Text>
-                      <Pressable style={styles.stepperButton} onPress={() => updateAutoTrade({ sellThreshold: Math.min(100, autoTrade.sellThreshold + 5) })}>
-                        <Text style={styles.stepperLabel}>+</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  {/* One row per secondary product the player has a plant
-                      for -- e.g. building a Lubricant Plant adds a
-                      "Sell lubricants above X%" row here, so Auto-trade
-                      covers it without a separate manual sell-chip tap
-                      every few minutes. Hidden entirely for products with
-                      no plant built yet (nothing to gate a threshold on). */}
-                  {products
-                    .filter((p) => derived.buildingCounts[PRODUCT_PLANT_BUILDING[p.key]] > 0)
-                    .map((p) => {
-                      const threshold = autoTrade.productSellThresholds[p.key] ?? 80
-                      const on = autoTrade.productSellEnabled[p.key] !== false
-                      return (
-                        <View key={p.key} style={styles.thresholdRow}>
-                          <Switch
-                            style={styles.rowSwitch}
-                            value={on}
-                            onValueChange={(v) => updateAutoTrade({ productSellEnabled: { ...autoTrade.productSellEnabled, [p.key]: v } })}
-                            trackColor={{ false: colors.creamBorder, true: colors.green }}
-                          />
-                          <Text style={[styles.thresholdLabel, !on && styles.thresholdLabelOff]}>
-                            Sell {p.label.toLowerCase()} above {threshold}%
-                          </Text>
-                          <View style={styles.stepper}>
-                            <Pressable style={styles.stepperButton} onPress={() => adjustProductSellThreshold(p.key, -5)}>
-                              <Text style={styles.stepperLabel}>−</Text>
-                            </Pressable>
-                            <Text style={styles.stepperValue}>{threshold}%</Text>
-                            <Pressable style={styles.stepperButton} onPress={() => adjustProductSellThreshold(p.key, 5)}>
-                              <Text style={styles.stepperLabel}>+</Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      )
-                    })}
-                </>
-              )}
-                </ScrollView>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Modal>
 
         {/* ── Power breakdown sheet — where the electricity goes ──────────── */}
         <Modal visible={powerPanelOpen} transparent animationType="fade" onRequestClose={() => setPowerPanelOpen(false)}>
@@ -1081,6 +743,17 @@ export default function RefineryScreen() {
 
       {/* ── More Info sheet ──────────────────────────────────────────────── */}
       <Sheet visible={secondaryOpen} title={t(text.hud.moreInfo)} onClose={() => setSecondaryOpen(false)}>
+        {nextGoal && (
+          <Pressable style={styles.moreGoalCard} onPress={() => { setSecondaryOpen(false); router.push('/achievements') }}>
+            <Text style={styles.moreGoalLabel}>CURRENT GOAL</Text>
+            <Text style={styles.moreGoalTitle}>{t(nextGoal.name)}</Text>
+            {nextGoal.progress && (
+              <Text style={styles.moreGoalProgress}>
+                {formatCompactNumber(nextGoal.progress.current)}/{formatCompactNumber(nextGoal.progress.target)}
+              </Text>
+            )}
+          </Pressable>
+        )}
         {secondaryStats.map((stat) => (
           <View key={stat.label} style={styles.infoStatRow}>
             <Text style={styles.infoStatLabel}>{stat.label}</Text>
@@ -1139,12 +812,7 @@ export default function RefineryScreen() {
         )}
       </Sheet>
 
-      {/* The old "Automation" sheet (Auto-trade toggle/thresholds +
-          Feedstock Priority) lived here as dead code ({false && ...} --
-          never rendered). Auto-trade now lives in the unified Trade
-          panel above (Layer 4); Feedstock Priority already has a home in
-          the Production tab (app/game/(tabs)/production.tsx), so nothing
-          was lost by removing this duplicate. */}
+      {/* Buy/Sell and Auto Trade now live on Operations. */}
 
       {/* ── Build picker ─────────────────────────────────────────────────── */}
       <Sheet
@@ -1718,14 +1386,11 @@ const styles = StyleSheet.create({
     zIndex: 4,
   },
   buildModeButton: {
-    height: 40,
-    minWidth: 88,
-    paddingHorizontal: 11,
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderRadius: pixelRadii.control,
+    borderRadius: 22,
     backgroundColor: 'rgba(10,35,56,0.94)',
     borderWidth: 2,
     borderColor: '#176197',
@@ -2089,7 +1754,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   companyNameRow: {
-    maxWidth: 166,
+    maxWidth: 132,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -2254,12 +1919,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: pixelUi.surface,
-    borderRadius: 0,
-    paddingHorizontal: 6,
+    backgroundColor: 'rgba(10,35,56,0.88)',
+    borderRadius: pixelRadii.control,
+    paddingHorizontal: 4,
     zIndex: 20,
-    borderTopWidth: 2,
-    borderTopColor: pixelUi.borderSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   dockStat: {
     flex: 1,
@@ -2330,7 +1995,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: pixelUi.surface,
+    backgroundColor: 'rgba(10,35,56,0.82)',
     borderRadius: pixelRadii.control,
     borderWidth: 2,
     borderColor: pixelUi.borderSoft,
@@ -2427,6 +2092,32 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.gold,
     marginLeft: spacing.xs,
+  },
+  moreGoalCard: {
+    backgroundColor: 'rgba(255,212,71,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,212,71,0.42)',
+    borderRadius: pixelRadii.control,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  moreGoalLabel: {
+    fontSize: 9,
+    fontFamily: fonts.heading,
+    color: '#FFD447',
+    letterSpacing: 1,
+  },
+  moreGoalTitle: {
+    marginTop: 3,
+    fontSize: 13,
+    fontFamily: fonts.heading,
+    color: '#FFFFFF',
+  },
+  moreGoalProgress: {
+    marginTop: 4,
+    fontSize: 11,
+    fontFamily: fonts.heading,
+    color: '#FFD447',
   },
 
   // ── Layer 4: Floating action buttons ──────────────────────────────────────
