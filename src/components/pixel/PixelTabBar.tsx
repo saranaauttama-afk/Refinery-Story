@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { fonts, pixelUi } from '../../theme'
+import factoryGlyph from '../../assets/generated/distillationUnitLv1'
 
 const VISIBLE_ROUTES = ['index', 'supply', 'contracts', 'staff'] as const
 const LABELS: Record<string, string> = {
@@ -20,7 +21,7 @@ function NavGlyph({ route, active }: { route: string; active: boolean }) {
   if (route === 'index') {
     return (
       <Image
-        source={require('../../../assets/plants/distillation_unit_lv1.png')}
+        source={{ uri: factoryGlyph }}
         style={[styles.factoryGlyph, !active && styles.glyphDim]}
         resizeMode="contain"
       />
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   labelActive: { color: pixelUi.accent },
-  factoryGlyph: { width: 31, height: 27 },
+  factoryGlyph: { width: 34, height: 30, marginTop: -2 },
   glyphDim: { opacity: 0.58 },
   operationsGlyph: { width: 28, height: 28, justifyContent: 'center', gap: 3 },
   pipe: { width: 27, height: 4 },
