@@ -1239,3 +1239,8 @@ src/
   buildingColors.ts     placeholder per-building tile colors
 assets/icons/           30 isometric SVGs (generated, not wired in yet)
 ```
+
+## Next playtest findings (2026-09-24)
+
+- **Product Visibility Pass (design first):** make unlocked products visible and meaningful beyond Crude/Gasoline. Keep Factory HUD compact, add an active-product inventory strip, and redesign Business around a Product Market with stock, capacity, demand/price, contract need, and clear sell actions. Do not change the working early-game economy before a focused playtest.
+- **Event freeze QA pass (high priority):** investigate intermittent game lock-ups when a surprise/event overlay appears, requiring app restart. Reproduce against ChoiceEventModal, AwardModal, EraBanner, ComboDiscoveryBanner, HiddenEventBanner, and overlapping modal/banner states; verify all dismissal/action/error paths restore input and simulation without requiring a restart. Diagnose and add regression coverage before altering event content or balance.
