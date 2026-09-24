@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { ImageSourcePropType } from 'react-native'
+import distillationUnitLv1 from '../assets/generated/distillationUnitLv1'
+import crudeTankLv1 from '../assets/generated/crudeTankLv1'
+import productTankLv1 from '../assets/generated/productTankLv1'
 
 import {
   BUILDING_CATEGORY_ACCENT,
@@ -15,9 +18,9 @@ import { colors, radii } from '../theme'
 import BuildingSilhouette from './BuildingSilhouette'
 
 const PLANT_TILE_PREVIEW: Partial<Record<BuildingType, ImageSourcePropType>> = {
-  distillationUnit: require('../../assets/plants/distillation_unit_lv1_v3.png'),
-  crudeTank: require('../../assets/plants/crude_tank_lv1_v3.png'),
-  productTank: require('../../assets/plants/product_tank_lv1_v3.png'),
+  distillationUnit: { uri: distillationUnitLv1 },
+  crudeTank: { uri: crudeTankLv1 },
+  productTank: { uri: productTankLv1 },
   laboratory: require('../../assets/plants/laboratory_lv1.png'),
   maintenanceWorkshop: require('../../assets/plants/maintenance_workshop_lv1.png'),
   salesOffice: require('../../assets/plants/sales_office_lv1.png'),
