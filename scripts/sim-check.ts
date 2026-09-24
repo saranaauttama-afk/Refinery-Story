@@ -9,7 +9,12 @@
  */
 import { runPlaythrough } from './full-loop-sim'
 import { ENDGAME_GOALS, LEGEND_LIFETIME_GASOLINE } from '../src/game/data/endgameGoals'
-import { createInitialGameState } from '../src/game/utils/gameCalculations'
+import {
+  applyBankruptcySafetyNet,
+  calculateDerivedStats,
+  createInitialGameState,
+} from '../src/game/utils/gameCalculations'
+import { applyAutoTrade, tick, type AutoTradeSettings } from '../src/game/utils/gameTick'
 
 // Direction A targets Industry Legend around ~200k ticks (~11h at 1x).
 // Budget generously at 320,000 ticks (~18h) — exceeding it means something
@@ -27,6 +32,30 @@ const fresh = createInitialGameState()
 check(fresh.grid.includes('crudeTank'), 'new game is missing its starter Crude Tank')
 check(fresh.grid.includes('distillationUnit'), 'new game is missing its starter Distillation Unit')
 check(fresh.crudeOil > 0, 'new game has no crude for its first production cycle')
+
+// Opening economy regression: before a downstream plant exists, Distillation
+// must not burn crude into unsellable feedstock. Run one real minute of the
+// actual tick + auto-trade loop, not a derived gross-income estimate.
+const earlyAutoTrade: AutoTradeSettings = {
+  enabled: true,
+  crudeBuyEnabled: true,
+  gasolineSellEnabled: true,
+  productSellEnabled: {},
+  buyThreshold: 20,
+  sellThreshold: 80,
+  productSellThresholds: {},
+}
+let early = fresh
+for (let i = 0; i < 300; i++) early = applyAutoTrade(tick(early), earlyAutoTrade)
+check(early.feedstock === 0, `starter refinery created unusable feedstock (${early.feedstock})`)
+check(early.totalGasolineProduced > 0, 'starter refinery produced no gasoline in its first minute')
+check(early.money > 0, `starter refinery went bankrupt in its first minute (${Math.round(early.money)})`)
+
+// A legacy save with stranded feedstock but no downstream plant is still truly
+// stuck; that unusable inventory must not suppress the emergency subsidy.
+const stranded = { ...fresh, money: 0, crudeOil: 0, gasoline: 0, feedstock: 10 }
+const relief = applyBankruptcySafetyNet(stranded, calculateDerivedStats(stranded))
+check(relief.triggered, 'stranded feedstock blocked the bankruptcy safety net')
 
 console.log('Running balance regression check (full playthrough)...\n')
 const { game: g, goalTick, yearScores } = runPlaythrough()

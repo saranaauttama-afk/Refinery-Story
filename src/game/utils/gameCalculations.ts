@@ -1307,10 +1307,18 @@ export function applyBankruptcySafetyNet(
 ): { game: GameState; triggered: boolean } {
   const crudePrice = getCrudePrice(game.tickCount)
   const hasProducts = Object.values(game.productInventory).some((v) => v > 0)
+  // Old saves can contain feedstock produced before any downstream plant was
+  // available. That stock is not sellable and cannot restart the refinery, so
+  // it must not block emergency relief unless a real consumer exists.
+  const hasFeedstockConsumer =
+    game.grid.includes('lubricantPlant') ||
+    game.grid.includes('jetFuelPlant') ||
+    game.grid.includes('petrochemicalPlant')
+  const hasUsableFeedstock = game.feedstock > 0 && hasFeedstockConsumer
   const stuck =
     game.money < crudePrice &&
     game.crudeOil <= 0 &&
-    game.feedstock <= 0 &&
+    !hasUsableFeedstock &&
     game.gasoline <= 0 &&
     !hasProducts
   if (!stuck) return { game, triggered: false }

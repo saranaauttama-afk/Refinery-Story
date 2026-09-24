@@ -234,7 +234,17 @@ export function tick(current: GameState): GameState {
   let waste = Math.min(current.waste + wasteGenerated, stats.maxWasteStorage)
 
   // --- Distillation: crude -> feedstock ---
+  // Feedstock has no use before the player owns a downstream plant. Running
+  // this line in the Lv1-4 starter refinery burned 3 crude/second into an
+  // unsellable stockpile, making the opening loop lose roughly $1,200/minute.
+  // Keep the gasoline speed benefit of Distillation Units, but only start the
+  // separate feedstock line once there is a real consumer on the grid.
+  const hasFeedstockConsumer =
+    stats.buildingCounts.lubricantPlant > 0 ||
+    stats.buildingCounts.jetFuelPlant > 0 ||
+    stats.buildingCounts.petrochemicalPlant > 0
   if (
+    hasFeedstockConsumer &&
     stats.feedstockPerDistillationCycle > 0 &&
     nextTick % FEEDSTOCK_BALANCE.distillationIntervalTicks === 0
   ) {
