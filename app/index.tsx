@@ -116,9 +116,9 @@ const styles = StyleSheet.create({
   },
   splashBrand: { position: 'absolute', top: '12%', left: 0, right: 0, alignItems: 'center' },
   brand: { alignItems: 'center', paddingTop: 34, zIndex: 2 },
-  brandKicker: { fontSize: 9, fontFamily: fonts.heading, letterSpacing: 2.4, color: '#EAF4FC', textShadowColor: '#061522', textShadowOffset: { width: 1, height: 2 }, textShadowRadius: 0 },
-  brandTitle: { marginTop: 2, fontSize: 42, lineHeight: 43, fontFamily: fonts.display, color: '#FFF', letterSpacing: 1.2, textShadowColor: '#061522', textShadowOffset: { width: 3, height: 4 }, textShadowRadius: 0 },
-  brandTitleAccent: { marginTop: -7, fontSize: 44, lineHeight: 46, fontFamily: fonts.display, color: '#FFD447', letterSpacing: 4, textShadowColor: '#7A4C08', textShadowOffset: { width: 3, height: 4 }, textShadowRadius: 0 },
+  brandKicker: { fontSize: 9, fontFamily: fonts.brandHeading, letterSpacing: 2.4, color: '#EAF4FC', textShadowColor: '#061522', textShadowOffset: { width: 1, height: 2 }, textShadowRadius: 0 },
+  brandTitle: { marginTop: 2, fontSize: 42, lineHeight: 43, fontFamily: fonts.brandDisplay, color: '#FFF', letterSpacing: 1.2, textShadowColor: '#061522', textShadowOffset: { width: 3, height: 4 }, textShadowRadius: 0 },
+  brandTitleAccent: { marginTop: -7, fontSize: 44, lineHeight: 46, fontFamily: fonts.brandDisplay, color: '#FFD447', letterSpacing: 4, textShadowColor: '#7A4C08', textShadowOffset: { width: 3, height: 4 }, textShadowRadius: 0 },
   bottomShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '49%', backgroundColor: 'rgba(3,15,27,0.56)' },
   bottomContent: {
     paddingHorizontal: spacing.lg,

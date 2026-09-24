@@ -86,18 +86,17 @@ export const pixelRadii = {
   panel: 4,
 } as const
 
-// Custom display font (Baloo 2 -- friendly, rounded, readable) loaded at app
-// start in app/_layout.tsx. Until the font finishes loading these family
-// names fall back to the system font. Applied to the game's "hero" text
-// (company name, resource dock, headlines, celebration modals) to give the
-// UI a cozy game identity instead of the default system typeface. Roll out
-// to more screens by swapping a style's fontWeight for one of these.
+// Readable UI typography. Pixelify Sans is reserved for the front-door logo;
+// dense in-game labels, values and buttons use Baloo 2 so small text remains
+// clear on a phone without losing the game's friendly identity.
 export const fonts = {
-  display: 'PixelifySans_700Bold', // hero titles: unmistakable modern pixel silhouette
-  heading: 'PixelifySans_600SemiBold', // section headers, badges, values
-  pixelBody: 'PixelifySans_500Medium', // compact labels and game read-outs
+  display: 'Baloo2_800ExtraBold',
+  heading: 'Baloo2_700Bold',
+  pixelBody: 'Baloo2_500Medium',
   body: 'Baloo2_500Medium', // labels, body copy
   regular: 'Baloo2_400Regular',
+  brandDisplay: 'PixelifySans_700Bold',
+  brandHeading: 'PixelifySans_600SemiBold',
 } as const
 
 export const spacing = {
