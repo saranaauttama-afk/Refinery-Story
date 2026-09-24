@@ -350,12 +350,12 @@ export default function ContractsScreen() {
               return (
                 <View key={group.key} style={[styles.productStockCard, contractReady && styles.productStockReady]}>
                   <View style={styles.productStockTop}>
-                    <GameIcon name={\`product-\${group.key}\`} size={25} />
+                    <GameIcon name={`product-${group.key}`} size={25} />
                     <Text style={styles.productStockName} numberOfLines={1}>{t(sc.groups[group.key])}</Text>
                   </View>
                   <Text style={styles.productStockValue}>{formatCompactNumber(stock)}</Text>
                   <Text style={[styles.productStockHint, contractReady && styles.productStockHintReady]}>
-                    {nextNeed > 0 ? (contractReady ? 'READY FOR DEAL' : \`NEXT DEAL: \${formatCompactNumber(nextNeed)}\`) : 'NO ACTIVE DEAL'}
+                    {nextNeed > 0 ? (contractReady ? 'READY FOR DEAL' : `NEXT DEAL: ${formatCompactNumber(nextNeed)}`) : 'NO ACTIVE DEAL'}
                   </Text>
                 </View>
               )
