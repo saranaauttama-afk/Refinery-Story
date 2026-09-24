@@ -428,12 +428,6 @@ export const text = {
     fulfill: bilingual('Fulfill', 'ส่งมอบ'),
   },
   recruitScreen: {
-    tiers: {
-      rookie: bilingual('ROOKIE', 'มือใหม่'),
-      skilled: bilingual('SKILLED', 'ชำนาญการ'),
-      expert: bilingual('EXPERT', 'ผู้เชี่ยวชาญ'),
-      star: bilingual('STAR', 'สตาร์'),
-    },
     title: bilingual('Recruit', 'จ้างงาน'),
     hiringOffice: bilingual('Hiring Office', 'สำนักงานจัดหางาน'),
     mystery: bilingual('Mystery!', 'ปริศนา!'),
