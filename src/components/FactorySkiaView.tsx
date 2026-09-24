@@ -300,6 +300,8 @@ function FactorySkiaView({
         y: lotY,
         cx: lotX + LOT_WIDTH / 2,
         cy: lotY + LOT_HEIGHT / 2,
+        hw: LOT_WIDTH / 2,
+        hh: LOT_HEIGHT / 2,
         occupied: !!cell,
         sprite: visual && spriteRect ? {
           source: visual.source,
@@ -404,13 +406,11 @@ function FactorySkiaView({
     cameraScale: number,
   ) => {
     const worldPoint = screenPointToWorld(px, py, cameraX, cameraY, cameraScale)
-    const hw = TILE_WIDTH / 2
-    const hh = TILE_HEIGHT / 2
     // Front-most first (reverse diagonal order) so overlapping picks the top tile.
     for (let i = ground.length - 1; i >= 0; i--) {
       const g = ground[i]
       if (!showPlacementGrid && !g.occupied) continue
-      if (Math.abs(worldPoint.x - g.cx) / hw + Math.abs(worldPoint.y - g.cy) / hh <= 1) {
+      if (Math.abs(worldPoint.x - g.cx) / g.hw + Math.abs(worldPoint.y - g.cy) / g.hh <= 1) {
         onCellPress?.(g.key)
         return
       }
