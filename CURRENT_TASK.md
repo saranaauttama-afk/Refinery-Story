@@ -1,25 +1,24 @@
-# CURRENT TASK — U2.5 Compact Factory UI
+# CURRENT TASK — U2.6 Operations Flow UI
 
 ## Goal
 
-Finish the approved Factory cleanup before starting the gameplay fun pass.
-Keep the refinery world visually dominant and move operational controls to
-their correct top-level screen.
+Turn Operations into a readable live production dashboard without changing
+production balance, save data, or the established Factory scene.
 
 ## Active Phase
 
-`U2.5 — implementation complete, device review pending`
+`U2.6 — implementation complete, device review deferred to the next APK`
 
 ## Shipped in This Pass
 
-1. Reduced the always-visible Factory resource dock from five stats to the
-   four core values: money, crude, gasoline, and reputation.
-2. Removed the large background plate and bottom Inventory/Trade dock from
-   the refinery scene.
-3. Changed Build to a compact icon-only camera control.
-4. Moved the current goal into the More Info sheet.
-5. Moved spot Buy/Sell and all Auto Trade controls to Operations.
-6. Preserved all existing Auto Trade settings and save behavior.
+1. Added a live Crude → Process → Gas production flow.
+2. Added real bottleneck diagnosis for paused production, missing
+   distillation, empty crude, full gasoline storage, and low electricity.
+3. Added live node status and output-per-minute feedback.
+4. Added compact speed, Factory, and Auto Trade controls.
+5. Added feedstock, electricity, and waste process inventory.
+6. Collapsed detailed Auto Trade thresholds by default.
+7. Preserved all economy, balance, and save behavior.
 
 ## Release Gates
 
@@ -27,13 +26,12 @@ their correct top-level screen.
 - `scripts/sim-check.ts`
 - `scripts/full-loop-sim.ts`
 - `scripts/camera-check.ts`
-- Android APK build and physical-device review
+- Android APK build after the next UI screen milestone
 
 ## Next Phase
 
-`U2.6 — Operations production-flow redesign`
+`U2.7 — Business screen redesign`
 
-Add the approved Crude Tank → Distillation → Storage flow, bottleneck status,
-and plant actions without changing production balance. The separate gameplay
-redesign remains documented in [FUN_BLUEPRINT.md](FUN_BLUEPRINT.md) and starts
-only after the UI V2 screens are complete.
+Organize the current contract, available jobs, shipments, and market into one
+clear business workflow. The separate gameplay redesign remains documented in
+[FUN_BLUEPRINT.md](FUN_BLUEPRINT.md) and starts only after UI V2 is complete.

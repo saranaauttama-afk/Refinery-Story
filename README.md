@@ -188,10 +188,10 @@
 >     conflicting tap-to-navigate-to-Achievements behavior).
 >
 > **What's next (2026-09-24)**: finish the approved UI V2 sequence before the
-> gameplay redesign. `U2.5 — Compact Factory UI` moves trading and automation
-> to Operations and clears the refinery scene; physical-device review is next.
-> Then implement `U2.6 — Operations production-flow redesign`, followed by the
-> remaining Business, Team, and secondary-screen passes. Read
+> gameplay redesign. `U2.5 — Compact Factory UI` cleared the refinery scene,
+> and `U2.6 — Operations Flow UI` added live production health, bottlenecks,
+> controls, and a Crude → Process → Gas flow. Next implement `U2.7 — Business`,
+> followed by Team and the remaining secondary-screen passes. Read
 > [CURRENT_TASK.md](CURRENT_TASK.md). The later gameplay redesign is preserved
 > in [FUN_BLUEPRINT.md](FUN_BLUEPRINT.md); do not start U3 until UI V2 is done.
 > The remaining historical suggestions below stay deferred:
