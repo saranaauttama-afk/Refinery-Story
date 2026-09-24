@@ -22,15 +22,12 @@ import {
 import { CRUDE_COST, TICK_MS, formatCompactNumber } from '../../../src/game/utils/gameCalculations'
 import { text } from '../../../src/game/translations'
 import { colors, fonts, spacing, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { STARTER_PLANT_ART_BY_LEVEL } from '../../../src/starterPlantArt'
 
 const CONTROL_ROOM = require('../../../assets/bg/operations_control_room_v1.png')
-const CRUDE_TANK = require('../../../assets/plants/crude_tank_lv1_v3.png')
-const DISTILLATION_LEVELS: Record<number, ImageSourcePropType> = {
-  1: require('../../../assets/plants/distillation_unit_lv1_v3.png'),
-  2: require('../../../assets/plants/distillation_unit_lv2.png'),
-  3: require('../../../assets/plants/distillation_unit_lv3.png'),
-}
-const PRODUCT_TANK = require('../../../assets/plants/product_tank_lv1_v3.png')
+const CRUDE_TANK = STARTER_PLANT_ART_BY_LEVEL.crudeTank![1]
+const DISTILLATION_LEVELS = STARTER_PLANT_ART_BY_LEVEL.distillationUnit!
+const PRODUCT_TANK = STARTER_PLANT_ART_BY_LEVEL.productTank![1]
 
 type Tone = 'good' | 'warn' | 'bad' | 'idle'
 

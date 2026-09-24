@@ -37,6 +37,7 @@ import { useHaptics } from '../../../src/hooks/useHaptics'
 import { useSound } from '../../../src/hooks/useSound'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import { colors, radii, spacing, fonts, modernUi, pixelRadii, pixelUi, FLOATING_TAB_BAR_CLEARANCE } from '../../../src/theme'
+import { STARTER_PLANT_ART_BY_LEVEL } from '../../../src/starterPlantArt'
 import GameIcon from '../../../src/components/GameIcon'
 import HistoryGraph from '../../../src/components/HistoryGraph'
 import { text } from '../../../src/game/translations'
@@ -122,9 +123,9 @@ const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 
 // Plant art thumbnails used in build + info sheets
 const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSourcePropType>>> = {
-  crudeTank:           { 1: require('../../../assets/plants/crude_tank_lv1_v3.png'), 2: require('../../../assets/plants/crude_tank_lv2.png'), 3: require('../../../assets/plants/crude_tank_lv3.png') },
-  distillationUnit:    { 1: require('../../../assets/plants/distillation_unit_lv1_v3.png'), 2: require('../../../assets/plants/distillation_unit_lv2.png'), 3: require('../../../assets/plants/distillation_unit_lv3.png') },
-  productTank:         { 1: require('../../../assets/plants/product_tank_lv1_v3.png'), 2: require('../../../assets/plants/product_tank_lv2.png'), 3: require('../../../assets/plants/product_tank_lv3.png') },
+  crudeTank:           STARTER_PLANT_ART_BY_LEVEL.crudeTank,
+  distillationUnit:    STARTER_PLANT_ART_BY_LEVEL.distillationUnit,
+  productTank:         STARTER_PLANT_ART_BY_LEVEL.productTank,
   laboratory:          { 1: require('../../../assets/plants/laboratory_lv1.png'), 2: require('../../../assets/plants/laboratory_lv2.png'), 3: require('../../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice:         { 1: require('../../../assets/plants/sales_office_lv1.png'), 2: require('../../../assets/plants/sales_office_lv2.png'), 3: require('../../../assets/plants/sales_office_lv3.png') },
@@ -143,9 +144,9 @@ const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSou
 
 // Plant art thumbnails (lv1) used in build sheet
 const PLANT_THUMB: Partial<Record<BuildingType, ReturnType<typeof require>>> = {
-  crudeTank:           require('../../../assets/plants/crude_tank_lv1_v3.png'),
-  distillationUnit:    require('../../../assets/plants/distillation_unit_lv1_v3.png'),
-  productTank:         require('../../../assets/plants/product_tank_lv1_v3.png'),
+  crudeTank:           STARTER_PLANT_ART_BY_LEVEL.crudeTank![1],
+  distillationUnit:    STARTER_PLANT_ART_BY_LEVEL.distillationUnit![1],
+  productTank:         STARTER_PLANT_ART_BY_LEVEL.productTank![1],
   laboratory:          require('../../../assets/plants/laboratory_lv1.png'),
   maintenanceWorkshop: require('../../../assets/plants/maintenance_workshop_lv1.png'),
   salesOffice:         require('../../../assets/plants/sales_office_lv1.png'),

@@ -12,6 +12,7 @@ import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/ty
 import { colors, radii } from '../theme'
 import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL } from '../config/factoryScene'
 import { getPlantSpriteProfile, getPlantSpriteRect } from '../factoryPlantLayout'
+import { STARTER_PLANT_ART_BY_LEVEL } from '../starterPlantArt'
 import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
@@ -77,19 +78,19 @@ const SQUARE_PLANT_ASPECT_RATIO = 1
 
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, PlantImageSpec>>> = {
   distillationUnit: {
-    1: { source: require('../../assets/plants/distillation_unit_lv1_v3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    2: { source: require('../../assets/plants/distillation_unit_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    3: { source: require('../../assets/plants/distillation_unit_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    1: { source: STARTER_PLANT_ART_BY_LEVEL.distillationUnit![1], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: STARTER_PLANT_ART_BY_LEVEL.distillationUnit![2], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: STARTER_PLANT_ART_BY_LEVEL.distillationUnit![3], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   crudeTank: {
-    1: { source: require('../../assets/plants/crude_tank_lv1_v3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    2: { source: require('../../assets/plants/crude_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    3: { source: require('../../assets/plants/crude_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    1: { source: STARTER_PLANT_ART_BY_LEVEL.crudeTank![1], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: STARTER_PLANT_ART_BY_LEVEL.crudeTank![2], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: STARTER_PLANT_ART_BY_LEVEL.crudeTank![3], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   productTank: {
-    1: { source: require('../../assets/plants/product_tank_lv1_v3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    2: { source: require('../../assets/plants/product_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    3: { source: require('../../assets/plants/product_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    1: { source: STARTER_PLANT_ART_BY_LEVEL.productTank![1], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: STARTER_PLANT_ART_BY_LEVEL.productTank![2], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: STARTER_PLANT_ART_BY_LEVEL.productTank![3], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   laboratory: {
     1: { source: require('../../assets/plants/laboratory_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },

@@ -29,11 +29,10 @@ const DEFAULT_PROFILE: PlantSpriteProfile = {
   groundOffsetY: 8,
 }
 
-// U2.4 starter art uses newer v3 canvases with different transparent padding.
-// Keep the tuning here instead of scattering one-off offsets through each
-// renderer. Higher levels use the shared default until their art is calibrated
-// from device screenshots.
-const STARTER_LEVEL_ONE_PROFILES: Partial<Record<BuildingType, PlantSpriteProfile>> = {
+// The nine starter sprites are one matched 256x256 set with a built-in base.
+// Keep one profile per building across Lv1-Lv3 so upgrading changes the plant,
+// never its tile contact point or footprint.
+const STARTER_PLANT_PROFILES: Partial<Record<BuildingType, PlantSpriteProfile>> = {
   distillationUnit: {
     scale: 1.3,
     anchorX: 0.5,
@@ -57,9 +56,8 @@ const STARTER_LEVEL_ONE_PROFILES: Partial<Record<BuildingType, PlantSpriteProfil
   },
 }
 
-export function getPlantSpriteProfile(cell: BuildingType, level: number): PlantSpriteProfile {
-  if (level === 1) return STARTER_LEVEL_ONE_PROFILES[cell] ?? DEFAULT_PROFILE
-  return DEFAULT_PROFILE
+export function getPlantSpriteProfile(cell: BuildingType, _level: number): PlantSpriteProfile {
+  return STARTER_PLANT_PROFILES[cell] ?? DEFAULT_PROFILE
 }
 
 /**

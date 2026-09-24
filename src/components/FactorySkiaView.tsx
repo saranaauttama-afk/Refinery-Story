@@ -1,15 +1,6 @@
 import { memo, useEffect, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import type { ImageSourcePropType } from 'react-native'
-import distillationUnitLv1 from '../assets/generated/distillationUnitLv1'
-import distillationUnitLv2 from '../assets/generated/distillationUnitLv2'
-import distillationUnitLv3 from '../assets/generated/distillationUnitLv3'
-import crudeTankLv1 from '../assets/generated/crudeTankLv1'
-import crudeTankLv2 from '../assets/generated/crudeTankLv2'
-import crudeTankLv3 from '../assets/generated/crudeTankLv3'
-import productTankLv1 from '../assets/generated/productTankLv1'
-import productTankLv2 from '../assets/generated/productTankLv2'
-import productTankLv3 from '../assets/generated/productTankLv3'
 
 import {
   Canvas,
@@ -40,6 +31,7 @@ import {
   GRID_SPREAD,
 } from '../config/factoryScene'
 import { getPlantSpriteProfile, getPlantSpriteRect } from '../factoryPlantLayout'
+import { STARTER_PLANT_ART_BY_LEVEL } from '../starterPlantArt'
 import {
   FACTORY_INITIAL_SCALE,
   FACTORY_MAX_SCALE,
@@ -99,9 +91,9 @@ function diamondPath(x: number, y: number, w: number, h: number): SkPath {
 }
 
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataSourceParam>>> = {
-  distillationUnit: { 1: distillationUnitLv1 as unknown as DataSourceParam, 2: distillationUnitLv2 as unknown as DataSourceParam, 3: distillationUnitLv3 as unknown as DataSourceParam },
-  crudeTank: { 1: crudeTankLv1 as unknown as DataSourceParam, 2: crudeTankLv2 as unknown as DataSourceParam, 3: crudeTankLv3 as unknown as DataSourceParam },
-  productTank: { 1: productTankLv1 as unknown as DataSourceParam, 2: productTankLv2 as unknown as DataSourceParam, 3: productTankLv3 as unknown as DataSourceParam },
+  distillationUnit: STARTER_PLANT_ART_BY_LEVEL.distillationUnit as Record<number, DataSourceParam>,
+  crudeTank: STARTER_PLANT_ART_BY_LEVEL.crudeTank as Record<number, DataSourceParam>,
+  productTank: STARTER_PLANT_ART_BY_LEVEL.productTank as Record<number, DataSourceParam>,
   laboratory: { 1: require('../../assets/plants/laboratory_lv1.png'), 2: require('../../assets/plants/laboratory_lv2.png'), 3: require('../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice: { 1: require('../../assets/plants/sales_office_lv1.png'), 2: require('../../assets/plants/sales_office_lv2.png'), 3: require('../../assets/plants/sales_office_lv3.png') },
