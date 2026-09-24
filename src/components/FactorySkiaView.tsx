@@ -61,6 +61,7 @@ const EMPTY_INSET_X = 9 * TILE_SCALE
 const EMPTY_INSET_Y = 5 * TILE_SCALE
 const TOP_CUT_DIAGONALS = 4
 const PLANT_IMAGE_WIDTH = TILE_WIDTH
+const ROAD_EDGE = 16 * TILE_SCALE
 
 const PIXEL_SAMPLING = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const
 
