@@ -29,8 +29,8 @@ import {
   BUILD_ZONE_TOP_Y,
   FACTORY_WORLD_VIEWPORT_SCALE,
   GRID_SPREAD,
-  PLANT_IMAGE_SCALE,
 } from '../config/factoryScene'
+import { getPlantSpriteProfile, getPlantSpriteRect } from '../factoryPlantLayout'
 import {
   FACTORY_INITIAL_SCALE,
   FACTORY_MAX_SCALE,
@@ -102,23 +102,14 @@ const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataS
   recyclingBunker: { 1: require('../../assets/plants/recycling_bunker_lv1.png'), 2: require('../../assets/plants/recycling_bunker_lv2.png'), 3: require('../../assets/plants/recycling_bunker_lv3.png') },
   pelletSilo: { 1: require('../../assets/plants/pellet_silo_lv1.png'), 2: require('../../assets/plants/pellet_silo_lv2.png'), 3: require('../../assets/plants/pellet_silo_lv3.png') },
 }
-type PlantVisual = { source: DataSourceParam; anchorY: number; scale: number }
+type PlantVisual = { source: DataSourceParam }
 
 function plantVisual(cell: BuildingType, level: number): PlantVisual | null {
   const byLevel = PLANT_IMAGE_BY_BUILDING[cell]
   if (!byLevel) return null
   const source = byLevel[level] ?? byLevel[1]
   if (!source) return null
-  const isNewStarter = level === 1 && (
-    cell === 'distillationUnit' || cell === 'crudeTank' || cell === 'productTank'
-  )
-  return {
-    source,
-    anchorY: isNewStarter ? 0.88 : 0.94,
-    scale: isNewStarter
-      ? (cell === 'distillationUnit' ? 1.08 : 1)
-      : PLANT_IMAGE_SCALE,
-  }
+  return { source }
 }
 
 // One building sprite — its own useImage so the source can vary per tile.
@@ -267,7 +258,16 @@ function FactorySkiaView({
         TILE_HEIGHT - EMPTY_INSET_Y * 2,
       )
       const visual = cell ? plantVisual(cell, gridLevels[t.activeIndex] ?? 1) : null
-      const imgSize = PLANT_IMAGE_WIDTH * (visual?.scale ?? PLANT_IMAGE_SCALE)
+      const spriteRect = cell && visual
+        ? getPlantSpriteRect(
+            t.x,
+            t.y,
+            TILE_WIDTH,
+            TILE_HEIGHT,
+            PLANT_IMAGE_WIDTH,
+            getPlantSpriteProfile(cell, gridLevels[t.activeIndex] ?? 1),
+          )
+        : null
       return {
         key: t.activeIndex,
         outer,
@@ -277,11 +277,11 @@ function FactorySkiaView({
         cx: t.x + TILE_WIDTH / 2,
         cy: t.y + TILE_HEIGHT / 2,
         occupied: !!cell,
-        sprite: visual ? {
+        sprite: visual && spriteRect ? {
           source: visual.source,
-          x: t.x + TILE_WIDTH / 2 - imgSize / 2,
-          y: t.y + TILE_HEIGHT / 2 - imgSize * visual.anchorY,
-          size: imgSize,
+          x: spriteRect.x,
+          y: spriteRect.y,
+          size: spriteRect.size,
         } : null,
       }
     })

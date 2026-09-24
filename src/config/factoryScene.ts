@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native'
+import { DEFAULT_PLANT_IMAGE_SCALE } from '../factoryPlantLayout'
 
 // ── Factory home scene — visual layout config ───────────────────────────────
 // Everything about HOW the factory home scene LOOKS/SITS lives here, so you can
@@ -61,7 +62,10 @@ export const BUILD_ZONE_FOCUS_Y = 0.62
 //   oversized on the smaller ground. Only the drawn sprite (and its smoke)
 //   shrinks; the tile, grid spacing, and tap targets are untouched. The sprite
 //   stays bottom-centred on its tile.
-export const PLANT_IMAGE_SCALE = 0.92
+// U2.4: plants are intentionally a little larger than one tile. Their gameplay
+// footprint and tap target stay one cell; only the sprite may overlap the cells
+// behind it, which is normal for a 3/4 isometric scene.
+export const PLANT_IMAGE_SCALE = DEFAULT_PLANT_IMAGE_SCALE
 
 // SHOW_GRID : draw the diamond tile art for the ACTIVE (playable) cells — the
 //             cream tiles, outlines, "+" markers on empty cells, and the tile

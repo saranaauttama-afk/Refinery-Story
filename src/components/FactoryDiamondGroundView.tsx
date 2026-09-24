@@ -10,7 +10,8 @@ import { BUILDING_CATEGORY_ACCENT, BUILDING_CATEGORY_BY_TYPE, BUILDING_CATEGORY_
 import { BUILDINGS } from '../game/data/buildings'
 import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
 import { colors, radii } from '../theme'
-import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL, PLANT_IMAGE_SCALE } from '../config/factoryScene'
+import { GRID_SPREAD, SHOW_GRID, SHOW_SHELL } from '../config/factoryScene'
+import { getPlantSpriteProfile, getPlantSpriteRect } from '../factoryPlantLayout'
 import { cellAcceptsSpecialist, getCellSynergy, getEmployeeAssignedToCell } from '../game/utils/gameCalculations'
 import PlantSmoke from './PlantSmoke'
 import GameIcon from './GameIcon'
@@ -76,17 +77,17 @@ const SQUARE_PLANT_ASPECT_RATIO = 1
 
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, PlantImageSpec>>> = {
   distillationUnit: {
-    1: { source: require('../../assets/plants/distillation_unit_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    1: { source: require('../../assets/plants/distillation_unit_lv1_v3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     2: { source: require('../../assets/plants/distillation_unit_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     3: { source: require('../../assets/plants/distillation_unit_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   crudeTank: {
-    1: { source: require('../../assets/plants/crude_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    1: { source: require('../../assets/plants/crude_tank_lv1_v3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     2: { source: require('../../assets/plants/crude_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     3: { source: require('../../assets/plants/crude_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   productTank: {
-    1: { source: require('../../assets/plants/product_tank_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    1: { source: require('../../assets/plants/product_tank_lv1_v3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     2: { source: require('../../assets/plants/product_tank_lv2.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     3: { source: require('../../assets/plants/product_tank_lv3.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
@@ -290,9 +291,16 @@ const DiamondCell = memo(function DiamondCell({
   const surfaceColor = BUILDING_CATEGORY_SURFACE[category]
   const code = BUILDINGS[cell!].shortName
   const plantImage = getPlantImageSpec(cell!, level)
-  const plantImageWidth = PLANT_IMAGE_WIDTH * PLANT_IMAGE_SCALE
+  const plantRect = getPlantSpriteRect(
+    0,
+    0,
+    TILE_WIDTH,
+    TILE_HEIGHT,
+    PLANT_IMAGE_WIDTH,
+    getPlantSpriteProfile(cell!, level),
+  )
+  const plantImageWidth = plantRect.size
   const plantImageHeight = plantImage ? plantImageWidth / plantImage.aspectRatio : 0
-  const plantImageLeft = (TILE_WIDTH - plantImageWidth) / 2
 
   return (
     <Pressable onPress={() => onCellPress?.(index)} style={[styles.cell, { left: x, top: y, zIndex }]}>
@@ -313,7 +321,14 @@ const DiamondCell = memo(function DiamondCell({
         </Svg>
       ) : null}
       {plantImage ? (
-        <Image source={plantImage.source} style={[styles.plantImage, { width: plantImageWidth, height: plantImageHeight, left: plantImageLeft }]} resizeMode="contain" />
+        <Image
+          source={plantImage.source}
+          style={[
+            styles.plantImage,
+            { width: plantImageWidth, height: plantImageHeight, left: plantRect.x, top: plantRect.y },
+          ]}
+          resizeMode="contain"
+        />
       ) : (
         <Text style={[styles.codeLabel, { color: accentColor }]}>{code}</Text>
       )}
@@ -549,7 +564,7 @@ const styles = StyleSheet.create({
   plantImage: {
     position: 'absolute',
     left: 0,
-    bottom: 0,
+    top: 0,
     width: PLANT_IMAGE_WIDTH,
   },
   levelBadge: {

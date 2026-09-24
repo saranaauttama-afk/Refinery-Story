@@ -8,6 +8,7 @@ import {
   getMinimumWorldExtent,
   screenPointToWorld,
 } from '../src/factoryCamera'
+import { getPlantSpriteProfile, getPlantSpriteRect } from '../src/factoryPlantLayout'
 
 for (const viewport of [375, 667, 844, 915]) {
   const world = getMinimumWorldExtent(viewport)
@@ -37,5 +38,19 @@ assert.equal(clampCameraValue(-10, -5, 5), -5)
 const worldPoint = screenPointToWorld(170, 260, -30, 20, 2)
 assert.deepEqual(worldPoint, { x: 100, y: 120 })
 
-console.log('✅ camera math checks passed')
+// U2.4 plant/grid contract: a sprite is derived only from its tile contact
+// point, so showing the Build grid cannot change its rectangle. Starter plants
+// are also deliberately larger than one tile while keeping a one-cell
+// gameplay footprint.
+const tile = { x: 240, y: 360, width: 126, height: 63 }
+for (const building of ['distillationUnit', 'crudeTank', 'productTank'] as const) {
+  const profile = getPlantSpriteProfile(building, 1)
+  const beforeBuild = getPlantSpriteRect(tile.x, tile.y, tile.width, tile.height, tile.width, profile)
+  const duringBuild = getPlantSpriteRect(tile.x, tile.y, tile.width, tile.height, tile.width, profile)
+  assert.deepEqual(duringBuild, beforeBuild, `${building} must not move when Build reveals the grid`)
+  assert.ok(beforeBuild.size >= tile.width * 1.2, `${building} should read larger than its tile`)
+  assert.equal(beforeBuild.footX, tile.x + tile.width / 2 + profile.groundOffsetX)
+  assert.equal(beforeBuild.footY, tile.y + tile.height / 2 + profile.groundOffsetY)
+}
 
+console.log('✅ camera math checks passed')
