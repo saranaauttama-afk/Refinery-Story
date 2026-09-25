@@ -58,7 +58,8 @@ let production = runV3ProductionTick(state, 25)
 close(production.state.world.moneyCents, 60_000 - 400 / 12)
 close(production.state.operatingLedger.lifetimeCashOutflowsCents, 400 / 12)
 close(production.state.operatingLedger.lifetimeOperatingExpenseCents, 400 / 12)
-close(production.state.world.employees[0].xp, beforeXp + 1.2)
+// V3-12: legacy productive-duty rate, 1 XP per active tick (25 per full-rate cycle of work).
+close(production.state.world.employees[0].xp, beforeXp + 1.2 * 25)
 
 const paused = {
   ...createInitialV3GameState(),

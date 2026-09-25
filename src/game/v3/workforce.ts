@@ -1,7 +1,14 @@
 import type { Employee, WorkerType } from '../types'
-import { isV3ProcessBuilding } from './data'
+import {
+  V3_CAPS,
+  V3_ROLES,
+  V3_STAFF_CAP_BY_CHAPTER,
+  V3_STAFF_LEVELS,
+  isV3ProcessBuilding,
+  type V3ProcessBuilding,
+} from './data'
 import { recordV3Ledger } from './productInventory'
-import type { V3EmployeeDuty, V3GameState } from './types'
+import type { V3EmployeeDuty, V3EmployeeRecord, V3GameState, V3ProductFamily } from './types'
 
 const WAGE_DOLLARS_PER_MINUTE: Record<WorkerType, number> = {
   operator: 4,
@@ -34,14 +41,79 @@ export function getV3LineEmployee(state: V3GameState, cellIndex: number): Employ
   return employeeId ? getV3Employee(state, employeeId) : undefined
 }
 
+export function canV3StaffLine(type: WorkerType, building: string | null | undefined): boolean {
+  return isV3ProcessBuilding(building as never) && V3_ROLES[type].lineBuildings.includes(building as V3ProcessBuilding)
+}
+
+export function canV3Support(type: WorkerType): boolean {
+  return V3_ROLES[type].support !== null
+}
+
+/** Q+5 lead: matched specialist/Chemist for the family, or any Operator Lv≥3. */
+export function getV3LeadContribution(employee: Employee, family: V3ProductFamily): 0 | 5 {
+  if (employee.type === 'operator') return employee.level >= 3 ? 5 : 0
+  return V3_ROLES[employee.type].leadFamilies.includes(family) ? 5 : 0
+}
+
+export function canV3Lead(employee: Employee, family: V3ProductFamily): boolean {
+  return V3_ROLES[employee.type].leadFamilies.includes(family)
+}
+
 export function getV3LocalCrewRate(state: V3GameState, cellIndex: number): number {
   const employee = getV3LineEmployee(state, cellIndex)
-  if (!employee || employee.type !== 'operator' || state.unpaidEmployeeIds.includes(employee.id)) return 0
-  const roleRate = Math.min(0.2, 0.1 + 0.02 * Math.max(0, employee.level - 1))
+  const building = state.world.grid[cellIndex]
+  if (!employee || state.unpaidEmployeeIds.includes(employee.id) || !canV3StaffLine(employee.type, building)) return 0
+  const level = Math.max(0, employee.level - 1)
+  const matched = V3_ROLES[employee.type].matchedBuildings.includes(building as V3ProcessBuilding)
+  const roleRate = matched ? Math.min(0.25, 0.15 + 0.02 * level) : Math.min(0.2, 0.1 + 0.02 * level)
   const skillRate = (employee.skills ?? [])
     .filter((skill) => skill.channel === 'output')
     .reduce((sum, skill) => sum + skill.value, 0)
-  return Math.min(0.3, roleRate + skillRate)
+  return Math.min(V3_CAPS.localCrewRate, roleRate + skillRate)
+}
+
+export function getV3StaffCap(state: V3GameState): number {
+  return V3_STAFF_CAP_BY_CHAPTER[state.campaignProgress.chapter] ?? V3_STAFF_CAP_BY_CHAPTER[0]
+}
+
+export function getV3TrainingCost(employee: Employee): { cents: number; rp: number } {
+  return {
+    cents: (V3_STAFF_LEVELS.trainBaseDollars + employee.level * V3_STAFF_LEVELS.trainDollarsPerLevel) * 100,
+    rp: V3_STAFF_LEVELS.trainRp,
+  }
+}
+
+/** Applies legacy thresholds; surplus XP carries to the next level. */
+export function applyV3LevelUps(employee: Employee): Employee {
+  let next = employee
+  while (next.level < V3_STAFF_LEVELS.maxLevel) {
+    const threshold = V3_STAFF_LEVELS.xpToNextLevel[next.level] ?? Infinity
+    if (next.xp + 1e-9 < threshold) break
+    next = { ...next, level: next.level + 1, xp: next.xp - threshold }
+  }
+  return next
+}
+
+export function emptyV3EmployeeRecord(): V3EmployeeRecord {
+  return { workTicks: 0, blueprintIds: [], milestoneIds: [] }
+}
+
+export function creditV3EmployeeRecords(
+  state: V3GameState,
+  employeeIds: string[],
+  credit: { blueprintId?: string; milestoneId?: string },
+): V3GameState {
+  if (!employeeIds.length) return state
+  const employeeRecords = { ...state.employeeRecords }
+  for (const id of employeeIds) {
+    const record = employeeRecords[id] ?? emptyV3EmployeeRecord()
+    employeeRecords[id] = {
+      ...record,
+      blueprintIds: credit.blueprintId && !record.blueprintIds.includes(credit.blueprintId) ? [...record.blueprintIds, credit.blueprintId] : record.blueprintIds,
+      milestoneIds: credit.milestoneId && !record.milestoneIds.includes(credit.milestoneId) ? [...record.milestoneIds, credit.milestoneId] : record.milestoneIds,
+    }
+  }
+  return { ...state, employeeRecords }
 }
 
 export type V3WageSettlement = {
@@ -84,24 +156,33 @@ export function settleV3Wages(state: V3GameState, deltaTicks: number): V3WageSet
   }
 }
 
+/**
+ * XP only for actual productive line work: the legacy rate of 1 XP per active
+ * tick, where a full-rate cycle of work equals 25 ticks. Level-ups apply once.
+ */
 export function addV3DutyXp(state: V3GameState, actualWorkByCell: Record<number, number>): V3GameState {
+  let employeeRecords = state.employeeRecords
   const employees = state.world.employees.map((employee) => {
     const duty = state.employeeDuties[employee.id]
-    if (
-      !duty || duty.kind !== 'line' ||
-      state.unpaidEmployeeIds.includes(employee.id) ||
-      (actualWorkByCell[duty.cellIndex] ?? 0) <= 0
-    ) return employee
-    return { ...employee, xp: employee.xp + actualWorkByCell[duty.cellIndex] }
+    const work = duty?.kind === 'line' ? actualWorkByCell[duty.cellIndex] ?? 0 : 0
+    if (!duty || duty.kind !== 'line' || state.unpaidEmployeeIds.includes(employee.id) || work <= 0) return employee
+    const ticks = work * 25
+    const record = employeeRecords[employee.id] ?? emptyV3EmployeeRecord()
+    employeeRecords = { ...employeeRecords, [employee.id]: { ...record, workTicks: record.workTicks + ticks } }
+    return applyV3LevelUps({ ...employee, xp: employee.xp + ticks * V3_STAFF_LEVELS.xpPerWorkTick })
   })
-  return { ...state, world: { ...state.world, employees } }
+  return { ...state, employeeRecords, world: { ...state.world, employees } }
 }
 
 export function returnV3EmployeeFromDevelopment(state: V3GameState, employeeId: string): V3GameState {
   const duty = state.employeeDuties[employeeId]
   if (duty?.kind !== 'development') return state
-  const targetAvailable = duty.returnCellIndex !== null &&
-    isV3ProcessBuilding(state.world.grid[duty.returnCellIndex]) &&
+  const employee = getV3Employee(state, employeeId)
+  if (duty.returnSupport && employee && canV3Support(employee.type)) {
+    return { ...state, employeeDuties: { ...state.employeeDuties, [employeeId]: { kind: 'support' } } }
+  }
+  const targetAvailable = duty.returnCellIndex !== null && Boolean(employee) &&
+    canV3StaffLine(employee!.type, state.world.grid[duty.returnCellIndex]) &&
     Boolean(state.plantPrograms[duty.returnCellIndex]) &&
     !Object.entries(state.employeeDuties).some(([id, otherDuty]) =>
       id !== employeeId && otherDuty.kind === 'line' && otherDuty.cellIndex === duty.returnCellIndex,

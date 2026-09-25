@@ -1,4 +1,4 @@
-import type { BuildingType, ProductKey } from '../types'
+import type { BuildingType, ProductKey, WorkerType } from '../types'
 
 export type V3BuildingCapability = {
   buildCostDollars: number
@@ -159,9 +159,97 @@ export const V3_MODULE_FIT_COST_RATE = 0.2
 export const V3_MODULE_MIN_PLANT_LEVEL = 2
 export const V3_MODULE_CHAPTER = 2
 
-// Research with a working V3 effect. Other legacy IDs are mapped in V3-12.
+// Systems S4 research candidates. `effect` is the only V3 consequence; IDs
+// without a V3 effect (saferOperations needs maintenance, not yet in V3)
+// are intentionally absent so they cannot be bought as a no-op.
+export type V3ResearchEffect =
+  | { kind: 'knowledgeRank'; rank: 1 | 2 }
+  | { kind: 'globalRate'; value: number }
+  | { kind: 'coreStorage'; value: number }
+  | { kind: 'storagePercent'; value: number }
+  | { kind: 'trade'; value: number }
+  | { kind: 'jobRp'; value: number }
+
+type V3ResearchRule = {
+  rp: number
+  chapter: 0 | 1 | 2 | 3 | 4
+  labLevel: number
+  prerequisite: string | null
+  effect: V3ResearchEffect
+}
+
 export const V3_RESEARCH = {
-  premiumFuel: { rp: 20, chapter: 2, labLevel: 2, prerequisite: null, knowledgeRank: 1 },
-  advancedProcessing: { rp: 60, chapter: 4, labLevel: 3, prerequisite: 'premiumFuel', knowledgeRank: 2 },
-} as const
+  betterPumps: { rp: 10, chapter: 1, labLevel: 0, prerequisite: null, effect: { kind: 'globalRate', value: 0.05 } },
+  biggerTanks: { rp: 15, chapter: 1, labLevel: 0, prerequisite: null, effect: { kind: 'coreStorage', value: 20 } },
+  premiumFuel: { rp: 20, chapter: 2, labLevel: 2, prerequisite: null, effect: { kind: 'knowledgeRank', rank: 1 } },
+  advancedDistillation: { rp: 40, chapter: 2, labLevel: 0, prerequisite: 'betterPumps', effect: { kind: 'globalRate', value: 0.1 } },
+  industrialStorage: { rp: 40, chapter: 2, labLevel: 0, prerequisite: 'biggerTanks', effect: { kind: 'storagePercent', value: 0.15 } },
+  premiumContracts: { rp: 40, chapter: 3, labLevel: 0, prerequisite: 'premiumFuel', effect: { kind: 'trade', value: 0.05 } },
+  contractAnalytics: { rp: 40, chapter: 3, labLevel: 0, prerequisite: 'premiumContracts', effect: { kind: 'jobRp', value: 0.2 } },
+  advancedProcessing: { rp: 60, chapter: 4, labLevel: 3, prerequisite: 'premiumFuel', effect: { kind: 'knowledgeRank', rank: 2 } },
+  storageOptimization: { rp: 60, chapter: 4, labLevel: 0, prerequisite: 'industrialStorage', effect: { kind: 'storagePercent', value: 0.25 } },
+} as const satisfies Record<string, V3ResearchRule>
 export type V3SupportedResearch = keyof typeof V3_RESEARCH
+
+// ---- Workforce (Master §6, Systems S4) ----
+export type V3SupportEffect = 'storageFlat' | 'storagePercent' | 'trade' | 'rp' | null
+
+export type V3RoleRule = {
+  lineBuildings: readonly V3ProcessBuilding[]
+  matchedBuildings: readonly V3ProcessBuilding[]
+  leadFamilies: readonly string[]
+  support: V3SupportEffect
+  supportValue: number
+  hireChapter: 0 | 1 | 2 | 3 | 4
+  hireCostDollars: number
+  /** False while the role has no working V3 duty (hire stays locked, truthfully). */
+  hireable: boolean
+}
+
+export const V3_ROLES: Record<WorkerType, V3RoleRule> = {
+  operator: { lineBuildings: ['distillationUnit', 'lubricantPlant', 'jetFuelPlant'], matchedBuildings: [], leadFamilies: ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'], support: null, supportValue: 0, hireChapter: 0, hireCostDollars: 500, hireable: true },
+  fuelSpecialist: { lineBuildings: ['distillationUnit', 'lubricantPlant'], matchedBuildings: ['distillationUnit', 'lubricantPlant'], leadFamilies: ['gasoline', 'lubricants'], support: null, supportValue: 0, hireChapter: 2, hireCostDollars: 1_500, hireable: true },
+  aviationSpecialist: { lineBuildings: ['jetFuelPlant'], matchedBuildings: ['jetFuelPlant'], leadFamilies: ['jetFuel'], support: null, supportValue: 0, hireChapter: 3, hireCostDollars: 3_000, hireable: true },
+  chemicalEngineer: { lineBuildings: [], matchedBuildings: [], leadFamilies: ['petrochemicals'], support: null, supportValue: 0, hireChapter: 4, hireCostDollars: 5_000, hireable: false },
+  polymerEngineer: { lineBuildings: [], matchedBuildings: [], leadFamilies: ['plasticPellets'], support: null, supportValue: 0, hireChapter: 4, hireCostDollars: 8_000, hireable: false },
+  chemist: { lineBuildings: [], matchedBuildings: [], leadFamilies: ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'], support: 'rp', supportValue: 0.1, hireChapter: 1, hireCostDollars: 1_500, hireable: true },
+  mechanic: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'storageFlat', supportValue: 25, hireChapter: 1, hireCostDollars: 800, hireable: true },
+  salesAgent: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'trade', supportValue: 0.04, hireChapter: 3, hireCostDollars: 1_000, hireable: true },
+  logisticsCoordinator: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'storagePercent', supportValue: 0.1, hireChapter: 2, hireCostDollars: 2_000, hireable: true },
+  // Safety/upkeep channels need V3 maintenance, which is not implemented yet.
+  safetyOfficer: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: null, supportValue: 0, hireChapter: 2, hireCostDollars: 1_200, hireable: false },
+}
+
+export const V3_CAPS = {
+  localCrewRate: 0.3,
+  globalRate: 0.2,
+  storagePercent: 0.5,
+  trade: 0.15,
+  rp: 0.5,
+  /** Mechanics' flat storage counts at most three staff-equivalents. */
+  mechanicEffectiveStaff: 3,
+  /** Chemists' RP bonus counts at most three staff-equivalents. */
+  chemistEffectiveStaff: 3,
+} as const
+
+export const V3_STAFF_LEVELS = {
+  maxLevel: 5,
+  xpToNextLevel: [0, 1_200, 3_000, 6_000, 12_000],
+  /** Legacy productive-duty rate retained: 1 XP per active tick of actual work. */
+  xpPerWorkTick: 1,
+  bonusPerLevelRate: 0.15,
+  trainBaseDollars: 600,
+  trainDollarsPerLevel: 500,
+  trainRp: 5,
+} as const
+
+/** Total staff cap per chapter (V3-A hypothesis; Master targets 6–12 at the end). */
+export const V3_STAFF_CAP_BY_CHAPTER = [4, 6, 8, 10, 12, 12] as const
+
+export const V3_SALES_OFFICE_TRADE_BY_LEVEL = [0, 0.05, 0.08, 0.1] as const
+
+export const V3_SPECIALIZATION = {
+  green: { rate: 0.95, energy: 0.9, waste: 0.8 },
+  industrial: { rate: 1.1, energy: 1.2, waste: 1 },
+} as const
+export const V3_SPECIALIZATION_CHAPTER = 3

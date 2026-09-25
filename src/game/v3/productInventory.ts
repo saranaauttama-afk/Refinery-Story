@@ -1,5 +1,6 @@
 import type { ProductKey } from '../types'
 import { V3_STORAGE } from './data'
+import { getV3Modifiers } from './modifiers'
 import type {
   V3GameState,
   V3InventoryEntry,
@@ -37,7 +38,18 @@ function storageContribution(building: StorageBuilding, level: number): number {
   }
 }
 
+/** Physical storage plus capped research/support bonuses (Systems S3/S4). */
+function withStorageBonuses(state: V3GameState, physical: number, core: boolean): number {
+  const modifiers = getV3Modifiers(state)
+  const base = physical + (core ? modifiers.coreStorageFlat : 0)
+  return base * (1 + modifiers.storagePercent.effective) + modifiers.mechanicStorageFlat
+}
+
 export function getV3CrudeCapacity(state: V3GameState): number {
+  return withStorageBonuses(state, getV3PhysicalCrudeCapacity(state), true)
+}
+
+export function getV3PhysicalCrudeCapacity(state: V3GameState): number {
   let capacity = V3_STORAGE.baseCrude
   for (let index = 0; index < state.world.grid.length; index++) {
     if (state.world.grid[index] === 'crudeTank') {
@@ -48,6 +60,10 @@ export function getV3CrudeCapacity(state: V3GameState): number {
 }
 
 export function getV3ProductCapacity(state: V3GameState, product: ProductKey): number {
+  return withStorageBonuses(state, getV3PhysicalProductCapacity(state, product), product === 'gasoline')
+}
+
+export function getV3PhysicalProductCapacity(state: V3GameState, product: ProductKey): number {
   let capacity = V3_STORAGE.baseByProduct[product]
   const storageBuilding = STORAGE_BUILDING_BY_PRODUCT[product]
   if (!storageBuilding) return capacity

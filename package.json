@@ -23,7 +23,8 @@
     "check:v3-session": "node --import tsx scripts/first-session-recovery-check.ts",
     "check:v3-gate": "node --import tsx scripts/prototype-gate-check.ts",
     "check:v3-lube": "node --import tsx scripts/lube-power-check.ts",
-    "check:v3-modules-jet": "node --import tsx scripts/modules-jet-check.ts"
+    "check:v3-modules-jet": "node --import tsx scripts/modules-jet-check.ts",
+    "check:v3-roles": "node --import tsx scripts/workforce-roles-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
