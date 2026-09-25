@@ -53,11 +53,16 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   if (value.schemaRevision === 7 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.world) && Array.isArray(value.world.employees)) {
     value = {
       ...value,
-      schemaRevision: V3_PREVIEW_SCHEMA_REVISION,
+      schemaRevision: 8,
       employeeRecords: Object.fromEntries((value.world.employees as Array<Record<string, unknown>>)
         .filter((employee) => isRecord(employee) && typeof employee.id === 'string')
         .map((employee) => [employee.id, { workTicks: 0, blueprintIds: [], milestoneIds: [] }])),
     }
+  }
+  if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
+  // Revision 8 (build #71) only lacks the auto-repeat opt-in, which defaults to off.
+  if (value.schemaRevision === 8 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.jobReceipts)) {
+    value = { ...value, schemaRevision: V3_PREVIEW_SCHEMA_REVISION, jobReceipts: { ...value.jobReceipts, autoRepeatTemplateId: null } }
   }
   if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   if (value.schemaRevision !== V3_PREVIEW_SCHEMA_REVISION) {
@@ -268,7 +273,8 @@ export function parseV3GameState(input: unknown): V3LoadResult {
         Object.hasOwn(value.productBlueprints as Record<string, unknown>, id) && isFiniteNonnegative(quantity)),
     ) ||
     !isRecord(jobReceipts.templateRetryAtTick) ||
-    !Object.values(jobReceipts.templateRetryAtTick).every((tick) => Number.isInteger(tick) && (tick as number) >= 0)
+    !Object.values(jobReceipts.templateRetryAtTick).every((tick) => Number.isInteger(tick) && (tick as number) >= 0) ||
+    (jobReceipts.autoRepeatTemplateId !== null && typeof jobReceipts.autoRepeatTemplateId !== 'string')
   ) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 job receipts.' }
   }

@@ -17,7 +17,9 @@ import {
 import { getV3Modifiers } from './modifiers'
 import { expandV3Grid } from './expansion'
 import { cancelV3Development, startV3Development } from './development'
-import { acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
+import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
+import { getV3RushTerms } from './offers'
+import { evaluateV3CampaignProgress } from './campaign'
 import {
   consumeV3SellableInventory,
   getV3CrudeCapacity,
@@ -191,8 +193,10 @@ function consumedResult(
   next: V3GameState,
   resultEvent: V3ActionEvent,
 ): V3ActionResult {
+  // Chapter predicates are re-evaluated after every accepted transaction (never decrease).
+  const evaluated = resultEvent.tone === 'success' ? evaluateV3CampaignProgress(next) : next
   return {
-    state: { ...next, nextActionSequence: state.nextActionSequence + 1 },
+    state: { ...evaluated, nextActionSequence: state.nextActionSequence + 1 },
     changed: true,
     actionId: getV3ActionId(action),
     events: [resultEvent],
@@ -465,11 +469,28 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   }
 
   if (action.type === 'accept_job') {
-    const accepted = acceptV3Job(state, action.templateId, action.sequence)
+    const accepted = acceptV3Job(state, action.templateId, action.sequence, getV3RushTerms(state, action.templateId))
     if (accepted.blocker) {
       return consumedResult(state, action, state, event('blocked', `v3.job.${accepted.blocker}` as V3ActionEvent['messageId']))
     }
     return consumedResult(state, action, accepted.state, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'set_auto_repeat') {
+    if (action.templateId !== null) {
+      if (state.campaignProgress.chapter < V3_AUTO_REPEAT_CHAPTER) {
+        return consumedResult(state, action, state, event('blocked', 'v3.job.auto_repeat_locked', { chapter: V3_AUTO_REPEAT_CHAPTER }))
+      }
+      const template = V3_JOB_TEMPLATES[action.templateId]
+      const proven = template?.requires && state.jobReceipts.receipts.some((receipt) => receipt.templateId === template.requires && receipt.status === 'completed')
+      if (!template || template.kind !== 'repeat' || !proven) {
+        return consumedResult(state, action, state, event('blocked', 'v3.job.auto_repeat_invalid'))
+      }
+    }
+    return consumedResult(state, action, {
+      ...state,
+      jobReceipts: { ...state.jobReceipts, autoRepeatTemplateId: action.templateId },
+    }, event('success', 'v3.action.ok'))
   }
 
   if (action.type === 'dispatch_job') {

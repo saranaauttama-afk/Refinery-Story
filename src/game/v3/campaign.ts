@@ -1,4 +1,11 @@
+import type { BuildingType } from '../types'
 import type { V3GameState } from './types'
+
+const UPGRADE_KINDS: ReadonlySet<BuildingType> = new Set<BuildingType>([
+  'distillationUnit', 'lubricantPlant', 'jetFuelPlant',
+  'crudeTank', 'gasolineTank', 'lubricantTank', 'jetFuelTank',
+  'powerPlant',
+])
 
 export type V3GuidanceStep =
   | 'produce_tutorial_stock'
@@ -12,6 +19,8 @@ export type V3GuidanceStep =
   | 'accept_qualifying_job'
   | 'ship_developed_product'
   | 'chapter_two'
+  | 'chapter_three'
+  | 'chapter_four'
 
 export function evaluateV3CampaignProgress(state: V3GameState): V3GameState {
   let chapter = state.campaignProgress.chapter
@@ -36,6 +45,22 @@ export function evaluateV3CampaignProgress(state: V3GameState): V3GameState {
     chapter = 2
     claimedFlags.add('chapter:2')
   }
+  // C3: two distinct clients reached Regular + at least one processing/tank/power upgrade.
+  const completed = new Set(state.jobReceipts.receipts.filter((receipt) => receipt.status === 'completed').map((receipt) => receipt.templateId))
+  const regularClients = new Set([...completed].filter((id) => id.endsWith(':regular')).map((id) => id.split(':')[0]))
+  const upgraded = state.world.grid.some((cell, index) =>
+    cell !== null && UPGRADE_KINDS.has(cell) && (state.world.gridLevels[index] ?? 1) >= 2)
+  if (chapter === 2 && regularClients.size >= 2 && upgraded) {
+    chapter = 3
+    claimedFlags.add('chapter:3')
+  }
+  // C4: one client Partner + a certified (developed) blueprint with Q≥65.
+  const partner = [...completed].some((id) => id.endsWith(':partner'))
+  const showcase = Object.values(state.productBlueprints).some((blueprint) => blueprint.provenance === 'developed' && blueprint.quality >= 65)
+  if (chapter === 3 && partner && showcase) {
+    chapter = 4
+    claimedFlags.add('chapter:4')
+  }
   if (chapter === state.campaignProgress.chapter && claimedFlags.size === state.campaignProgress.claimedFlags.length) return state
   return {
     ...state,
@@ -48,7 +73,9 @@ export function evaluateV3CampaignProgress(state: V3GameState): V3GameState {
 }
 
 export function getV3GuidanceStep(state: V3GameState): V3GuidanceStep {
-  if (state.campaignProgress.chapter >= 2) return 'chapter_two'
+  if (state.campaignProgress.chapter >= 4) return 'chapter_four'
+  if (state.campaignProgress.chapter === 3) return 'chapter_three'
+  if (state.campaignProgress.chapter === 2) return 'chapter_two'
   if (state.campaignProgress.chapter === 0) {
     const tutorial = state.acceptedJob?.templateId === 'tutorial:gasoline' ? state.acceptedJob : null
     if (!tutorial) {

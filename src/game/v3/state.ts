@@ -116,7 +116,7 @@ export function createInitialV3GameState(): V3GameState {
     employeeRecords: { [operator.id]: { workTicks: 0, blueprintIds: [], milestoneIds: [] } },
     clientProgress: {},
     acceptedJob: null,
-    jobReceipts: { receipts: [], templateRetryAtTick: {} },
+    jobReceipts: { receipts: [], templateRetryAtTick: {}, autoRepeatTemplateId: null },
     stockPolicies: {},
     campaignProgress: {
       chapter: 0,

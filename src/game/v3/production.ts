@@ -16,7 +16,8 @@ import {
 } from './data'
 import { advanceV3Development } from './development'
 import { getV3Modifiers } from './modifiers'
-import { addV3JobContribution, runV3AutoDispatch } from './jobs'
+import { addV3JobContribution, advanceV3JobClock, runV3AutoDispatch } from './jobs'
+import { evaluateV3CampaignProgress } from './campaign'
 import { addV3VariantInventory, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
 import { advanceV3Recovery, isV3LoanerCell } from './recovery'
 import type { V3GameState, V3PlantProgram, V3ProductFamily } from './types'
@@ -386,5 +387,5 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
     },
     plantPrograms: programs,
   }, Object.fromEntries(lines.map((line) => [line.cellIndex, line.actualWork])))
-  return { lines, power, state: advanceV3Recovery(runV3AutoDispatch(producedState), deltaTicks) }
+  return { lines, power, state: evaluateV3CampaignProgress(advanceV3Recovery(advanceV3JobClock(runV3AutoDispatch(producedState)), deltaTicks)) }
 }
