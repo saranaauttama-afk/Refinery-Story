@@ -88,3 +88,80 @@ export const V3_DISTILLATION = {
   feedstockCapacityPerCell: 60,
   wasteCapacity: 200,
 } as const
+
+export type V3ProcessBuilding = 'distillationUnit' | 'lubricantPlant' | 'jetFuelPlant'
+export type V3ProcessInput = 'crude' | 'feedstock'
+
+export type V3ProcessUnit = {
+  family: 'gasoline' | 'lubricants' | 'jetFuel'
+  input: V3ProcessInput
+  inputPerWork: number
+  outputPerWork: number
+  energyPerWork: number
+  wastePerWork: number
+  chapter: 0 | 2 | 3
+}
+
+// Systems S3 dataset V3-A. Only families listed here have a ported V3 route;
+// Petrochemical/Polymer/Waste Treatment remain unavailable until V3-14.
+export const V3_PROCESS_UNITS: Record<V3ProcessBuilding, V3ProcessUnit> = {
+  distillationUnit: { family: 'gasoline', input: 'crude', inputPerWork: 6, outputPerWork: 5, energyPerWork: 0, wastePerWork: 0.5, chapter: 0 },
+  lubricantPlant: { family: 'lubricants', input: 'feedstock', inputPerWork: 6, outputPerWork: 5, energyPerWork: 3, wastePerWork: 1, chapter: 2 },
+  jetFuelPlant: { family: 'jetFuel', input: 'feedstock', inputPerWork: 8, outputPerWork: 5, energyPerWork: 4, wastePerWork: 1, chapter: 3 },
+}
+
+export const V3_PLANT_BY_FAMILY: Partial<Record<ProductKey, V3ProcessBuilding>> = {
+  gasoline: 'distillationUnit',
+  lubricants: 'lubricantPlant',
+  jetFuel: 'jetFuelPlant',
+}
+
+export function isV3ProcessBuilding(building: BuildingType | null | undefined): building is V3ProcessBuilding {
+  return building === 'distillationUnit' || building === 'lubricantPlant' || building === 'jetFuelPlant'
+}
+
+// Energy per full 5s cycle, crude per full cycle and battery contribution.
+export const V3_SITE_POWER = { energyPerCycle: 4, battery: 20 } as const
+export const V3_GENERATOR_BY_LEVEL = [
+  { energyPerCycle: 0, crudePerCycle: 0, battery: 0 },
+  { energyPerCycle: 12, crudePerCycle: 1, battery: 60 },
+  { energyPerCycle: 24, crudePerCycle: 2, battery: 120 },
+  { energyPerCycle: 42, crudePerCycle: 3, battery: 210 },
+] as const
+
+export const V3_FEEDSTOCK_REFERENCE_CENTS = 800
+
+export const V3_MODULE_QUALITY: Record<'none' | 'throughput' | 'economy' | 'precision', number> = {
+  none: 0,
+  throughput: -5,
+  economy: 0,
+  precision: 10,
+}
+export const V3_PROFILE_QUALITY = { volume: -5, standard: 0, precision: 15 } as const
+
+export const V3_DEVELOPMENT_BY_FAMILY = {
+  gasoline: { feeCents: 5_000, ticks: 100, chapter: 1 },
+  lubricants: { feeCents: 10_000, ticks: 125, chapter: 2 },
+  jetFuel: { feeCents: 20_000, ticks: 150, chapter: 3 },
+  petrochemicals: { feeCents: 30_000, ticks: 175, chapter: 4 },
+  plasticPellets: { feeCents: 40_000, ticks: 200, chapter: 4 },
+} as const
+
+export const V3_DEVELOPMENT_SAMPLE_QUANTITY = 10
+
+// Anchored square expansion: 3x3 -> 4x4 at C2, 4x4 -> 5x5 at C4 (V3-14).
+export const V3_GRID_EXPANSIONS = [
+  { fromSize: 3, toSize: 4, costDollars: 6_000, chapter: 2 },
+] as const
+
+// Systems S2 module table: fit cost is 20% of the plant's base build cost.
+export const V3_MODULE_FIT_COST_RATE = 0.2
+export const V3_MODULE_MIN_PLANT_LEVEL = 2
+export const V3_MODULE_CHAPTER = 2
+
+// Research with a working V3 effect. Other legacy IDs are mapped in V3-12.
+export const V3_RESEARCH = {
+  premiumFuel: { rp: 20, chapter: 2, labLevel: 2, prerequisite: null, knowledgeRank: 1 },
+  advancedProcessing: { rp: 60, chapter: 4, labLevel: 3, prerequisite: 'premiumFuel', knowledgeRank: 2 },
+} as const
+export type V3SupportedResearch = keyof typeof V3_RESEARCH

@@ -98,7 +98,7 @@ export type V3JobStatus = 'accepted' | 'completed' | 'cancelled' | 'expired'
 export type V3AcceptedJob = {
   id: string
   templateId: string
-  family: ProductKey
+  family: V3ProductFamily
   minimumQuality: number
   quantity: number
   deliveredQuantity: number
@@ -221,6 +221,10 @@ export type V3ActionMessageId =
   | 'v3.build.occupied'
   | 'v3.build.locked'
   | 'v3.build.insufficient_cash'
+  | 'v3.build.unsupported'
+  | 'v3.expand.unavailable'
+  | 'v3.expand.locked'
+  | 'v3.expand.insufficient_cash'
   | 'v3.upgrade.invalid_cell'
   | 'v3.upgrade.unsupported'
   | 'v3.upgrade.locked'
@@ -243,6 +247,18 @@ export type V3ActionMessageId =
   | 'v3.development.project_active'
   | 'v3.development.invalid_lab'
   | 'v3.development.invalid_config'
+  | 'v3.development.knowledge_locked'
+  | 'v3.module.invalid_cell'
+  | 'v3.module.locked'
+  | 'v3.module.plant_level'
+  | 'v3.module.no_change'
+  | 'v3.module.insufficient_cash'
+  | 'v3.research.unsupported'
+  | 'v3.research.owned'
+  | 'v3.research.locked'
+  | 'v3.research.prerequisite'
+  | 'v3.research.lab_level'
+  | 'v3.research.insufficient_rp'
   | 'v3.development.duplicate_signature'
   | 'v3.development.insufficient_cash'
   | 'v3.development.insufficient_samples'
@@ -399,7 +415,25 @@ export type V3DemolishAction = {
   expectedBuilding: BuildingType
 }
 
-export type V3Action = V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3SetModuleAction = {
+  type: 'set_module'
+  sequence: number
+  cellIndex: number
+  module: V3ModuleKey
+}
+
+export type V3BuyResearchAction = {
+  type: 'buy_research'
+  sequence: number
+  researchId: ResearchKey
+}
+
+export type V3ExpandGridAction = {
+  type: 'expand_grid'
+  sequence: number
+}
+
+export type V3Action = V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

@@ -202,8 +202,10 @@ rescue payout; clear slots flow doesn't silently destroy assets; nested sheets s
 
 ### V3-10 · Prototype gate and scoped corrections
 
-Status: automated comparison passes; Android 15–20 minute human playtest is
-pending. Evidence and the exact checklist live in
+Status: **COMPLETE** — automated comparison passes and on 2026-09-26 the player
+passed the gate to R2 after playing build #69 (see the gate document; detailed
+device measurements were not supplied). Original note: the Android 15–20 minute
+human playtest was pending. Evidence and the exact checklist live in
 [GAMEPLAY_PROTOTYPE_GATE_V3.md](GAMEPLAY_PROTOTYPE_GATE_V3.md). Do not mark this
 task complete or enter R2 from simulator evidence alone.
 
@@ -220,6 +222,14 @@ proceed to R2. APK/push only when user asks for a tested slice.
 ## R2 — Midgame with specialization choices
 
 ### V3-11 · Lube/Jet + upgraded infrastructure and modules
+
+Status: **COMPLETE IN CODE** — 11a `a857b53`, 11b/c `5f24c17`, UI `f0a0faa`.
+Checks: `check:v3-lube`, `check:v3-modules-jet` plus all prior V3/legacy checks.
+Evidence notes: Q65 at C2 is reached through the legal route; Q75 Jet is proven
+on a labelled C3 fixture because the C2→C3 predicate belongs to V3-13. Only
+Operators staff lines until V3-12. Legal C2 funding of 2 Lube + Power Lv2 +
+Lube Tank Lv2 through Gasoline spot took 630 cycles (~52 sim min): flag for V3-18.
+Android device interaction with the new panels is not claimed.
 
 Dependencies:10 pass. Split11a Lube/C2,11b modules/rank1,11c Jet/C3.
 Port all inputs/outputs through variant ledger and fair planner. Implement V3-A

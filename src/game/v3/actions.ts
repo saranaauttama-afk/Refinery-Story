@@ -1,5 +1,17 @@
 import type { BuildingType, ProductKey } from '../types'
-import { V3_BUILDINGS, V3_CRUDE_PRICE_CENTS, V3_SPOT_PRICE_CENTS } from './data'
+import { unlockV3Research, validateV3Research } from './research'
+import {
+  V3_BUILDINGS,
+  V3_CRUDE_PRICE_CENTS,
+  V3_MODULE_CHAPTER,
+  V3_MODULE_FIT_COST_RATE,
+  V3_MODULE_MIN_PLANT_LEVEL,
+  V3_PLANT_BY_FAMILY,
+  V3_PROCESS_UNITS,
+  V3_SPOT_PRICE_CENTS,
+  isV3ProcessBuilding,
+} from './data'
+import { expandV3Grid } from './expansion'
 import { cancelV3Development, startV3Development } from './development'
 import { acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import {
@@ -19,6 +31,8 @@ import type {
   V3ActionResult,
   V3BuildAction,
   V3GameState,
+  V3ModuleKey,
+  V3ProductFamily,
   V3TradeAction,
   V3UpgradeAction,
 } from './types'
@@ -31,6 +45,49 @@ function event(
   return { tone, messageId, ...(params ? { params } : {}) }
 }
 
+// Buildings whose V3 capability is implemented end-to-end. Others stay visible
+// as locked rather than being placeable with no working system behind them.
+export const V3_SUPPORTED_BUILDINGS: ReadonlySet<BuildingType> = new Set<BuildingType>([
+  'crudeTank',
+  'gasolineTank',
+  'distillationUnit',
+  'laboratory',
+  'powerPlant',
+  'lubricantPlant',
+  'lubricantTank',
+  'jetFuelPlant',
+  'jetFuelTank',
+])
+
+const STORAGE_PRODUCT: Partial<Record<BuildingType, V3ProductFamily>> = {
+  gasolineTank: 'gasoline',
+  lubricantTank: 'lubricants',
+  jetFuelTank: 'jetFuel',
+}
+
+export function isV3TradableFamily(product: ProductKey | 'crude'): product is V3ProductFamily {
+  return product !== 'crude' && V3_PLANT_BY_FAMILY[product] !== undefined
+}
+
+export type V3ModuleQuote =
+  | { blocker: null; costCents: number; params?: undefined }
+  | { blocker: 'invalid_cell' | 'locked' | 'plant_level' | 'no_change' | 'insufficient_cash'; costCents: number; params?: Record<string, number> }
+
+/** Shared module fit validation used by the action and the UI preview. */
+export function getV3ModuleQuote(state: V3GameState, cellIndex: number, module: V3ModuleKey): V3ModuleQuote {
+  const building = state.world.grid[cellIndex]
+  const program = state.plantPrograms[cellIndex]
+  if (!isV3ProcessBuilding(building) || !program || isV3LoanerCell(state, cellIndex)) return { blocker: 'invalid_cell', costCents: 0 }
+  if (program.installedModule === module) return { blocker: 'no_change', costCents: 0 }
+  const costCents = module === 'none' ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 100 * V3_MODULE_FIT_COST_RATE)
+  if (module !== 'none') {
+    if (state.campaignProgress.chapter < V3_MODULE_CHAPTER) return { blocker: 'locked', costCents, params: { chapter: V3_MODULE_CHAPTER } }
+    if ((state.world.gridLevels[cellIndex] ?? 1) < V3_MODULE_MIN_PLANT_LEVEL) return { blocker: 'plant_level', costCents, params: { level: V3_MODULE_MIN_PLANT_LEVEL } }
+    if (state.world.moneyCents < costCents) return { blocker: 'insufficient_cash', costCents, params: { costCents } }
+  }
+  return { blocker: null, costCents }
+}
+
 export function getV3ActionId(action: Pick<V3Action, 'type' | 'sequence'>): string {
   return `action:${action.type}:${String(action.sequence).padStart(8, '0')}`
 }
@@ -41,6 +98,9 @@ export function validateV3Build(state: V3GameState, action: V3BuildAction): V3Ac
   }
   if (state.world.grid[action.cellIndex] !== null) {
     return event('blocked', 'v3.build.occupied')
+  }
+  if (!V3_SUPPORTED_BUILDINGS.has(action.building)) {
+    return event('blocked', 'v3.build.unsupported')
   }
   const capability = V3_BUILDINGS[action.building]
   const requiredChapter = capability.buildChapter
@@ -59,7 +119,7 @@ export function validateV3Upgrade(state: V3GameState, action: V3UpgradeAction): 
     return event('blocked', 'v3.upgrade.invalid_cell')
   }
   const building = state.world.grid[action.cellIndex]
-  if (!building || V3_BUILDINGS[building].upgradeCostDollars === null) {
+  if (!building || !V3_SUPPORTED_BUILDINGS.has(building) || V3_BUILDINGS[building].upgradeCostDollars === null) {
     return event('blocked', 'v3.upgrade.unsupported')
   }
   const level = state.world.gridLevels[action.cellIndex] ?? 1
@@ -91,7 +151,7 @@ export function validateV3Trade(state: V3GameState, action: V3TradeAction): V3Ac
     if (action.product === 'crude') {
       return event('blocked', 'v3.trade.insufficient_stock')
     }
-    if (action.product !== 'gasoline') return event('info', 'v3.trade.inventory_pending')
+    if (!isV3TradableFamily(action.product)) return event('info', 'v3.trade.inventory_pending')
     if (getV3SellableQuantity(state, action.product, action) + 1e-8 < action.quantity) {
       return event('blocked', 'v3.trade.insufficient_stock')
     }
@@ -135,12 +195,12 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     const gridLevels = [...state.world.gridLevels]
     grid[action.cellIndex] = action.building
     gridLevels[action.cellIndex] = 1
-    const plantPrograms = action.building === 'distillationUnit'
+    const plantPrograms = isV3ProcessBuilding(action.building)
       ? {
         ...state.plantPrograms,
         [action.cellIndex]: {
           cellIndex: action.cellIndex,
-          blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline,
+          blueprintId: V3_DEFAULT_BLUEPRINT_ID[V3_PROCESS_UNITS[action.building].family],
           installedModule: 'none' as const,
           setupRemainingTicks: 0,
           paused: false,
@@ -178,9 +238,10 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     const grid = [...state.world.grid]
     grid[action.cellIndex] = null
     const hypothetical = { ...state, world: { ...state.world, grid } }
+    const storedProduct = STORAGE_PRODUCT[building]
     if (
       (building === 'crudeTank' && state.world.crudeOil > getV3CrudeCapacity(hypothetical) + 1e-8) ||
-      (building === 'gasolineTank' && getV3ProductQuantity(state, 'gasoline') > getV3ProductCapacity(hypothetical, 'gasoline') + 1e-8)
+      (storedProduct && getV3ProductQuantity(state, storedProduct) > getV3ProductCapacity(hypothetical, storedProduct) + 1e-8)
     ) {
       return consumedResult(state, action, state, event('blocked', 'v3.demolish.stock_overflow'))
     }
@@ -237,7 +298,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     }
     if (action.duty.kind === 'line') {
       const targetCellIndex = action.duty.cellIndex
-      if (state.world.grid[targetCellIndex] !== 'distillationUnit' || !state.plantPrograms[targetCellIndex]) {
+      if (!isV3ProcessBuilding(state.world.grid[targetCellIndex]) || !state.plantPrograms[targetCellIndex]) {
         return consumedResult(state, action, state, event('blocked', 'v3.duty.invalid_target'))
       }
       if (employee.type !== 'operator') {
@@ -370,10 +431,11 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   if (action.type === 'set_program') {
     const program = state.plantPrograms[action.cellIndex]
     const blueprint = state.productBlueprints[action.blueprintId]
-    if (!program || state.world.grid[action.cellIndex] !== 'distillationUnit') {
+    const building = state.world.grid[action.cellIndex]
+    if (!program || !isV3ProcessBuilding(building)) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_cell'))
     }
-    if (!blueprint || blueprint.family !== 'gasoline' || (state.world.gridLevels[action.cellIndex] ?? 1) < blueprint.minPlantLevel) {
+    if (!blueprint || blueprint.family !== V3_PROCESS_UNITS[building].family || (state.world.gridLevels[action.cellIndex] ?? 1) < blueprint.minPlantLevel) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_blueprint'))
     }
     if (blueprint.module !== program.installedModule) {
@@ -393,7 +455,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
 
   if (action.type === 'set_pause') {
     const program = state.plantPrograms[action.cellIndex]
-    if (!program || state.world.grid[action.cellIndex] !== 'distillationUnit') {
+    if (!program || !isV3ProcessBuilding(state.world.grid[action.cellIndex])) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_cell'))
     }
     return consumedResult(state, action, {
@@ -403,6 +465,44 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
         [action.cellIndex]: { ...program, paused: action.paused },
       },
     }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'set_module') {
+    const quote = getV3ModuleQuote(state, action.cellIndex, action.module)
+    if (quote.blocker) {
+      return consumedResult(state, action, state, event('blocked', `v3.module.${quote.blocker}` as V3ActionEvent['messageId'], quote.params))
+    }
+    const program = state.plantPrograms[action.cellIndex]
+    const blueprint = state.productBlueprints[program.blueprintId]
+    // Never silently run a blueprint on hardware it was not certified for:
+    // an incompatible line pauses until the player selects a matching program.
+    const compatible = blueprint?.module === action.module
+    const next: V3GameState = {
+      ...state,
+      world: { ...state.world, moneyCents: state.world.moneyCents - quote.costCents },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + quote.costCents },
+      plantPrograms: {
+        ...state.plantPrograms,
+        [action.cellIndex]: { ...program, installedModule: action.module, paused: compatible ? program.paused : true },
+      },
+    }
+    return consumedResult(state, action, next, event('success', 'v3.action.ok', { costCents: quote.costCents, paused: compatible ? 0 : 1 }))
+  }
+
+  if (action.type === 'buy_research') {
+    const invalid = validateV3Research(state, action.researchId)
+    if (invalid) {
+      return consumedResult(state, action, state, event('blocked', `v3.research.${invalid.blocker}` as V3ActionEvent['messageId'], invalid.params))
+    }
+    return consumedResult(state, action, unlockV3Research(state, action.researchId), event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'expand_grid') {
+    const expanded = expandV3Grid(state)
+    if (expanded.blocker) {
+      return consumedResult(state, action, state, event('blocked', `v3.expand.${expanded.blocker}` as V3ActionEvent['messageId'], expanded.params))
+    }
+    return consumedResult(state, action, expanded.state, event('success', 'v3.action.ok'))
   }
 
   const blocker = validateV3Trade(state, action)
@@ -433,7 +533,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       event('success', 'v3.action.ok', { quantity: actual, costCents }),
     )
   }
-  if (action.direction === 'sell' && action.product === 'gasoline') {
+  if (action.direction === 'sell' && isV3TradableFamily(action.product)) {
     const consumed = consumeV3SellableInventory(state, action.product, action.quantity, action)
     const receiptsCents = consumed.quantity * V3_SPOT_PRICE_CENTS[action.product]
     const sold = {

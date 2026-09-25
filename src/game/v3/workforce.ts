@@ -1,4 +1,5 @@
 import type { Employee, WorkerType } from '../types'
+import { isV3ProcessBuilding } from './data'
 import { recordV3Ledger } from './productInventory'
 import type { V3EmployeeDuty, V3GameState } from './types'
 
@@ -100,7 +101,7 @@ export function returnV3EmployeeFromDevelopment(state: V3GameState, employeeId: 
   const duty = state.employeeDuties[employeeId]
   if (duty?.kind !== 'development') return state
   const targetAvailable = duty.returnCellIndex !== null &&
-    state.world.grid[duty.returnCellIndex] === 'distillationUnit' &&
+    isV3ProcessBuilding(state.world.grid[duty.returnCellIndex]) &&
     Boolean(state.plantPrograms[duty.returnCellIndex]) &&
     !Object.entries(state.employeeDuties).some(([id, otherDuty]) =>
       id !== employeeId && otherDuty.kind === 'line' && otherDuty.cellIndex === duty.returnCellIndex,

@@ -1,6 +1,6 @@
 # Gameplay V3 — Prototype gate
 
-2026-09-25 · **AUTOMATED GATE PASS; ANDROID PLAYTEST PENDING**
+2026-09-26 · **PASS TO R2 — player decision on build #69**
 
 This gate evaluates the C0→C2 Gasoline prototype only. It does not authorize
 Lube, Jet, later clients, art/map work, a build, or a push.
@@ -64,7 +64,13 @@ Status remains **pending** until one 15–20 minute fresh-device session records
 
 ## Gate decision
 
-**Pending device evidence.** Automated economics support the intended choice, so
+**2026-09-26 — Pass to R2 (player decision).** After playing Android build #69
+(release `9b8fe406`) the player judged the prototype playable enough to continue
+(“พอเล่นได้ ทำต่อเลย”). No per-item timings or observations for checklist
+items 1–7 were supplied, so they are not recorded here as measured evidence;
+revisit them during the V3-19 Android acceptance pass.
+
+Previous status (2026-09-25): **Pending device evidence.** Automated economics support the intended choice, so
 there is no current reason to add later product families to hide a weak Gasoline
 loop. After device play, choose exactly one outcome: pass to R2, correct mechanics
 within V3-00…09, or stop expansion.

@@ -21,6 +21,7 @@ import {
 import type { BilingualTextValue } from '../src/game/types'
 import type { V3ActionEvent, V3GameState } from '../src/game/v3/types'
 import { getV3LineEmployee, getV3LocalCrewRate } from '../src/game/v3/workforce'
+import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { useLang } from '../src/hooks/SettingsContext'
 import { colors, fonts, spacing } from '../src/theme'
 
@@ -45,8 +46,32 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.duty.invalid_target': return translate({ en: 'That duty is not available yet.', th: 'หน้าที่นี้ยังไม่เปิดใช้งาน' })
     case 'v3.development.chapter_locked': return translate({ en: 'Product development unlocks in C1.', th: 'ระบบพัฒนาสินค้าปลดล็อกในบท C1' })
     case 'v3.development.invalid_lab': return translate({ en: 'Build and select a Laboratory first.', th: 'ต้องสร้างและเลือก Laboratory ก่อน' })
-    case 'v3.development.insufficient_cash': return translate({ en: 'Development needs $50.', th: 'การพัฒนาต้องใช้เงิน $50' })
-    case 'v3.development.insufficient_samples': return translate({ en: 'Need 10 unreserved Gasoline samples.', th: 'ต้องมี Gasoline ที่ไม่ถูกจอง 10 หน่วย' })
+    case 'v3.development.insufficient_cash': return translate({ en: 'Not enough cash for the development fee.', th: 'เงินไม่พอจ่ายค่าพัฒนา' })
+    case 'v3.development.insufficient_samples': return translate({ en: 'Need 10 unreserved samples of this product.', th: 'ต้องมีสินค้านี้ที่ไม่ถูกจอง 10 หน่วย' })
+    case 'v3.development.invalid_config': return translate({ en: 'This family or module is not available yet.', th: 'สินค้าหรือโมดูลนี้ยังใช้ไม่ได้' })
+    case 'v3.development.knowledge_locked': return translate({ en: 'Needs Lab Lv2 + Premium Fuel research for rank 1.', th: 'ต้องมี Lab Lv2 + วิจัย Premium Fuel สำหรับ rank 1' })
+    case 'v3.development.invalid_lead': return translate({ en: 'This lead is unavailable.', th: 'หัวหน้าทดลองคนนี้ไม่ว่าง' })
+    case 'v3.build.unsupported': return translate({ en: 'This building has no V3 system yet.', th: 'อาคารนี้ยังไม่มีระบบใน V3' })
+    case 'v3.build.invalid_cell': return translate({ en: 'No empty slot. Expand the yard or remove a building.', th: 'ไม่มีช่องว่าง ขยายพื้นที่หรือรื้ออาคารก่อน' })
+    case 'v3.upgrade.max_level': return translate({ en: 'Already at the highest level.', th: 'ถึงเลเวลสูงสุดแล้ว' })
+    case 'v3.upgrade.unsupported': return translate({ en: 'This building cannot be upgraded here.', th: 'อาคารนี้อัปเกรดไม่ได้' })
+    case 'v3.expand.unavailable': return translate({ en: 'No further expansion in this chapter.', th: 'ยังไม่มีการขยายเพิ่มในบทนี้' })
+    case 'v3.expand.locked': return translate({ en: `Expansion unlocks in C${p?.chapter}.`, th: `ขยายพื้นที่ได้ในบท C${p?.chapter}` })
+    case 'v3.expand.insufficient_cash': return translate({ en: `Expansion needs $${Number(p?.costCents ?? 0) / 100}.`, th: `ขยายพื้นที่ต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
+    case 'v3.module.invalid_cell': return translate({ en: 'Modules fit owned production lines only.', th: 'ติดโมดูลได้เฉพาะไลน์ผลิตของเรา' })
+    case 'v3.module.locked': return translate({ en: `Modules unlock in C${p?.chapter}.`, th: `โมดูลปลดล็อกในบท C${p?.chapter}` })
+    case 'v3.module.plant_level': return translate({ en: `Upgrade this plant to Lv${p?.level} first.`, th: `ต้องอัปเกรดโรงงานเป็น Lv${p?.level} ก่อน` })
+    case 'v3.module.no_change': return translate({ en: 'This module is already installed.', th: 'ติดตั้งโมดูลนี้อยู่แล้ว' })
+    case 'v3.module.insufficient_cash': return translate({ en: `Module needs $${Number(p?.costCents ?? 0) / 100}.`, th: `โมดูลต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
+    case 'v3.program.module_mismatch': return translate({ en: 'Recipe needs a different installed module.', th: 'สูตรนี้ต้องใช้โมดูลอื่น' })
+    case 'v3.program.invalid_blueprint': return translate({ en: 'Recipe does not fit this plant or its level.', th: 'สูตรนี้ไม่ตรงกับโรงงานหรือเลเวล' })
+    case 'v3.research.unsupported': return translate({ en: 'This research has no V3 effect yet.', th: 'งานวิจัยนี้ยังไม่มีผลใน V3' })
+    case 'v3.research.owned': return translate({ en: 'Already researched.', th: 'วิจัยแล้ว' })
+    case 'v3.research.locked': return translate({ en: `Research unlocks in C${p?.chapter}.`, th: `วิจัยได้ในบท C${p?.chapter}` })
+    case 'v3.research.prerequisite': return translate({ en: `Research ${p?.research} first.`, th: `ต้องวิจัย ${p?.research} ก่อน` })
+    case 'v3.research.lab_level': return translate({ en: `Needs a Laboratory Lv${p?.level}.`, th: `ต้องมี Laboratory Lv${p?.level}` })
+    case 'v3.research.insufficient_rp': return translate({ en: `Needs ${p?.rp} RP.`, th: `ต้องใช้ ${p?.rp} RP` })
+    case 'v3.job.template_missing': return translate({ en: 'Offer unavailable.', th: 'ไม่มีงานนี้' })
     case 'v3.development.duplicate_signature': return translate({ en: 'This configuration is already certified.', th: 'สูตรรูปแบบนี้ได้รับการรับรองแล้ว' })
     case 'v3.development.project_active': return translate({ en: 'Finish or cancel the active project first.', th: 'ต้องจบหรือยกเลิกโครงการปัจจุบันก่อน' })
     case 'v3.job.slot_occupied': return translate({ en: 'Finish or cancel the current job first.', th: 'ต้องส่งหรือยกเลิกงานปัจจุบันก่อน' })
@@ -76,7 +101,7 @@ function guidanceText(step: V3GuidanceStep, translate: (value: BilingualTextValu
     produce_developed_stock: { en: 'Produce 40 units of your developed Gasoline.', th: 'ผลิต Gasoline สูตรของเราให้ครบ 40 หน่วย' },
     accept_qualifying_job: { en: 'Accept Local Trial and reserve the developed stock.', th: 'รับงาน Local Trial เพื่อจองสต็อกสูตรที่พัฒนาเอง' },
     ship_developed_product: { en: 'Ship 40 developed units to reach C2.', th: 'ส่งสูตรที่พัฒนาเอง 40 หน่วยเพื่อเข้าสู่ C2' },
-    chapter_two: { en: 'C2 reached — the first strategic branch is ready.', th: 'ถึง C2 แล้ว — พร้อมเข้าสู่ทางเลือกธุรกิจแรก' },
+    chapter_two: { en: 'C2: choose Lube, a Power Plant, modules (plant Lv2) or Lab Lv2 research.', th: 'C2: เลือกลงทุน Lube, โรงไฟฟ้า, โมดูล (โรงงาน Lv2) หรือวิจัย Lab Lv2' },
   }
   return translate(copy[step])
 }
@@ -181,8 +206,8 @@ export default function V3PreviewScreen() {
   const gasoline = getV3ProductQuantity(state, 'gasoline')
   const gasolineCapacity = getV3ProductCapacity(state, 'gasoline')
   const productionPreview = evaluateV3GasolineProduction(state, 25)
-  const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialGasolinePerMinute, 0)
-  const actualRate = productionPreview.reduce((sum, line) => sum + line.actualGasolinePerMinute, 0)
+  const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialOutputPerMinute, 0)
+  const actualRate = productionPreview.reduce((sum, line) => sum + line.actualOutputPerMinute, 0)
   const starterOperator = state.world.employees[0]
   const starterDuty = state.employeeDuties[starterOperator.id] ?? { kind: 'reserve' as const }
   const distillationCellIndex = state.world.grid.findIndex((cell) => cell === 'distillationUnit')
@@ -196,12 +221,13 @@ export default function V3PreviewScreen() {
     .filter((blueprint) => blueprint.family === 'gasoline')
     .sort((a, b) => a.quality - b.quality || a.id.localeCompare(b.id))
   const activeJob = state.acceptedJob
-  const gasolineAllocations = getV3StockAllocations(state, 'gasoline')
+  const gasolineAllocations = getV3StockAllocations(state, activeJob?.family ?? 'gasoline')
   const jobReserved = gasolineAllocations.reduce((sum, allocation) => sum + allocation.jobReserved, 0)
   const jobEligibleBlueprints = activeJob ? gasolineAllocations.filter((allocation) =>
     allocation.quality >= activeJob.minimumQuality && allocation.quantity - allocation.kept > 0,
   ) : []
-  const defaultGasPolicy = state.stockPolicies[V3_DEFAULT_BLUEPRINT_ID.gasoline] ?? { keepQuantity: 0, autoSell: false, autoDispatch: false }
+  const jobDefaultBlueprintId = V3_DEFAULT_BLUEPRINT_ID[activeJob?.family ?? 'gasoline']
+  const defaultGasPolicy = state.stockPolicies[jobDefaultBlueprintId] ?? { keepQuantity: 0, autoSell: false, autoDispatch: false }
   const guidance = getV3GuidanceStep(state)
   const recoveryOffer = getV3RecoveryOffer(state)
   const effectiveSpeed = getV3EffectiveSpeed(pauseState)
@@ -291,6 +317,8 @@ export default function V3PreviewScreen() {
           )}
         </View>
 
+        <V3MidgamePanels state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Customers & shipments', th: 'ลูกค้าและการจัดส่ง' })}</Text>
           {activeJob ? (
@@ -317,10 +345,10 @@ export default function V3PreviewScreen() {
               ))}
               <Pressable style={styles.secondary} onPress={() => apply({
                 type: 'set_stock_policy', sequence: state.nextActionSequence,
-                blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline,
+                blueprintId: jobDefaultBlueprintId,
                 autoDispatch: !defaultGasPolicy.autoDispatch,
               })}>
-                <Text style={styles.secondaryText}>Auto-dispatch Standard Q40: {defaultGasPolicy.autoDispatch ? 'ON' : 'OFF'}</Text>
+                <Text style={styles.secondaryText}>Auto-dispatch {state.productBlueprints[jobDefaultBlueprintId]?.name}: {defaultGasPolicy.autoDispatch ? 'ON' : 'OFF'}</Text>
               </Pressable>
               <Pressable style={styles.secondary} onPress={() => apply({ type: 'cancel_job', sequence: state.nextActionSequence })}>
                 <Text style={styles.secondaryText}>{t({ en: 'Cancel job', th: 'ยกเลิกงาน' })}</Text>
@@ -328,15 +356,7 @@ export default function V3PreviewScreen() {
             </>
           ) : (
             <>
-              <Pressable style={styles.secondary} onPress={() => apply({ type: 'accept_job', sequence: state.nextActionSequence, templateId: 'tutorial:gasoline' })}>
-                <Text style={styles.secondaryText}>{t({ en: 'Accept Tutorial · Q0 · 20 Gas', th: 'รับ Tutorial · Q0 · Gas 20' })}</Text>
-              </Pressable>
-              <Pressable style={styles.secondary} onPress={() => apply({ type: 'accept_job', sequence: state.nextActionSequence, templateId: 'local:trial' })}>
-                <Text style={styles.secondaryText}>{t({ en: 'Accept Local Trial · Q35 · 40 Gas', th: 'รับ Local Trial · Q35 · Gas 40' })}</Text>
-              </Pressable>
-              <Pressable style={styles.secondary} onPress={() => apply({ type: 'accept_job', sequence: state.nextActionSequence, templateId: 'performance:trial' })}>
-                <Text style={styles.secondaryText}>{t({ en: 'Accept Performance Trial · Q55 · 35 Gas', th: 'รับ Performance Trial · Q55 · Gas 35' })}</Text>
-              </Pressable>
+              <Text style={styles.row}>{t({ en: 'Choose an offer in Customer offers below.', th: 'เลือกงานในหัวข้อข้อเสนอลูกค้าด้านล่าง' })}</Text>
               <Text style={styles.row}>{t({ en: 'Completed receipts', th: 'ใบเสร็จงานสำเร็จ' })}: {state.jobReceipts.receipts.filter((receipt) => receipt.status === 'completed').length}</Text>
             </>
           )}
@@ -450,7 +470,7 @@ export default function V3PreviewScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Financial ledger', th: 'บัญชีการเงิน' })}</Text>
-          <Text style={styles.row}>{t({ en: 'Buildings', th: 'อาคาร' })}: {buildings}/9</Text>
+          <Text style={styles.row}>{t({ en: 'Buildings', th: 'อาคาร' })}: {buildings}/{state.world.grid.length}</Text>
           <Text style={styles.row}>{t({ en: 'Operating receipts', th: 'รายรับดำเนินงาน' })}: ${(state.operatingLedger.lifetimeReceiptsCents / 100).toFixed(2)}</Text>
           <Text style={styles.row}>{t({ en: 'Cash outflows', th: 'เงินจ่ายดำเนินงาน' })}: ${(state.operatingLedger.lifetimeCashOutflowsCents / 100).toFixed(2)}</Text>
           <Text style={styles.row}>CAPEX: ${(state.operatingLedger.capexCents / 100).toFixed(2)}</Text>
