@@ -1,7 +1,11 @@
 import type { BuildingType, ProductKey } from '../types'
+import { unlockV3Research, validateV3Research } from './research'
 import {
   V3_BUILDINGS,
   V3_CRUDE_PRICE_CENTS,
+  V3_MODULE_CHAPTER,
+  V3_MODULE_FIT_COST_RATE,
+  V3_MODULE_MIN_PLANT_LEVEL,
   V3_PLANT_BY_FAMILY,
   V3_PROCESS_UNITS,
   V3_SPOT_PRICE_CENTS,
@@ -27,6 +31,7 @@ import type {
   V3ActionResult,
   V3BuildAction,
   V3GameState,
+  V3ModuleKey,
   V3ProductFamily,
   V3TradeAction,
   V3UpgradeAction,
@@ -62,6 +67,25 @@ const STORAGE_PRODUCT: Partial<Record<BuildingType, V3ProductFamily>> = {
 
 export function isV3TradableFamily(product: ProductKey | 'crude'): product is V3ProductFamily {
   return product !== 'crude' && V3_PLANT_BY_FAMILY[product] !== undefined
+}
+
+export type V3ModuleQuote =
+  | { blocker: null; costCents: number; params?: undefined }
+  | { blocker: 'invalid_cell' | 'locked' | 'plant_level' | 'no_change' | 'insufficient_cash'; costCents: number; params?: Record<string, number> }
+
+/** Shared module fit validation used by the action and the UI preview. */
+export function getV3ModuleQuote(state: V3GameState, cellIndex: number, module: V3ModuleKey): V3ModuleQuote {
+  const building = state.world.grid[cellIndex]
+  const program = state.plantPrograms[cellIndex]
+  if (!isV3ProcessBuilding(building) || !program || isV3LoanerCell(state, cellIndex)) return { blocker: 'invalid_cell', costCents: 0 }
+  if (program.installedModule === module) return { blocker: 'no_change', costCents: 0 }
+  const costCents = module === 'none' ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 100 * V3_MODULE_FIT_COST_RATE)
+  if (module !== 'none') {
+    if (state.campaignProgress.chapter < V3_MODULE_CHAPTER) return { blocker: 'locked', costCents, params: { chapter: V3_MODULE_CHAPTER } }
+    if ((state.world.gridLevels[cellIndex] ?? 1) < V3_MODULE_MIN_PLANT_LEVEL) return { blocker: 'plant_level', costCents, params: { level: V3_MODULE_MIN_PLANT_LEVEL } }
+    if (state.world.moneyCents < costCents) return { blocker: 'insufficient_cash', costCents, params: { costCents } }
+  }
+  return { blocker: null, costCents }
 }
 
 export function getV3ActionId(action: Pick<V3Action, 'type' | 'sequence'>): string {
@@ -441,6 +465,36 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
         [action.cellIndex]: { ...program, paused: action.paused },
       },
     }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'set_module') {
+    const quote = getV3ModuleQuote(state, action.cellIndex, action.module)
+    if (quote.blocker) {
+      return consumedResult(state, action, state, event('blocked', `v3.module.${quote.blocker}` as V3ActionEvent['messageId'], quote.params))
+    }
+    const program = state.plantPrograms[action.cellIndex]
+    const blueprint = state.productBlueprints[program.blueprintId]
+    // Never silently run a blueprint on hardware it was not certified for:
+    // an incompatible line pauses until the player selects a matching program.
+    const compatible = blueprint?.module === action.module
+    const next: V3GameState = {
+      ...state,
+      world: { ...state.world, moneyCents: state.world.moneyCents - quote.costCents },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + quote.costCents },
+      plantPrograms: {
+        ...state.plantPrograms,
+        [action.cellIndex]: { ...program, installedModule: action.module, paused: compatible ? program.paused : true },
+      },
+    }
+    return consumedResult(state, action, next, event('success', 'v3.action.ok', { costCents: quote.costCents, paused: compatible ? 0 : 1 }))
+  }
+
+  if (action.type === 'buy_research') {
+    const invalid = validateV3Research(state, action.researchId)
+    if (invalid) {
+      return consumedResult(state, action, state, event('blocked', `v3.research.${invalid.blocker}` as V3ActionEvent['messageId'], invalid.params))
+    }
+    return consumedResult(state, action, unlockV3Research(state, action.researchId), event('success', 'v3.action.ok'))
   }
 
   if (action.type === 'expand_grid') {

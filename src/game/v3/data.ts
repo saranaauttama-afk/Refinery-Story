@@ -153,3 +153,15 @@ export const V3_DEVELOPMENT_SAMPLE_QUANTITY = 10
 export const V3_GRID_EXPANSIONS = [
   { fromSize: 3, toSize: 4, costDollars: 6_000, chapter: 2 },
 ] as const
+
+// Systems S2 module table: fit cost is 20% of the plant's base build cost.
+export const V3_MODULE_FIT_COST_RATE = 0.2
+export const V3_MODULE_MIN_PLANT_LEVEL = 2
+export const V3_MODULE_CHAPTER = 2
+
+// Research with a working V3 effect. Other legacy IDs are mapped in V3-12.
+export const V3_RESEARCH = {
+  premiumFuel: { rp: 20, chapter: 2, labLevel: 2, prerequisite: null, knowledgeRank: 1 },
+  advancedProcessing: { rp: 60, chapter: 4, labLevel: 3, prerequisite: 'premiumFuel', knowledgeRank: 2 },
+} as const
+export type V3SupportedResearch = keyof typeof V3_RESEARCH

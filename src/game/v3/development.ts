@@ -1,5 +1,7 @@
+import { getV3AvailableKnowledgeRank } from './research'
 import {
   V3_DEVELOPMENT_BY_FAMILY,
+  V3_MODULE_CHAPTER,
   V3_DEVELOPMENT_SAMPLE_QUANTITY,
   V3_MODULE_QUALITY,
   V3_PLANT_BY_FAMILY,
@@ -47,7 +49,7 @@ export function getV3DevelopmentSignature(action: Pick<V3StartDevelopmentAction,
 
 export type V3DevelopmentStartResult = {
   state: V3GameState
-  blocker: null | 'chapter_locked' | 'project_active' | 'invalid_lab' | 'invalid_config' | 'duplicate_signature' | 'insufficient_cash' | 'insufficient_samples' | 'invalid_lead'
+  blocker: null | 'chapter_locked' | 'project_active' | 'invalid_lab' | 'invalid_config' | 'knowledge_locked' | 'duplicate_signature' | 'insufficient_cash' | 'insufficient_samples' | 'invalid_lead'
 }
 
 export function startV3Development(state: V3GameState, action: V3StartDevelopmentAction): V3DevelopmentStartResult {
@@ -57,7 +59,10 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
   if (state.developmentProject) return { state, blocker: 'project_active' }
   if (state.world.grid[action.labCellIndex] !== 'laboratory') return { state, blocker: 'invalid_lab' }
   const labLevel = state.world.gridLevels[action.labCellIndex] ?? 1
-  if (action.module !== 'none' || action.knowledgeRank !== 0 || labLevel < 1) return { state, blocker: 'invalid_config' }
+  if (labLevel < 1 || ![0, 1, 2].includes(action.knowledgeRank)) return { state, blocker: 'invalid_config' }
+  if (action.module !== 'none' && state.campaignProgress.chapter < V3_MODULE_CHAPTER) return { state, blocker: 'invalid_config' }
+  // Rank uses the selected lab only (never the sum of labs) plus owned research.
+  if (action.knowledgeRank > getV3AvailableKnowledgeRank(state, action.labCellIndex)) return { state, blocker: 'knowledge_locked' }
   const feeCents = familyRules.feeCents
 
   const lead = action.leadEmployeeId ? getV3Employee(state, action.leadEmployeeId) : undefined
