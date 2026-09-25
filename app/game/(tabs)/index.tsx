@@ -45,7 +45,8 @@ import { BUILDINGS } from '../../../src/game/data/buildings'
 import { ENDGAME_GOALS } from '../../../src/game/data/endgameGoals'
 import { HIDDEN_EVENTS } from '../../../src/game/data/hiddenEvents'
 import { WORKERS } from '../../../src/game/data/workers'
-import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, PRODUCTION_BALANCE, POWER_PLANT_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
+import { BUILDING_UPGRADE_BALANCE, PLANT_PRODUCTION, GRID_EDIT_BALANCE, EXPANSION_BALANCE, PRESTIGE_BALANCE, MAX_REFINERY_LEVEL } from '../../../src/game/data/balance'
+import { getBuildingUpgradeCost, UPGRADEABLE_BUILDINGS } from '../../../src/game/data/buildingUpgrades'
 import type { BilingualTextValue, BuildingType } from '../../../src/game/types'
 import {
   getBuildingEffectLines,
@@ -186,19 +187,6 @@ const BUILD_REQUIRES: Partial<Record<BuildingType, string>> = {
   recyclingBunker:     'Stores recycled material overflow',
   pelletSilo:          'Stores plastic pellets overflow',
 }
-const UPGRADEABLE: BuildingType[] = [
-  'crudeTank',
-  'distillationUnit',
-  'gasolineTank',
-  'laboratory',
-  'maintenanceWorkshop',
-  'salesOffice',
-  'lubricantPlant',
-  'jetFuelPlant',
-  'petrochemicalPlant',
-  'polymerPlant',
-]
-
 // ── Scene geometry constants ──────────────────────────────────────────────────
 const SKY_RATIO    = 0.08   // สัดส่วนความสูงฟ้า (0.0–1.0) → กำหนดตำแหน่ง HUD + Grid
 const HORIZON_H    = 8    // px — ความสูง horizon strip (ถ้าไม่ใช้ bg รูปก็ set 0 ได้)
@@ -350,11 +338,9 @@ export default function RefineryScreen() {
   const meterColorStyle = (v: number) =>
     v < 40 ? styles.meterDanger : v < 60 ? styles.meterWarn : styles.meterGood
   // Power (electricity) supply-vs-demand breakdown for the power sheet.
-  const powerBd = getPowerBreakdown(derived.buildingCounts)
+  const powerBd = getPowerBreakdown(game)
   const hasPowerInfo = powerBd.supply > 0 || powerBd.demand > 0
-  // A real deficit only bites once a Power Plant exists and can't cover demand;
-  // pre-plant the demand is just informational (plants run unpowered).
-  const powerDeficit = derived.buildingCounts.powerPlant > 0 && powerBd.supply < powerBd.demand
+  const powerDeficit = powerBd.supply < powerBd.demand
   const claimableHiddenEvents = HIDDEN_EVENTS.filter((e) => game.hiddenEventStatus[e.key] === 'unlocked')
   const firstEmptyCellIndex   = game.grid.findIndex((cell) => cell === null)
   const timeLabel          = `${formatGameClockTime(derived.gameClock)} · D${derived.gameClock.dayOfMonth + 1}`
@@ -372,22 +358,11 @@ export default function RefineryScreen() {
   }
   const flowState: 'profit' | 'loss' | 'idle' =
     gasRate <= 0 && moneyRate === 0 ? 'idle' : moneyRate >= 0 ? 'profit' : 'loss'
-  // Gasoline batches are electricity-gated once a Power Plant exists, and the
-  // downstream plants draw electricity first — so an under-built power grid
-  // silently starves the gasoline line (and the lifetime-gasoline goal) with no
-  // feedback. Flag it: gasoline *could* run (crude + tank room) but there isn't
-  // even one batch of electricity left.
-  const gasPowerStarved =
-    derived.buildingCounts.powerPlant > 0 &&
-    game.electricity < PRODUCTION_BALANCE.electricityPerGasolineBatch &&
-    game.crudeOil > 0 &&
-    game.gasoline < derived.maxGasolineStorage
-  // When idle, say *why* the primary loop stalled instead of a vague "Idle" —
-  // the real gasoline bottlenecks are no crude, a full tank, or no electricity.
+  // Gasoline uses its built-in utility supply; power shown here belongs to
+  // advanced processing only.
   const idleReason =
     game.crudeOil <= 0 ? t(text.hud.idleNoCrude)
     : game.gasoline >= derived.maxGasolineStorage ? t(text.hud.idleTankFull)
-    : gasPowerStarved ? t(text.hud.idleNoPower)
     : t(text.hud.flowIdle)
   const flowStateLabel =
     flowState === 'profit' ? t(text.hud.flowProfit)
@@ -414,17 +389,10 @@ export default function RefineryScreen() {
   const secondaryStats = [
     { label: t(text.hud.specialization), value: specValue },
     { label: t(text.hud.feedstock),      value: `${game.feedstock}/${derived.maxFeedstockStorage}` },
-    // Power balance: generation vs downstream demand per cycle. Surplus feeds the
-    // gasoline line; a deficit means gasoline (and maybe plants) are starved — the
-    // hidden trap behind a stalled gasoline goal. Only shown once a Power Plant exists.
-    ...(derived.buildingCounts.powerPlant > 0
+    ...(hasPowerInfo
       ? [{
           label: t(text.hud.power),
-          value: (() => {
-            const gen = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
-            const use = derived.electricityDemandPerCycle
-            return `${gen}⚡/${use} per cyc${gen <= use ? ' ⚠️' : ` · +${gen - use} free`}`
-          })(),
+          value: `${powerBd.supply}⚡/${powerBd.demand} per 5s${powerDeficit ? ' ⚠️' : ` · +${powerBd.supply - powerBd.demand} free`}`,
         }]
       : []),
     { label: t(text.hud.season),         value: `${t(seasonLabel)} · ${seasonPct}%` },
@@ -663,21 +631,15 @@ export default function RefineryScreen() {
             onPress={() => setPowerPanelOpen(true)}
           >
             <GameIcon name="gas" size={15} />
-            {gasPowerStarved ? (
-              <Text style={styles.flowWarn} numberOfLines={1}>⚡ {t(text.hud.lowPower)} {powerBd.supply}/{powerBd.demand} ⓘ</Text>
+            <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
+            {hasPowerInfo ? (
+              <Text style={styles.flowUnit} numberOfLines={1}>
+                {'· ⚡'}
+                <Text style={[styles.flowPowerNum, powerDeficit && styles.flowUnitDeficit]}>{powerBd.supply}/{powerBd.demand}</Text>
+                {' ⓘ'}
+              </Text>
             ) : (
-              <>
-                <Text style={styles.flowVal}>{gasRate > 0 ? `+${gasRate}` : gasRate}</Text>
-                {hasPowerInfo ? (
-                  <Text style={styles.flowUnit} numberOfLines={1}>
-                    {'· ⚡'}
-                    <Text style={[styles.flowPowerNum, powerDeficit && styles.flowUnitDeficit]}>{powerBd.supply}/{powerBd.demand}</Text>
-                    {' ⓘ'}
-                  </Text>
-                ) : (
-                  <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
-                )}
-              </>
+              <Text style={styles.flowUnit}>{t(text.hud.output)}{t(text.hud.perMin)}</Text>
             )}
           </Pressable>
           {/* Boost lives in the status rail so its countdown can never collide
@@ -738,9 +700,7 @@ export default function RefineryScreen() {
                     )
                   })
                 )}
-                {powerBd.gasolineDraws && (
-                  <Text style={styles.powerGasNote}>{t(text.hud.powerGasNote)}</Text>
-                )}
+                <Text style={styles.powerGasNote}>{t(text.hud.powerGasNote)}</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -1017,9 +977,9 @@ export default function RefineryScreen() {
           const config      = BUILDINGS[cell]
           const effectLines = getBuildingEffectLines(cell, level, game, derived, infoCell)
           const nextEffectLines = getBuildingEffectLines(cell, level + 1, game, derived, infoCell)
-          const isUpgradeable = Boolean(UPGRADEABLE.includes(cell))
+          const isUpgradeable = Boolean(UPGRADEABLE_BUILDINGS.includes(cell))
           const maxed       = level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel
-          const upgradeCost = level === 1 ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
+          const upgradeCost = getBuildingUpgradeCost(cell, level) ?? 0
           const canAffordUpgrade = game.money >= upgradeCost
           const plant           = PLANT_PRODUCTION.find((p) => p.buildingKey === cell)
           const specialistType  = cell === 'polymerPlant' ? 'polymerEngineer' : plant?.specialistWorker

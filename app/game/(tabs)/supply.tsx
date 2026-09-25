@@ -16,7 +16,7 @@ import MarketGraph from '../../../src/components/MarketGraph'
 import { useGame } from '../../../src/hooks/GameContext'
 import { useLang } from '../../../src/hooks/SettingsContext'
 import {
-  BUILDING_UPGRADE_BALANCE, FEEDSTOCK_BALANCE, PRODUCTION_BALANCE,
+  BUILDING_UPGRADE_BALANCE, FEEDSTOCK_BALANCE,
   SHIPMENT_BALANCE, STANDING_ORDER_BALANCE,
 } from '../../../src/game/data/balance'
 import { CRUDE_COST, TICK_MS, formatCompactNumber } from '../../../src/game/utils/gameCalculations'
@@ -101,10 +101,6 @@ export default function SupplyScreen() {
   const distillationImage = DISTILLATION_LEVELS[distillationLevel] ?? DISTILLATION_LEVELS[1]
   const crudePct = derived.maxCrudeStorage > 0 ? game.crudeOil / derived.maxCrudeStorage : 0
   const gasPct = derived.maxGasolineStorage > 0 ? game.gasoline / derived.maxGasolineStorage : 0
-  const powerStarved = derived.buildingCounts.powerPlant > 0 &&
-    game.electricity < PRODUCTION_BALANCE.electricityPerGasolineBatch &&
-    game.crudeOil > 0 && game.gasoline < derived.maxGasolineStorage
-
   const bottleneck = speed === 0
     ? { title: 'Production paused', detail: 'Resume the refinery clock to restart the line.', tone: 'idle' as const }
     : distillationCount === 0
@@ -113,18 +109,16 @@ export default function SupplyScreen() {
         ? { title: 'Low crude — production stopped', detail: 'Open Supply & Orders below to restock crude.', tone: 'bad' as const }
         : game.gasoline >= derived.maxGasolineStorage
           ? { title: 'Gasoline Tank full', detail: 'Sell gasoline or increase Gasoline Tank capacity.', tone: 'warn' as const }
-          : powerStarved
-            ? { title: 'Electricity too low', detail: 'The production line is waiting for more power.', tone: 'warn' as const }
-            : { title: 'Production line running', detail: 'Crude is moving through the refinery normally.', tone: 'good' as const }
+          : { title: 'Production line running', detail: 'Crude is moving through the refinery normally.', tone: 'good' as const }
 
   const crudeTone: Tone = game.crudeOil <= 0 ? 'bad' : crudePct < 0.25 ? 'warn' : 'good'
   const processTone: Tone = speed === 0 || distillationCount === 0 ? 'idle' :
-    powerStarved ? 'warn' : game.crudeOil <= 0 || gasPct >= 1 ? 'bad' : 'good'
+    game.crudeOil <= 0 || gasPct >= 1 ? 'bad' : 'good'
   const storageTone: Tone = gasPct >= 1 ? 'bad' : gasPct >= 0.8 ? 'warn' : 'good'
   const processStatus = speed === 0 ? 'PAUSED' : distillationCount === 0 ? 'MISSING' :
-    powerStarved ? 'LOW POWER' : game.crudeOil <= 0 || gasPct >= 1 ? 'BLOCKED' : 'RUNNING'
+    game.crudeOil <= 0 || gasPct >= 1 ? 'BLOCKED' : 'RUNNING'
   const lineEfficiency = speed === 0 || distillationCount === 0 || game.crudeOil <= 0 || gasPct >= 1 ? 0 :
-    powerStarved ? 60 : game.productionPenalty && game.tickCount < game.productionPenalty.untilTick
+    game.productionPenalty && game.tickCount < game.productionPenalty.untilTick
       ? Math.round(game.productionPenalty.multiplier * 100) : 100
   const crudeInputPerMin = processStatus === 'RUNNING'
     ? distillationCount * FEEDSTOCK_BALANCE.crudePerDistillationCycle * 60 * Math.max(1, speed) : 0

@@ -173,6 +173,7 @@ function AppShell() {
 }
 
 export default function RootLayout() {
+  const pathname = usePathname()
   // Load the custom display font before showing the app. We proceed once the
   // load settles either way (loaded OR errored) so a font-load failure can't
   // brick the app -- the family names just fall back to the system font.
@@ -191,7 +192,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
         <SettingsProvider>
-          <GameProvider>
+          <GameProvider active={!pathname.startsWith('/v3-preview')}>
             <AppShell />
           </GameProvider>
         </SettingsProvider>

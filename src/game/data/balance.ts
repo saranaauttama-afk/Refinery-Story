@@ -843,11 +843,11 @@ export const POLYMER_PLANT_BALANCE = {
 // matches each product's plant, so a tank becomes buildable as soon as the
 // corresponding plant is.
 export const TANK_FARM_BALANCE = {
-  lubricantTank: { unlockLevel: 5, cost: 1500, storagePerTank: 75 },
-  jetFuelTank: { unlockLevel: 10, cost: 4000, storagePerTank: 60 },
-  petrochemicalTank: { unlockLevel: 15, cost: 7500, storagePerTank: 50 },
-  recyclingBunker: { unlockLevel: 8, cost: 3000, storagePerTank: 100 },
-  pelletSilo: { unlockLevel: 20, cost: 12000, storagePerTank: 40 },
+  lubricantTank: { unlockLevel: 5, cost: 1500, storagePerTank: 75, storageByLevel: [0, 75, 190, 375] },
+  jetFuelTank: { unlockLevel: 10, cost: 4000, storagePerTank: 60, storageByLevel: [0, 60, 150, 300] },
+  petrochemicalTank: { unlockLevel: 15, cost: 7500, storagePerTank: 50, storageByLevel: [0, 50, 125, 250] },
+  recyclingBunker: { unlockLevel: 8, cost: 3000, storagePerTank: 100, storageByLevel: [0, 100, 250, 500] },
+  pelletSilo: { unlockLevel: 20, cost: 12000, storagePerTank: 40, storageByLevel: [0, 40, 100, 200] },
 } as const
 
 // Production Complexity Expansion Phase 2: Power Plant burns crude to
@@ -866,9 +866,14 @@ export const POWER_PLANT_BALANCE = {
   unlockLevel: 5,
   cost: 4000,
   intervalTicks: 25,
+  siteElectricityPerCycle: 4,
+  siteElectricityStorage: 20,
   crudePerCycle: 4,
   electricityPerCycle: 12,
   maxElectricityStorage: 60,
+  crudePerCycleByLevel: [0, 1, 2, 3],
+  electricityPerCycleByLevel: [0, 12, 24, 42],
+  electricityStorageByLevel: [0, 60, 120, 210],
 } as const
 
 export const JET_FUEL_BALANCE = {

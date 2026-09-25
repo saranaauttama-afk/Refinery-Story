@@ -1,5 +1,14 @@
 # CURRENT TASK — Refinery Story 1.0 Release Candidate
 
+> **Current priority — 2026-09-25:** Gameplay V3 R0 is complete in code.
+> Read [GAMEPLAY_MASTER_PLAN_V3.md](GAMEPLAY_MASTER_PLAN_V3.md),
+> [GAMEPLAY_SYSTEMS_V3.md](GAMEPLAY_SYSTEMS_V3.md), then
+> [GAMEPLAY_IMPLEMENTATION_V3.md](GAMEPLAY_IMPLEMENTATION_V3.md).
+> Completed commits: V3-00 `f21f035`, V3-01 `5fcd951`, V3-02 `6414de9`.
+> The next task is V3-03 (isolated preview schema/action boundary). No push or
+> Android build was performed; build #68 remains the shipped baseline. Historical
+> completion claims below do not validate later V3 systems.
+
 ## Goal
 
 Finish the approved Modern Pixel UI and the first gameplay fun pass, preserve

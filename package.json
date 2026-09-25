@@ -13,7 +13,15 @@
     "sim:balance": "npx --yes tsx@4 scripts/balance-sim.ts",
     "sim:check": "npx --yes tsx@4 scripts/sim-check.ts",
     "sim:camera": "npx --yes tsx@4 scripts/camera-check.ts",
-    "sim:map": "npx --yes tsx@4 scripts/factory-map-check.ts"
+    "sim:map": "npx --yes tsx@4 scripts/factory-map-check.ts",
+    "check:v3-schema": "node --import tsx scripts/gameplay-v3-schema-check.ts",
+    "check:v3-ledger": "node --import tsx scripts/product-ledger-check.ts",
+    "check:v3-production": "node --import tsx scripts/gasoline-production-check.ts",
+    "check:v3-workforce": "node --import tsx scripts/workforce-duty-check.ts",
+    "check:v3-development": "node --import tsx scripts/product-development-check.ts",
+    "check:v3-jobs": "node --import tsx scripts/job-ledger-check.ts",
+    "check:v3-session": "node --import tsx scripts/first-session-recovery-check.ts",
+    "check:v3-gate": "node --import tsx scripts/prototype-gate-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",

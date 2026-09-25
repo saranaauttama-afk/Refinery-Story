@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Animated, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Alert, Animated, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Constants from 'expo-constants'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -88,9 +88,19 @@ export default function MenuScreen() {
             <Text style={styles.secondaryButtonLabel}>⚙️ Settings</Text>
           </Pressable>
 
-          <Pressable style={[styles.button, styles.secondaryButton, styles.disabledButton]} disabled>
-            <Text style={styles.secondaryButtonLabel}>Store</Text>
-            <Text style={styles.laterText}>LATER</Text>
+          <Pressable
+            style={[styles.button, styles.previewButton]}
+            onPress={() => Alert.alert(
+              t({ en: 'Gameplay V3 · Development', th: 'Gameplay V3 · เวอร์ชันพัฒนา' }),
+              t({ en: 'This starts the new V3 ruleset in a fresh save. The prototype is not a complete game yet.', th: 'เริ่มกติกา V3 ด้วยเซฟใหม่ทั้งหมด ขณะนี้ยังเป็นต้นแบบที่เล่นไม่ครบเกม' }),
+              [
+                { text: t({ en: 'Cancel', th: 'ยกเลิก' }), style: 'cancel' },
+                { text: t({ en: 'Open V3', th: 'เปิด V3' }), onPress: () => router.push('/v3-preview') },
+              ],
+            )}
+          >
+            <Text style={styles.secondaryButtonLabel}>Gameplay V3</Text>
+            <Text style={styles.previewTag}>DEV PREVIEW</Text>
           </Pressable>
 
           <Text style={styles.version}>v{Constants.expoConfig?.version ?? '1.0.0'} · {t({ en: 'English', th: 'ภาษาไทย' })}</Text>
@@ -173,6 +183,14 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: 'rgba(8,37,61,0.94)',
   },
+  previewButton: {
+    backgroundColor: 'rgba(18,57,66,0.96)',
+    borderColor: '#66B6A5',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 9,
+  },
+  previewTag: { fontSize: 8, fontFamily: fonts.heading, color: '#A9F3D9', borderWidth: 1, borderColor: '#4F9E8C', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3 },
   secondaryButtonLabel: {
     fontFamily: fonts.heading,
     fontSize: 14,

@@ -5,8 +5,8 @@ type GameLoopValue = ReturnType<typeof useGameLoop>
 
 const GameContext = createContext<GameLoopValue | null>(null)
 
-export function GameProvider({ children }: { children: ReactNode }) {
-  const value = useGameLoop()
+export function GameProvider({ children, active = true }: { children: ReactNode; active?: boolean }) {
+  const value = useGameLoop(active)
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }
 

@@ -758,11 +758,8 @@ export function getBuildingEffectLines(
 
       const lines = [line, priorityLine]
 
-      // Electricity supply vs demand (Production Complexity Expansion
-      // Phase 2). Only relevant once >= 1 Power Plant is built -- before
-      // that, downstream plants don't need electricity at all.
-      if (derived.buildingCounts.powerPlant > 0 && derived.electricityDemandPerCycle > 0) {
-        const electricitySupplyPerCycle = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
+      if (derived.electricityDemandPerCycle > 0) {
+        const electricitySupplyPerCycle = getPowerGenerationStats(game).supplyPerCycle
         const electricityLine: BuildingEffectLine = {
           label: 'Electricity demand (this plant)',
           value: `${plant.electricityPerCycle} / ${seconds}s`,
@@ -778,18 +775,25 @@ export function getBuildingEffectLines(
     }
     case 'powerPlant': {
       const seconds = (POWER_PLANT_BALANCE.intervalTicks * TICK_MS) / 1000
+      const generated = POWER_PLANT_BALANCE.electricityPerCycleByLevel[level] ?? POWER_PLANT_BALANCE.electricityPerCycleByLevel[1]
+      const crude = POWER_PLANT_BALANCE.crudePerCycleByLevel[level] ?? POWER_PLANT_BALANCE.crudePerCycleByLevel[1]
+      const capacity = POWER_PLANT_BALANCE.electricityStorageByLevel[level] ?? POWER_PLANT_BALANCE.electricityStorageByLevel[1]
       return [
         {
           label: 'Electricity output per plant',
-          value: `+${POWER_PLANT_BALANCE.electricityPerCycle} / ${seconds}s`,
+          value: `+${generated} / ${seconds}s`,
         },
         {
           label: 'Crude consumed per plant',
-          value: `-${POWER_PLANT_BALANCE.crudePerCycle} / ${seconds}s`,
+          value: `-${crude} / ${seconds}s at full generation`,
+        },
+        {
+          label: 'Battery capacity from this plant',
+          value: `+${capacity}`,
         },
         {
           label: 'Powers',
-          value: 'Jet Fuel, Petrochemical, Lubricant & Polymer Plants, plus gasoline production',
+          value: 'Jet Fuel, Petrochemical, Lubricant & Polymer Plants',
         },
       ]
     }
@@ -847,12 +851,8 @@ export function getBuildingEffectLines(
       }
       const lines = [line, inputLine]
 
-      // Electricity supply vs demand (Production Complexity Expansion
-      // Phase 2/3, completed). Only relevant once >= 1 Power Plant is
-      // built -- before that, Polymer Plant doesn't need electricity at
-      // all (matches the 3 PLANT_PRODUCTION plants' pattern).
-      if (derived.buildingCounts.powerPlant > 0) {
-        const electricitySupplyPerCycle = derived.buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
+      if (derived.electricityDemandPerCycle > 0) {
+        const electricitySupplyPerCycle = getPowerGenerationStats(game).supplyPerCycle
         const electricityLine: BuildingEffectLine = {
           label: 'Electricity demand (this plant)',
           value: `${POLYMER_PLANT_BALANCE.electricityPerCycle} / ${seconds}s`,
@@ -872,6 +872,8 @@ export function getBuildingEffectLines(
     case 'recyclingBunker':
     case 'pelletSilo': {
       const config = TANK_FARM_BALANCE[cell]
+      const storage = config.storageByLevel[level] ?? config.storageByLevel[1]
+      const nextStorage = config.storageByLevel[level + 1]
       const productLabel: Record<typeof cell, string> = {
         lubricantTank: 'lubricants',
         jetFuelTank: 'jet fuel',
@@ -882,7 +884,8 @@ export function getBuildingEffectLines(
       return [
         {
           label: `${productLabel[cell]} storage from this tank`,
-          value: `+${config.storagePerTank}`,
+          value: `+${storage}`,
+          bonus: nextStorage !== undefined ? `(+${nextStorage - storage} at Lv${level + 1})` : undefined,
         },
       ]
     }
@@ -944,8 +947,8 @@ export function getBuildingEffectLines(
 // Where the power goes: supply (from Power Plants) vs a per-plant-type demand
 // list, so a starved grid shows exactly which plants are drawing it. Mirrors
 // the electricityDemandPerCycle sum in calculateDerivedStats. Gasoline draws
-// power on a different cadence (see PRODUCTION_BALANCE.electricityPerGasolineBatch)
-// so it's flagged separately rather than mixed into this per-cycle list.
+// Advanced plants draw power on the shared production cadence. Gasoline is
+// independent so the player can always recover from an empty battery.
 export type PowerBreakdownRow = {
   buildingKey: BuildingType
   count: number
@@ -953,12 +956,38 @@ export type PowerBreakdownRow = {
   total: number
 }
 
-export function getPowerBreakdown(buildingCounts: BuildingCounts): {
+export function getPowerGenerationStats(game: GameState): {
+  siteSupplyPerCycle: number
+  generatorSupplyPerCycle: number
+  generatorCrudePerCycle: number
+  supplyPerCycle: number
+  storageCapacity: number
+} {
+  let generatorSupplyPerCycle = 0
+  let generatorCrudePerCycle = 0
+  let generatorStorage = 0
+  for (let index = 0; index < game.grid.length; index++) {
+    if (game.grid[index] !== 'powerPlant') continue
+    const level = game.gridLevels[index] ?? 1
+    generatorSupplyPerCycle += POWER_PLANT_BALANCE.electricityPerCycleByLevel[level] ?? POWER_PLANT_BALANCE.electricityPerCycleByLevel[1]
+    generatorCrudePerCycle += POWER_PLANT_BALANCE.crudePerCycleByLevel[level] ?? POWER_PLANT_BALANCE.crudePerCycleByLevel[1]
+    generatorStorage += POWER_PLANT_BALANCE.electricityStorageByLevel[level] ?? POWER_PLANT_BALANCE.electricityStorageByLevel[1]
+  }
+  return {
+    siteSupplyPerCycle: POWER_PLANT_BALANCE.siteElectricityPerCycle,
+    generatorSupplyPerCycle,
+    generatorCrudePerCycle,
+    supplyPerCycle: POWER_PLANT_BALANCE.siteElectricityPerCycle + generatorSupplyPerCycle,
+    storageCapacity: POWER_PLANT_BALANCE.siteElectricityStorage + generatorStorage,
+  }
+}
+
+export function getPowerBreakdown(game: GameState): {
   supply: number
   demand: number
   rows: PowerBreakdownRow[]
-  gasolineDraws: boolean
 } {
+  const buildingCounts = countBuildings(game.grid)
   const rows: PowerBreakdownRow[] = []
   for (const plant of PLANT_PRODUCTION) {
     const count = buildingCounts[plant.buildingKey]
@@ -976,8 +1005,8 @@ export function getPowerBreakdown(buildingCounts: BuildingCounts): {
   }
   rows.sort((a, b) => b.total - a.total)
   const demand = rows.reduce((sum, r) => sum + r.total, 0)
-  const supply = buildingCounts.powerPlant * POWER_PLANT_BALANCE.electricityPerCycle
-  return { supply, demand, rows, gasolineDraws: buildingCounts.powerPlant > 0 }
+  const supply = getPowerGenerationStats(game).supplyPerCycle
+  return { supply, demand, rows }
 }
 
 // --- ESG / Safety axis ---
@@ -1805,6 +1834,11 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   let laboratoryRpBonusTotal = 0
   let workshopPenaltyMultiplier = 1
   let salesOfficeContractBonusTotal = 0
+  let lubricantTankStorageTotal = 0
+  let jetFuelTankStorageTotal = 0
+  let petrochemicalTankStorageTotal = 0
+  let recyclingBunkerStorageTotal = 0
+  let pelletSiloStorageTotal = 0
   for (let i = 0; i < game.grid.length; i++) {
     const cell = game.grid[i]
     if (!cell) continue
@@ -1828,6 +1862,16 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
       const penalty = hasPollutingNeighbor(game.grid, i) ? 1 - LAYOUT_BALANCE.dirtyPenaltyRate : 1
       salesOfficeContractBonusTotal +=
         (BUILDING_UPGRADE_BALANCE.salesOfficeContractBonusRateByLevel[level] ?? 0.1) * penalty
+    } else if (cell === 'lubricantTank') {
+      lubricantTankStorageTotal += TANK_FARM_BALANCE.lubricantTank.storageByLevel[level] ?? TANK_FARM_BALANCE.lubricantTank.storageByLevel[1]
+    } else if (cell === 'jetFuelTank') {
+      jetFuelTankStorageTotal += TANK_FARM_BALANCE.jetFuelTank.storageByLevel[level] ?? TANK_FARM_BALANCE.jetFuelTank.storageByLevel[1]
+    } else if (cell === 'petrochemicalTank') {
+      petrochemicalTankStorageTotal += TANK_FARM_BALANCE.petrochemicalTank.storageByLevel[level] ?? TANK_FARM_BALANCE.petrochemicalTank.storageByLevel[1]
+    } else if (cell === 'recyclingBunker') {
+      recyclingBunkerStorageTotal += TANK_FARM_BALANCE.recyclingBunker.storageByLevel[level] ?? TANK_FARM_BALANCE.recyclingBunker.storageByLevel[1]
+    } else if (cell === 'pelletSilo') {
+      pelletSiloStorageTotal += TANK_FARM_BALANCE.pelletSilo.storageByLevel[level] ?? TANK_FARM_BALANCE.pelletSilo.storageByLevel[1]
     }
   }
   const distillationUpgradeProductionMultiplier = 1 + distillationUpgradeBonusRate
@@ -1853,36 +1897,26 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const petrochemicalPlantConfig = PLANT_PRODUCTION.find((p) => p.buildingKey === 'petrochemicalPlant')
   const maxLubricantsStorage =
     (lubricantPlantConfig?.maxStorage ?? 0) +
-    buildingCounts.lubricantTank * TANK_FARM_BALANCE.lubricantTank.storagePerTank
+    lubricantTankStorageTotal
   const maxJetFuelStorage =
     (jetFuelPlantConfig?.maxStorage ?? 0) +
-    buildingCounts.jetFuelTank * TANK_FARM_BALANCE.jetFuelTank.storagePerTank
+    jetFuelTankStorageTotal
   const maxPetrochemicalsStorage =
     (petrochemicalPlantConfig?.maxStorage ?? 0) +
-    buildingCounts.petrochemicalTank * TANK_FARM_BALANCE.petrochemicalTank.storagePerTank
+    petrochemicalTankStorageTotal
   const maxRecycledMaterialStorage =
     WASTE_TREATMENT_PLANT_BALANCE.maxRecycledMaterialStorage +
-    buildingCounts.recyclingBunker * TANK_FARM_BALANCE.recyclingBunker.storagePerTank
+    recyclingBunkerStorageTotal
   const maxPlasticPelletsStorage =
     POLYMER_PLANT_BALANCE.maxPlasticPelletsStorage +
-    buildingCounts.pelletSilo * TANK_FARM_BALANCE.pelletSilo.storagePerTank
+    pelletSiloStorageTotal
 
-  // --- Production Complexity Expansion Phase 2: electricity ---
-  // Flat storage cap per Power Plant built. Demand is the sum of every
-  // downstream plant's electricityPerCycle * count, regardless of whether
-  // any Power Plant exists -- the tick loop only enforces this demand when
-  // buildingCounts.powerPlant > 0 (see useGameLoop.ts), so this number is
-  // harmless to compute unconditionally and is useful for the UI even
-  // before the player builds their first Power Plant.
-  const maxElectricityStorage = buildingCounts.powerPlant * POWER_PLANT_BALANCE.maxElectricityStorage
+  // Site storage is permanent; each generator adds the capacity of its own
+  // level. Demand is explicit even before a generator is built.
+  const maxElectricityStorage = getPowerGenerationStats(game).storageCapacity
   // Electricity demand per 25-tick (5s) cycle, for the UI's supply-vs-demand
-  // display. Includes the 3 PLANT_PRODUCTION plants AND Polymer Plant (same
-  // 25-tick cadence, standalone block -- see useGameLoop.ts). Does NOT
-  // include Tier-1 gasoline production, which runs on its own much shorter
-  // productionInterval cadence and isn't directly comparable to a
-  // per-25-tick number -- its electricity gating is enforced in the tick
-  // loop (PRODUCTION_BALANCE.electricityPerGasolineBatch) but not reflected
-  // in this aggregate display.
+  // display. It includes the 3 PLANT_PRODUCTION plants and Polymer Plant on
+  // the shared 25-tick cadence. Tier-1 gasoline production is independent.
   const electricityDemandPerCycle =
     PLANT_PRODUCTION.reduce((sum, plant) => sum + buildingCounts[plant.buildingKey] * plant.electricityPerCycle, 0) +
     buildingCounts.polymerPlant * POLYMER_PLANT_BALANCE.electricityPerCycle

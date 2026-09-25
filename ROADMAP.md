@@ -1,5 +1,12 @@
 # Refinery Story — Roadmap
 
+> **2026-09-25 update:** canonical future design is now
+> [GAMEPLAY_MASTER_PLAN_V3.md](GAMEPLAY_MASTER_PLAN_V3.md), with
+> [systems/data](GAMEPLAY_SYSTEMS_V3.md) and
+> [implementation tasks](GAMEPLAY_IMPLEMENTATION_V3.md). Product development
+> replaces the V2 contract-only expansion plan; do not implement both backlogs.
+> All V3 work is unimplemented. V2 audit facts remain useful baseline evidence.
+
 Living plan for the game's design + balance direction. Status markers:
 `✅ done` · `🚧 in progress` · `⏳ planned`. Newest work is tracked here;
 deep implementation notes still live in `README.md`.

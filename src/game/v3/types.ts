@@ -1,0 +1,407 @@
+import type {
+  BuildingType,
+  Employee,
+  GridCell,
+  ProductKey,
+  ResearchKey,
+  SpecializationPath,
+  WorkerType,
+} from '../types'
+
+export const V3_RULESET_VERSION = 3 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 7 as const
+
+export type V3ProductFamily = Extract<
+  ProductKey,
+  'gasoline' | 'lubricants' | 'jetFuel' | 'petrochemicals' | 'plasticPellets'
+>
+export type V3CommodityFamily = Extract<ProductKey, 'asphalt' | 'recycledMaterial'>
+export type V3ProcessProfile = 'volume' | 'standard' | 'precision'
+export type V3BlueprintProvenance = 'default' | 'developed'
+export type V3ModuleKey = 'none' | 'throughput' | 'economy' | 'precision'
+
+export type V3ProductBlueprint = {
+  id: string
+  signature: string
+  revision: number
+  family: V3ProductFamily
+  name: string
+  quality: number
+  profile: V3ProcessProfile
+  module: V3ModuleKey
+  minPlantLevel: 1 | 2 | 3
+  provenance: V3BlueprintProvenance
+  commissionedAtTick: number | null
+  pinned: boolean
+  archived: boolean
+}
+
+export type V3InventoryEntry = {
+  blueprintId: string
+  quantity: number
+  totalCostBasisCents: number
+  estimatedBasis: boolean
+}
+
+export type V3MaterialCostBasis = {
+  crudeCents: number
+  feedstockCents: number
+  wasteCents: number
+  electricityCents: number
+}
+
+export type V3PlantProgram = {
+  cellIndex: number
+  blueprintId: string
+  installedModule: V3ModuleKey
+  setupRemainingTicks: number
+  paused: boolean
+}
+
+export type V3DevelopmentProject = {
+  id: string
+  signature: string
+  family: V3ProductFamily
+  leadEmployeeId: string
+  contributorEmployeeIds: string[]
+  labCellIndex: number
+  remainingTicks: number
+  profile: V3ProcessProfile
+  module: V3ModuleKey
+  knowledgeRank: 0 | 1 | 2
+  leadContribution: 0 | 5
+  quality: number
+  sampleDebits: Array<{ blueprintId: string; quantity: number }>
+  feeDebitedCents: number
+}
+
+export type V3DevelopmentHistoryEntry = {
+  signature: string
+  blueprintId: string
+  completedAtTick: number
+  creditedEmployeeIds: string[]
+}
+
+export type V3EmployeeDuty =
+  | { kind: 'line'; cellIndex: number }
+  | { kind: 'development'; projectId: string; returnCellIndex: number | null }
+  | { kind: 'support' }
+  | { kind: 'reserve' }
+
+export type V3ClientProgress = {
+  clientId: string
+  lastCompletedMilestoneId: string | null
+  repeatAvailableAtTick: number
+}
+
+export type V3JobStatus = 'accepted' | 'completed' | 'cancelled' | 'expired'
+export type V3AcceptedJob = {
+  id: string
+  templateId: string
+  family: ProductKey
+  minimumQuality: number
+  quantity: number
+  deliveredQuantity: number
+  lockedUnitPriceCents: number
+  completionBonusCents: number
+  paidToDateCents: number
+  acceptedAtTick: number
+  deadlineTick: number | null
+  status: V3JobStatus
+  contributorWork: Record<string, number>
+  deliveredByBlueprint: Record<string, number>
+}
+
+export type V3JobReceipt = {
+  id: string
+  jobId: string
+  templateId: string
+  status: Exclude<V3JobStatus, 'accepted'>
+  settledAtTick: number
+  deliveredQuantity: number
+  paidCents: number
+  deliveredByBlueprint: Record<string, number>
+}
+
+export type V3JobReceipts = {
+  receipts: V3JobReceipt[]
+  templateRetryAtTick: Record<string, number>
+}
+
+export type V3StockPolicy = {
+  keepQuantity: number
+  autoSell: boolean
+  autoDispatch: boolean
+}
+
+export type V3CampaignProgress = {
+  chapter: 0 | 1 | 2 | 3 | 4 | 5
+  claimedFlags: string[]
+  showcaseReceiptId: string | null
+  clearedAtTick: number | null
+  inheritedCapabilities: string[]
+}
+
+export type V3LedgerBucket = {
+  second: number
+  receiptsCents: number
+  cashOutflowsCents: number
+  cogsCents: number
+  wagesCents: number
+  maintenanceCents: number
+}
+
+export type V3OperatingLedger = {
+  buckets: V3LedgerBucket[]
+  capexCents: number
+  grantsCents: number
+  developmentExpenseCents: number
+  lifetimeCashOutflowsCents: number
+  lifetimeReceiptsCents: number
+  lifetimeCogsCents: number
+  lifetimeOperatingExpenseCents: number
+}
+
+export type V3RecoveryState = {
+  rescueJobId: string
+  loanerCellIndices: number[]
+  status: 'running' | 'completed'
+  quoteCents: number
+  targetCashCents: number
+  startedAtTick: number
+  remainingTicks: number
+  paidCents: number
+}
+
+export type V3WorldState = {
+  tickCount: number
+  moneyCents: number
+  researchPoints: number
+  reputation: number
+  crudeOil: number
+  feedstock: number
+  electricity: number
+  waste: number
+  grid: GridCell[]
+  gridLevels: number[]
+  gridExpansionLevel: number
+  employees: Employee[]
+  unlockedResearchIds: ResearchKey[]
+  specialization: SpecializationPath | null
+}
+
+export type V3GameState = {
+  rulesetVersion: typeof V3_RULESET_VERSION
+  schemaRevision: typeof V3_PREVIEW_SCHEMA_REVISION
+  preview: true
+  world: V3WorldState
+  productBlueprints: Record<string, V3ProductBlueprint>
+  variantInventory: Record<string, V3InventoryEntry>
+  commodityInventory: Partial<Record<V3CommodityFamily, V3InventoryEntry>>
+  materialCostBasis: V3MaterialCostBasis
+  plantPrograms: Record<number, V3PlantProgram>
+  developmentProject: V3DevelopmentProject | null
+  developmentHistory: V3DevelopmentHistoryEntry[]
+  employeeDuties: Record<string, V3EmployeeDuty>
+  unpaidEmployeeIds: string[]
+  clientProgress: Record<string, V3ClientProgress>
+  acceptedJob: V3AcceptedJob | null
+  jobReceipts: V3JobReceipts
+  stockPolicies: Record<string, V3StockPolicy>
+  campaignProgress: V3CampaignProgress
+  operatingLedger: V3OperatingLedger
+  recoveryState: V3RecoveryState | null
+  nextActionSequence: number
+}
+
+export type V3ActionMessageId =
+  | 'v3.action.ok'
+  | 'v3.action.sequence_mismatch'
+  | 'v3.build.invalid_cell'
+  | 'v3.build.occupied'
+  | 'v3.build.locked'
+  | 'v3.build.insufficient_cash'
+  | 'v3.upgrade.invalid_cell'
+  | 'v3.upgrade.unsupported'
+  | 'v3.upgrade.locked'
+  | 'v3.upgrade.max_level'
+  | 'v3.upgrade.insufficient_cash'
+  | 'v3.trade.invalid_amount'
+  | 'v3.trade.insufficient_cash'
+  | 'v3.trade.storage_full'
+  | 'v3.trade.insufficient_stock'
+  | 'v3.trade.inventory_pending'
+  | 'v3.program.invalid_cell'
+  | 'v3.program.invalid_blueprint'
+  | 'v3.program.module_mismatch'
+  | 'v3.duty.employee_missing'
+  | 'v3.duty.invalid_target'
+  | 'v3.duty.ineligible'
+  | 'v3.duty.occupied'
+  | 'v3.duty.resume_unaffordable'
+  | 'v3.development.chapter_locked'
+  | 'v3.development.project_active'
+  | 'v3.development.invalid_lab'
+  | 'v3.development.invalid_config'
+  | 'v3.development.duplicate_signature'
+  | 'v3.development.insufficient_cash'
+  | 'v3.development.insufficient_samples'
+  | 'v3.development.invalid_lead'
+  | 'v3.development.no_project'
+  | 'v3.blueprint.missing'
+  | 'v3.job.template_missing'
+  | 'v3.job.slot_occupied'
+  | 'v3.job.locked'
+  | 'v3.job.cooldown'
+  | 'v3.job.no_active_job'
+  | 'v3.job.invalid_quantity'
+  | 'v3.job.insufficient_qualified_stock'
+  | 'v3.recovery.not_available'
+  | 'v3.recovery.already_running'
+  | 'v3.recovery.clear_slots'
+  | 'v3.recovery.no_missing_route'
+  | 'v3.demolish.invalid_cell'
+  | 'v3.demolish.stock_overflow'
+  | 'v3.demolish.building_changed'
+  | 'v3.demolish.active_project'
+
+export type V3ActionEvent = {
+  tone: 'success' | 'blocked' | 'info'
+  messageId: V3ActionMessageId
+  params?: Record<string, string | number>
+}
+
+export type V3ActionResult = {
+  state: V3GameState
+  changed: boolean
+  actionId: string
+  events: V3ActionEvent[]
+}
+
+export type V3BuildAction = {
+  type: 'build'
+  sequence: number
+  cellIndex: number
+  building: BuildingType
+}
+
+export type V3UpgradeAction = {
+  type: 'upgrade'
+  sequence: number
+  cellIndex: number
+}
+
+export type V3TradeDirection = 'buy' | 'sell'
+export type V3TradeAction = {
+  type: 'trade'
+  sequence: number
+  direction: V3TradeDirection
+  product: ProductKey | 'crude'
+  quantity: number
+  blueprintId?: string
+  source?: 'manual' | 'auto'
+  overrideKeep?: boolean
+}
+
+export type V3SetProgramAction = {
+  type: 'set_program'
+  sequence: number
+  cellIndex: number
+  blueprintId: string
+}
+
+export type V3SetPauseAction = {
+  type: 'set_pause'
+  sequence: number
+  cellIndex: number
+  paused: boolean
+}
+
+export type V3AssignDutyAction = {
+  type: 'assign_duty'
+  sequence: number
+  employeeId: string
+  duty: V3EmployeeDuty
+}
+
+export type V3ResumeEmployeeAction = {
+  type: 'resume_employee'
+  sequence: number
+  employeeId: string
+}
+
+export type V3StartDevelopmentAction = {
+  type: 'start_development'
+  sequence: number
+  family: V3ProductFamily
+  profile: V3ProcessProfile
+  module: V3ModuleKey
+  knowledgeRank: 0 | 1 | 2
+  leadEmployeeId: string | null
+  labCellIndex: number
+}
+
+export type V3CancelDevelopmentAction = {
+  type: 'cancel_development'
+  sequence: number
+}
+
+export type V3SetBlueprintPresentationAction = {
+  type: 'set_blueprint_presentation'
+  sequence: number
+  blueprintId: string
+  name?: string
+  pinned?: boolean
+  archived?: boolean
+}
+
+export type V3AcceptJobAction = {
+  type: 'accept_job'
+  sequence: number
+  templateId: string
+}
+
+export type V3DispatchJobAction = {
+  type: 'dispatch_job'
+  sequence: number
+  quantity: number
+  blueprintId?: string
+}
+
+export type V3CancelJobAction = {
+  type: 'cancel_job'
+  sequence: number
+}
+
+export type V3SetStockPolicyAction = {
+  type: 'set_stock_policy'
+  sequence: number
+  blueprintId: string
+  keepQuantity?: number
+  autoSell?: boolean
+  autoDispatch?: boolean
+}
+
+export type V3StartRecoveryAction = {
+  type: 'start_recovery'
+  sequence: number
+}
+
+export type V3RestoreStarterLoanersAction = {
+  type: 'restore_starter_loaners'
+  sequence: number
+}
+
+export type V3DemolishAction = {
+  type: 'demolish'
+  sequence: number
+  cellIndex: number
+  expectedBuilding: BuildingType
+}
+
+export type V3Action = V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+
+export type V3StaffRequirement = {
+  workerType: WorkerType
+  minimumLevel: number
+}

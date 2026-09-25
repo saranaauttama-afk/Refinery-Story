@@ -15,6 +15,7 @@ import {
   getProductSellPrice,
   getProductMaxStorage,
   getTotalCellOutput,
+  getPowerGenerationStats,
   getWasteGeneratedPerTick,
   getWasteOverflowEsgPenalty,
   getEsgDrift,
@@ -28,7 +29,6 @@ import {
   WASTE_TREATMENT_PLANT_BALANCE,
   POLYMER_PLANT_BALANCE,
   PLANT_PRODUCTION,
-  PRODUCTION_BALANCE,
   BOOST_BALANCE,
   ESG_BALANCE,
   DEMAND_SHIFT_BALANCE,
@@ -61,6 +61,72 @@ export const DEFAULT_PRODUCT_SELL_THRESHOLD = 80
 // tick, pinning crude to full (the "crude never drains" bug report). Capping
 // just under 100 guarantees a visible buy→drain cycle.
 export const CRUDE_BUY_THRESHOLD_MAX = 95
+
+type WorkRequest = {
+  key: string
+  outputProduct: SellableProductKey
+  outputAtFullWork: number
+  input: 'feedstock' | 'petrochemicals'
+  inputAtFullWork: number
+  electricityAtFullWork: number
+  weight: number
+  maxWorkFraction: number
+}
+
+/**
+ * Progressively shares one scarce resource between requests. Each returned
+ * fraction is in [0, request.maxWorkFraction]. A request that reaches its cap
+ * releases the rest of its share to the other requests. This makes the result
+ * deterministic, bounded by the actual resource pool, and independent of the
+ * order in which product types happen to be listed below.
+ */
+export function allocateWeightedWork(
+  requests: WorkRequest[],
+  available: number,
+  demand: (request: WorkRequest) => number,
+): number[] {
+  const fractions = requests.map(() => 0)
+  let remainingResource = Math.max(0, available)
+  let active = requests
+    .map((request, index) => ({ request, index }))
+    .filter(({ request }) => request.maxWorkFraction > 0 && demand(request) > 0)
+
+  while (active.length > 0 && remainingResource > 1e-9) {
+    const weightedDemand = active.reduce(
+      (sum, { request }) => sum + demand(request) * Math.max(0, request.weight),
+      0,
+    )
+    if (weightedDemand <= 0) break
+
+    const capped: typeof active = []
+    for (const entry of active) {
+      const { request, index } = entry
+      const proposed = remainingResource * Math.max(0, request.weight) / weightedDemand
+      const room = request.maxWorkFraction - fractions[index]
+      if (proposed >= room - 1e-9) capped.push(entry)
+    }
+
+    if (capped.length === 0) {
+      for (const { request, index } of active) {
+        fractions[index] += remainingResource * Math.max(0, request.weight) / weightedDemand
+      }
+      remainingResource = 0
+      break
+    }
+
+    const cappedIndexes = new Set(capped.map(({ index }) => index))
+    for (const { request, index } of capped) {
+      const added = Math.max(0, request.maxWorkFraction - fractions[index])
+      fractions[index] += added
+      remainingResource -= added * demand(request)
+    }
+    active = active.filter(({ index }) => !cappedIndexes.has(index))
+  }
+
+  return fractions.map((fraction, index) =>
+    Math.max(0, Math.min(requests[index].maxWorkFraction, fraction)),
+  )
+}
 
 // Maps each secondary product to the building that produces it (used to
 // gate auto-sell on "does the player actually have this plant") and to a
@@ -260,24 +326,35 @@ export function tick(current: GameState): GameState {
     }
   }
 
-  // --- Power Plant: crude -> electricity (Production Complexity Expansion
-  // Phase 2) ---
-  // Burns crude (not feedstock) every 25-tick (5s) cycle, same cadence as
-  // downstream plants. Capped by maxElectricityStorage. With 0 Power
-  // Plants built this block does nothing (powerPlantCount === 0), and
-  // electricityDemand below is simply never enforced.
-  const powerPlantCount = stats.buildingCounts.powerPlant
-  if (powerPlantCount > 0 && nextTick % POWER_PLANT_BALANCE.intervalTicks === 0) {
-    const crudeNeeded = powerPlantCount * POWER_PLANT_BALANCE.crudePerCycle
-    const electricitySpace = stats.maxElectricityStorage - electricity
-    if (crudeOil >= crudeNeeded && electricitySpace > 0) {
-      const electricityMade = Math.min(
-        powerPlantCount * POWER_PLANT_BALANCE.electricityPerCycle,
-        electricitySpace,
+  // --- Site power + owned generators ---
+  // The permanent site connection is always explicit. Owned generators add
+  // level-based supply/capacity; building the first one never introduces a new
+  // gasoline tax. Generation is partial when fuel/space is partial and a full
+  // battery burns no crude.
+  if (nextTick % POWER_PLANT_BALANCE.intervalTicks === 0) {
+    const generation = getPowerGenerationStats(current)
+    let electricitySpace = Math.max(0, generation.storageCapacity - electricity)
+    const siteMade = Math.min(generation.siteSupplyPerCycle, electricitySpace)
+    electricity += siteMade
+    electricitySpace -= siteMade
+
+    if (generation.generatorSupplyPerCycle > 0 && electricitySpace > 1e-9) {
+      const boostMultiplier = current.tickCount < current.boostActiveUntilTick ? BOOST_BALANCE.productionMultiplier : 1
+      const progressAtGasolineStep = current.productionProgress + TICK_MS * boostMultiplier
+      const gasolineBatchesDue = Math.min(
+        Math.floor(progressAtGasolineStep / stats.productionInterval),
+        Math.max(0, stats.maxGasolineStorage - current.gasoline),
       )
-      if (electricityMade > 0) {
-        crudeOil -= crudeNeeded
-        electricity += electricityMade
+      const gasolineCrudeReserve = Math.min(crudeOil, gasolineBatchesDue)
+      const generatorFuelAvailable = Math.max(0, crudeOil - gasolineCrudeReserve)
+      const scale = Math.min(
+        1,
+        generation.generatorCrudePerCycle > 0 ? generatorFuelAvailable / generation.generatorCrudePerCycle : 0,
+        electricitySpace / generation.generatorSupplyPerCycle,
+      )
+      if (scale > 1e-9) {
+        crudeOil -= generation.generatorCrudePerCycle * scale
+        electricity += generation.generatorSupplyPerCycle * scale
       }
     }
   }
@@ -308,164 +385,111 @@ export function tick(current: GameState): GameState {
     }
   }
 
-  // --- Polymer Plant: petrochemicals -> plasticPellets (Production
-  // Complexity Expansion Phase 3) ---
-  // Same 25-tick (5s) cadence. Standalone block (not part of the shared
-  // feedstock PLANT_PRODUCTION loop below) since its input is
-  // `petrochemicals`, a different pool with its own dedicated
-  // producer/consumer relationship -- 1 plant = 1 product, like every
-  // other plant. Petrochemicals keeps its existing dual role: this
-  // consumes from the same productInventory.petrochemicals that auto-trade
-  // can also sell. polymerEngineer specialist (tier 3)
-  // multiplies output, same pattern as chemicalEngineer/aviationSpecialist.
-  {
-    const polymerPlantCount = stats.buildingCounts.polymerPlant
-    if (polymerPlantCount > 0 && nextTick % POLYMER_PLANT_BALANCE.intervalTicks === 0) {
-      const petrochemicalsNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle
-      const plasticPelletsSpace = stats.maxPlasticPelletsStorage - productInventory.plasticPellets
-      // Production Complexity Expansion Phase 2/3 (completed): Polymer
-      // Plant now also competes for the electricity pool, same as the 3
-      // PLANT_PRODUCTION plants. Runs before the downstream-plants loop
-      // below, so it draws from whatever Power Plants generated this tick
-      // before downstream plants get their share -- same ordering as the
-      // Waste Treatment Plant block above. With 0 Power Plants built,
-      // electricitySufficient stays true (no-op).
-      const electricityNeeded = polymerPlantCount * POLYMER_PLANT_BALANCE.electricityPerCycle
-      const electricitySufficient = stats.buildingCounts.powerPlant <= 0 || electricity >= electricityNeeded
-      if (
-        productInventory.petrochemicals >= petrochemicalsNeeded &&
-        plasticPelletsSpace > 0 &&
-        electricitySufficient
-      ) {
-        const totalOutput = getTotalCellOutput(
-          current,
-          'polymerPlant',
-          POLYMER_PLANT_BALANCE.plasticPelletsPerCycle,
-          'polymerEngineer',
-          BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
-        )
-        const produced = Math.min(Math.round(totalOutput), plasticPelletsSpace)
-        if (produced > 0) {
-          productInventory = {
-            ...productInventory,
-            petrochemicals: productInventory.petrochemicals - petrochemicalsNeeded,
-            plasticPellets: productInventory.plasticPellets + produced,
-          }
-          if (stats.buildingCounts.powerPlant > 0) {
-            electricity -= electricityNeeded
-          }
-        }
-      }
-    }
+  // --- Atomic advanced processing plan ---
+  // Build every due request first, share its input and electricity pools, then
+  // commit input/output from the exact same work fraction. Polymer participates
+  // in the electricity allocation instead of consuming first by update order.
+  // R0 preserves the legacy "power is enforced once a generator exists" rule;
+  // V3-02 replaces that switch with an explicit permanent site supply.
+  const workRequests: WorkRequest[] = []
+  for (const plant of PLANT_PRODUCTION) {
+    const plantCount = stats.buildingCounts[plant.buildingKey]
+    const weight = current.feedstockPriority[plant.buildingKey] ?? 1
+    if (plantCount <= 0 || weight <= 0 || nextTick % plant.intervalTicks !== 0) continue
+    const outputAtFullWork = getTotalCellOutput(
+      current,
+      plant.buildingKey,
+      plant.outputPerCycle,
+      plant.specialistWorker,
+      plant.specialistBonusRate,
+    )
+    const outputSpace = Math.max(0, getProductMaxStorage(stats, plant.productKey) - productInventory[plant.productKey])
+    workRequests.push({
+      key: plant.buildingKey,
+      outputProduct: plant.productKey,
+      outputAtFullWork,
+      input: 'feedstock',
+      inputAtFullWork: plantCount * plant.feedstockPerCycle,
+      electricityAtFullWork: plantCount * plant.electricityPerCycle,
+      weight,
+      maxWorkFraction: outputAtFullWork > 0 ? Math.min(1, outputSpace / outputAtFullWork) : 0,
+    })
   }
 
-  // --- Downstream plants: feedstock -> product ---
-  // Feedstock is a single shared pool that lubricant/jet fuel/petrochem
-  // all draw from every 25-tick (5s) cycle. Originally this was
-  // first-come-first-served in a fixed order, which could leave one plant
-  // type producing 0% for minutes while another produced 100%. Fixed to
-  // proportional sharing (every eligible plant gets the same shareRatio of
-  // its normal output), then extended here with player-adjustable
-  // per-plant PRIORITY weights (Feedstock Priority card, Refinery tab,
-  // feedstockPriority in GameState/FEEDSTOCK_PRIORITY_BALANCE):
-  //
-  // - priority = 0: this plant is excluded entirely -- never produces,
-  //   never competes for feedstock, regardless of supply (a hard "off"
-  //   switch for when the player doesn't want more of that product right
-  //   now).
-  // - priority = 1 (default, 100%): unchanged from the plain proportional
-  //   split.
-  // - priority > 1: this plant's *demand* is weighted up for the scarcity
-  //   split below, so it gets a bigger slice of shareRatio (closer to its
-  //   normal 100%) at the expense of lower-priority plants -- but its
-  //   output is still capped at its own normal 100% (priority lets you
-  //   reach full output sooner under scarcity, not exceed it).
-  //
-  // When supply >= total (unweighted) demand, every eligible plant still
-  // gets its normal full output regardless of priority -- priority only
-  // matters when plants are competing for a shortage.
-  const eligiblePlants = PLANT_PRODUCTION.filter((plant) => {
-    const plantCount = stats.buildingCounts[plant.buildingKey]
-    if (plantCount <= 0 || nextTick % plant.intervalTicks !== 0) return false
-    if ((current.feedstockPriority[plant.buildingKey] ?? 1) <= 0) return false
-    return getProductMaxStorage(stats, plant.productKey) - productInventory[plant.productKey] > 0
-  })
-  const totalFeedstockDemand = eligiblePlants.reduce(
-    (sum, plant) => sum + stats.buildingCounts[plant.buildingKey] * plant.feedstockPerCycle,
-    0,
-  )
-  if (totalFeedstockDemand > 0 && feedstock > 0) {
-    const sufficient = feedstock >= totalFeedstockDemand
-    // Priority only changes the SPLIT during scarcity -- when supply is
-    // sufficient, every plant gets full output regardless of weight, so
-    // the weighted total is only needed in the scarce branch.
-    const totalWeightedDemand = sufficient
-      ? totalFeedstockDemand
-      : eligiblePlants.reduce(
-          (sum, plant) =>
-            sum +
-            stats.buildingCounts[plant.buildingKey] *
-              plant.feedstockPerCycle *
-              (current.feedstockPriority[plant.buildingKey] ?? 1),
-          0,
-        )
-    const shareRatio = sufficient ? 1 : feedstock / totalWeightedDemand
-
-    // --- Electricity throttle (Production Complexity Expansion Phase 2) ---
-    // Independent second constraint on top of the feedstock shareRatio
-    // above. Only enforced once the player has built >= 1 Power Plant --
-    // before that, electricityShareRatio stays at 1 (no-op), so every save
-    // without a Power Plant behaves exactly as before Phase 2.
-    const totalElectricityDemand = eligiblePlants.reduce(
-      (sum, plant) => sum + stats.buildingCounts[plant.buildingKey] * plant.electricityPerCycle,
-      0,
+  const polymerPlantCount = stats.buildingCounts.polymerPlant
+  if (polymerPlantCount > 0 && nextTick % POLYMER_PLANT_BALANCE.intervalTicks === 0) {
+    const outputAtFullWork = getTotalCellOutput(
+      current,
+      'polymerPlant',
+      POLYMER_PLANT_BALANCE.plasticPelletsPerCycle,
+      'polymerEngineer',
+      BONUS_BALANCE.polymerEngineerPlasticPelletsBonusRate,
     )
-    const electricitySufficient =
-      stats.buildingCounts.powerPlant <= 0 || electricity >= totalElectricityDemand
-    const electricityShareRatio = electricitySufficient
-      ? 1
-      : totalElectricityDemand > 0
-        ? electricity / totalElectricityDemand
-        : 1
-    const combinedShareRatio = Math.min(shareRatio, electricityShareRatio)
-    const combinedSufficient = sufficient && electricitySufficient
+    const outputSpace = Math.max(0, stats.maxPlasticPelletsStorage - productInventory.plasticPellets)
+    workRequests.push({
+      key: 'polymerPlant',
+      outputProduct: 'plasticPellets',
+      outputAtFullWork,
+      input: 'petrochemicals',
+      inputAtFullWork: polymerPlantCount * POLYMER_PLANT_BALANCE.petrochemicalsPerCycle,
+      electricityAtFullWork: polymerPlantCount * POLYMER_PLANT_BALANCE.electricityPerCycle,
+      weight: 1,
+      maxWorkFraction: outputAtFullWork > 0 ? Math.min(1, outputSpace / outputAtFullWork) : 0,
+    })
+  }
 
-    for (const plant of eligiblePlants) {
-      const productSpace = getProductMaxStorage(stats, plant.productKey) - productInventory[plant.productKey]
-      const priority = current.feedstockPriority[plant.buildingKey] ?? 1
-      const normalOutput = getTotalCellOutput(
-        current,
-        plant.buildingKey,
-        plant.outputPerCycle,
-        plant.specialistWorker,
-        plant.specialistBonusRate,
-      )
-      // Full share: round as before (preserves old behavior exactly when
-      // both feedstock and electricity are sufficient). Reduced share:
-      // floor of (normal output * priority * combinedShareRatio), capped
-      // at the plant's own normal output so priority can only help it
-      // reach 100% sooner, never exceed it. combinedShareRatio is the
-      // tighter of the feedstock-scarcity ratio and the
-      // electricity-scarcity ratio -- whichever resource is scarcer this
-      // tick governs the throttle.
-      const produced = combinedSufficient
-        ? Math.min(Math.round(normalOutput), productSpace)
-        : Math.min(
-            Math.floor(normalOutput * priority * combinedShareRatio),
-            Math.round(normalOutput),
-            productSpace,
-          )
-      if (produced <= 0) continue
+  if (workRequests.length > 0) {
+    const downstreamIndexes = workRequests
+      .map((request, index) => ({ request, index }))
+      .filter(({ request }) => request.input === 'feedstock')
+    const downstreamRequests = downstreamIndexes.map(({ request }) => request)
+    const downstreamFractions = allocateWeightedWork(
+      downstreamRequests,
+      feedstock,
+      (request) => request.inputAtFullWork,
+    )
+    const inputFractions = workRequests.map(() => 0)
+    downstreamIndexes.forEach(({ index }, localIndex) => {
+      inputFractions[index] = downstreamFractions[localIndex]
+    })
+    workRequests.forEach((request, index) => {
+      if (request.input === 'petrochemicals') {
+        inputFractions[index] = request.inputAtFullWork > 0
+          ? Math.min(request.maxWorkFraction, productInventory.petrochemicals / request.inputAtFullWork)
+          : 0
+      }
+    })
 
+    const electricityIsEnforced = true
+    const electricityRequests = workRequests.map((request, index) => ({
+      ...request,
+      maxWorkFraction: inputFractions[index],
+    }))
+    const workFractions = electricityIsEnforced
+      ? allocateWeightedWork(electricityRequests, electricity, (request) => request.electricityAtFullWork)
+      : inputFractions
+
+    let feedstockConsumed = 0
+    let petrochemicalsConsumed = 0
+    let electricityConsumed = 0
+    workRequests.forEach((request, index) => {
+      const fraction = Math.max(0, Math.min(request.maxWorkFraction, workFractions[index]))
+      if (fraction <= 1e-9) return
+      const produced = request.outputAtFullWork * fraction
       productInventory = {
         ...productInventory,
-        [plant.productKey]: productInventory[plant.productKey] + produced,
+        [request.outputProduct]: productInventory[request.outputProduct] + produced,
       }
+      if (request.input === 'feedstock') feedstockConsumed += request.inputAtFullWork * fraction
+      else petrochemicalsConsumed += request.inputAtFullWork * fraction
+      if (electricityIsEnforced) electricityConsumed += request.electricityAtFullWork * fraction
+    })
+    feedstock = Math.max(0, feedstock - feedstockConsumed)
+    productInventory = {
+      ...productInventory,
+      petrochemicals: Math.max(0, productInventory.petrochemicals - petrochemicalsConsumed),
     }
-    feedstock = sufficient ? feedstock - totalFeedstockDemand : 0
-    electricity = electricitySufficient
-      ? electricity - totalElectricityDemand
-      : 0
+    if (electricityIsEnforced) electricity = Math.max(0, electricity - electricityConsumed)
   }
 
   // --- Gasoline production: crude -> gasoline (with Efficiency yield carry) ---
@@ -489,22 +513,10 @@ export function tick(current: GameState): GameState {
 
   if (nextProgress >= interval) {
     const storageRoom = stats.maxGasolineStorage - gasoline
-    // Production Complexity Expansion Phase 2 (completed): once the player
-    // has built >= 1 Power Plant, Tier-1 gasoline production also competes
-    // for the same electricity pool as the downstream plants -- capping
-    // batchesProduced by however many batches the remaining electricity can
-    // cover, same as the existing crudeOil/storageRoom caps. With 0 Power
-    // Plants built, electricityBatchCap stays at Infinity (no-op), so every
-    // save without a Power Plant behaves exactly as before this change.
-    const electricityBatchCap =
-      stats.buildingCounts.powerPlant > 0
-        ? Math.floor(electricity / PRODUCTION_BALANCE.electricityPerGasolineBatch)
-        : Infinity
     const batchesProduced = Math.min(
       Math.floor(nextProgress / interval),
       crudeOil,
       storageRoom,
-      electricityBatchCap,
     )
 
     if (batchesProduced >= 1) {
@@ -515,16 +527,12 @@ export function tick(current: GameState): GameState {
       gasolineYieldCarry = produced === Math.floor(rawYield) ? rawYield - produced : 0
 
       crudeOil -= batchesProduced
-      const electricityRemaining = stats.buildingCounts.powerPlant > 0 ? electricity - batchesProduced * PRODUCTION_BALANCE.electricityPerGasolineBatch : Infinity
-      if (stats.buildingCounts.powerPlant > 0) {
-        electricity = electricityRemaining
-      }
       gasoline += produced
       totalGasolineProduced += produced
       yearGasolineProduced += produced
 
       productionProgress =
-        crudeOil > 0 && gasoline < stats.maxGasolineStorage && electricityRemaining > 0
+        crudeOil > 0 && gasoline < stats.maxGasolineStorage
           ? nextProgress - batchesProduced * interval
           : 0
     } else {

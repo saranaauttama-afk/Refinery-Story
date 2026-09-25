@@ -1,5 +1,30 @@
 # Refinery Story — Mobile (Expo)
 
+> **CURRENT HANDOFF — 2026-09-25 Gameplay V3 R1 foundation through V3-09**
+>
+> The user selected a new direction: develop product variants, assign a real
+> team, manufacture for distinct customers, and finish an optional-path campaign.
+> Read [GAMEPLAY_MASTER_PLAN_V3.md](GAMEPLAY_MASTER_PLAN_V3.md) first, then
+> [GAMEPLAY_SYSTEMS_V3.md](GAMEPLAY_SYSTEMS_V3.md) for rules/data and
+> [GAMEPLAY_IMPLEMENTATION_V3.md](GAMEPLAY_IMPLEMENTATION_V3.md) for task contracts.
+> V3 supersedes V2's future plan; V2's source audit remains evidence. R0 is now
+> implemented: V3-00 `f21f035`, V3-01 `5fcd951`, V3-02 `6414de9`, and fresh-state
+> V3-03 `1104884`. V3-04 now owns variant inventory, shared capacities, protected
+> stock, material cost basis, operating ledger, per-cell Gasoline production, and
+> exclusive local Operator duties with wages/standby/XP, and Gasoline product
+> development Q35/Q40/Q55, and the first locked-price customer/job ledger with
+> protected stock and staged shipment payment. V3-09 adds the playable C0→C2
+> first-session path, guided objective, deterministic recovery/loaners, safe
+> demolition confirmation and modal/background pause ownership. The next task is
+> V3-10, the prototype playtest gate and scoped corrections. V3 is
+> fresh-save only: do not add migration or old-save compatibility. Keep
+> art/PixelLab/sound deferred. No push or Android
+> build was performed; last shipped build #68 remote `51bc987` remains the device
+> baseline. Do not force-sync histories.
+> V3-10 automated recipe/market evidence passes; see
+> [GAMEPLAY_PROTOTYPE_GATE_V3.md](GAMEPLAY_PROTOTYPE_GATE_V3.md). The gate remains
+> open until a real 15–20 minute Android session is recorded.
+
 > ## 👋 START HERE — Session Handoff (last updated: floating tab bar + collapsible card shipped)
 >
 > **If you're a new Claude picking this up: read this block fully before
@@ -1147,6 +1172,19 @@ risk than the reverse or combining them.
 - **Grid Expansion map contract revised.** The core yard is a permanent 5x5
   plan. The 6x6 endgame tier remains available as a later outer band, without
   moving any of the original 25 world-space slots.
+- **Backlog: rebuild the Factory art system with PixelLab (do not continue the
+  current road-grid polish).** Pause further background/road/plant-image work
+  until a single visual pipeline is approved. Use one approved plant as the
+  master style reference; lock the isometric projection, palette, outline,
+  lighting, transparent canvas, and equal lot footprint. Generate ground/road
+  pieces as a coherent isometric tileset, then generate plants as referenced
+  objects. Build Lv1 first and derive Lv2/Lv3 through edit/inpainting so each
+  family keeps the same identity and grows through height, density, pipes, and
+  auxiliary equipment rather than horizontal scaling. First validation slice:
+  a 3x3 yard containing Crude Tank, Distillation Unit, and Gasoline Tank at
+  Lv1-Lv3. Approve that slice on-device before producing the remaining plants
+  or replacing the live 5x5 art. Gameplay, slot IDs, save mapping, and economy
+  must remain unchanged.
 - **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Originally deferred
   in favor of Feedstock Priority (shipped above). Feedstock Priority's 0%
   setting already gives players a way to effectively "turn off" a plant

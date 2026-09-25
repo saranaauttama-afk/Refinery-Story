@@ -88,7 +88,6 @@ import {
   PLANT_PRODUCTION,
   POWER_PLANT_BALANCE,
   GRID_EDIT_BALANCE,
-  PRODUCTION_BALANCE,
   WASTE_TREATMENT_PLANT_BALANCE,
   POLYMER_PLANT_BALANCE,
   BONUS_BALANCE,
@@ -101,6 +100,7 @@ import {
   type PaidExpansionEntry,
   type ShipmentOption,
 } from '../game/data/balance'
+import { getBuildingUpgradeCost, isBuildingUpgradeable } from '../game/data/buildingUpgrades'
 import { text } from '../game/translations'
 import { MILESTONE_HEADLINES } from '../components/MilestoneHeadline'
 import { shouldSpawnCrisis, spawnCrisis, applyCrisisPenalty } from '../game/data/crisisEvents'
@@ -284,7 +284,7 @@ export function canActivateBoost(game: GameState): boolean {
 }
 
 
-export function useGameLoop() {
+export function useGameLoop(active = true) {
   const [game, setGame] = useState<GameState | null>(null)
   const gameRef = useRef<GameState | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -368,7 +368,7 @@ export function useGameLoop() {
   // so 2x/3x fast-forward shortens the period and "paused" (speed 0) tears the
   // interval down entirely -- the whole sim freezes, no catch-up on resume.
   useEffect(() => {
-    if (!loaded || speed <= 0) return
+    if (!active || !loaded || speed <= 0) return
     const period = TICK_MS / speed
     const interval = setInterval(() => {
       setGame((current) => {
@@ -547,15 +547,15 @@ export function useGameLoop() {
       })
     }, period)
     return () => clearInterval(interval)
-  }, [loaded, triggerChoiceEvent, triggerStaffEvent, speed])
+  }, [active, loaded, triggerChoiceEvent, triggerStaffEvent, speed])
 
   useEffect(() => {
-    if (!loaded) return
+    if (!active || !loaded) return
     const interval = setInterval(() => {
       if (gameRef.current) saveStoredGameState(gameRef.current)
     }, SAVE_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [loaded])
+  }, [active, loaded])
 
   const update = useCallback((fn: (current: GameState) => GameState) => {
     setGame((current) => {
@@ -906,32 +906,11 @@ export function useGameLoop() {
       update((current) => {
         const cell = current.grid[cellIndex]
         if (!cell) return current
-        // Every building with a ...ByLevel table in BUILDING_UPGRADE_BALANCE
-        // is upgradeable. crudeTank/gasolineTank/distillationUnit were the
-        // original 3; laboratory/maintenanceWorkshop/salesOffice had tables
-        // but were missing from this list (their bonuses were stuck at Lv1
-        // in normal play); lubricantPlant/jetFuelPlant/petrochemicalPlant/
-        // polymerPlant are the new Production Complexity Expansion tables
-        // (Lv1 = no bonus, so this is backward compatible -- existing saves
-        // at Lv1 see no change until the player upgrades).
-        const isUpgradeable =
-          cell === 'crudeTank' ||
-          cell === 'gasolineTank' ||
-          cell === 'distillationUnit' ||
-          cell === 'laboratory' ||
-          cell === 'maintenanceWorkshop' ||
-          cell === 'salesOffice' ||
-          cell === 'lubricantPlant' ||
-          cell === 'jetFuelPlant' ||
-          cell === 'petrochemicalPlant' ||
-          cell === 'polymerPlant'
-        if (!isUpgradeable) return current
+        if (!isBuildingUpgradeable(cell)) return current
         const currentLevel = current.gridLevels[cellIndex] ?? 1
         if (currentLevel >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel) return current
-        const cost =
-          currentLevel === 1
-            ? BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost
-            : BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost
+        const cost = getBuildingUpgradeCost(cell, currentLevel)
+        if (cost === null) return current
         if (current.money < cost) return current
         const gridLevels = [...current.gridLevels]
         gridLevels[cellIndex] = currentLevel + 1

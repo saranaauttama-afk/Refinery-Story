@@ -216,13 +216,13 @@ export const text = {
       ),
     powerCovered: bilingual('✓ All plants fully powered', '✓ ไฟพอทุกโรงงาน'),
     powerNoPlant: bilingual(
-      "No Power Plant yet — plants don't need power until you build one.",
-      'ยังไม่มีโรงไฟฟ้า — โรงงานยังไม่ต้องใช้ไฟจนกว่าจะสร้าง',
+      'Permanent site supply is active. Build a Power Plant for more capacity.',
+      'ไฟจากระบบกลางทำงานอยู่ สร้างโรงไฟฟ้าเพื่อเพิ่มกำลังและความจุ',
     ),
     powerNoDraw: bilingual('No power-using plants built yet.', 'ยังไม่มีโรงงานที่ใช้ไฟ'),
     powerGasNote: bilingual(
-      'Gasoline production also draws power each batch.',
-      'การผลิตน้ำมันเบนซินก็ใช้ไฟทุกรอบผลิตเช่นกัน',
+      'Gasoline production is independent of electricity.',
+      'การผลิตน้ำมันเบนซินไม่ใช้ไฟฟ้า',
     ),
     feedstock: bilingual('Feedstock', 'วัตถุดิบ'),
     reputation: bilingual('Reputation', 'ชื่อเสียง'),

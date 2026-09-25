@@ -1,5 +1,10 @@
 # Refinery Story — U3 Fun Blueprint
 
+> **2026-09-25:** historical proposal, partly implemented. The current future
+> design is [GAMEPLAY_MASTER_PLAN_V3.md](GAMEPLAY_MASTER_PLAN_V3.md); execute
+> from [GAMEPLAY_IMPLEMENTATION_V3.md](GAMEPLAY_IMPLEMENTATION_V3.md). V2 retains
+> source audit evidence only. Do not replay U3/V2 tasks alongside V3.
+
 Status: design approved for planning; implementation has not started.
 
 Purpose: turn the existing feature-rich simulation into a readable, satisfying management game without discarding the current systems, art direction, or save data.
