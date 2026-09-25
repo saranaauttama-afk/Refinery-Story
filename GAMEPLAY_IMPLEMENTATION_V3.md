@@ -243,6 +243,19 @@ Q65 reachableC2 and Q75 JetC3; multi-cell level/staff independent.
 
 ### V3-12 · Full workforce/support and progression mapping
 
+Status: **COMPLETE IN CODE** — engine `a2a2990`, UI `2d7c3fd`. Check:
+`check:v3-roles` plus all prior V3/legacy checks.
+Evidence notes: every role×plant/support eligibility is asserted; mass-hired
+Mechanics/Sales hit their caps; R&D leads lose line/support benefit and return;
+no-specialist quality path reaches Q65 (C2) and Q70 (rank1) through modules and
+research, Q75 without a specialist needs rank2 at C4 (V3-14). Decisions recorded
+as V3-A hypotheses for V3-18: staff cap by chapter 4/6/8/10/12; mechanics and
+chemists count at most 3 staff-equivalents; job RP bonus cap 50%; productive XP
+uses the legacy 1 XP per active tick. Safety Officer, Maintenance Workshop and
+`saferOperations` stay locked with a visible reason because V3 maintenance/upkeep
+is not implemented yet; perks/prestige do not exist in a fresh V3 save.
+Revision-7 preview saves load by adding empty accomplishment records.
+
 Dependencies:11. Implement all role assignments in Master's matrix, deterministic
 vacancy hires, all duty caps/wages, contributions display, training legal actions,
 minimal employee accomplishment records. Apply research/perk/specialization mapping
