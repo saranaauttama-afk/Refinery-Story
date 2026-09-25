@@ -267,6 +267,17 @@ specialist path can eventually achieve required Q with knowledge/modules.
 
 ### V3-13 · Fleet/Airline ladder and repeat/rush progression
 
+Status: **COMPLETE IN CODE** — engine `42c8ed4`, UI `7469d7b`. Check:
+`check:v3-clients` plus all prior V3/legacy checks. **R2 human gate pending.**
+Evidence notes: 12 milestones for 4 clients generated from the Master table and S6
+multipliers; ladder order, cooldown-from-acceptance, cancel/expire without bonus,
+RP or XP, repeat income-only, C3 auto-repeat and Rush sizing/deadline/expiry are
+asserted. Two C3 routes (Local+Performance, Local+Fleet) and C4 are proven on
+**constructed fixtures** (certified blueprints/stock inserted directly); legal Q65/Q70
+certification is proven separately in `check:v3-modules-jet`, but a full legal
+fresh-progress run to C3/C4 is not simulated yet (V3-18). Q75 is attainable at C3
+(Precision + module + rank1 + lead). Materials remains V3-14.
+
 Dependencies:12. Add all remaining Local/Performance milestones and full Fleet/
 Airline content. Implement C2→C3→C4 predicates, repeat cooldown/auto-repeat and
 optional Rush only for previously proven routes. Include quote/time feasibility.
