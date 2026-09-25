@@ -1,50 +1,31 @@
-# CURRENT TASK — Refinery Story 1.0 Release Candidate
+# CURRENT TASK — Refinery Story Gameplay V3
 
-> **Current priority — 2026-09-25:** Gameplay V3 R0 is complete in code.
-> Read [GAMEPLAY_MASTER_PLAN_V3.md](GAMEPLAY_MASTER_PLAN_V3.md),
-> [GAMEPLAY_SYSTEMS_V3.md](GAMEPLAY_SYSTEMS_V3.md), then
-> [GAMEPLAY_IMPLEMENTATION_V3.md](GAMEPLAY_IMPLEMENTATION_V3.md).
-> Completed commits: V3-00 `f21f035`, V3-01 `5fcd951`, V3-02 `6414de9`.
-> The next task is V3-03 (isolated preview schema/action boundary). No push or
-> Android build was performed; build #68 remains the shipped baseline. Historical
-> completion claims below do not validate later V3 systems.
+> **Updated 2026-09-26.** Source of truth for the V3 backlog is
+> [GAMEPLAY_IMPLEMENTATION_V3.md](GAMEPLAY_IMPLEMENTATION_V3.md), with rules in
+> [GAMEPLAY_SYSTEMS_V3.md](GAMEPLAY_SYSTEMS_V3.md) and design in
+> [GAMEPLAY_MASTER_PLAN_V3.md](GAMEPLAY_MASTER_PLAN_V3.md). Older text that named
+> V3-03 as the next task is obsolete.
 
-## Goal
+## Baseline
 
-Finish the approved Modern Pixel UI and the first gameplay fun pass, preserve
-existing saves, verify the full progression loop, then publish one final APK.
+- Release baseline: `release/refinery-story-v1` at `9b8fe406` (V3 playable prototype).
+- Build baseline: GitHub Actions *Android Preview APK* run **#69**.
+- Old saves are not supported; V3 uses its own fresh save model.
 
-## Completed Scope
+## Status
 
-1. Factory: compact HUD, anchored isometric build grid, camera controls, clear
-   build mode, live profit/output rail, and bottleneck feedback.
-2. Operations: illustrated control room, production flow, process detail,
-   staff/efficiency, upgrades, trade, supply orders, and automation.
-3. Business: illustrated commercial office, deal summary, Deal Desk, grouped
-   contracts, rush orders, and contract completion flow.
-4. Team: illustrated crew room, live staffing summary, recruitment, training,
-   skills, retirement warnings, and per-plant assignment.
-5. HQ screens: Research, Achievements, Company, and Settings use the same dark
-   pixel UI; the unfinished Store remains visible as `LATER`.
-6. Fun pass: new games start with a working Crude Tank + Distillation Unit,
-   onboarding teaches decisions instead of mandatory setup, and Auto Trade is
-   earned at Refinery Lv3.
-7. Reliability: corrected the save export storage key; existing save sanitation
-   and migration remain intact.
+- V3-00 … V3-10: **complete**. The V3-10 prototype gate was passed to R2 by the
+  player after playing build #69 (see
+  [GAMEPLAY_PROTOTYPE_GATE_V3.md](GAMEPLAY_PROTOTYPE_GATE_V3.md)).
+- V3-11 (Lube/Jet, power, storage, modules, rank1, 4×4): **complete in code** on
+  branch `claude/gameplay-v3`; Android interaction of the new panels still needs a
+  device check.
+- **Current task: V3-12** — full workforce/support and progression mapping.
 
-## Final Release Gates
+## Rules for this work
 
-- TypeScript clean
-- Full progression/balance regression clean
-- Camera math regression clean
-- Expo bundle export clean
-- Git diff whitespace clean
-- Android bundled release APK succeeds from the final commit
-
-## Release Policy
-
-No milestone APKs. Build once after every release gate passes.
-
-Build marker: `REFINERY-STORY-1.0-RC`.
-
-Native release event: final Android candidate.
+- One milestone per commit series; run `npx tsc --noEmit`, every `npm run check:v3-*`
+  script and `node --import tsx scripts/factory-map-check.ts` before pushing.
+- Factory art, plant images, backgrounds, roads and PixelLab work stay in the
+  backlog; do not edit them in gameplay milestones.
+- Stop at human/playtest gates (R2 gate after V3-13, R3 gate after V3-16, V3-19).
