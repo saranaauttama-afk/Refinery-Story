@@ -67,7 +67,10 @@ const LOT_HEIGHT = TILE_HEIGHT * 0.78
 const LOT_OFFSET_X = (TILE_WIDTH - LOT_WIDTH) / 2
 const LOT_OFFSET_Y = (TILE_HEIGHT - LOT_HEIGHT) / 2
 const PLANT_IMAGE_WIDTH = LOT_WIDTH * 1.08
-const ROAD_EDGE = 12 * TILE_SCALE
+const YARD_APRON_X = 20 * TILE_SCALE
+const YARD_APRON_Y = 10 * TILE_SCALE
+const YARD_ROAD_INSET_X = 7 * TILE_SCALE
+const YARD_ROAD_INSET_Y = 4 * TILE_SCALE
 
 const PIXEL_SAMPLING = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const
 
@@ -253,16 +256,31 @@ function FactorySkiaView({
     playableMaxY,
   } = layout
 
+  // A single continuous service yard replaces the expanded road diamond that
+  // used to be drawn behind every lot. Those overlapping diamonds merged into
+  // a near-black slab on device. The exposed gaps between the equal concrete
+  // pads below now form the road network without changing gameplay geometry.
+  const yard = useMemo(() => {
+    const x = playableMinX - YARD_APRON_X
+    const y = playableMinY - YARD_APRON_Y
+    const width = playableMaxX - playableMinX + YARD_APRON_X * 2
+    const height = playableMaxY - playableMinY + YARD_APRON_Y * 2
+    return {
+      shadow: diamondPath(x, y + 8 * TILE_SCALE, width, height),
+      apron: diamondPath(x, y, width, height),
+      road: diamondPath(
+        x + YARD_ROAD_INSET_X,
+        y + YARD_ROAD_INSET_Y,
+        width - YARD_ROAD_INSET_X * 2,
+        height - YARD_ROAD_INSET_Y * 2,
+      ),
+    }
+  }, [playableMaxX, playableMaxY, playableMinX, playableMinY])
+
   // Ground diamonds — rebuilt only when the grid contents change, not per tick.
   const ground = useMemo(() => {
     return placed.map((t) => {
       const cell = grid[t.activeIndex]
-      const road = diamondPath(
-        t.x - ROAD_EDGE,
-        t.y - ROAD_EDGE / 2,
-        TILE_WIDTH + ROAD_EDGE * 2,
-        TILE_HEIGHT + ROAD_EDGE,
-      )
       const lotX = t.x + LOT_OFFSET_X
       const lotY = t.y + LOT_OFFSET_Y
       const outer = diamondPath(lotX, lotY, LOT_WIDTH, LOT_HEIGHT)
@@ -285,7 +303,6 @@ function FactorySkiaView({
         : null
       return {
         key: t.activeIndex,
-        road,
         outer,
         inner,
         x: lotX,
@@ -457,26 +474,35 @@ function FactorySkiaView({
                   sampling={PIXEL_SAMPLING}
                 />
               ) : null}
-              {/* ground: outer + inset diamonds */}
+              {/* Continuous yard: raised concrete apron around an asphalt
+                  service area. Gaps between pads become readable roads. */}
+              {showPlacementGrid ? (
+                <>
+                  <Path path={yard.shadow} color="rgba(11, 25, 32, 0.58)" />
+                  <Path path={yard.apron} color="#918C7E" />
+                  <Path path={yard.apron} color="#24343C" style="stroke" strokeWidth={3.2} />
+                  <Path path={yard.road} color="#4E5D62" />
+                  <Path path={yard.road} color="#C69B32" style="stroke" strokeWidth={1.8} />
+                </>
+              ) : null}
+              {/* Equal concrete pads; no per-cell road layer to overlap. */}
               {ground.map((g) => (showPlacementGrid ? (
                 <Group key={`gnd-${g.key}`}>
-                  <Path path={g.road} color="#334148" />
-                  <Path path={g.road} color="#1B262C" style="stroke" strokeWidth={2} />
-                  <Path path={g.outer} color={g.occupied ? '#56636B' : '#495760'} />
+                  <Path path={g.outer} color={g.occupied ? '#8D8A7F' : '#938E81'} />
                   <Path
                     path={g.outer}
-                    color={g.key === selectedCellIndex ? '#63DF79' : '#172A38'}
+                    color={g.key === selectedCellIndex ? '#63DF79' : '#273A43'}
                     style="stroke"
                     strokeWidth={g.key === selectedCellIndex ? 3.6 : 2.4}
                   />
-                  <Path path={g.inner} color={g.occupied ? '#A89470' : '#BDAA82'} />
-                  <Path path={g.inner} color={g.occupied ? '#D7B83C' : '#7B6A50'} style="stroke" strokeWidth={1.4} />
+                  <Path path={g.inner} color={g.occupied ? '#C4B58F' : '#C9BB99'} />
+                  <Path path={g.inner} color={g.occupied ? '#D8B83F' : '#85775D'} style="stroke" strokeWidth={1.4} />
                   {!g.occupied ? (
                     <>
-                      <Rect x={g.cx - 10} y={g.cy - 2} width={20} height={4} color="#746248" />
-                      <Rect x={g.cx - 2} y={g.cy - 10} width={4} height={20} color="#746248" />
-                      <Rect x={g.cx - 8} y={g.y + 6} width={16} height={3} color="#F0B936" />
-                      <Rect x={g.cx - 8} y={g.y + LOT_HEIGHT - 9} width={16} height={3} color="#F0B936" />
+                      <Rect x={g.cx - 10} y={g.cy - 2} width={20} height={4} color="#756A55" />
+                      <Rect x={g.cx - 2} y={g.cy - 10} width={4} height={20} color="#756A55" />
+                      <Rect x={g.cx - 9} y={g.y + 5} width={18} height={3} color="#F2C13A" />
+                      <Rect x={g.cx - 9} y={g.y + LOT_HEIGHT - 8} width={18} height={3} color="#F2C13A" />
                     </>
                   ) : null}
                 </Group>
