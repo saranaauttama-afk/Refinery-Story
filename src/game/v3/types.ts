@@ -98,7 +98,7 @@ export type V3JobStatus = 'accepted' | 'completed' | 'cancelled' | 'expired'
 export type V3AcceptedJob = {
   id: string
   templateId: string
-  family: ProductKey
+  family: V3ProductFamily
   minimumQuality: number
   quantity: number
   deliveredQuantity: number
@@ -221,6 +221,10 @@ export type V3ActionMessageId =
   | 'v3.build.occupied'
   | 'v3.build.locked'
   | 'v3.build.insufficient_cash'
+  | 'v3.build.unsupported'
+  | 'v3.expand.unavailable'
+  | 'v3.expand.locked'
+  | 'v3.expand.insufficient_cash'
   | 'v3.upgrade.invalid_cell'
   | 'v3.upgrade.unsupported'
   | 'v3.upgrade.locked'
@@ -399,7 +403,12 @@ export type V3DemolishAction = {
   expectedBuilding: BuildingType
 }
 
-export type V3Action = V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3ExpandGridAction = {
+  type: 'expand_grid'
+  sequence: number
+}
+
+export type V3Action = V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

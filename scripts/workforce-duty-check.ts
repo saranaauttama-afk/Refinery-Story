@@ -14,13 +14,13 @@ let state = createInitialV3GameState()
 const niranId = state.world.employees[0].id
 let preview = evaluateV3GasolineProduction(state, 25)
 close(preview[0].crewRate, 0.2)
-close(preview[0].potentialGasolinePerMinute, 72)
+close(preview[0].potentialOutputPerMinute, 72)
 
 let action = reduceV3Action(state, {
   type: 'assign_duty', sequence: state.nextActionSequence, employeeId: niranId, duty: { kind: 'reserve' },
 })
 state = action.state
-close(evaluateV3GasolineProduction(state, 25)[0].potentialGasolinePerMinute, 60)
+close(evaluateV3GasolineProduction(state, 25)[0].potentialOutputPerMinute, 60)
 
 state = {
   ...state,
@@ -39,8 +39,8 @@ action = reduceV3Action(state, {
 })
 state = action.state
 preview = evaluateV3GasolineProduction(state, 25)
-close(preview.find((line) => line.cellIndex === 0)!.potentialGasolinePerMinute, 72)
-close(preview.find((line) => line.cellIndex === 4)!.potentialGasolinePerMinute, 60)
+close(preview.find((line) => line.cellIndex === 0)!.potentialOutputPerMinute, 72)
+close(preview.find((line) => line.cellIndex === 4)!.potentialOutputPerMinute, 60)
 
 const secondOperator: Employee = {
   id: 'employee:operator:000002', type: 'operator', name: 'Mali', level: 1, xp: 0,
@@ -73,7 +73,7 @@ production = runV3ProductionTick(state, 25)
 assert.deepEqual(production.state.unpaidEmployeeIds, [niranId])
 close(production.state.world.moneyCents, 0)
 close(production.lines[0].crewRate, 0)
-close(production.lines[0].potentialGasolinePerMinute, 60)
+close(production.lines[0].potentialOutputPerMinute, 60)
 close(production.state.world.employees[0].xp, 0)
 
 state = { ...production.state, world: { ...production.state.world, moneyCents: 1_000 } }

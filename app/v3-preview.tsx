@@ -181,8 +181,8 @@ export default function V3PreviewScreen() {
   const gasoline = getV3ProductQuantity(state, 'gasoline')
   const gasolineCapacity = getV3ProductCapacity(state, 'gasoline')
   const productionPreview = evaluateV3GasolineProduction(state, 25)
-  const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialGasolinePerMinute, 0)
-  const actualRate = productionPreview.reduce((sum, line) => sum + line.actualGasolinePerMinute, 0)
+  const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialOutputPerMinute, 0)
+  const actualRate = productionPreview.reduce((sum, line) => sum + line.actualOutputPerMinute, 0)
   const starterOperator = state.world.employees[0]
   const starterDuty = state.employeeDuties[starterOperator.id] ?? { kind: 'reserve' as const }
   const distillationCellIndex = state.world.grid.findIndex((cell) => cell === 'distillationUnit')

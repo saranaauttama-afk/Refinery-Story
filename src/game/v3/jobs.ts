@@ -1,18 +1,18 @@
 import { consumeV3ProtectedInventory, getV3ProductCapacity, getV3StockAllocations, recordV3Ledger } from './productInventory'
 import { evaluateV3CampaignProgress } from './campaign'
-import type { V3AcceptedJob, V3GameState } from './types'
+import type { V3AcceptedJob, V3GameState, V3ProductFamily } from './types'
 
 export type V3JobTemplate = {
   id: string
   clientId: string
-  family: 'gasoline'
+  family: V3ProductFamily
   minimumQuality: number
   quantity: number
   unitPriceCents: number
   completionBonusCents: number
   researchReward: number
   reputationReward: number
-  minimumChapter: 0 | 1
+  minimumChapter: 0 | 1 | 2 | 3
   milestone: boolean
 }
 
@@ -31,6 +31,19 @@ export const V3_JOB_TEMPLATES: Record<string, V3JobTemplate> = {
     id: 'performance:trial', clientId: 'performance', family: 'gasoline', minimumQuality: 55,
     quantity: 35, unitPriceCents: 2_700, completionBonusCents: 9_450,
     researchReward: 5, reputationReward: 5, minimumChapter: 1, milestone: true,
+  },
+  // Master §7 Trial rows. Quote = spot × Q multiplier (Q40–50 1.20, Q55–60 1.50);
+  // milestone completion bonus is 10% of the quoted order. Regular/Partner rows
+  // belong to V3-13.
+  'fleet:trial': {
+    id: 'fleet:trial', clientId: 'fleet', family: 'lubricants', minimumQuality: 40,
+    quantity: 30, unitPriceCents: 3_600, completionBonusCents: 10_800,
+    researchReward: 5, reputationReward: 5, minimumChapter: 2, milestone: true,
+  },
+  'airline:trial': {
+    id: 'airline:trial', clientId: 'airline', family: 'jetFuel', minimumQuality: 55,
+    quantity: 30, unitPriceCents: 7_500, completionBonusCents: 22_500,
+    researchReward: 5, reputationReward: 5, minimumChapter: 3, milestone: true,
   },
 }
 
@@ -90,7 +103,7 @@ export function dispatchV3Job(state: V3GameState, requestedQuantity: number, blu
   }
   const remaining = job.quantity - job.deliveredQuantity
   const quantity = Math.min(requestedQuantity, remaining)
-  const consumed = consumeV3ProtectedInventory(state, 'gasoline', quantity, { purpose: 'job-dispatch', blueprintId })
+  const consumed = consumeV3ProtectedInventory(state, job.family as V3ProductFamily, quantity, { purpose: 'job-dispatch', blueprintId })
   if (consumed.quantity + 1e-8 < quantity) {
     return { state, blocker: 'insufficient_qualified_stock', quantity: 0, paidCents: 0 }
   }
@@ -183,7 +196,7 @@ export function cancelV3Job(state: V3GameState): V3JobResult {
   }
 }
 
-export function addV3JobContribution(state: V3GameState, employeeId: string | null, family: 'gasoline', quality: number, quantity: number): V3GameState {
+export function addV3JobContribution(state: V3GameState, employeeId: string | null, family: V3ProductFamily, quality: number, quantity: number): V3GameState {
   const job = state.acceptedJob
   if (!job || !employeeId || job.family !== family || quality < job.minimumQuality || quantity <= 0) return state
   return {
@@ -200,12 +213,12 @@ export function addV3JobContribution(state: V3GameState, employeeId: string | nu
 
 export function runV3AutoDispatch(state: V3GameState): V3GameState {
   const job = state.acceptedJob
-  if (!job || job.family !== 'gasoline') return state
+  if (!job) return state
   const remaining = job.quantity - job.deliveredQuantity
-  const allocations = getV3StockAllocations(state, 'gasoline')
+  const allocations = getV3StockAllocations(state, job.family)
   const eligible = allocations.reduce((sum, allocation) =>
     sum + (state.stockPolicies[allocation.blueprintId]?.autoDispatch ? allocation.jobReserved : 0), 0)
-  const threshold = Math.min(remaining, Math.max(1, Math.floor(getV3ProductCapacity(state, 'gasoline') * 0.25)))
+  const threshold = Math.min(remaining, Math.max(1, Math.floor(getV3ProductCapacity(state, job.family) * 0.25)))
   if (eligible + 1e-8 < threshold && eligible + 1e-8 < remaining) return state
   const quantity = Math.min(Math.floor(eligible + 1e-8), remaining)
   return quantity > 0 ? dispatchV3Job(state, quantity).state : state

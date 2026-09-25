@@ -19,8 +19,8 @@ const createUnstaffedState = (): V3GameState => {
 let state = createUnstaffedState()
 let preview = evaluateV3GasolineProduction(state, 25)
 assert.equal(preview.length, 1)
-close(preview[0].potentialGasolinePerMinute, 60)
-close(preview[0].actualGasolinePerMinute, 60)
+close(preview[0].potentialOutputPerMinute, 60)
+close(preview[0].actualOutputPerMinute, 60)
 
 let result = runV3ProductionTick(state, 25)
 state = result.state
@@ -59,8 +59,8 @@ state = {
   },
 }
 preview = evaluateV3GasolineProduction(state, 25)
-close(preview.find((line) => line.cellIndex === 4)!.potentialGasolinePerMinute, 60)
-close(preview.find((line) => line.cellIndex === 0)!.potentialGasolinePerMinute, 48)
+close(preview.find((line) => line.cellIndex === 4)!.potentialOutputPerMinute, 60)
+close(preview.find((line) => line.cellIndex === 0)!.potentialOutputPerMinute, 48)
 result = runV3ProductionTick(state, 25)
 close(result.state.variantInventory[V3_DEFAULT_BLUEPRINT_ID.gasoline].quantity, 5)
 close(result.state.variantInventory[precision.id].quantity, 4)
@@ -82,7 +82,7 @@ close(preview[1].actualWork, 0.5, 'equal cell 4 work')
 let nearlyFull = createUnstaffedState()
 nearlyFull = addV3VariantInventory(nearlyFull, V3_DEFAULT_BLUEPRINT_ID.gasoline, 69, 69_000).state
 preview = evaluateV3GasolineProduction(nearlyFull, 25)
-close(preview[0].gasoline, 1)
+close(preview[0].outputQuantity, 1)
 result = runV3ProductionTick(nearlyFull, 25)
 close(getV3ProductQuantity(result.state, 'gasoline'), 70)
 close(result.state.world.crudeOil, 16.8)

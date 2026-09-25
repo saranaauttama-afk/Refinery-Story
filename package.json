@@ -21,7 +21,8 @@
     "check:v3-development": "node --import tsx scripts/product-development-check.ts",
     "check:v3-jobs": "node --import tsx scripts/job-ledger-check.ts",
     "check:v3-session": "node --import tsx scripts/first-session-recovery-check.ts",
-    "check:v3-gate": "node --import tsx scripts/prototype-gate-check.ts"
+    "check:v3-gate": "node --import tsx scripts/prototype-gate-check.ts",
+    "check:v3-lube": "node --import tsx scripts/lube-power-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
@@ -52,6 +53,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@types/react": "~19.2.0",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.0"
   },
   "overrides": {

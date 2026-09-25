@@ -1,19 +1,44 @@
+import {
+  V3_DEVELOPMENT_BY_FAMILY,
+  V3_DEVELOPMENT_SAMPLE_QUANTITY,
+  V3_MODULE_QUALITY,
+  V3_PLANT_BY_FAMILY,
+  V3_PROFILE_QUALITY,
+} from './data'
 import { consumeV3ProtectedInventory, getV3StockAllocations, recordV3Ledger } from './productInventory'
 import type {
   V3GameState,
+  V3ModuleKey,
   V3ProcessProfile,
+  V3ProductFamily,
   V3StartDevelopmentAction,
 } from './types'
 import { getV3Employee, returnV3EmployeeFromDevelopment } from './workforce'
 
-export const V3_GASOLINE_DEVELOPMENT_FEE_CENTS = 5_000
-export const V3_GASOLINE_SAMPLE_QUANTITY = 10
-export const V3_GASOLINE_DEVELOPMENT_TICKS = 100
+export const V3_GASOLINE_DEVELOPMENT_FEE_CENTS = V3_DEVELOPMENT_BY_FAMILY.gasoline.feeCents
+export const V3_GASOLINE_SAMPLE_QUANTITY = V3_DEVELOPMENT_SAMPLE_QUANTITY
+export const V3_GASOLINE_DEVELOPMENT_TICKS = V3_DEVELOPMENT_BY_FAMILY.gasoline.ticks
 
-const PROFILE_QUALITY: Record<V3ProcessProfile, number> = {
-  volume: 35,
-  standard: 40,
-  precision: 55,
+const FAMILY_NAME: Record<V3ProductFamily, string> = {
+  gasoline: 'Gasoline',
+  lubricants: 'Lubricants',
+  jetFuel: 'Jet Fuel',
+  petrochemicals: 'Petrochemicals',
+  plasticPellets: 'Plastic Pellets',
+}
+
+/** Systems S2: Q = clamp(40 + profile + module + 5*rank + lead, 20, 80). */
+export function getV3BlueprintQuality(
+  profile: V3ProcessProfile,
+  module: V3ModuleKey,
+  knowledgeRank: 0 | 1 | 2,
+  leadContribution: 0 | 5,
+): number {
+  return Math.min(80, Math.max(20, 40 + V3_PROFILE_QUALITY[profile] + V3_MODULE_QUALITY[module] + 5 * knowledgeRank + leadContribution))
+}
+
+export function isV3FamilyPorted(family: V3ProductFamily): boolean {
+  return V3_PLANT_BY_FAMILY[family] !== undefined
 }
 
 export function getV3DevelopmentSignature(action: Pick<V3StartDevelopmentAction, 'family' | 'profile' | 'module' | 'knowledgeRank'>, leadContribution: 0 | 5): string {
@@ -26,14 +51,14 @@ export type V3DevelopmentStartResult = {
 }
 
 export function startV3Development(state: V3GameState, action: V3StartDevelopmentAction): V3DevelopmentStartResult {
-  if (state.campaignProgress.chapter < 1) return { state, blocker: 'chapter_locked' }
+  if (!isV3FamilyPorted(action.family)) return { state, blocker: 'invalid_config' }
+  const familyRules = V3_DEVELOPMENT_BY_FAMILY[action.family]
+  if (state.campaignProgress.chapter < familyRules.chapter) return { state, blocker: 'chapter_locked' }
   if (state.developmentProject) return { state, blocker: 'project_active' }
   if (state.world.grid[action.labCellIndex] !== 'laboratory') return { state, blocker: 'invalid_lab' }
   const labLevel = state.world.gridLevels[action.labCellIndex] ?? 1
-  if (
-    action.family !== 'gasoline' || action.module !== 'none' || action.knowledgeRank !== 0 ||
-    labLevel < 1
-  ) return { state, blocker: 'invalid_config' }
+  if (action.module !== 'none' || action.knowledgeRank !== 0 || labLevel < 1) return { state, blocker: 'invalid_config' }
+  const feeCents = familyRules.feeCents
 
   const lead = action.leadEmployeeId ? getV3Employee(state, action.leadEmployeeId) : undefined
   if (
@@ -45,14 +70,14 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
   if (Object.values(state.productBlueprints).some((blueprint) => blueprint.signature === signature)) {
     return { state, blocker: 'duplicate_signature' }
   }
-  if (state.world.moneyCents < V3_GASOLINE_DEVELOPMENT_FEE_CENTS) return { state, blocker: 'insufficient_cash' }
+  if (state.world.moneyCents < feeCents) return { state, blocker: 'insufficient_cash' }
 
   const allocations = getV3StockAllocations(state, action.family)
-  if (allocations.reduce((sum, allocation) => sum + allocation.free, 0) + 1e-8 < V3_GASOLINE_SAMPLE_QUANTITY) {
+  if (allocations.reduce((sum, allocation) => sum + allocation.free, 0) + 1e-8 < V3_DEVELOPMENT_SAMPLE_QUANTITY) {
     return { state, blocker: 'insufficient_samples' }
   }
   let sampledState = state
-  let remaining = V3_GASOLINE_SAMPLE_QUANTITY
+  let remaining = V3_DEVELOPMENT_SAMPLE_QUANTITY
   const sampleDebits: Array<{ blueprintId: string; quantity: number }> = []
   for (const allocation of allocations) {
     const quantity = Math.min(allocation.free, remaining)
@@ -75,27 +100,27 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
     ...sampledState,
     world: {
       ...sampledState.world,
-      moneyCents: sampledState.world.moneyCents - V3_GASOLINE_DEVELOPMENT_FEE_CENTS,
+      moneyCents: sampledState.world.moneyCents - feeCents,
     },
     operatingLedger: {
       ...sampledState.operatingLedger,
-      developmentExpenseCents: sampledState.operatingLedger.developmentExpenseCents + V3_GASOLINE_DEVELOPMENT_FEE_CENTS,
+      developmentExpenseCents: sampledState.operatingLedger.developmentExpenseCents + feeCents,
     },
     developmentProject: {
       id: projectId,
       signature,
-      family: 'gasoline',
+      family: action.family,
       leadEmployeeId: lead?.id ?? '',
       contributorEmployeeIds: lead ? [lead.id] : [],
       labCellIndex: action.labCellIndex,
-      remainingTicks: V3_GASOLINE_DEVELOPMENT_TICKS,
+      remainingTicks: familyRules.ticks,
       profile: action.profile,
-      module: 'none',
-      knowledgeRank: 0,
+      module: action.module,
+      knowledgeRank: action.knowledgeRank,
       leadContribution,
-      quality: Math.min(80, Math.max(20, PROFILE_QUALITY[action.profile] + leadContribution)),
+      quality: getV3BlueprintQuality(action.profile, action.module, action.knowledgeRank, leadContribution),
       sampleDebits,
-      feeDebitedCents: V3_GASOLINE_DEVELOPMENT_FEE_CENTS,
+      feeDebitedCents: feeCents,
     },
     employeeDuties: lead ? {
       ...sampledState.employeeDuties,
@@ -105,7 +130,7 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
         returnCellIndex: priorDuty?.kind === 'line' ? priorDuty.cellIndex : null,
       },
     } : sampledState.employeeDuties,
-  }, { cashOutflowsCents: V3_GASOLINE_DEVELOPMENT_FEE_CENTS })
+  }, { cashOutflowsCents: feeCents })
   return { state: debited, blocker: null }
 }
 
@@ -132,7 +157,7 @@ export function advanceV3Development(state: V3GameState, deltaTicks: number): V3
     signature: project.signature,
     revision,
     family: project.family,
-    name: `${project.profile[0].toUpperCase()}${project.profile.slice(1)} Gasoline`,
+    name: `${project.profile[0].toUpperCase()}${project.profile.slice(1)}${project.module === 'none' ? '' : ` ${project.module[0].toUpperCase()}${project.module.slice(1)}`} ${FAMILY_NAME[project.family]}`,
     quality: project.quality,
     profile: project.profile,
     module: project.module,

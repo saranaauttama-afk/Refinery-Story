@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { BUILDINGS } from '../data/buildings'
+import { V3_DEVELOPMENT_BY_FAMILY, isV3ProcessBuilding } from './data'
 import { createInitialV3GameState } from './state'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
@@ -172,7 +173,7 @@ export function parseV3GameState(value: unknown): V3LoadResult {
     isRecord(program) &&
     Number.isInteger(program.cellIndex) && String(program.cellIndex) === key &&
     (program.cellIndex as number) >= 0 && (program.cellIndex as number) < grid.length &&
-    grid[program.cellIndex as number] === 'distillationUnit' &&
+    isV3ProcessBuilding(grid[program.cellIndex as number] as never) &&
     typeof program.blueprintId === 'string' &&
     Object.hasOwn(value.productBlueprints as Record<string, unknown>, program.blueprintId) &&
     ['none', 'throughput', 'economy', 'precision'].includes(program.installedModule as string) &&
@@ -192,7 +193,7 @@ export function parseV3GameState(value: unknown): V3LoadResult {
     }
     if (duty.kind !== 'line' || !Number.isInteger(duty.cellIndex)) return false
     const cellIndex = duty.cellIndex as number
-    if (employeeTypes.get(employeeId) !== 'operator' || grid[cellIndex] !== 'distillationUnit' || occupiedLineCells.has(cellIndex)) return false
+    if (employeeTypes.get(employeeId) !== 'operator' || !isV3ProcessBuilding(grid[cellIndex] as never) || occupiedLineCells.has(cellIndex)) return false
     occupiedLineCells.add(cellIndex)
     return true
   })) {
@@ -202,8 +203,9 @@ export function parseV3GameState(value: unknown): V3LoadResult {
     const project = value.developmentProject
     if (
       !isRecord(project) || typeof project.id !== 'string' || typeof project.signature !== 'string' ||
-      project.family !== 'gasoline' || !['volume', 'standard', 'precision'].includes(project.profile as string) ||
-      project.module !== 'none' || project.knowledgeRank !== 0 || ![0, 5].includes(project.leadContribution as number) ||
+      !PRODUCT_FAMILIES.has(project.family as string) || !['volume', 'standard', 'precision'].includes(project.profile as string) ||
+      !['none', 'throughput', 'economy', 'precision'].includes(project.module as string) ||
+      ![0, 1, 2].includes(project.knowledgeRank as number) || ![0, 5].includes(project.leadContribution as number) ||
       !isFiniteNonnegative(project.quality) || !isFiniteNonnegative(project.remainingTicks) ||
       grid[project.labCellIndex as number] !== 'laboratory' ||
       typeof project.leadEmployeeId !== 'string' ||
@@ -212,7 +214,7 @@ export function parseV3GameState(value: unknown): V3LoadResult {
       !project.contributorEmployeeIds.every((id) => typeof id === 'string' && employeeIds.has(id)) ||
       !Array.isArray(project.sampleDebits) ||
       !project.sampleDebits.every((debit) => isRecord(debit) && typeof debit.blueprintId === 'string' && isFiniteNonnegative(debit.quantity)) ||
-      project.feeDebitedCents !== 5_000
+      project.feeDebitedCents !== V3_DEVELOPMENT_BY_FAMILY[project.family as keyof typeof V3_DEVELOPMENT_BY_FAMILY].feeCents
     ) {
       return { status: 'invalid', state: null, reason: 'Invalid V3 development project.' }
     }
@@ -221,7 +223,7 @@ export function parseV3GameState(value: unknown): V3LoadResult {
     const job = value.acceptedJob
     if (
       !isRecord(job) || typeof job.id !== 'string' || typeof job.templateId !== 'string' ||
-      job.family !== 'gasoline' || job.status !== 'accepted' ||
+      !PRODUCT_FAMILIES.has(job.family as string) || job.status !== 'accepted' ||
       !isFiniteNonnegative(job.minimumQuality) || !isFiniteNonnegative(job.quantity) ||
       !isFiniteNonnegative(job.deliveredQuantity) || (job.deliveredQuantity as number) > (job.quantity as number) ||
       !isFiniteNonnegative(job.lockedUnitPriceCents) || !isFiniteNonnegative(job.completionBonusCents) ||
