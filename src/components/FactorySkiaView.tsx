@@ -7,6 +7,7 @@ import {
   FilterMode,
   Group,
   MipmapMode,
+  Oval,
   Path,
   Rect,
   Image as SkiaImage,
@@ -67,10 +68,6 @@ const LOT_HEIGHT = TILE_HEIGHT * 0.78
 const LOT_OFFSET_X = (TILE_WIDTH - LOT_WIDTH) / 2
 const LOT_OFFSET_Y = (TILE_HEIGHT - LOT_HEIGHT) / 2
 const PLANT_IMAGE_WIDTH = LOT_WIDTH * 1.08
-const YARD_APRON_X = 20 * TILE_SCALE
-const YARD_APRON_Y = 10 * TILE_SCALE
-const YARD_ROAD_INSET_X = 7 * TILE_SCALE
-const YARD_ROAD_INSET_Y = 4 * TILE_SCALE
 
 const PIXEL_SAMPLING = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const
 
@@ -256,27 +253,6 @@ function FactorySkiaView({
     playableMaxY,
   } = layout
 
-  // A single continuous service yard replaces the expanded road diamond that
-  // used to be drawn behind every lot. Those overlapping diamonds merged into
-  // a near-black slab on device. The exposed gaps between the equal concrete
-  // pads below now form the road network without changing gameplay geometry.
-  const yard = useMemo(() => {
-    const x = playableMinX - YARD_APRON_X
-    const y = playableMinY - YARD_APRON_Y
-    const width = playableMaxX - playableMinX + YARD_APRON_X * 2
-    const height = playableMaxY - playableMinY + YARD_APRON_Y * 2
-    return {
-      shadow: diamondPath(x, y + 8 * TILE_SCALE, width, height),
-      apron: diamondPath(x, y, width, height),
-      road: diamondPath(
-        x + YARD_ROAD_INSET_X,
-        y + YARD_ROAD_INSET_Y,
-        width - YARD_ROAD_INSET_X * 2,
-        height - YARD_ROAD_INSET_Y * 2,
-      ),
-    }
-  }, [playableMaxX, playableMaxY, playableMinX, playableMinY])
-
   // Ground diamonds — rebuilt only when the grid contents change, not per tick.
   const ground = useMemo(() => {
     return placed.map((t) => {
@@ -317,6 +293,8 @@ function FactorySkiaView({
           x: spriteRect.x,
           y: spriteRect.y,
           size: spriteRect.size,
+          footX: spriteRect.footX,
+          footY: spriteRect.footY,
         } : null,
       }
     })
@@ -474,29 +452,19 @@ function FactorySkiaView({
                   sampling={PIXEL_SAMPLING}
                 />
               ) : null}
-              {/* Continuous yard: raised concrete apron around an asphalt
-                  service area. Gaps between pads become readable roads. */}
-              {showPlacementGrid ? (
-                <>
-                  <Path path={yard.shadow} color="rgba(11, 25, 32, 0.58)" />
-                  <Path path={yard.apron} color="#918C7E" />
-                  <Path path={yard.apron} color="#24343C" style="stroke" strokeWidth={3.2} />
-                  <Path path={yard.road} color="#4E5D62" />
-                  <Path path={yard.road} color="#C69B32" style="stroke" strokeWidth={1.8} />
-                </>
-              ) : null}
-              {/* Equal concrete pads; no per-cell road layer to overlap. */}
+              {/* Build guides exist only while the hammer mode is active. The
+                  normal factory view uses the painted concrete yard directly. */}
               {ground.map((g) => (showPlacementGrid ? (
                 <Group key={`gnd-${g.key}`}>
-                  <Path path={g.outer} color={g.occupied ? '#8D8A7F' : '#938E81'} />
+                  <Path path={g.outer} color={g.occupied ? 'rgba(35, 58, 67, 0.20)' : 'rgba(35, 58, 67, 0.30)'} />
                   <Path
                     path={g.outer}
-                    color={g.key === selectedCellIndex ? '#63DF79' : '#273A43'}
+                    color={g.key === selectedCellIndex ? '#63DF79' : 'rgba(39, 58, 67, 0.75)'}
                     style="stroke"
                     strokeWidth={g.key === selectedCellIndex ? 3.6 : 2.4}
                   />
-                  <Path path={g.inner} color={g.occupied ? '#C4B58F' : '#C9BB99'} />
-                  <Path path={g.inner} color={g.occupied ? '#D8B83F' : '#85775D'} style="stroke" strokeWidth={1.4} />
+                  <Path path={g.inner} color={g.occupied ? 'rgba(211, 190, 141, 0.18)' : 'rgba(229, 207, 157, 0.38)'} />
+                  <Path path={g.inner} color={g.occupied ? 'rgba(216, 184, 63, 0.58)' : 'rgba(133, 119, 93, 0.72)'} style="stroke" strokeWidth={1.4} />
                   {!g.occupied ? (
                     <>
                       <Rect x={g.cx - 10} y={g.cy - 2} width={20} height={4} color="#756A55" />
@@ -506,6 +474,18 @@ function FactorySkiaView({
                     </>
                   ) : null}
                 </Group>
+              ) : null))}
+              {/* A soft contact shadow anchors each sprite to the painted
+                  concrete. Its centre uses the same foot point as the sprite. */}
+              {ground.map((g) => (g.sprite ? (
+                <Oval
+                  key={`shadow-${g.key}`}
+                  x={g.sprite.footX - LOT_WIDTH * 0.24}
+                  y={g.sprite.footY - LOT_HEIGHT * 0.10}
+                  width={LOT_WIDTH * 0.48}
+                  height={LOT_HEIGHT * 0.20}
+                  color="rgba(20, 28, 31, 0.30)"
+                />
               ) : null))}
               {/* building sprites, back-to-front */}
               {ground.map((g) => (g.sprite ? (

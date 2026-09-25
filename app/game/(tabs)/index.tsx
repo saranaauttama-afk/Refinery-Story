@@ -506,7 +506,7 @@ export default function RefineryScreen() {
               anchorGridSize={EXPANSION_BALANCE[0].size}
               onCellPress={handleCellPress}
               selectedCellIndex={pickerCell}
-              showPlacementGrid
+              showPlacementGrid={buildModeOpen || pickerCell !== null}
               panOutX={bgPanX}
               panOutY={bgPanY}
               zoomOut={bgZoom}
