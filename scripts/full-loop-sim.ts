@@ -34,6 +34,7 @@ import {
 import { BUILDINGS } from '../src/game/data/buildings'
 import { RESEARCH_ITEMS } from '../src/game/data/research'
 import { CONTRACTS } from '../src/game/data/contracts'
+import { WORKERS } from '../src/game/data/workers'
 import { AWARDS_BALANCE, CORE_BALANCE, EXPANSION_BALANCE, MAX_REFINERY_LEVEL, STANDING_ORDER_BALANCE } from '../src/game/data/balance'
 import { areAllEndgameGoalsComplete, ENDGAME_GOALS } from '../src/game/data/endgameGoals'
 import type { BuildingType, GameState, WorkerType } from '../src/game/types'
@@ -187,13 +188,14 @@ function decide(g: GameState): GameState {
   // 3. Hire workers to cap (priority order).
   const cap = getMaxHireCount(next.refineryLevel)
   for (const type of WORKER_PRIORITY) {
-    while ((next.workerCounts[type] ?? 0) < cap && next.money > 4000) {
+    const hireCost = WORKERS.find((worker) => worker.key === type)?.cost ?? 1500
+    while ((next.workerCounts[type] ?? 0) < cap && next.money >= hireCost) {
       const employees = [...next.employees, createNewEmployee(next.employees, type)]
       next = {
         ...next,
         employees,
         workerCounts: { ...next.workerCounts, [type]: (next.workerCounts[type] ?? 0) + 1 },
-        money: next.money - 1500, // representative hire cost
+        money: next.money - hireCost,
       }
     }
   }
@@ -232,6 +234,9 @@ const MAX_TICKS = 1_500_000 // ~83h cap
 export type PlaythroughResult = {
   game: GameState
   goalTick: Record<string, number>
+  levelTick: Record<number, number>
+  researchTick: Record<number, number>
+  gridTick: Record<number, number>
   yearScores: { year: number; score: number; grade: string }[]
 }
 
@@ -239,6 +244,9 @@ export type PlaythroughResult = {
 export function runPlaythrough(): PlaythroughResult {
   let g = createInitialGameState()
   const goalTick: Record<string, number> = {}
+  const levelTick: Record<number, number> = { 1: 0 }
+  const researchTick: Record<number, number> = { 0: 0 }
+  const gridTick: Record<number, number> = { 0: 0 }
   const yearScores: { year: number; score: number; grade: string }[] = []
 
   for (let step = 0; step < MAX_TICKS; step++) {
@@ -249,6 +257,10 @@ export function runPlaythrough(): PlaythroughResult {
     g = applyAutoTrade(g, autoTrade)
 
     if (g.tickCount % DECISION_EVERY === 0) g = decide(g)
+
+    if (levelTick[g.refineryLevel] === undefined) levelTick[g.refineryLevel] = g.tickCount
+    if (researchTick[g.unlockedResearchIds.length] === undefined) researchTick[g.unlockedResearchIds.length] = g.tickCount
+    if (gridTick[g.gridExpansionLevel] === undefined) gridTick[g.gridExpansionLevel] = g.tickCount
 
     // year-end close (awards / S-grade / reputation)
     if (g.tickCount > 0 && g.tickCount % YEAR_TICKS === 0) {
@@ -263,10 +275,10 @@ export function runPlaythrough(): PlaythroughResult {
     }
     if (areAllEndgameGoalsComplete(g)) { goalTick['LEGEND'] = g.tickCount; break }
   }
-  return { game: g, goalTick, yearScores }
+  return { game: g, goalTick, levelTick, researchTick, gridTick, yearScores }
 }
 
-function printReport({ game: g, goalTick, yearScores }: PlaythroughResult) {
+function printReport({ game: g, goalTick, levelTick, researchTick, gridTick, yearScores }: PlaythroughResult) {
   console.log('=== Full-loop playthrough (auto-pilot) ===\n')
   const d = calculateDerivedStats(g)
   console.log(`reached: level ${g.refineryLevel}/${MAX_REFINERY_LEVEL}  cash ${fmtMoney(g.money)}  ` +
@@ -282,6 +294,17 @@ function printReport({ game: g, goalTick, yearScores }: PlaythroughResult) {
     console.log(`  ${goal.key.padEnd(18)}: ${tk !== undefined ? fmtTime(tk) : `NOT MET (${Math.round(p.current).toLocaleString()}/${p.target.toLocaleString()})`}`)
   }
   console.log(`\n  ${'INDUSTRY LEGEND'.padEnd(18)}: ${goalTick['LEGEND'] !== undefined ? fmtTime(goalTick['LEGEND']) : 'NOT REACHED within cap'}`)
+
+  console.log('\nprogression checkpoints:')
+  for (const level of [5, 10, 15, 20, 25, 30]) {
+    console.log(`  level ${String(level).padStart(2)}: ${levelTick[level] !== undefined ? fmtTime(levelTick[level]) : 'NOT REACHED'}`)
+  }
+  for (const count of [3, 6, 10]) {
+    console.log(`  research ${String(count).padStart(2)}: ${researchTick[count] !== undefined ? fmtTime(researchTick[count]) : 'NOT REACHED'}`)
+  }
+  for (const level of [1, 2, 3]) {
+    console.log(`  grid L${level}: ${gridTick[level] !== undefined ? fmtTime(gridTick[level]) : 'NOT REACHED'}`)
+  }
 
   console.log('\nannual award score by year:')
   for (const y of [1, 2, 3, 5, 8, 12, 20]) {

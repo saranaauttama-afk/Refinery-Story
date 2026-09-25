@@ -274,9 +274,11 @@ export function prestigeGame(game: GameState, chosenPerk?: PrestigePerkKey): Gam
 // physical economy can reach, rounded to 3 significant digits so price tags
 // read cleanly ($46.2k, not $46,140).
 export function getUpgradeCost(level: number) {
+  const lateLevels = Math.max(0, level - 4)
   const raw =
     ECONOMY_BALANCE.refineryUpgradeBaseCost +
-    ECONOMY_BALANCE.refineryUpgradeLevelStep * level * level
+    ECONOMY_BALANCE.refineryUpgradeLevelStep * level * level +
+    ECONOMY_BALANCE.refineryUpgradeLateCostStep * lateLevels * lateLevels * lateLevels
   if (raw < 1000) return Math.round(raw)
   const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(raw)) - 2))
   return Math.round(raw / magnitude) * magnitude
@@ -287,13 +289,19 @@ export function getUpgradeCost(level: number) {
 // snappy) but steeply rising so late levels are a goal you run toward for a
 // while, not something you click 2-3x back-to-back once cash is banked.
 export function getUpgradeProductionRequirement(level: number) {
-  return ECONOMY_BALANCE.refineryUpgradeProductionPerLevel * level * level
+  const lateLevels = Math.max(0, level - 4)
+  return Math.round(
+    ECONOMY_BALANCE.refineryUpgradeProductionPerLevel * level * level +
+    ECONOMY_BALANCE.refineryUpgradeLateProductionStep * lateLevels * lateLevels,
+  )
 }
 
 // Reputation required to advance past `level`. 0 for early levels,
 // then scales at +15 rep per level above 4.
 export function getUpgradeReputationRequirement(level: number): number {
-  return Math.max(0, (level - 4) * 15)
+  const base = Math.max(0, (level - 4) * 15)
+  const lateLevels = Math.max(0, level - 10)
+  return base + ECONOMY_BALANCE.refineryUpgradeLateReputationStep * lateLevels * lateLevels
 }
 
 // Research items required to advance past `level`. 0 for early levels,

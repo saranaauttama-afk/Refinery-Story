@@ -21,6 +21,14 @@ import { applyAutoTrade, tick, type AutoTradeSettings } from '../src/game/utils/
 // regressed (e.g. an endgame goal became unreachable, as with the award bug),
 // not merely that the game is intentionally long.
 const LEGEND_TICK_BUDGET = 320_000
+// Mid/late progression must not collapse back into the old 1.5-hour sprint.
+// These floors are deliberately below the current auto-pilot result so normal
+// simulation variance is safe, but a future economy multiplier/reward spike
+// cannot silently erase the middle game again.
+const LEGEND_TICK_FLOOR = 180_000
+const MAX_LEVEL_TICK_FLOOR = 120_000
+const ALL_RESEARCH_TICK_FLOOR = 55_000
+const MAX_GRID_TICK_FLOOR = 70_000
 
 const failures: string[] = []
 const check = (cond: boolean, msg: string) => { if (!cond) failures.push(msg) }
@@ -63,9 +71,18 @@ const { game: g, goalTick, yearScores } = runPlaythrough()
 // 1. Industry Legend is reachable, and within a sane time budget.
 check(goalTick['LEGEND'] !== undefined, 'Industry Legend was NOT reached within the tick cap')
 if (goalTick['LEGEND'] !== undefined) {
+  check(goalTick['LEGEND'] >= LEGEND_TICK_FLOOR,
+    `Legend arrived too early at ${goalTick['LEGEND'].toLocaleString()} ticks (floor ${LEGEND_TICK_FLOOR.toLocaleString()})`)
   check(goalTick['LEGEND'] <= LEGEND_TICK_BUDGET,
     `Legend took ${goalTick['LEGEND'].toLocaleString()} ticks (budget ${LEGEND_TICK_BUDGET.toLocaleString()})`)
 }
+
+check((goalTick['maxLevel'] ?? 0) >= MAX_LEVEL_TICK_FLOOR,
+  `max refinery level arrived too early (${(goalTick['maxLevel'] ?? 0).toLocaleString()} ticks)`)
+check((goalTick['allResearch'] ?? 0) >= ALL_RESEARCH_TICK_FLOOR,
+  `all research arrived too early (${(goalTick['allResearch'] ?? 0).toLocaleString()} ticks)`)
+check((goalTick['maxGrid'] ?? 0) >= MAX_GRID_TICK_FLOOR,
+  `max grid arrived too early (${(goalTick['maxGrid'] ?? 0).toLocaleString()} ticks)`)
 
 // 2. Every individual endgame goal completes.
 for (const goal of ENDGAME_GOALS) {

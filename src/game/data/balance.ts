@@ -204,6 +204,11 @@ export const ECONOMY_BALANCE = {
   // the whole climb) without dwarfing the layout play that is the game's core.
   refineryUpgradeBaseCost: 600,
   refineryUpgradeLevelStep: 240,
+  // Keep Lv1-4 onboarding unchanged, then add a cubic infrastructure curve.
+  // Cash used to stop mattering after the first hour: the old Lv29 upgrade was
+  // only ~$202k while late product lines generate millions. This term makes
+  // mid/late upgrades compete with plants, storage, staff and grid expansion.
+  refineryUpgradeLateCostStep: 700,
   refineryLevelIncomeGrowth: 1.05,
   // Non-cash gate alongside the cost: cumulative lifetime gasoline output
   // required to advance past a level. Quadratic in level (see
@@ -212,6 +217,13 @@ export const ECONOMY_BALANCE = {
   // a genuine "run the plant for a while" gate that stops back-to-back
   // level spam.
   refineryUpgradeProductionPerLevel: 60,
+  // Extra lifetime-output gate after Lv4. Quadratic in the number of levels
+  // beyond onboarding, so Lv5 is barely changed while Lv20+ takes sustained
+  // operation instead of a burst of contract cash.
+  refineryUpgradeLateProductionStep: 400,
+  // Contracts/reputation remain relevant throughout the late game instead of
+  // satisfying every future level during the first contract ladder.
+  refineryUpgradeLateReputationStep: 10,
 } as const
 
 export const PRODUCTION_BALANCE = {
@@ -749,8 +761,8 @@ export const CONTRACT_BALANCE = [
 ] as const
 
 export const BUILDING_UPGRADE_BALANCE = {
-  upgradeLv1ToLv2Cost: 3_500,
-  upgradeLv2ToLv3Cost: 10_000,
+  upgradeLv1ToLv2Cost: 5_000,
+  upgradeLv2ToLv3Cost: 20_000,
   maxBuildingLevel: 3,
   // Index 0 is unused; index 1/2/3 = level bonus
   // Production / storage buildings
@@ -1059,7 +1071,7 @@ export const AWARDS_BALANCE = {
 // closeBusinessYear). Each worker "pays rent" yet still earns out; leveled crews
 // cost more (see levelWageRate), tying leveling to ongoing upkeep. Doubled in
 // Economy Pass 2 so a full bench is a visible recurring line item (see perWorker
-// note) — the original wages were ~0.6% of gross and created no hiring tension.
+// note) — the original wages were under 1% of gross and created no hiring tension.
 // Hiring cap + retirement (Phase 5 of Individual Staff system).
 // Per-type cap scales with refinery level so early game stays small and
 // late game allows a full bench. Formula: floor(BASE + refineryLevel / STEP).
@@ -1092,21 +1104,20 @@ export const HIRING_BALANCE = {
 } as const
 
 export const WAGE_BALANCE = {
-  // Economy Pass 2 (staff tension): wages were ~0.6% of gross at mid-game, so
-  // "fill every bench slot" had no recurring cost. Roughly doubled the
-  // production/sell roles so a full crew is a visible annual line item that the
-  // diminishing-returns curve (workerStackDiminishingExponent) makes you weigh
-  // before stacking a 3rd/4th of the same type.
+  // Mid/late pacing pass: a typical Lv8 crew now costs roughly 4-8% of annual
+  // gross instead of <1%. Combined with diminishing returns, the 3rd/4th copy
+  // of a role is a real payroll decision rather than an automatic purchase.
   perWorker: {
-    operator: 160,
-    mechanic: 220,
-    salesAgent: 300,
-    safetyOfficer: 320,
-    chemist: 400,
-    logisticsCoordinator: 520,
-    fuelSpecialist: 400,
-    aviationSpecialist: 700,
-    chemicalEngineer: 1000,
+    operator: 800,
+    mechanic: 1100,
+    salesAgent: 1500,
+    safetyOfficer: 1600,
+    chemist: 2000,
+    logisticsCoordinator: 2600,
+    fuelSpecialist: 2000,
+    aviationSpecialist: 3500,
+    chemicalEngineer: 5000,
+    polymerEngineer: 6500,
   } as Record<string, number>,
   // Each crew level above 1 adds this fraction to that type's wage.
   // Level 5 crew costs 1 + 4*0.1 = 1.4x wage.
@@ -1124,8 +1135,8 @@ export const WAGE_BALANCE = {
 // comes from the Dynamic Market (fluctuating crude cost), not from upkeep
 // alone. A full 36-tile factory lands around a few thousand $/year.
 export const MAINTENANCE_BALANCE = {
-  flatPerBuilding: 40,
-  costRate: 0.05,
+  flatPerBuilding: 100,
+  costRate: 0.10,
 } as const
 
 // --- Specialization (Roadmap feature 2) ---
