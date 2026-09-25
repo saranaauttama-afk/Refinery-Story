@@ -502,7 +502,7 @@ export default function RefineryScreen() {
               containerWidth={width}
               viewportHeight={sceneHeight}
               contentOffsetY={yardTop + GRID_DROP}
-              displayGridSize={11}
+              displayGridSize={5}
               anchorGridSize={EXPANSION_BALANCE[0].size}
               onCellPress={handleCellPress}
               selectedCellIndex={pickerCell}
@@ -521,7 +521,7 @@ export default function RefineryScreen() {
               containerWidth={width}
               viewportHeight={sceneHeight - yardTop}
               contentOffsetY={GRID_DROP}
-              displayGridSize={11}
+              displayGridSize={5}
               anchorGridSize={EXPANSION_BALANCE[0].size}
               onCellPress={handleCellPress}
               isActive={game.crudeOil > 0}

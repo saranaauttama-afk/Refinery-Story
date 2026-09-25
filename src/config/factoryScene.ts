@@ -10,7 +10,7 @@ import { DEFAULT_PLANT_IMAGE_SCALE } from '../factoryPlantLayout'
 // The full-bleed background painting (sky / sea / land). Swap this file to
 // reskin the whole scene. Keep it large enough that the crop + overscan below
 // still cover the screen.
-export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/factory_harbor_world_v4.png')
+export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/factory_harbor_world_v3.png')
 
 // ── Background framing ──
 // The image is drawn at an EXPLICIT pixel size computed to always cover the
@@ -47,7 +47,9 @@ export const BG_ZOOM_PARALLAX = 0
 //               (cramped); >1 opens a walkway/road gap between cells. Tiles and
 //               plant sprites keep their size — only the spacing grows.
 export const GRID_DROP = 278
-export const GRID_SPREAD = 1.28
+// Service roads are rendered inside each world tile, so neighbouring road
+// diamonds must meet exactly. The concrete build lot is inset from that road.
+export const GRID_SPREAD = 1
 
 // U2.3 large-world camera. The painted world is intentionally much larger
 // than one phone screen so the harbor can be explored in all four directions.
