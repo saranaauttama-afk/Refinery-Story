@@ -1,6 +1,8 @@
-export const FACTORY_MIN_SCALE = 0.58
+export const FACTORY_MIN_SCALE = 0.48
 export const FACTORY_MAX_SCALE = 2.4
-export const FACTORY_INITIAL_SCALE = 0.74
+// At 0.58 a portrait phone sees roughly the unlocked 3x3 starter yard while
+// the remaining 5x5 plan stays offscreen and discoverable by panning.
+export const FACTORY_INITIAL_SCALE = 0.58
 
 // The backdrop is deliberately larger than the viewport even at minimum zoom.
 // This lets the camera move without ever revealing the View behind the world.

@@ -25,21 +25,27 @@ import type { SharedValue } from 'react-native-reanimated'
 
 import type { BuildingType, GridCell } from '../game/types'
 import {
-  BUILD_ZONE_CENTER_X,
   BUILD_ZONE_FOCUS_Y,
-  BUILD_ZONE_TOP_Y,
-  FACTORY_WORLD_VIEWPORT_SCALE,
-  GRID_SPREAD,
 } from '../config/factoryScene'
+import {
+  FACTORY_MAP_SLOTS,
+  FACTORY_MAX_GRID_SIZE,
+  FACTORY_MICRO_TILE_HEIGHT,
+  FACTORY_MICRO_TILE_WIDTH,
+  FACTORY_PLANNED_GRID_SIZE,
+  FACTORY_WORLD_HEIGHT,
+  FACTORY_WORLD_WIDTH,
+  getActiveGridIndex,
+  getFactoryTerrainTiles,
+  pointIsInsideFactorySlot,
+} from '../factoryMap'
 import { getPlantSpriteProfile, getPlantSpriteRect } from '../factoryPlantLayout'
 import { STARTER_PLANT_ART_BY_LEVEL } from '../starterPlantArt'
 import {
   FACTORY_INITIAL_SCALE,
   FACTORY_MAX_SCALE,
   FACTORY_MIN_SCALE,
-  FACTORY_WORLD_BLEED,
   clampCameraValue,
-  getMinimumWorldExtent,
   getWorldCameraAxisBounds,
   screenPointToWorld,
 } from '../factoryCamera'
@@ -52,30 +58,10 @@ import {
 // FactoryDiamondGroundView for web. Phase 1: ground tiles + building sprites +
 // pan/zoom/tap. (Smoke, worker/level/synergy badges come next.)
 
-// ── Layout constants (mirrors FactoryDiamondGroundView so positions match) ──
-const TILE_SCALE = 1.5
-const TILE_WIDTH = 84 * TILE_SCALE
-const TILE_HEIGHT = 42 * TILE_SCALE
-const SIDE_PADDING = 18 * TILE_SCALE
-const TOP_PADDING = 18 * TILE_SCALE
-const MIN_VIEWPORT_HEIGHT = 220 * TILE_SCALE
-const EMPTY_INSET_X = 9 * TILE_SCALE
-const EMPTY_INSET_Y = 5 * TILE_SCALE
-// Every build lot remains equal; the margin around it is a non-buildable service road.
-const LOT_WIDTH = TILE_WIDTH * 0.78
-const LOT_HEIGHT = TILE_HEIGHT * 0.78
-const LOT_OFFSET_X = (TILE_WIDTH - LOT_WIDTH) / 2
-const LOT_OFFSET_Y = (TILE_HEIGHT - LOT_HEIGHT) / 2
-const PLANT_IMAGE_WIDTH = LOT_WIDTH * 1.08
+const PLANT_IMAGE_WIDTH = FACTORY_MICRO_TILE_WIDTH * 2
 
 const PIXEL_SAMPLING = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const
 
-function isoX(row: number, col: number, rows: number) {
-  return (col - row + rows - 1) * (TILE_WIDTH / 2) * GRID_SPREAD + SIDE_PADDING
-}
-function isoY(row: number, col: number) {
-  return (row + col) * (TILE_HEIGHT / 2) * GRID_SPREAD + TOP_PADDING
-}
 // Absolute-coord diamond path (Skia). x,y = tile top-left in scene space.
 function diamondPath(x: number, y: number, w: number, h: number): SkPath {
   const p = Skia.Path.Make()
@@ -127,14 +113,6 @@ const PlantSprite = memo(function PlantSprite({
   return <SkiaImage image={image} x={x} y={y} width={size} height={size} fit="contain" sampling={PIXEL_SAMPLING} />
 })
 
-type Tile = {
-  displayIndex: number
-  activeIndex: number | null
-  x: number
-  y: number
-  diagonal: number
-}
-
 export type FactorySkiaViewProps = {
   grid: GridCell[]
   gridLevels: number[]
@@ -159,9 +137,9 @@ function FactorySkiaView({
   backgroundSource,
   containerWidth,
   viewportHeight,
-  contentOffsetY = 0,
-  displayGridSize,
-  anchorGridSize,
+  contentOffsetY: _contentOffsetY = 0,
+  displayGridSize: _displayGridSize,
+  anchorGridSize: _anchorGridSize,
   onCellPress,
   selectedCellIndex = null,
   showPlacementGrid = false,
@@ -172,81 +150,45 @@ function FactorySkiaView({
 }: FactorySkiaViewProps) {
   const backgroundImage = useImage(backgroundSource as DataSourceParam)
 
-  // Same geometry as the View renderer — memoised so it never churns on a tick.
+  // The yard owns one permanent 5x5 set of world-space slots. Expansion only
+  // changes which slots map to the compact gameplay array; it never moves the
+  // road, pad, building contact point, or camera world beneath them.
   const layout = useMemo(() => {
-    const activeCols = Math.round(Math.sqrt(grid.length))
-    const activeRows = activeCols
-    const displayCols = Math.max(displayGridSize ?? activeCols, activeCols)
-    const displayRows = displayCols
-    // The permanent world starts as a full 5x5 road/lot plan. Gameplay opens
-    // the top-left 3x3 first, then grows to 4x4 and 5x5 without moving any
-    // existing building index. This matches remapAnchoredSquareArray().
-    const tiles: Tile[] = []
-    for (let displayIndex = 0; displayIndex < displayCols * displayRows; displayIndex++) {
-      const row = Math.floor(displayIndex / displayCols)
-      const col = displayIndex % displayCols
-      const diagonal = row + col
-      const x = isoX(row, col, displayRows)
-      const y = isoY(row, col)
-      const withinRows = row < activeRows
-      const withinCols = col < activeCols
-      const activeIndex =
-        withinRows && withinCols
-          ? row * activeCols + col
-          : null
-      tiles.push({ displayIndex, activeIndex, x, y, diagonal })
-    }
-
-    // The camera can explore the complete planned world, while its initial
-    // focus follows only the currently unlocked 3x3/4x4/5x5 region.
-    const activeTiles = tiles.filter((t) => t.activeIndex !== null)
-    const minX = Math.min(...tiles.map((t) => t.x))
-    const maxX = Math.max(...tiles.map((t) => t.x + TILE_WIDTH))
-    const minY = Math.min(...tiles.map((t) => t.y))
-    const maxY = Math.max(...tiles.map((t) => t.y + TILE_HEIGHT))
-    const activeMinX = Math.min(...activeTiles.map((t) => t.x))
-    const activeMaxX = Math.max(...activeTiles.map((t) => t.x + TILE_WIDTH))
-    const activeMinY = Math.min(...activeTiles.map((t) => t.y))
-    const activeMaxY = Math.max(...activeTiles.map((t) => t.y + TILE_HEIGHT))
+    const activeGridSize = Math.min(
+      FACTORY_MAX_GRID_SIZE,
+      Math.round(Math.sqrt(grid.length)),
+    )
+    const displayGridSize = Math.max(FACTORY_PLANNED_GRID_SIZE, activeGridSize)
+    const slots = FACTORY_MAP_SLOTS
+      .filter((slot) => slot.row < displayGridSize && slot.col < displayGridSize)
+      .map((slot) => ({
+        ...slot,
+        activeIndex: getActiveGridIndex(slot, activeGridSize),
+      }))
+    const activeSlots = slots.filter((slot) => slot.activeIndex !== null)
+    const activeMinX = Math.min(...activeSlots.map((slot) => slot.centerX - slot.width / 2))
+    const activeMaxX = Math.max(...activeSlots.map((slot) => slot.centerX + slot.width / 2))
+    const activeMinY = Math.min(...activeSlots.map((slot) => slot.topY))
+    const activeMaxY = Math.max(...activeSlots.map((slot) => slot.topY + slot.height))
     const vpWidth = containerWidth
     const vpHeight = viewportHeight
-    const worldWidth = maxX - minX
-    const worldHeight = maxY - minY
-
-    // The backdrop, ground, sprites, and hit testing now share this one world
-    // rectangle. It is large enough to cover the viewport at minimum zoom.
-    const mapWidth = Math.max(
-      getMinimumWorldExtent(vpWidth),
-      vpWidth * FACTORY_WORLD_VIEWPORT_SCALE,
-      worldWidth + SIDE_PADDING * 2 + FACTORY_WORLD_BLEED * 2,
-    )
-    const mapHeight = Math.max(
-      getMinimumWorldExtent(vpHeight),
-      vpHeight * FACTORY_WORLD_VIEWPORT_SCALE,
-      MIN_VIEWPORT_HEIGHT,
-      worldHeight + TOP_PADDING * 2 + FACTORY_WORLD_BLEED * 2,
-    )
-    const offsetX = mapWidth * BUILD_ZONE_CENTER_X - worldWidth / 2 - minX
-    const offsetY = mapHeight * BUILD_ZONE_TOP_Y - minY
-    // Absolute (offset-applied) tile positions used for both drawing and hit-test.
-    const placed = tiles
-      .map((t) => ({ ...t, x: t.x + offsetX, y: t.y + offsetY }))
-      .sort((a, b) => a.diagonal - b.diagonal)
     return {
-      placed,
-      mapWidth,
-      mapHeight,
+      slots,
+      displayGridSize,
+      mapWidth: FACTORY_WORLD_WIDTH,
+      mapHeight: FACTORY_WORLD_HEIGHT,
       vpWidth,
       vpHeight,
-      playableMinX: activeMinX + offsetX,
-      playableMaxX: activeMaxX + offsetX,
-      playableMinY: activeMinY + offsetY,
-      playableMaxY: activeMaxY + offsetY,
+      playableMinX: activeMinX,
+      playableMaxX: activeMaxX,
+      playableMinY: activeMinY,
+      playableMaxY: activeMaxY,
     }
-  }, [grid.length, displayGridSize, anchorGridSize, containerWidth, viewportHeight, contentOffsetY])
+  }, [grid.length, containerWidth, viewportHeight])
 
   const {
-    placed,
+    slots,
+    displayGridSize,
     mapWidth,
     mapHeight,
     vpWidth,
@@ -257,47 +199,48 @@ function FactorySkiaView({
     playableMaxY,
   } = layout
 
-  // Ground diamonds — rebuilt only when the grid contents change, not per tick.
+  const terrain = useMemo(() => getFactoryTerrainTiles(displayGridSize).map((tile) => ({
+    ...tile,
+    path: diamondPath(
+      tile.x,
+      tile.y,
+      FACTORY_MICRO_TILE_WIDTH,
+      FACTORY_MICRO_TILE_HEIGHT,
+    ),
+  })), [displayGridSize])
+
+  // Dynamic plant/socket layer. Terrain and service roads above are immutable.
   const ground = useMemo(() => {
-    return placed.map((t) => {
-      const cell = t.activeIndex === null ? null : grid[t.activeIndex]
-      const road = diamondPath(t.x, t.y, TILE_WIDTH, TILE_HEIGHT)
-      const lotX = t.x + LOT_OFFSET_X
-      const lotY = t.y + LOT_OFFSET_Y
-      const outer = diamondPath(lotX, lotY, LOT_WIDTH, LOT_HEIGHT)
-      const inner = diamondPath(
-        lotX + EMPTY_INSET_X,
-        lotY + EMPTY_INSET_Y,
-        LOT_WIDTH - EMPTY_INSET_X * 2,
-        LOT_HEIGHT - EMPTY_INSET_Y * 2,
-      )
-      const visual = cell && t.activeIndex !== null
-        ? plantVisual(cell, gridLevels[t.activeIndex] ?? 1)
+    return slots.map((slot) => {
+      const activeIndex = slot.activeIndex
+      const cell = activeIndex === null ? null : grid[activeIndex]
+      const lotX = slot.centerX - slot.width / 2
+      const lotY = slot.topY
+      const outer = diamondPath(lotX, lotY, slot.width, slot.height)
+      const visual = cell && activeIndex !== null
+        ? plantVisual(cell, gridLevels[activeIndex] ?? 1)
         : null
       const spriteRect = cell && visual
         ? getPlantSpriteRect(
             lotX,
             lotY,
-            LOT_WIDTH,
-            LOT_HEIGHT,
+            slot.width,
+            slot.height,
             PLANT_IMAGE_WIDTH,
-            getPlantSpriteProfile(cell, gridLevels[t.activeIndex as number] ?? 1),
+            getPlantSpriteProfile(cell, gridLevels[activeIndex as number] ?? 1),
           )
         : null
       return {
-        key: t.displayIndex,
-        activeIndex: t.activeIndex,
-        road,
+        key: slot.id,
+        slot,
+        activeIndex,
         outer,
-        inner,
         x: lotX,
         y: lotY,
-        cx: lotX + LOT_WIDTH / 2,
-        cy: lotY + LOT_HEIGHT / 2,
-        hw: LOT_WIDTH / 2,
-        hh: LOT_HEIGHT / 2,
+        cx: slot.centerX,
+        cy: slot.centerY,
         occupied: !!cell,
-        locked: t.activeIndex === null,
+        locked: activeIndex === null,
         sprite: visual && spriteRect ? {
           source: visual.source,
           x: spriteRect.x,
@@ -308,7 +251,7 @@ function FactorySkiaView({
         } : null,
       }
     })
-  }, [placed, grid, gridLevels])
+  }, [slots, grid, gridLevels])
 
   // ── Pan / zoom shared values (UI thread) ──────────────────────────────────
   const focusWorldX = (playableMinX + playableMaxX) / 2
@@ -424,7 +367,7 @@ function FactorySkiaView({
       const g = ground[i]
       if (g.locked || g.activeIndex === null) continue
       if (!showPlacementGrid && !g.occupied) continue
-      if (Math.abs(worldPoint.x - g.cx) / g.hw + Math.abs(worldPoint.y - g.cy) / g.hh <= 1) {
+      if (pointIsInsideFactorySlot(worldPoint.x, worldPoint.y, g.slot)) {
         onCellPress?.(g.activeIndex)
         return
       }
@@ -463,43 +406,49 @@ function FactorySkiaView({
                   sampling={PIXEL_SAMPLING}
                 />
               ) : null}
-              {/* Permanent 5x5 yard plan. Each full tile is service road; the
-                  inset diamond is the equal-size concrete plant lot. Future
-                  expansion lots stay visible but subdued outside the active
-                  3x3/4x4 area. */}
-              {ground.map((g) => (
-                <Group key={`yard-${g.key}`}>
-                  <Path path={g.road} color="#3A4B52" />
-                  <Path path={g.road} color="#20343C" style="stroke" strokeWidth={2.2} />
-                  <Path path={g.outer} color={g.locked ? "#A39C86" : "#D7C39A"} />
+              {/* Real map layers: 16x16 micro tiles form one continuous yard.
+                  A road tile appears only on the six row/column service bands;
+                  concrete fills the 25 equal 2x2 plant lots between them. */}
+              {terrain.map((tile) => (
+                <Group key={`terrain-${tile.row}-${tile.col}`}>
                   <Path
-                    path={g.outer}
-                    color={g.locked ? "rgba(91, 91, 80, 0.72)" : "rgba(225, 178, 48, 0.92)"}
-                    style="stroke"
-                    strokeWidth={2}
+                    path={tile.path}
+                    color={tile.kind === 'road' ? '#716E65' : '#CCB993'}
                   />
-                  <Path path={g.inner} color={g.locked ? "rgba(79, 84, 79, 0.16)" : "rgba(238, 220, 180, 0.18)"} />
+                  <Path
+                    path={tile.path}
+                    color={tile.kind === 'road' ? 'rgba(67, 66, 62, 0.52)' : 'rgba(116, 99, 73, 0.22)'}
+                    style="stroke"
+                    strokeWidth={tile.kind === 'road' ? 1.25 : 0.8}
+                  />
                 </Group>
               ))}
               {/* Build guides exist only while the hammer mode is active. The
                   normal factory view uses the painted concrete yard directly. */}
-              {ground.map((g) => (showPlacementGrid && !g.locked ? (
+              {ground.map((g) => (showPlacementGrid ? (
                 <Group key={`gnd-${g.key}`}>
-                  <Path path={g.outer} color={g.occupied ? 'rgba(35, 58, 67, 0.20)' : 'rgba(35, 58, 67, 0.30)'} />
                   <Path
                     path={g.outer}
-                    color={g.activeIndex === selectedCellIndex ? '#63DF79' : 'rgba(39, 58, 67, 0.75)'}
+                    color={g.locked
+                      ? 'rgba(72, 68, 59, 0.24)'
+                      : g.occupied
+                        ? 'rgba(43, 76, 82, 0.12)'
+                        : 'rgba(255, 221, 105, 0.16)'}
+                  />
+                  <Path
+                    path={g.outer}
+                    color={g.locked
+                      ? 'rgba(86, 82, 72, 0.46)'
+                      : g.activeIndex === selectedCellIndex
+                        ? '#63DF79'
+                        : 'rgba(232, 192, 67, 0.78)'}
                     style="stroke"
                     strokeWidth={g.activeIndex === selectedCellIndex ? 3.6 : 2.4}
                   />
-                  <Path path={g.inner} color={g.occupied ? 'rgba(211, 190, 141, 0.18)' : 'rgba(229, 207, 157, 0.38)'} />
-                  <Path path={g.inner} color={g.occupied ? 'rgba(216, 184, 63, 0.58)' : 'rgba(133, 119, 93, 0.72)'} style="stroke" strokeWidth={1.4} />
-                  {!g.occupied ? (
+                  {!g.locked && !g.occupied ? (
                     <>
                       <Rect x={g.cx - 10} y={g.cy - 2} width={20} height={4} color="#756A55" />
                       <Rect x={g.cx - 2} y={g.cy - 10} width={4} height={20} color="#756A55" />
-                      <Rect x={g.cx - 9} y={g.y + 5} width={18} height={3} color="#F2C13A" />
-                      <Rect x={g.cx - 9} y={g.y + LOT_HEIGHT - 8} width={18} height={3} color="#F2C13A" />
                     </>
                   ) : null}
                 </Group>
@@ -509,10 +458,10 @@ function FactorySkiaView({
               {ground.map((g) => (g.sprite ? (
                 <Oval
                   key={`shadow-${g.key}`}
-                  x={g.sprite.footX - LOT_WIDTH * 0.24}
-                  y={g.sprite.footY - LOT_HEIGHT * 0.10}
-                  width={LOT_WIDTH * 0.48}
-                  height={LOT_HEIGHT * 0.20}
+                  x={g.sprite.footX - g.slot.width * 0.24}
+                  y={g.sprite.footY - g.slot.height * 0.10}
+                  width={g.slot.width * 0.48}
+                  height={g.slot.height * 0.20}
                   color="rgba(20, 28, 31, 0.30)"
                 />
               ) : null))}

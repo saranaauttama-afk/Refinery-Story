@@ -90,9 +90,9 @@
 >    `getSafeAssignments` in `gameStorage.ts`). Verified with 9 isolated
 >    `node -e` simulation cases (4 output-scaling, 5 migration) before
 >    committing -- see commit `659c48e`'s message for details.
-> 8. **Grid Expansion Tier 4 (6x6)**: a 4th `EXPANSION_BALANCE` entry (36
->    cells, Lv20, $400k). Pure data addition -- every consumer was already
->    written generically against the array/grid length.
+> 8. **Grid Expansion** presents a permanent 5x5 planned yard, with the older
+>    6x6 late-game tier retained as an additional outer district band so it
+>    does not crowd or move the initial 25 plant slots.
 > 9. **Electricity-gating Tier-1 gasoline + Polymer Plant**: the last
 >    remaining backlog item. Gasoline production now caps its batch count
 >    by remaining electricity once a Power Plant is built (1 electricity
@@ -1138,13 +1138,9 @@ risk than the reverse or combining them.
   gained an `electricityPerCycle: 6` cost, same pattern as the other 3
   plants. Both fully backward compatible (no-op with 0 Power Plants).
   Verified in isolation (3 gasoline cases + 4 Polymer Plant cases).
-- **SHIPPED: Grid Expansion Tier 4 (6x6)**. Added a 4th `EXPANSION_BALANCE`
-  entry: 36 cells, Lv20, $400k (commit `7827b58`). Pure data addition --
-  every consumer (expandGrid, calculateDerivedStats, the expansion UI,
-  grid validation, BuildingGrid rendering, combo adjacency detection) was
-  already written generically against the array/grid length, with no
-  hardcoded tier count or cell count anywhere. Verified in isolation (4
-  expandGrid cases, 3 combo-adjacency cases on a 36-cell grid).
+- **Grid Expansion map contract revised.** The core yard is a permanent 5x5
+  plan. The 6x6 endgame tier remains available as a later outer band, without
+  moving any of the original 25 world-space slots.
 - **Backlog: cap Jet Fuel/Petrochem Plant at 1 each.** Originally deferred
   in favor of Feedstock Priority (shipped above). Feedstock Priority's 0%
   setting already gives players a way to effectively "turn off" a plant

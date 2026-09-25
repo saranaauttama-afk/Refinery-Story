@@ -1,6 +1,6 @@
 import type { GameState } from '../types'
 import { bilingual } from '../translations'
-import { MAX_REFINERY_LEVEL } from './balance'
+import { EXPANSION_BALANCE, MAX_REFINERY_LEVEL } from './balance'
 import { RESEARCH_ITEMS } from './research'
 
 // Endgame spine (Roadmap feature 5). A ladder of ambitious post-"prototype
@@ -11,6 +11,7 @@ import { RESEARCH_ITEMS } from './research'
 
 const LEGEND_MILLION = 120_000_000
 export const LEGEND_LIFETIME_GASOLINE = 1_000_000
+const MAX_GRID_EXPANSION_LEVEL = EXPANSION_BALANCE.length - 1
 
 export type EndgameGoal = {
   key: string
@@ -47,8 +48,8 @@ export const ENDGAME_GOALS: EndgameGoal[] = [
     key: 'maxGrid',
     name: bilingual('Sprawling Complex', 'อาณาจักรโรงงาน'),
     description: bilingual('Expand the grid to its maximum size.', 'ขยายพื้นที่ถึงขนาดใหญ่สุด'),
-    isComplete: (g) => g.gridExpansionLevel >= 3,
-    progress: (g) => ({ current: g.gridExpansionLevel, target: 3 }),
+    isComplete: (g) => g.gridExpansionLevel >= MAX_GRID_EXPANSION_LEVEL,
+    progress: (g) => ({ current: g.gridExpansionLevel, target: MAX_GRID_EXPANSION_LEVEL }),
   },
   {
     key: 'perfectYear',

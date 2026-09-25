@@ -35,7 +35,7 @@ Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-h
 - [x] Auto-trade ครบ 5 products
 - [x] Contracts (37 contracts across all product lines)
 - [x] Standing Orders (4 repeatable orders)
-- [x] Grid Expansion (3×3 → 6×6)
+- [x] Grid Expansion (3×3 → planned 5×5 yard → late 6×6 outer band)
 - [x] Hidden combo system (5 combos)
 - [x] Choice events + Random events
 

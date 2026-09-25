@@ -282,7 +282,7 @@ function printReport({ game: g, goalTick, levelTick, researchTick, gridTick, yea
   console.log('=== Full-loop playthrough (auto-pilot) ===\n')
   const d = calculateDerivedStats(g)
   console.log(`reached: level ${g.refineryLevel}/${MAX_REFINERY_LEVEL}  cash ${fmtMoney(g.money)}  ` +
-    `research ${g.unlockedResearchIds.length}/${RESEARCH_ITEMS.length}  grid L${g.gridExpansionLevel}/3  ` +
+    `research ${g.unlockedResearchIds.length}/${RESEARCH_ITEMS.length}  grid L${g.gridExpansionLevel}/${EXPANSION_BALANCE.length - 1}  ` +
     `lifetime gas ${Math.round(g.totalGasolineProduced).toLocaleString()}  rep ${Math.round(g.reputation)}  ` +
     `bestAward ${g.awardHistory.map((a) => a.grade).join('') || '-'}`)
   console.log(`final gas/sec ${Math.round(d.productionRate * d.prestigeOutputMultiplier * d.speedOverflowYieldMultiplier * 10) / 10}  business year ${g.businessYear}\n`)
