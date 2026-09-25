@@ -29,35 +29,40 @@ const DEFAULT_PROFILE: PlantSpriteProfile = {
   groundOffsetY: 8,
 }
 
-// The nine starter sprites are one matched 256x256 set with a built-in base.
-// Keep one profile per building across Lv1-Lv3 so upgrading changes the plant,
-// never its tile contact point or footprint.
-const STARTER_PLANT_PROFILES: Partial<Record<BuildingType, PlantSpriteProfile>> = {
-  distillationUnit: {
-    scale: 1.3,
-    anchorX: 0.5,
-    anchorY: 0.88,
-    groundOffsetX: 0,
-    groundOffsetY: 9,
-  },
+// Gameplay footprint and ground contact never change, but visual mass must
+// still progress Lv1 < Lv2 < Lv3. A single fixed image frame can make a denser
+// upgrade feel squeezed, so the matched starter set gets a small, deliberate
+// per-level scale increase. The increase is capped so service roads remain
+// visible around a full yard.
+const starterProfile = (scale: number): PlantSpriteProfile => ({
+  scale,
+  anchorX: 0.5,
+  anchorY: 0.88,
+  groundOffsetX: 0,
+  groundOffsetY: 9,
+})
+
+const STARTER_PLANT_PROFILES: Partial<Record<BuildingType, Record<number, PlantSpriteProfile>>> = {
   crudeTank: {
-    scale: 1.2,
-    anchorX: 0.5,
-    anchorY: 0.88,
-    groundOffsetX: -2,
-    groundOffsetY: 9,
+    1: starterProfile(1.06),
+    2: starterProfile(1.10),
+    3: starterProfile(1.14),
+  },
+  distillationUnit: {
+    1: starterProfile(1.10),
+    2: starterProfile(1.14),
+    3: starterProfile(1.18),
   },
   gasolineTank: {
-    scale: 1.2,
-    anchorX: 0.5,
-    anchorY: 0.88,
-    groundOffsetX: 2,
-    groundOffsetY: 9,
+    1: starterProfile(1.06),
+    2: starterProfile(1.10),
+    3: starterProfile(1.14),
   },
 }
 
-export function getPlantSpriteProfile(cell: BuildingType, _level: number): PlantSpriteProfile {
-  return STARTER_PLANT_PROFILES[cell] ?? DEFAULT_PROFILE
+export function getPlantSpriteProfile(cell: BuildingType, level: number): PlantSpriteProfile {
+  const starterLevels = STARTER_PLANT_PROFILES[cell]
+  return starterLevels?.[Math.max(1, Math.min(3, level))] ?? DEFAULT_PROFILE
 }
 
 /**

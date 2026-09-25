@@ -193,6 +193,12 @@
 > games a working starter refinery, rewrites onboarding around production
 > decisions, delays Auto Trade until Lv3, and preserves existing saves. Read
 > [CURRENT_TASK.md](CURRENT_TASK.md) for the final release gates.
+> **Factory world refresh (2026-09-25)**: the native Factory now uses a clean
+> harbor background with one consistent 2:1 isometric angle. The permanent 5x5
+> yard keeps equal plant lots, while its service bands render as asphalt roads
+> with concrete curbs, dashed centre lines, and proper four-way intersections.
+> This is visual-only: slot IDs, save mapping, progression, and economy are
+> unchanged.
 > The remaining historical suggestions below stay deferred:
 > - **Time balancing**: the user explicitly said "เดี๋ยวค่อยบาลานซ์ทีหลัง"
 >   (balance it later) about CALENDAR_BALANCE.dayLengthTicks (currently

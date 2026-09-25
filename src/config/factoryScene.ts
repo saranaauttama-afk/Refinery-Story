@@ -10,7 +10,7 @@ import { DEFAULT_PLANT_IMAGE_SCALE } from '../factoryPlantLayout'
 // The full-bleed background painting (sky / sea / land). Swap this file to
 // reskin the whole scene. Keep it large enough that the crop + overscan below
 // still cover the screen.
-export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/factory_harbor_world_v3.png')
+export const FACTORY_BG: ImageSourcePropType = require('../../assets/bg/factory_harbor_world_v5.png')
 
 // ── Background framing ──
 // The image is drawn at an EXPLICIT pixel size computed to always cover the

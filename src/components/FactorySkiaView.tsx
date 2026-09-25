@@ -75,6 +75,41 @@ function diamondPath(x: number, y: number, w: number, h: number): SkPath {
   return p
 }
 
+function segmentPath(x1: number, y1: number, x2: number, y2: number): SkPath {
+  const p = Skia.Path.Make()
+  p.moveTo(x1, y1)
+  p.lineTo(x2, y2)
+  return p
+}
+
+type RoadEdge = 'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft'
+
+function roadEdgePath(x: number, y: number, edge: RoadEdge): SkPath {
+  const w = FACTORY_MICRO_TILE_WIDTH
+  const h = FACTORY_MICRO_TILE_HEIGHT
+  const points: Record<RoadEdge, [number, number, number, number]> = {
+    topLeft: [x + w / 2, y, x, y + h / 2],
+    topRight: [x + w / 2, y, x + w, y + h / 2],
+    bottomRight: [x + w, y + h / 2, x + w / 2, y + h],
+    bottomLeft: [x + w / 2, y + h, x, y + h / 2],
+  }
+  return segmentPath(...points[edge])
+}
+
+function roadDashPath(
+  x: number,
+  y: number,
+  axis: 'row' | 'col',
+): SkPath {
+  const cx = x + FACTORY_MICRO_TILE_WIDTH / 2
+  const cy = y + FACTORY_MICRO_TILE_HEIGHT / 2
+  const dx = 9
+  const dy = 4.5
+  return axis === 'row'
+    ? segmentPath(cx - dx, cy - dy, cx + dx, cy + dy)
+    : segmentPath(cx + dx, cy - dy, cx - dx, cy + dy)
+}
+
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataSourceParam>>> = {
   distillationUnit: STARTER_PLANT_ART_BY_LEVEL.distillationUnit as Record<number, DataSourceParam>,
   crudeTank: STARTER_PLANT_ART_BY_LEVEL.crudeTank as Record<number, DataSourceParam>,
@@ -199,15 +234,40 @@ function FactorySkiaView({
     playableMaxY,
   } = layout
 
-  const terrain = useMemo(() => getFactoryTerrainTiles(displayGridSize).map((tile) => ({
-    ...tile,
-    path: diamondPath(
-      tile.x,
-      tile.y,
-      FACTORY_MICRO_TILE_WIDTH,
-      FACTORY_MICRO_TILE_HEIGHT,
-    ),
-  })), [displayGridSize])
+  const terrain = useMemo(() => {
+    const tiles = getFactoryTerrainTiles(displayGridSize)
+    const byPosition = new Map(tiles.map((tile) => [`${tile.row}:${tile.col}`, tile]))
+    return tiles.map((tile) => {
+      const curbs: SkPath[] = []
+      if (tile.kind === 'road') {
+        const neighbours: Array<[number, number, RoadEdge]> = [
+          [tile.row, tile.col - 1, 'topLeft'],
+          [tile.row - 1, tile.col, 'topRight'],
+          [tile.row, tile.col + 1, 'bottomRight'],
+          [tile.row + 1, tile.col, 'bottomLeft'],
+        ]
+        for (const [row, col, edge] of neighbours) {
+          if (byPosition.get(`${row}:${col}`)?.kind === 'lot') {
+            curbs.push(roadEdgePath(tile.x, tile.y, edge))
+          }
+        }
+      }
+      const isIntersection = tile.roadAlongRow && tile.roadAlongCol
+      return {
+        ...tile,
+        path: diamondPath(
+          tile.x,
+          tile.y,
+          FACTORY_MICRO_TILE_WIDTH,
+          FACTORY_MICRO_TILE_HEIGHT,
+        ),
+        curbs,
+        dash: isIntersection || tile.kind !== 'road'
+          ? null
+          : roadDashPath(tile.x, tile.y, tile.roadAlongRow ? 'row' : 'col'),
+      }
+    })
+  }, [displayGridSize])
 
   // Dynamic plant/socket layer. Terrain and service roads above are immutable.
   const ground = useMemo(() => {
@@ -406,21 +466,42 @@ function FactorySkiaView({
                   sampling={PIXEL_SAMPLING}
                 />
               ) : null}
-              {/* Real map layers: 16x16 micro tiles form one continuous yard.
-                  A road tile appears only on the six row/column service bands;
-                  concrete fills the 25 equal 2x2 plant lots between them. */}
+              {/* Continuous yard: warm concrete lots are separated by actual
+                  asphalt service roads. Curbs are drawn only where asphalt
+                  meets a plant lot; dashed centre lines skip intersections. */}
               {terrain.map((tile) => (
                 <Group key={`terrain-${tile.row}-${tile.col}`}>
                   <Path
                     path={tile.path}
-                    color={tile.kind === 'road' ? '#716E65' : '#CCB993'}
+                    color={tile.kind === 'road' ? '#555A5C' : 'rgba(214, 190, 150, 0.82)'}
                   />
                   <Path
                     path={tile.path}
-                    color={tile.kind === 'road' ? 'rgba(67, 66, 62, 0.52)' : 'rgba(116, 99, 73, 0.22)'}
+                    color={tile.kind === 'road' ? 'rgba(40, 44, 46, 0.42)' : 'rgba(112, 91, 62, 0.20)'}
                     style="stroke"
-                    strokeWidth={tile.kind === 'road' ? 1.25 : 0.8}
+                    strokeWidth={tile.kind === 'road' ? 0.8 : 0.65}
                   />
+                </Group>
+              ))}
+              {/* Road furniture must render after every ground tile; drawing
+                  it inside the terrain loop lets a later concrete tile cover
+                  half of the shared curb. */}
+              {terrain.map((tile) => (
+                <Group key={`road-detail-${tile.row}-${tile.col}`}>
+                  {tile.curbs.map((curb, index) => (
+                    <Group key={`curb-${index}`}>
+                      <Path path={curb} color="#373D40" style="stroke" strokeWidth={4.4} />
+                      <Path path={curb} color="#D2C39F" style="stroke" strokeWidth={2.2} />
+                    </Group>
+                  ))}
+                  {tile.dash ? (
+                    <Path
+                      path={tile.dash}
+                      color="#E9D8A6"
+                      style="stroke"
+                      strokeWidth={1.8}
+                    />
+                  ) : null}
                 </Group>
               ))}
               {/* Build guides exist only while the hammer mode is active. The

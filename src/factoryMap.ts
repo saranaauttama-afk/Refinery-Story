@@ -12,7 +12,7 @@
  * and their contact points never move.
  */
 
-export const FACTORY_MAP_VERSION = 1
+export const FACTORY_MAP_VERSION = 2
 
 export const FACTORY_WORLD_WIDTH = 1216
 export const FACTORY_WORLD_HEIGHT = 2160
@@ -39,6 +39,8 @@ export type FactoryTerrainTile = {
   x: number
   y: number
   kind: FactoryTerrainKind
+  roadAlongRow: boolean
+  roadAlongCol: boolean
   diagonal: number
 }
 
@@ -89,6 +91,11 @@ export function getFactoryTerrainTiles(displayGridSize: number): FactoryTerrainT
       x: factoryTileX(row, col),
       y: factoryTileY(row, col),
       kind: (isRoadBand(row) || isRoadBand(col) ? 'road' : 'lot') as FactoryTerrainKind,
+      // A row band travels along increasing columns; a column band travels
+      // along increasing rows. Keeping both flags makes true four-way road
+      // intersections distinguishable from ordinary straight road pieces.
+      roadAlongRow: isRoadBand(row),
+      roadAlongCol: isRoadBand(col),
       diagonal: row + col,
     }
   },
