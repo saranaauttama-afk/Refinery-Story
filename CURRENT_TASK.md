@@ -22,8 +22,12 @@
 - V3-11: merged to release `489ddfd`, Android Preview APK run **#70** succeeded.
 - V3-12 (roles, hiring, support caps, training, research/specialization mapping,
   accomplishment records): **complete in code** on `claude/gameplay-v3`.
-- **Current task: V3-13** — Fleet/Airline ladder and repeat/rush progression. The
-  R2 human gate (20–30 min midgame play) follows V3-13; do not start V3-14 before it.
+- V3-12: merged to release `3716957`, Android Preview APK run **#71** succeeded.
+- V3-13 (client ladder, repeat/rush, C3/C4 predicates, offer ETA): **complete in code**.
+- **Current task: R2 human gate** — 20–30 min midgame play on the V3-13 APK:
+  fresh progress to C2/C3 and constructed-fixture checks show viable quality vs
+  quantity decisions, no deadlock, and correct power/tank readouts. Record the
+  player's result in GAMEPLAY_IMPLEMENTATION_V3.md. **Do not start V3-14 before it.**
 
 ## Rules for this work
 

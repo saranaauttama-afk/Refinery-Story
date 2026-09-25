@@ -70,6 +70,10 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.train.max_level': return translate({ en: 'Already at max level.', th: 'เลเวลสูงสุดแล้ว' })
     case 'v3.train.insufficient_cash': return translate({ en: `Training needs $${Number(p?.costCents ?? 0) / 100}.`, th: `ฝึกต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
     case 'v3.train.insufficient_rp': return translate({ en: `Training needs ${p?.rp} RP.`, th: `ฝึกต้องใช้ ${p?.rp} RP` })
+    case 'v3.job.requires_previous': return translate({ en: 'Complete this client’s previous stage first.', th: 'ต้องทำขั้นก่อนหน้าของลูกค้ารายนี้ให้เสร็จก่อน' })
+    case 'v3.job.rush_unavailable': return translate({ en: 'No qualifying running line to size a Rush.', th: 'ยังไม่มีไลน์ที่ผลิตคุณภาพถึงสำหรับงานด่วน' })
+    case 'v3.job.auto_repeat_locked': return translate({ en: `Auto-repeat opens in C${p?.chapter}.`, th: `ทำซ้ำอัตโนมัติเปิดในบท C${p?.chapter}` })
+    case 'v3.job.auto_repeat_invalid': return translate({ en: 'Only a proven repeat job can auto-repeat.', th: 'ทำซ้ำอัตโนมัติได้เฉพาะงานซ้ำที่เคยทำสำเร็จแล้ว' })
     case 'v3.specialization.locked': return translate({ en: `Specialization opens in C${p?.chapter}.`, th: `เลือกแนวทางได้ในบท C${p?.chapter}` })
     case 'v3.specialization.chosen': return translate({ en: 'Specialization is already chosen.', th: 'เลือกแนวทางไปแล้ว' })
     case 'v3.duty.ineligible': return translate({ en: 'This role cannot take that duty.', th: 'ตำแหน่งนี้รับหน้าที่นั้นไม่ได้' })
@@ -111,7 +115,9 @@ function guidanceText(step: V3GuidanceStep, translate: (value: BilingualTextValu
     produce_developed_stock: { en: 'Produce 40 units of your developed Gasoline.', th: 'ผลิต Gasoline สูตรของเราให้ครบ 40 หน่วย' },
     accept_qualifying_job: { en: 'Accept Local Trial and reserve the developed stock.', th: 'รับงาน Local Trial เพื่อจองสต็อกสูตรที่พัฒนาเอง' },
     ship_developed_product: { en: 'Ship 40 developed units to reach C2.', th: 'ส่งสูตรที่พัฒนาเอง 40 หน่วยเพื่อเข้าสู่ C2' },
-    chapter_two: { en: 'C2: choose Lube, a Power Plant, modules (plant Lv2) or Lab Lv2 research.', th: 'C2: เลือกลงทุน Lube, โรงไฟฟ้า, โมดูล (โรงงาน Lv2) หรือวิจัย Lab Lv2' },
+    chapter_two: { en: 'C2: choose Lube, a Power Plant, modules (plant Lv2) or Lab Lv2 research. C3 needs two clients at Regular + one processing/tank/power upgrade.', th: 'C2: เลือกลงทุน Lube, โรงไฟฟ้า, โมดูล (โรงงาน Lv2) หรือวิจัย Lab Lv2 · ขึ้น C3 ต้องมีลูกค้า 2 รายถึง Regular + อัปเกรดโรงผลิต/ถัง/ไฟ 1 ครั้ง' },
+    chapter_three: { en: 'C3: Jet and Airline open; Rush and auto-repeat available. C4 needs one Partner + a certified recipe Q65+.', th: 'C3: เปิด Jet และ Airline มีงานด่วนและทำซ้ำอัตโนมัติ · ขึ้น C4 ต้องมีลูกค้า Partner 1 ราย + สูตรที่รับรอง Q65 ขึ้นไป' },
+    chapter_four: { en: 'C4 reached. Petro/Polymer/Materials arrive in the next update (V3-14).', th: 'ถึงบท C4 แล้ว · Petro/Polymer/Materials จะมาในอัปเดตถัดไป (V3-14)' },
   }
   return translate(copy[step])
 }
@@ -330,6 +336,12 @@ export default function V3PreviewScreen() {
           {activeJob ? (
             <>
               <Text style={styles.row}>{activeJob.templateId} · Q{activeJob.minimumQuality}+ · {activeJob.deliveredQuantity}/{activeJob.quantity}</Text>
+              {activeJob.deadlineTick !== null && (
+                <Text style={styles.row}>{t({
+                  en: `Rush deadline in ${Math.max(0, Math.ceil((activeJob.deadlineTick - state.world.tickCount) / 5))}s simulated · bonus lost on expiry, shipped units stay paid`,
+                  th: `งานด่วนเหลือ ${Math.max(0, Math.ceil((activeJob.deadlineTick - state.world.tickCount) / 5))} วินาทีในเกม · หมดเวลาเสียแค่โบนัส ของที่ส่งแล้วได้เงินแล้ว`,
+                })}</Text>
+              )}
               <Text style={styles.row}>{t({ en: 'Reserved qualified stock', th: 'สต็อกผ่านสเปกที่จองไว้' })}: {jobReserved.toFixed(1)}</Text>
               <Pressable style={styles.primary} onPress={() => apply({
                 type: 'dispatch_job', sequence: state.nextActionSequence,

@@ -9,7 +9,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 8 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 9 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -133,6 +133,8 @@ export type V3JobReceipt = {
 export type V3JobReceipts = {
   receipts: V3JobReceipt[]
   templateRetryAtTick: Record<string, number>
+  /** Opt-in repeat re-accepted into the single slot (C3+); null = off. */
+  autoRepeatTemplateId: string | null
 }
 
 export type V3StockPolicy = {
@@ -259,6 +261,10 @@ export type V3ActionMessageId =
   | 'v3.train.max_level'
   | 'v3.train.insufficient_cash'
   | 'v3.train.insufficient_rp'
+  | 'v3.job.requires_previous'
+  | 'v3.job.rush_unavailable'
+  | 'v3.job.auto_repeat_locked'
+  | 'v3.job.auto_repeat_invalid'
   | 'v3.specialization.locked'
   | 'v3.specialization.chosen'
   | 'v3.development.chapter_locked'
@@ -464,12 +470,18 @@ export type V3ChooseSpecializationAction = {
   path: SpecializationPath
 }
 
+export type V3SetAutoRepeatAction = {
+  type: 'set_auto_repeat'
+  sequence: number
+  templateId: string | null
+}
+
 export type V3ExpandGridAction = {
   type: 'expand_grid'
   sequence: number
 }
 
-export type V3Action = V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

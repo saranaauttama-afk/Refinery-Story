@@ -7,12 +7,12 @@ import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../
 import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
 import { getV3NextGridExpansion } from '../../game/v3/expansion'
-import { V3_JOB_TEMPLATES } from '../../game/v3/jobs'
 import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
 import type { V3Action, V3ActionEvent, V3GameState, V3ModuleKey, V3ProcessProfile, V3ProductFamily } from '../../game/v3/types'
 import { fonts } from '../../theme'
+import { V3OffersPanel } from './V3OffersPanel'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -232,19 +232,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
         ))}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t({ en: 'Customer offers', th: 'ข้อเสนอลูกค้า' })}</Text>
-        {Object.values(V3_JOB_TEMPLATES).filter((template) => template.minimumChapter <= chapter + 1).map((template) => (
-          <Gate
-            key={template.id}
-            label={t({
-              en: `${template.id} · Q${template.minimumQuality}+ · ${template.quantity} ${FAMILY_LABEL[template.family].en} · $${template.unitPriceCents / 100}/unit`,
-              th: `${template.id} · Q${template.minimumQuality}+ · ${FAMILY_LABEL[template.family].th} ${template.quantity} · $${template.unitPriceCents / 100}/หน่วย`,
-            })}
-            action={{ type: 'accept_job', templateId: template.id }}
-          />
-        ))}
-      </View>
+      <V3OffersPanel state={state} apply={apply} t={t} describe={describe} />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Product development', th: 'พัฒนาสูตรสินค้า' })}</Text>
