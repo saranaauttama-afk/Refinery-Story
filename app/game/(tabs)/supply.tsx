@@ -27,7 +27,9 @@ import { STARTER_PLANT_ART_BY_LEVEL } from '../../../src/starterPlantArt'
 const CONTROL_ROOM = require('../../../assets/bg/operations_control_room_v1.png')
 const CRUDE_TANK = STARTER_PLANT_ART_BY_LEVEL.crudeTank![1]
 const DISTILLATION_LEVELS = STARTER_PLANT_ART_BY_LEVEL.distillationUnit!
-const PRODUCT_TANK = STARTER_PLANT_ART_BY_LEVEL.productTank![1]
+// Keep the Operations flow diagram on the original spherical Gas Storage art.
+// The newer levelled Product Tank set remains available in Factory/Build/Info.
+const PRODUCT_TANK = require('../../../assets/plants/product_tank_lv1_v3.png')
 
 type Tone = 'good' | 'warn' | 'bad' | 'idle'
 
@@ -110,7 +112,7 @@ export default function SupplyScreen() {
     : distillationCount === 0
       ? { title: 'Distillation unit required', detail: 'Build the first process unit on the Factory screen.', tone: 'bad' as const }
       : game.crudeOil <= 0
-        ? { title: 'Out of crude — production stopped', detail: 'Buy crude to restart gasoline production.', tone: 'bad' as const }
+        ? { title: 'Low crude — production stopped', detail: 'Open Supply & Orders below to restock crude.', tone: 'bad' as const }
         : game.gasoline >= derived.maxGasolineStorage
           ? { title: 'Gas storage full', detail: 'Sell gasoline or increase Product Tank capacity.', tone: 'warn' as const }
           : powerStarved
@@ -193,15 +195,6 @@ export default function SupplyScreen() {
             {bottleneck.tone === 'good' ? <View style={[styles.alertDot, { backgroundColor: statusColor }]} /> :
               <AlertTriangle size={16} color={statusColor} />}
             <Text style={styles.alertText}>{bottleneck.detail}</Text>
-            {game.crudeOil <= 0 && (
-              <Pressable
-                disabled={game.money < derived.crudePrice}
-                style={[styles.quickBuyButton, game.money < derived.crudePrice && styles.quickBuyButtonDisabled]}
-                onPress={() => buyCrude(10)}
-              >
-                <Text style={styles.quickBuyText}>BUY CRUDE</Text>
-              </Pressable>
-            )}
           </View>
 
           <View style={styles.flowRow}>
@@ -392,9 +385,6 @@ const styles = StyleSheet.create({
   alertStrip_idle: { backgroundColor: 'rgba(136,160,185,0.10)', borderColor: 'rgba(161,180,200,0.30)' },
   alertDot: { width: 9, height: 9, borderRadius: 5 },
   alertText: { flex: 1, fontSize: 9.5, color: '#D9E7F2' },
-  quickBuyButton: { minHeight: 28, justifyContent: 'center', borderRadius: 6, paddingHorizontal: 9, backgroundColor: '#FFD447' },
-  quickBuyButtonDisabled: { opacity: 0.35 },
-  quickBuyText: { fontSize: 8, fontFamily: fonts.heading, color: '#0A3152' },
   flowRow: { marginTop: 11, flexDirection: 'row', alignItems: 'center' },
   plantNode: { flex: 1, minHeight: 128, alignItems: 'center', justifyContent: 'flex-end', borderRadius: 9, borderWidth: 1, paddingHorizontal: 3, paddingBottom: 7, overflow: 'hidden' },
   plantNodeLarge: { flex: 1.13, minHeight: 138 },

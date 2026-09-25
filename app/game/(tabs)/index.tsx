@@ -290,15 +290,17 @@ export default function RefineryScreen() {
     }
     const cell = game.grid[index]
     if (cell === null) {
-      if (buildModeOpen) {
-        setPickerCell(index)
-        setSelectedBuildKey(null)
-      }
+      // Empty build lots are the primary Build entry point. Opening the picker
+      // directly restores the original `+` interaction and also guarantees an
+      // empty lot can never fall through to a blank Building Info sheet.
+      setBuildModeOpen(true)
+      setPickerCell(index)
+      setSelectedBuildKey(null)
       return
     }
     setInfoCell(index)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildModeOpen, gridEditMode, gameGrid, moveBuilding, swapBuildings])
+  }, [gridEditMode, gameGrid, moveBuilding, swapBuildings])
 
   if (!loaded || !game || !derived) {
     return (
