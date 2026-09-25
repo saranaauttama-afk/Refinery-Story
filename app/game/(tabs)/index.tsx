@@ -288,11 +288,15 @@ export default function RefineryScreen() {
       setGridEditMode(null)
       return
     }
-    if (game.grid[index] === null && buildModeOpen) {
-      setPickerCell(index)
-      setSelectedBuildKey(null)
+    const cell = game.grid[index]
+    if (cell === null) {
+      if (buildModeOpen) {
+        setPickerCell(index)
+        setSelectedBuildKey(null)
+      }
+      return
     }
-    else                           setInfoCell(index)
+    setInfoCell(index)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildModeOpen, gridEditMode, gameGrid, moveBuilding, swapBuildings])
 

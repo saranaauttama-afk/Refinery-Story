@@ -398,7 +398,23 @@ function FactorySkiaView({
     cameraScale: number,
   ) => {
     const worldPoint = screenPointToWorld(px, py, cameraX, cameraY, cameraScale)
-    // Front-most first (reverse diagonal order) so overlapping picks the top tile.
+    // A plant is much taller than its ground diamond. Test visible sprite bounds
+    // first so tapping the tank/tower opens that plant instead of the empty lot
+    // geometrically behind it.
+    for (let i = ground.length - 1; i >= 0; i--) {
+      const g = ground[i]
+      if (!g.occupied || !g.sprite) continue
+      if (
+        worldPoint.x >= g.sprite.x &&
+        worldPoint.x <= g.sprite.x + g.sprite.size &&
+        worldPoint.y >= g.sprite.y &&
+        worldPoint.y <= g.sprite.y + g.sprite.size
+      ) {
+        onCellPress?.(g.key)
+        return
+      }
+    }
+    // Then test the build lots, front-most first (reverse diagonal order).
     for (let i = ground.length - 1; i >= 0; i--) {
       const g = ground[i]
       if (!showPlacementGrid && !g.occupied) continue
