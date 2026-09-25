@@ -15,7 +15,7 @@ import type {
   V3ProductFamily,
   V3StartDevelopmentAction,
 } from './types'
-import { getV3Employee, returnV3EmployeeFromDevelopment } from './workforce'
+import { applyV3LevelUps, canV3Lead, creditV3EmployeeRecords, getV3Employee, getV3LeadContribution, returnV3EmployeeFromDevelopment } from './workforce'
 
 export const V3_GASOLINE_DEVELOPMENT_FEE_CENTS = V3_DEVELOPMENT_BY_FAMILY.gasoline.feeCents
 export const V3_GASOLINE_SAMPLE_QUANTITY = V3_DEVELOPMENT_SAMPLE_QUANTITY
@@ -68,9 +68,9 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
   const lead = action.leadEmployeeId ? getV3Employee(state, action.leadEmployeeId) : undefined
   if (
     action.leadEmployeeId &&
-    (!lead || lead.type !== 'operator' || state.unpaidEmployeeIds.includes(lead.id) || state.employeeDuties[lead.id]?.kind === 'development')
+    (!lead || !canV3Lead(lead, action.family) || state.unpaidEmployeeIds.includes(lead.id) || state.employeeDuties[lead.id]?.kind === 'development')
   ) return { state, blocker: 'invalid_lead' }
-  const leadContribution: 0 | 5 = lead && lead.level >= 3 ? 5 : 0
+  const leadContribution: 0 | 5 = lead ? getV3LeadContribution(lead, action.family) : 0
   const signature = getV3DevelopmentSignature(action, leadContribution)
   if (Object.values(state.productBlueprints).some((blueprint) => blueprint.signature === signature)) {
     return { state, blocker: 'duplicate_signature' }
@@ -133,6 +133,7 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
         kind: 'development',
         projectId,
         returnCellIndex: priorDuty?.kind === 'line' ? priorDuty.cellIndex : null,
+        ...(priorDuty?.kind === 'support' ? { returnSupport: true } : {}),
       },
     } : sampledState.employeeDuties,
   }, { cashOutflowsCents: feeCents })
@@ -190,6 +191,11 @@ export function advanceV3Development(state: V3GameState, deltaTicks: number): V3
           : employee,
       ),
     },
+  }
+  completed = creditV3EmployeeRecords(completed, project.contributorEmployeeIds, { blueprintId })
+  completed = {
+    ...completed,
+    world: { ...completed.world, employees: completed.world.employees.map((employee) => applyV3LevelUps(employee)) },
   }
   if (project.leadEmployeeId) completed = returnV3EmployeeFromDevelopment(completed, project.leadEmployeeId)
   return completed

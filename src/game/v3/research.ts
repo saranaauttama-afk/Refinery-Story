@@ -8,6 +8,11 @@ function isSupported(researchId: ResearchKey): researchId is V3SupportedResearch
   return Object.hasOwn(V3_RESEARCH, researchId)
 }
 
+export function getV3ResearchKnowledgeRank(researchId: V3SupportedResearch): 0 | 1 | 2 {
+  const effect = V3_RESEARCH[researchId].effect
+  return effect.kind === 'knowledgeRank' ? effect.rank : 0
+}
+
 export function getV3HighestLabLevel(state: V3GameState): number {
   return state.world.grid.reduce((best, cell, index) =>
     cell === 'laboratory' ? Math.max(best, state.world.gridLevels[index] ?? 1) : best, 0)
@@ -18,10 +23,10 @@ export function validateV3Research(state: V3GameState, researchId: ResearchKey):
   const rule = V3_RESEARCH[researchId]
   if (state.world.unlockedResearchIds.includes(researchId)) return { blocker: 'owned' }
   if (state.campaignProgress.chapter < rule.chapter) return { blocker: 'locked', params: { chapter: rule.chapter } }
-  if (rule.prerequisite && !state.world.unlockedResearchIds.includes(rule.prerequisite)) {
+  if (rule.prerequisite && !state.world.unlockedResearchIds.includes(rule.prerequisite as ResearchKey)) {
     return { blocker: 'prerequisite', params: { research: rule.prerequisite } }
   }
-  if (getV3HighestLabLevel(state) < rule.labLevel) return { blocker: 'lab_level', params: { level: rule.labLevel } }
+  if (rule.labLevel > 0 && getV3HighestLabLevel(state) < rule.labLevel) return { blocker: 'lab_level', params: { level: rule.labLevel } }
   if (state.world.researchPoints + 1e-8 < rule.rp) return { blocker: 'insufficient_rp', params: { rp: rule.rp } }
   return null
 }

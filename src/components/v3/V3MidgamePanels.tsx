@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, BuildingType } from '../../game/types'
 import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../game/v3/actions'
-import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
+import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
 import { getV3NextGridExpansion } from '../../game/v3/expansion'
 import { V3_JOB_TEMPLATES } from '../../game/v3/jobs'
@@ -46,6 +46,17 @@ const STATUS_TEXT: Record<V3LinePlan['status'], BilingualTextValue> = {
   paused: { en: 'Paused', th: 'พักไลน์' },
   setup: { en: 'Changing recipe', th: 'กำลังเปลี่ยนสูตร' },
   invalid: { en: 'Recipe/module/level mismatch', th: 'สูตร/โมดูล/เลเวลไม่ตรงกัน' },
+}
+
+function researchEffectText(effect: V3ResearchEffect): BilingualTextValue {
+  switch (effect.kind) {
+    case 'knowledgeRank': return { en: `knowledge rank ${effect.rank} (Q+${effect.rank * 5})`, th: `ความรู้ rank ${effect.rank} (Q+${effect.rank * 5})` }
+    case 'globalRate': return { en: `all lines +${effect.value * 100}% rate (cap 20%)`, th: `ทุกไลน์เร็วขึ้น ${effect.value * 100}% (สูงสุด 20%)` }
+    case 'coreStorage': return { en: `crude & gasoline storage +${effect.value}`, th: `ถัง crude และ gasoline +${effect.value}` }
+    case 'storagePercent': return { en: `storage +${effect.value * 100}% (cap 50%)`, th: `ความจุ +${effect.value * 100}% (สูงสุด 50%)` }
+    case 'trade': return { en: `prices +${effect.value * 100}% (cap 15%)`, th: `ราคาขาย +${effect.value * 100}% (สูงสุด 15%)` }
+    case 'jobRp': return { en: `job RP +${effect.value * 100}% (cap 50%)`, th: `RP จากงาน +${effect.value * 100}% (สูงสุด 50%)` }
+  }
 }
 
 export function V3MidgamePanels({ state, apply, t, describe }: Props) {
@@ -211,11 +222,11 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t({ en: 'Research', th: 'งานวิจัย' })} · {state.world.researchPoints} RP</Text>
+        <Text style={styles.cardTitle}>{t({ en: 'Research', th: 'งานวิจัย' })} · {state.world.researchPoints.toFixed(1)} RP</Text>
         {(Object.keys(V3_RESEARCH) as Array<keyof typeof V3_RESEARCH>).map((researchId) => (
           <Gate
             key={researchId}
-            label={`${researchId} · ${V3_RESEARCH[researchId].rp} RP · rank ${V3_RESEARCH[researchId].knowledgeRank}`}
+            label={`${state.world.unlockedResearchIds.includes(researchId) ? '✓ ' : ''}${researchId} · ${V3_RESEARCH[researchId].rp} RP · ${t(researchEffectText(V3_RESEARCH[researchId].effect))}`}
             action={{ type: 'buy_research', researchId }}
           />
         ))}

@@ -20,8 +20,8 @@ import {
 } from '../src/game/v3/storage'
 import type { BilingualTextValue } from '../src/game/types'
 import type { V3ActionEvent, V3GameState } from '../src/game/v3/types'
-import { getV3LineEmployee, getV3LocalCrewRate } from '../src/game/v3/workforce'
 import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
+import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
 import { useLang } from '../src/hooks/SettingsContext'
 import { colors, fonts, spacing } from '../src/theme'
 
@@ -40,10 +40,7 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.trade.storage_full': return translate({ en: 'Crude storage is full.', th: 'ถังน้ำมันดิบเต็ม' })
     case 'v3.trade.insufficient_stock': return translate({ en: 'Not enough unreserved stock.', th: 'สต็อกที่ไม่ถูกจองมีไม่พอ' })
     case 'v3.trade.inventory_pending': return translate({ en: 'Trade settlement activates in V3-04; no stock was changed.', th: 'ระบบซื้อขายจะเปิดใน V3-04 และยังไม่มีสต็อกถูกเปลี่ยน' })
-    case 'v3.duty.occupied': return translate({ en: 'This line already has an Operator.', th: 'ไลน์นี้มี Operator ประจำอยู่แล้ว' })
-    case 'v3.duty.ineligible': return translate({ en: 'This employee is not eligible for the line.', th: 'พนักงานคนนี้ทำงานในไลน์นี้ไม่ได้' })
     case 'v3.duty.resume_unaffordable': return translate({ en: 'Cash cannot cover the next wage cycle.', th: 'เงินยังไม่พอจ่ายค่าจ้างรอบถัดไป' })
-    case 'v3.duty.invalid_target': return translate({ en: 'That duty is not available yet.', th: 'หน้าที่นี้ยังไม่เปิดใช้งาน' })
     case 'v3.development.chapter_locked': return translate({ en: 'Product development unlocks in C1.', th: 'ระบบพัฒนาสินค้าปลดล็อกในบท C1' })
     case 'v3.development.invalid_lab': return translate({ en: 'Build and select a Laboratory first.', th: 'ต้องสร้างและเลือก Laboratory ก่อน' })
     case 'v3.development.insufficient_cash': return translate({ en: 'Not enough cash for the development fee.', th: 'เงินไม่พอจ่ายค่าพัฒนา' })
@@ -65,6 +62,19 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.module.insufficient_cash': return translate({ en: `Module needs $${Number(p?.costCents ?? 0) / 100}.`, th: `โมดูลต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
     case 'v3.program.module_mismatch': return translate({ en: 'Recipe needs a different installed module.', th: 'สูตรนี้ต้องใช้โมดูลอื่น' })
     case 'v3.program.invalid_blueprint': return translate({ en: 'Recipe does not fit this plant or its level.', th: 'สูตรนี้ไม่ตรงกับโรงงานหรือเลเวล' })
+    case 'v3.hire.locked': return translate({ en: `Hiring this role unlocks in C${p?.chapter}.`, th: `จ้างตำแหน่งนี้ได้ในบท C${p?.chapter}` })
+    case 'v3.hire.unsupported': return translate({ en: 'This role has no working V3 duty yet.', th: 'ตำแหน่งนี้ยังไม่มีหน้าที่ใน V3' })
+    case 'v3.hire.staff_cap': return translate({ en: `Team is at the ${p?.cap}-person cap for this chapter.`, th: `ทีมเต็ม ${p?.cap} คนสำหรับบทนี้แล้ว` })
+    case 'v3.hire.insufficient_cash': return translate({ en: `Hiring needs $${Number(p?.costCents ?? 0) / 100}.`, th: `จ้างต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
+    case 'v3.train.employee_missing': return translate({ en: 'Employee not found.', th: 'ไม่พบพนักงาน' })
+    case 'v3.train.max_level': return translate({ en: 'Already at max level.', th: 'เลเวลสูงสุดแล้ว' })
+    case 'v3.train.insufficient_cash': return translate({ en: `Training needs $${Number(p?.costCents ?? 0) / 100}.`, th: `ฝึกต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
+    case 'v3.train.insufficient_rp': return translate({ en: `Training needs ${p?.rp} RP.`, th: `ฝึกต้องใช้ ${p?.rp} RP` })
+    case 'v3.specialization.locked': return translate({ en: `Specialization opens in C${p?.chapter}.`, th: `เลือกแนวทางได้ในบท C${p?.chapter}` })
+    case 'v3.specialization.chosen': return translate({ en: 'Specialization is already chosen.', th: 'เลือกแนวทางไปแล้ว' })
+    case 'v3.duty.ineligible': return translate({ en: 'This role cannot take that duty.', th: 'ตำแหน่งนี้รับหน้าที่นั้นไม่ได้' })
+    case 'v3.duty.occupied': return translate({ en: 'That duty is occupied (or the person is leading R&D).', th: 'หน้าที่นี้มีคนอยู่ (หรือพนักงานกำลังนำ R&D)' })
+    case 'v3.duty.invalid_target': return translate({ en: 'That line is not available.', th: 'ไลน์นี้ใช้ไม่ได้' })
     case 'v3.research.unsupported': return translate({ en: 'This research has no V3 effect yet.', th: 'งานวิจัยนี้ยังไม่มีผลใน V3' })
     case 'v3.research.owned': return translate({ en: 'Already researched.', th: 'วิจัยแล้ว' })
     case 'v3.research.locked': return translate({ en: `Research unlocks in C${p?.chapter}.`, th: `วิจัยได้ในบท C${p?.chapter}` })
@@ -209,13 +219,9 @@ export default function V3PreviewScreen() {
   const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialOutputPerMinute, 0)
   const actualRate = productionPreview.reduce((sum, line) => sum + line.actualOutputPerMinute, 0)
   const starterOperator = state.world.employees[0]
-  const starterDuty = state.employeeDuties[starterOperator.id] ?? { kind: 'reserve' as const }
   const distillationCellIndex = state.world.grid.findIndex((cell) => cell === 'distillationUnit')
   const activeProgram = state.plantPrograms[distillationCellIndex]
   const activeBlueprint = activeProgram ? state.productBlueprints[activeProgram.blueprintId] : null
-  const lineOperator = getV3LineEmployee(state, distillationCellIndex)
-  const crewRate = getV3LocalCrewRate(state, distillationCellIndex)
-  const operatorUnpaid = state.unpaidEmployeeIds.includes(starterOperator.id)
   const labCellIndex = state.world.grid.findIndex((cell) => cell === 'laboratory')
   const gasolineBlueprints = Object.values(state.productBlueprints)
     .filter((blueprint) => blueprint.family === 'gasoline')
@@ -362,42 +368,7 @@ export default function V3PreviewScreen() {
           )}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Factory assignment', th: 'การมอบหมายจาก Factory' })}</Text>
-          <Text style={styles.row}>{distillationCellIndex >= 0
-            ? `Distillation #${distillationCellIndex + 1}: ${lineOperator?.name ?? t({ en: 'Unstaffed baseline', th: 'ไม่มีคนประจำ · ผลิตพื้นฐาน' })}`
-            : t({ en: 'Distillation is missing — use Safe recovery above.', th: 'ไม่มี Distillation — ใช้ระบบกู้สถานการณ์ด้านบน' })}</Text>
-          <Text style={styles.row}>{t({ en: 'Local crew bonus', th: 'โบนัสทีมเฉพาะไลน์' })}: +{(crewRate * 100).toFixed(0)}%</Text>
-          {distillationCellIndex >= 0 && (
-            <Pressable
-              style={styles.secondary}
-              onPress={() => apply({ type: 'assign_duty', sequence: state.nextActionSequence, employeeId: starterOperator.id, duty: { kind: 'line', cellIndex: distillationCellIndex } })}
-            >
-              <Text style={styles.secondaryText}>{t({ en: 'Assign Niran to this line', th: 'มอบหมาย Niran ให้ไลน์นี้' })}</Text>
-            </Pressable>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Team roster', th: 'รายชื่อทีม' })}</Text>
-          <Text style={styles.row}>{starterOperator.name} · Operator Lv{starterOperator.level} · XP {starterOperator.xp.toFixed(2)}</Text>
-          <Text style={styles.row}>{t({ en: 'Duty', th: 'หน้าที่' })}: {starterDuty.kind === 'line' ? `Distillation #${starterDuty.cellIndex}` : starterDuty.kind === 'development' ? t({ en: 'Product development', th: 'พัฒนาผลิตภัณฑ์' }) : t({ en: 'Reserve', th: 'สำรอง' })}</Text>
-          <Text style={[styles.row, operatorUnpaid && styles.warning]}>{t({ en: 'Pay status', th: 'สถานะค่าจ้าง' })}: {operatorUnpaid ? t({ en: 'UNPAID STANDBY', th: 'พักงานเพราะค่าจ้างค้าง' }) : t({ en: 'Active', th: 'พร้อมทำงาน' })}</Text>
-          <Pressable
-            style={styles.secondary}
-            onPress={() => apply({ type: 'assign_duty', sequence: state.nextActionSequence, employeeId: starterOperator.id, duty: { kind: 'reserve' } })}
-          >
-            <Text style={styles.secondaryText}>{t({ en: 'Move Niran to reserve', th: 'ย้าย Niran ไปทีมสำรอง' })}</Text>
-          </Pressable>
-          {operatorUnpaid && (
-            <Pressable
-              style={styles.primary}
-              onPress={() => apply({ type: 'resume_employee', sequence: state.nextActionSequence, employeeId: starterOperator.id })}
-            >
-              <Text style={styles.primaryText}>{t({ en: 'Resume after funding wages', th: 'กลับเข้าทำงานหลังเตรียมค่าจ้าง' })}</Text>
-            </Pressable>
-          )}
-        </View>
+        <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Gasoline development', th: 'พัฒนาสูตร Gasoline' })}</Text>

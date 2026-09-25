@@ -1,4 +1,4 @@
-import type { BuildingType, ProductKey } from '../types'
+import type { BuildingType, ProductKey, WorkerType } from '../types'
 import { unlockV3Research, validateV3Research } from './research'
 import {
   V3_BUILDINGS,
@@ -8,9 +8,13 @@ import {
   V3_MODULE_MIN_PLANT_LEVEL,
   V3_PLANT_BY_FAMILY,
   V3_PROCESS_UNITS,
+  V3_ROLES,
+  V3_SPECIALIZATION_CHAPTER,
   V3_SPOT_PRICE_CENTS,
+  V3_STAFF_LEVELS,
   isV3ProcessBuilding,
 } from './data'
+import { getV3Modifiers } from './modifiers'
 import { expandV3Grid } from './expansion'
 import { cancelV3Development, startV3Development } from './development'
 import { acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
@@ -24,7 +28,15 @@ import {
 } from './productInventory'
 import { V3_DEFAULT_BLUEPRINT_ID } from './state'
 import { getV3RecoveryOffer, isV3LoanerCell, restoreV3StarterLoaners, startV3Recovery } from './recovery'
-import { getV3Employee, getV3WageCents } from './workforce'
+import {
+  canV3StaffLine,
+  canV3Support,
+  emptyV3EmployeeRecord,
+  getV3Employee,
+  getV3StaffCap,
+  getV3TrainingCost,
+  getV3WageCents,
+} from './workforce'
 import type {
   V3Action,
   V3ActionEvent,
@@ -57,7 +69,21 @@ export const V3_SUPPORTED_BUILDINGS: ReadonlySet<BuildingType> = new Set<Buildin
   'lubricantTank',
   'jetFuelPlant',
   'jetFuelTank',
+  'salesOffice',
 ])
+
+const V3_ROLE_NAME: Record<WorkerType, string> = {
+  operator: 'Operator',
+  mechanic: 'Mechanic',
+  salesAgent: 'Sales Agent',
+  safetyOfficer: 'Safety Officer',
+  chemist: 'Chemist',
+  logisticsCoordinator: 'Logistics',
+  fuelSpecialist: 'Fuel Specialist',
+  aviationSpecialist: 'Aviation Specialist',
+  chemicalEngineer: 'Chemical Engineer',
+  polymerEngineer: 'Polymer Engineer',
+}
 
 const STORAGE_PRODUCT: Partial<Record<BuildingType, V3ProductFamily>> = {
   gasolineTank: 'gasoline',
@@ -293,15 +319,21 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   if (action.type === 'assign_duty') {
     const employee = getV3Employee(state, action.employeeId)
     if (!employee) return consumedResult(state, action, state, event('blocked', 'v3.duty.employee_missing'))
-    if (action.duty.kind !== 'line' && action.duty.kind !== 'reserve') {
+    if (state.employeeDuties[employee.id]?.kind === 'development') {
+      return consumedResult(state, action, state, event('blocked', 'v3.duty.occupied'))
+    }
+    if (action.duty.kind === 'development') {
       return consumedResult(state, action, state, event('blocked', 'v3.duty.invalid_target'))
+    }
+    if (action.duty.kind === 'support' && !canV3Support(employee.type)) {
+      return consumedResult(state, action, state, event('blocked', 'v3.duty.ineligible'))
     }
     if (action.duty.kind === 'line') {
       const targetCellIndex = action.duty.cellIndex
       if (!isV3ProcessBuilding(state.world.grid[targetCellIndex]) || !state.plantPrograms[targetCellIndex]) {
         return consumedResult(state, action, state, event('blocked', 'v3.duty.invalid_target'))
       }
-      if (employee.type !== 'operator') {
+      if (!canV3StaffLine(employee.type, state.world.grid[targetCellIndex])) {
         return consumedResult(state, action, state, event('blocked', 'v3.duty.ineligible'))
       }
       const occupant = Object.entries(state.employeeDuties).find(([id, duty]) =>
@@ -312,6 +344,78 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     return consumedResult(state, action, {
       ...state,
       employeeDuties: { ...state.employeeDuties, [employee.id]: action.duty },
+    }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'hire_employee') {
+    const rule = V3_ROLES[action.role]
+    if (!rule.hireable) return consumedResult(state, action, state, event('blocked', 'v3.hire.unsupported'))
+    if (state.campaignProgress.chapter < rule.hireChapter) {
+      return consumedResult(state, action, state, event('blocked', 'v3.hire.locked', { chapter: rule.hireChapter }))
+    }
+    if (state.world.employees.length >= getV3StaffCap(state)) {
+      return consumedResult(state, action, state, event('blocked', 'v3.hire.staff_cap', { cap: getV3StaffCap(state) }))
+    }
+    const costCents = rule.hireCostDollars * 100
+    if (state.world.moneyCents < costCents) {
+      return consumedResult(state, action, state, event('blocked', 'v3.hire.insufficient_cash', { costCents }))
+    }
+    // Guaranteed ordinary vacancy candidate: deterministic ID/name, no reroll.
+    const id = `employee:${action.role}:${String(action.sequence).padStart(6, '0')}`
+    const ordinal = state.world.employees.filter((employee) => employee.type === action.role).length + 1
+    const hired = {
+      id,
+      type: action.role,
+      name: `${V3_ROLE_NAME[action.role]} ${ordinal}`,
+      level: 1,
+      xp: 0,
+      skills: [],
+    }
+    return consumedResult(state, action, {
+      ...state,
+      world: { ...state.world, moneyCents: state.world.moneyCents - costCents, employees: [...state.world.employees, hired] },
+      employeeDuties: { ...state.employeeDuties, [id]: { kind: 'reserve' } },
+      employeeRecords: { ...state.employeeRecords, [id]: emptyV3EmployeeRecord() },
+      operatingLedger: {
+        ...state.operatingLedger,
+        capexCents: state.operatingLedger.capexCents + costCents,
+      },
+    }, event('success', 'v3.action.ok', { costCents }))
+  }
+
+  if (action.type === 'train_employee') {
+    const employee = getV3Employee(state, action.employeeId)
+    if (!employee) return consumedResult(state, action, state, event('blocked', 'v3.train.employee_missing'))
+    if (employee.level >= V3_STAFF_LEVELS.maxLevel) return consumedResult(state, action, state, event('blocked', 'v3.train.max_level'))
+    const cost = getV3TrainingCost(employee)
+    if (state.world.moneyCents < cost.cents) {
+      return consumedResult(state, action, state, event('blocked', 'v3.train.insufficient_cash', { costCents: cost.cents }))
+    }
+    if (state.world.researchPoints + 1e-8 < cost.rp) {
+      return consumedResult(state, action, state, event('blocked', 'v3.train.insufficient_rp', { rp: cost.rp }))
+    }
+    const trained = { ...employee, level: employee.level + 1, xp: 0 }
+    // Training is a one-time people investment: capex, not factory operating cost.
+    return consumedResult(state, action, {
+      ...state,
+      world: {
+        ...state.world,
+        moneyCents: state.world.moneyCents - cost.cents,
+        researchPoints: state.world.researchPoints - cost.rp,
+        employees: state.world.employees.map((entry) => entry.id === employee.id ? trained : entry),
+      },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + cost.cents },
+    }, event('success', 'v3.action.ok', { costCents: cost.cents }))
+  }
+
+  if (action.type === 'choose_specialization') {
+    if (state.world.specialization) return consumedResult(state, action, state, event('blocked', 'v3.specialization.chosen'))
+    if (state.campaignProgress.chapter < V3_SPECIALIZATION_CHAPTER) {
+      return consumedResult(state, action, state, event('blocked', 'v3.specialization.locked', { chapter: V3_SPECIALIZATION_CHAPTER }))
+    }
+    return consumedResult(state, action, {
+      ...state,
+      world: { ...state.world, specialization: action.path },
     }, event('success', 'v3.action.ok'))
   }
 
@@ -535,7 +639,8 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   }
   if (action.direction === 'sell' && isV3TradableFamily(action.product)) {
     const consumed = consumeV3SellableInventory(state, action.product, action.quantity, action)
-    const receiptsCents = consumed.quantity * V3_SPOT_PRICE_CENTS[action.product]
+    // Spot uses the base price plus the capped trade channel; no Q multiplier.
+    const receiptsCents = Math.round(consumed.quantity * V3_SPOT_PRICE_CENTS[action.product] * (1 + getV3Modifiers(state).trade.effective))
     const sold = {
       ...consumed.state,
       world: {

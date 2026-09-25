@@ -17,10 +17,13 @@
 - V3-00 … V3-10: **complete**. The V3-10 prototype gate was passed to R2 by the
   player after playing build #69 (see
   [GAMEPLAY_PROTOTYPE_GATE_V3.md](GAMEPLAY_PROTOTYPE_GATE_V3.md)).
-- V3-11 (Lube/Jet, power, storage, modules, rank1, 4×4): **complete in code** on
-  branch `claude/gameplay-v3`; Android interaction of the new panels still needs a
-  device check.
-- **Current task: V3-12** — full workforce/support and progression mapping.
+- V3-11 (Lube/Jet, power, storage, modules, rank1, 4×4): **complete in code**;
+  Android interaction of the new panels still needs a device check.
+- V3-11: merged to release `489ddfd`, Android Preview APK run **#70** succeeded.
+- V3-12 (roles, hiring, support caps, training, research/specialization mapping,
+  accomplishment records): **complete in code** on `claude/gameplay-v3`.
+- **Current task: V3-13** — Fleet/Airline ladder and repeat/rush progression. The
+  R2 human gate (20–30 min midgame play) follows V3-13; do not start V3-14 before it.
 
 ## Rules for this work
 

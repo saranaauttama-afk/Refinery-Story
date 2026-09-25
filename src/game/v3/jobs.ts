@@ -1,5 +1,7 @@
 import { consumeV3ProtectedInventory, getV3ProductCapacity, getV3StockAllocations, recordV3Ledger } from './productInventory'
 import { evaluateV3CampaignProgress } from './campaign'
+import { getV3Modifiers } from './modifiers'
+import { applyV3LevelUps, creditV3EmployeeRecords } from './workforce'
 import type { V3AcceptedJob, V3GameState, V3ProductFamily } from './types'
 
 export type V3JobTemplate = {
@@ -61,6 +63,8 @@ export function acceptV3Job(state: V3GameState, templateId: string, sequence: nu
   if ((state.jobReceipts.templateRetryAtTick[template.id] ?? 0) > state.world.tickCount) {
     return { state, blocker: 'cooldown', quantity: 0, paidCents: 0 }
   }
+  // Capped trade bonus is snapshotted into the quote; the tutorial quote is explicit.
+  const tradeRate = template.clientId === 'tutorial' ? 0 : getV3Modifiers(state).trade.effective
   const job: V3AcceptedJob = {
     id: `job:${String(sequence).padStart(8, '0')}`,
     templateId: template.id,
@@ -68,8 +72,8 @@ export function acceptV3Job(state: V3GameState, templateId: string, sequence: nu
     minimumQuality: template.minimumQuality,
     quantity: template.quantity,
     deliveredQuantity: 0,
-    lockedUnitPriceCents: template.unitPriceCents,
-    completionBonusCents: template.completionBonusCents,
+    lockedUnitPriceCents: Math.round(template.unitPriceCents * (1 + tradeRate)),
+    completionBonusCents: Math.round(template.completionBonusCents * (1 + tradeRate)),
     paidToDateCents: 0,
     acceptedAtTick: state.world.tickCount,
     deadlineTick: null,
@@ -124,11 +128,12 @@ export function dispatchV3Job(state: V3GameState, requestedQuantity: number, blu
     world: {
       ...consumed.state.world,
       moneyCents: consumed.state.world.moneyCents + totalPaidCents,
-      researchPoints: consumed.state.world.researchPoints + (completed ? template?.researchReward ?? 0 : 0),
+      researchPoints: consumed.state.world.researchPoints +
+        (completed ? (template?.researchReward ?? 0) * (1 + getV3Modifiers(state).rp.effective) : 0),
       reputation: consumed.state.world.reputation + (completed ? template?.reputationReward ?? 0 : 0),
       employees: consumed.state.world.employees.map((employee) =>
         completed && (job.contributorWork[employee.id] ?? 0) > 0
-          ? { ...employee, xp: employee.xp + 5 }
+          ? applyV3LevelUps({ ...employee, xp: employee.xp + 5 })
           : employee,
       ),
     },
@@ -140,6 +145,8 @@ export function dispatchV3Job(state: V3GameState, requestedQuantity: number, blu
     },
   }
   if (completed) {
+    const credited = Object.entries(job.contributorWork).filter(([, work]) => work > 0).map(([id]) => id).sort()
+    if (template?.milestone) next = creditV3EmployeeRecords(next, credited, { milestoneId: template.id })
     next = {
       ...next,
       clientProgress: template ? {

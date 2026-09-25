@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { BUILDINGS } from '../data/buildings'
-import { V3_DEVELOPMENT_BY_FAMILY, isV3ProcessBuilding } from './data'
+import { V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
 import { createInitialV3GameState } from './state'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
@@ -37,7 +37,8 @@ function isValidGridCell(value: unknown): boolean {
   return value === null || (typeof value === 'string' && BUILDING_KEYS.has(value))
 }
 
-export function parseV3GameState(value: unknown): V3LoadResult {
+export function parseV3GameState(input: unknown): V3LoadResult {
+  let value = input
   if (!isRecord(value)) {
     return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   }
@@ -48,6 +49,17 @@ export function parseV3GameState(value: unknown): V3LoadResult {
       reason: `Unsupported ruleset version: ${String(value.rulesetVersion)}`,
     }
   }
+  // Revision 7 (build #69/#70 preview saves) only lacks accomplishment records.
+  if (value.schemaRevision === 7 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.world) && Array.isArray(value.world.employees)) {
+    value = {
+      ...value,
+      schemaRevision: V3_PREVIEW_SCHEMA_REVISION,
+      employeeRecords: Object.fromEntries((value.world.employees as Array<Record<string, unknown>>)
+        .filter((employee) => isRecord(employee) && typeof employee.id === 'string')
+        .map((employee) => [employee.id, { workTicks: 0, blueprintIds: [], milestoneIds: [] }])),
+    }
+  }
+  if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   if (value.schemaRevision !== V3_PREVIEW_SCHEMA_REVISION) {
     return {
       status: 'unsupported',
@@ -186,14 +198,18 @@ export function parseV3GameState(value: unknown): V3LoadResult {
   const occupiedLineCells = new Set<number>()
   if (Object.keys(employeeDuties).length !== employeeIds.size || !Object.entries(employeeDuties).every(([employeeId, duty]) => {
     if (!employeeIds.has(employeeId) || !isRecord(duty) || typeof duty.kind !== 'string') return false
-    if (duty.kind === 'reserve' || duty.kind === 'support') return true
+    const role = V3_ROLES[employeeTypes.get(employeeId) as keyof typeof V3_ROLES]
+    if (!role) return false
+    if (duty.kind === 'reserve') return true
+    if (duty.kind === 'support') return role.support !== null
     if (duty.kind === 'development') {
       return typeof duty.projectId === 'string' &&
-        (duty.returnCellIndex === null || Number.isInteger(duty.returnCellIndex))
+        (duty.returnCellIndex === null || Number.isInteger(duty.returnCellIndex)) &&
+        (duty.returnSupport === undefined || typeof duty.returnSupport === 'boolean')
     }
     if (duty.kind !== 'line' || !Number.isInteger(duty.cellIndex)) return false
     const cellIndex = duty.cellIndex as number
-    if (employeeTypes.get(employeeId) !== 'operator' || !isV3ProcessBuilding(grid[cellIndex] as never) || occupiedLineCells.has(cellIndex)) return false
+    if (!isV3ProcessBuilding(grid[cellIndex] as never) || !role.lineBuildings.includes(grid[cellIndex] as V3ProcessBuilding) || occupiedLineCells.has(cellIndex)) return false
     occupiedLineCells.add(cellIndex)
     return true
   })) {
@@ -279,6 +295,16 @@ export function parseV3GameState(value: unknown): V3LoadResult {
     ) {
       return { status: 'invalid', state: null, reason: 'Invalid V3 recovery state.' }
     }
+  }
+  if (
+    !isRecord(value.employeeRecords) ||
+    Object.keys(value.employeeRecords).some((id) => !employeeIds.has(id)) ||
+    !Object.values(value.employeeRecords).every((record) =>
+      isRecord(record) && isFiniteNonnegative(record.workTicks) &&
+      Array.isArray(record.blueprintIds) && record.blueprintIds.every((id) => typeof id === 'string') &&
+      Array.isArray(record.milestoneIds) && record.milestoneIds.every((id) => typeof id === 'string'))
+  ) {
+    return { status: 'invalid', state: null, reason: 'Invalid V3 employee records.' }
   }
   if (
     !Array.isArray(value.developmentHistory) ||

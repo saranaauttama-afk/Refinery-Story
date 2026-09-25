@@ -7,6 +7,7 @@ import {
   V3_PROCESS_UNITS,
   V3_PROFILE_MULTIPLIERS,
   V3_SITE_POWER,
+  V3_SPECIALIZATION,
   V3_SPOT_PRICE_CENTS,
   V3_TICKS_PER_CYCLE,
   isV3ProcessBuilding,
@@ -14,6 +15,7 @@ import {
   type V3ProcessInput,
 } from './data'
 import { advanceV3Development } from './development'
+import { getV3Modifiers } from './modifiers'
 import { addV3JobContribution, runV3AutoDispatch } from './jobs'
 import { addV3VariantInventory, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
 import { advanceV3Recovery, isV3LoanerCell } from './recovery'
@@ -97,6 +99,7 @@ function lineRequest(
   program: V3PlantProgram,
   deltaTicks: number,
   boostRate: number,
+  globalRate: number,
 ): V3LinePlan | null {
   const building = state.world.grid[program.cellIndex]
   if (!isV3ProcessBuilding(building)) return null
@@ -116,11 +119,16 @@ function lineRequest(
   const employee = getV3LineEmployee(state, program.cellIndex)
   const loanerRate = isV3LoanerCell(state, program.cellIndex) ? 0.5 : 1
   const crewRate = status === 'ready' && loanerRate === 1 ? getV3LocalCrewRate(state, program.cellIndex) : 0
+  // Loaners run the Lv1 baseline without crew, global or specialization effects.
+  const specialization = state.world.specialization ? V3_SPECIALIZATION[state.world.specialization] : null
+  const specializationRate = loanerRate === 1 ? specialization?.rate ?? 1 : 1
+  const cappedGlobal = loanerRate === 1 ? globalRate : 0
   const requestedWork = status === 'ready'
-    ? deltaTicks / V3_TICKS_PER_CYCLE * (V3_LEVEL_RATE[level] ?? 0) * profile.work * module.work * (1 + crewRate) * boostRate * loanerRate
+    ? deltaTicks / V3_TICKS_PER_CYCLE * (V3_LEVEL_RATE[level] ?? 0) * profile.work * module.work *
+      (1 + crewRate) * (1 + cappedGlobal) * specializationRate * boostRate * loanerRate
     : 0
   const perMinute = 300 / Math.max(deltaTicks, 1)
-  const energyPerWork = unit.energyPerWork * profile.energy * module.energy
+  const energyPerWork = unit.energyPerWork * profile.energy * module.energy * (specialization?.energy ?? 1)
   return {
     cellIndex: program.cellIndex,
     building,
@@ -218,7 +226,7 @@ function planGeneration(state: V3GameState, deltaTicks: number, crudeReserved: n
 export function evaluateV3Production(state: V3GameState, deltaTicks = 1, boostRate = 1): V3ProductionPlan {
   const lines = Object.values(state.plantPrograms)
     .sort((a, b) => a.cellIndex - b.cellIndex)
-    .map((program) => lineRequest(state, program, deltaTicks, boostRate))
+    .map((program) => lineRequest(state, program, deltaTicks, boostRate, getV3Modifiers(state).globalRate.effective))
     .filter((line): line is V3LinePlan => line !== null)
   const outputBound = boundByOutputSpace(state, lines)
   const actual = lines.map(() => 0)
@@ -326,7 +334,8 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
   const feedstockCapacity = getV3FeedstockCapacity(developed)
   for (const line of lines) {
     if (line.actualWork <= EPSILON) continue
-    const producedWaste = line.actualWork * V3_PROCESS_UNITS[line.building].wastePerWork
+    const wasteRate = developed.world.specialization ? V3_SPECIALIZATION[developed.world.specialization].waste : 1
+    const producedWaste = line.actualWork * V3_PROCESS_UNITS[line.building].wastePerWork * wasteRate
     const retainedWaste = Math.min(producedWaste, Math.max(0, V3_DISTILLATION.wasteCapacity - waste))
     waste += retainedWaste
     line.waste = retainedWaste

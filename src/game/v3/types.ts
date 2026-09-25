@@ -9,7 +9,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 7 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 8 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -84,9 +84,16 @@ export type V3DevelopmentHistoryEntry = {
 
 export type V3EmployeeDuty =
   | { kind: 'line'; cellIndex: number }
-  | { kind: 'development'; projectId: string; returnCellIndex: number | null }
+  | { kind: 'development'; projectId: string; returnCellIndex: number | null; returnSupport?: boolean }
   | { kind: 'support' }
   | { kind: 'reserve' }
+
+/** Minimal accomplishment record (Master §6); derived only from real ledger events. */
+export type V3EmployeeRecord = {
+  workTicks: number
+  blueprintIds: string[]
+  milestoneIds: string[]
+}
 
 export type V3ClientProgress = {
   clientId: string
@@ -204,6 +211,7 @@ export type V3GameState = {
   developmentHistory: V3DevelopmentHistoryEntry[]
   employeeDuties: Record<string, V3EmployeeDuty>
   unpaidEmployeeIds: string[]
+  employeeRecords: Record<string, V3EmployeeRecord>
   clientProgress: Record<string, V3ClientProgress>
   acceptedJob: V3AcceptedJob | null
   jobReceipts: V3JobReceipts
@@ -243,6 +251,16 @@ export type V3ActionMessageId =
   | 'v3.duty.ineligible'
   | 'v3.duty.occupied'
   | 'v3.duty.resume_unaffordable'
+  | 'v3.hire.locked'
+  | 'v3.hire.unsupported'
+  | 'v3.hire.staff_cap'
+  | 'v3.hire.insufficient_cash'
+  | 'v3.train.employee_missing'
+  | 'v3.train.max_level'
+  | 'v3.train.insufficient_cash'
+  | 'v3.train.insufficient_rp'
+  | 'v3.specialization.locked'
+  | 'v3.specialization.chosen'
   | 'v3.development.chapter_locked'
   | 'v3.development.project_active'
   | 'v3.development.invalid_lab'
@@ -428,12 +446,30 @@ export type V3BuyResearchAction = {
   researchId: ResearchKey
 }
 
+export type V3HireEmployeeAction = {
+  type: 'hire_employee'
+  sequence: number
+  role: WorkerType
+}
+
+export type V3TrainEmployeeAction = {
+  type: 'train_employee'
+  sequence: number
+  employeeId: string
+}
+
+export type V3ChooseSpecializationAction = {
+  type: 'choose_specialization'
+  sequence: number
+  path: SpecializationPath
+}
+
 export type V3ExpandGridAction = {
   type: 'expand_grid'
   sequence: number
 }
 
-export type V3Action = V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType
