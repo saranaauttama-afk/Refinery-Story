@@ -18,7 +18,7 @@ import BuildingSilhouette from './BuildingSilhouette'
 const PLANT_TILE_PREVIEW: Partial<Record<BuildingType, ImageSourcePropType>> = {
   distillationUnit: getStarterPlantArt('distillationUnit', 1),
   crudeTank: getStarterPlantArt('crudeTank', 1),
-  productTank: getStarterPlantArt('productTank', 1),
+  gasolineTank: getStarterPlantArt('gasolineTank', 1),
   laboratory: require('../../assets/plants/laboratory_lv1.png'),
   maintenanceWorkshop: require('../../assets/plants/maintenance_workshop_lv1.png'),
   salesOffice: require('../../assets/plants/sales_office_lv1.png'),

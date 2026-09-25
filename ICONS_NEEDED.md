@@ -85,7 +85,7 @@ The game currently renders its **33 icons** as inline SVG (the
 |----|---------|------------|
 | `building-crudeTank` | build picker | Crude storage tank (orange) |
 | `building-distillationUnit` | build picker | Distillation unit (crude → feedstock) |
-| `building-productTank` | build picker | Product storage tank (green) |
+| `building-gasolineTank` | build picker | Gasoline storage tank (green) |
 | `building-laboratory` | build picker | Laboratory (research) |
 | `building-maintenanceWorkshop` | build picker | Maintenance workshop (wrench) |
 | `building-salesOffice` | build picker | Sales office ($) |

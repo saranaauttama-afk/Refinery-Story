@@ -367,7 +367,7 @@ function getEmptyBuildingCounts(): BuildingCounts {
   return {
     crudeTank: 0,
     distillationUnit: 0,
-    productTank: 0,
+    gasolineTank: 0,
     laboratory: 0,
     maintenanceWorkshop: 0,
     salesOffice: 0,
@@ -660,11 +660,11 @@ export function getBuildingEffectLines(
 ): BuildingEffectLine[] {
   switch (cell) {
     case 'crudeTank':
-    case 'productTank': {
+    case 'gasolineTank': {
       const byLevel =
         cell === 'crudeTank'
           ? BUILDING_UPGRADE_BALANCE.crudeTankStorageByLevel
-          : BUILDING_UPGRADE_BALANCE.productTankStorageByLevel
+          : BUILDING_UPGRADE_BALANCE.gasolineTankStorageByLevel
       const current = byLevel[level] ?? byLevel[1]
       const next = byLevel[level + 1]
       return [
@@ -1401,8 +1401,8 @@ export function hasPollutingNeighbor(grid: GridCell[], cellIndex: number): boole
 // (mirrors getComboStats). Used to draw synergy auras on the factory grid.
 const SYNERGY_PAIRS: [BuildingType, BuildingType][] = [
   ['crudeTank', 'distillationUnit'],
-  ['distillationUnit', 'productTank'],
-  ['crudeTank', 'productTank'],
+  ['distillationUnit', 'gasolineTank'],
+  ['crudeTank', 'gasolineTank'],
   // Power plant next to a downstream production plant (local-power output combo).
   ['powerPlant', 'lubricantPlant'],
   ['powerPlant', 'jetFuelPlant'],
@@ -1470,15 +1470,15 @@ function getComboStats(grid: GridCell[]): ComboStats {
       }
 
       if (
-        (cell === 'distillationUnit' && neighbor === 'productTank') ||
-        (cell === 'productTank' && neighbor === 'distillationUnit')
+        (cell === 'distillationUnit' && neighbor === 'gasolineTank') ||
+        (cell === 'gasolineTank' && neighbor === 'distillationUnit')
       ) {
         combos.distillationToProduct += 1
       }
 
       if (
-        (cell === 'crudeTank' && neighbor === 'productTank') ||
-        (cell === 'productTank' && neighbor === 'crudeTank')
+        (cell === 'crudeTank' && neighbor === 'gasolineTank') ||
+        (cell === 'gasolineTank' && neighbor === 'crudeTank')
       ) {
         combos.crudeToProduct += 1
       }
@@ -1792,7 +1792,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
   const eraResearchRateBonusRate = currentEra.researchRateBonusRate
 
   let crudeTankStorageTotal = 0
-  let productTankStorageTotal = 0
+  let gasolineTankStorageTotal = 0
   let distillationUpgradeBonusRate = 0
   let laboratoryRpBonusTotal = 0
   let workshopPenaltyMultiplier = 1
@@ -1803,8 +1803,8 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     const level = game.gridLevels[i] ?? 1
     if (cell === 'crudeTank') {
       crudeTankStorageTotal += BUILDING_UPGRADE_BALANCE.crudeTankStorageByLevel[level] ?? 25
-    } else if (cell === 'productTank') {
-      productTankStorageTotal += BUILDING_UPGRADE_BALANCE.productTankStorageByLevel[level] ?? 25
+    } else if (cell === 'gasolineTank') {
+      gasolineTankStorageTotal += BUILDING_UPGRADE_BALANCE.gasolineTankStorageByLevel[level] ?? 25
     } else if (cell === 'distillationUnit') {
       distillationUpgradeBonusRate +=
         BUILDING_UPGRADE_BALANCE.distillationUnitBonusRateByLevel[level] ?? 0
@@ -1890,7 +1890,7 @@ export function calculateDerivedStats(game: GameState): DerivedStats {
     distillationUpgradeProductionMultiplier
 
   const baseCrudeStorage = STORAGE_BALANCE.baseCrudeStorage + crudeTankStorageTotal
-  const baseGasolineStorage = STORAGE_BALANCE.baseGasolineStorage + productTankStorageTotal
+  const baseGasolineStorage = STORAGE_BALANCE.baseGasolineStorage + gasolineTankStorageTotal
   const storageMultiplier =
     1 + comboStats.crudeToProduct * BONUS_BALANCE.adjacencyBonusRate
   const researchStorageBonus =

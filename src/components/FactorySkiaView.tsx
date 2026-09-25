@@ -93,7 +93,7 @@ function diamondPath(x: number, y: number, w: number, h: number): SkPath {
 const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, DataSourceParam>>> = {
   distillationUnit: STARTER_PLANT_ART_BY_LEVEL.distillationUnit as Record<number, DataSourceParam>,
   crudeTank: STARTER_PLANT_ART_BY_LEVEL.crudeTank as Record<number, DataSourceParam>,
-  productTank: STARTER_PLANT_ART_BY_LEVEL.productTank as Record<number, DataSourceParam>,
+  gasolineTank: STARTER_PLANT_ART_BY_LEVEL.gasolineTank as Record<number, DataSourceParam>,
   laboratory: { 1: require('../../assets/plants/laboratory_lv1.png'), 2: require('../../assets/plants/laboratory_lv2.png'), 3: require('../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice: { 1: require('../../assets/plants/sales_office_lv1.png'), 2: require('../../assets/plants/sales_office_lv2.png'), 3: require('../../assets/plants/sales_office_lv3.png') },

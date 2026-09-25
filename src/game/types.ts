@@ -30,7 +30,7 @@ export type ProductInventory = Record<ProductKey, number>
 export type BuildingType =
   | 'crudeTank'
   | 'distillationUnit'
-  | 'productTank'
+  | 'gasolineTank'
   | 'laboratory'
   | 'maintenanceWorkshop'
   | 'salesOffice'

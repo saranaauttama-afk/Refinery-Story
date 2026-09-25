@@ -21,10 +21,10 @@ export const HIDDEN_COMBOS: HiddenComboConfig[] = [
     key: 'fullRefineryLine',
     name: bilingual('Full Refinery Line', 'แนวโรงกลั่นครบสาย'),
     message: bilingual(
-      'Crude Tank, Distillation Unit, and Product Tank lined up — a complete mini refinery!',
-      'ถังน้ำมันดิบ หน่วยกลั่น และถังสินค้าเรียงกัน — โรงกลั่นจิ๋วครบสาย!',
+      'Crude Tank, Distillation Unit, and Gasoline Tank lined up — a complete mini refinery!',
+      'ถังน้ำมันดิบ หน่วยกลั่น และถังเก็บเบนซินเรียงกัน — โรงกลั่นจิ๋วครบสาย!',
     ),
-    buildings: ['crudeTank', 'distillationUnit', 'productTank'],
+    buildings: ['crudeTank', 'distillationUnit', 'gasolineTank'],
     cashReward: 300,
     rpReward: 5,
   },

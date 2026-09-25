@@ -129,7 +129,7 @@ function targetLoadout(level: number): Partial<Record<BuildingType, number>> {
   const t: Partial<Record<BuildingType, number>> = {
     distillationUnit: Math.min(6, 1 + Math.floor(level / 2)),
     crudeTank: 3,
-    productTank: 2,
+    gasolineTank: 2,
   }
   // Power must cover downstream electricity demand AND leave headroom for the
   // electricity-gated gasoline line — under-provisioning silently starves

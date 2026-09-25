@@ -42,7 +42,7 @@ Append this at the end when needed:
 ### Lv3
 `isometric pixel art industrial building for a tycoon game, distillation unit, 3/4 isometric view, medium detail, clean readable silhouette, single building sprite, transparent background, centered object, fits inside a single square tile, same footprint across all levels, no multi-tile layout, no wide horizontal expansion, readable on a mobile game grid, stylized refinery asset, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no painterly texture, no text, no people, no vehicles, no ground tile, clearly level 3, advanced version of the same distillation unit, one very tall main column plus one substantial secondary tower nearly half as tall, a visible overhead pipe bridge connecting them, a larger base process block, denser lower pipe network, silhouette clearly different from level 2`
 
-## 3. Product Tank
+## 3. Gasoline Tank
 
 ### Lv1
 `isometric pixel art industrial building for a tycoon game, product tank, 3/4 isometric view, medium detail, clean readable silhouette, single building sprite, transparent background, centered object, fits inside a single square tile, same footprint across all levels, no multi-tile layout, no wide horizontal expansion, readable on a mobile game grid, stylized refinery asset, crisp pixel art, limited color palette, clean shading, sharp pixel edges, no blur, no painterly texture, no text, no people, no vehicles, no ground tile, clearly level 1, one compact finished-product tank only, small outlet pipe, simple clean storage silhouette, no catwalk, no side module`

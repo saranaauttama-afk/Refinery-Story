@@ -27,9 +27,7 @@ import { STARTER_PLANT_ART_BY_LEVEL } from '../../../src/starterPlantArt'
 const CONTROL_ROOM = require('../../../assets/bg/operations_control_room_v1.png')
 const CRUDE_TANK = STARTER_PLANT_ART_BY_LEVEL.crudeTank![1]
 const DISTILLATION_LEVELS = STARTER_PLANT_ART_BY_LEVEL.distillationUnit!
-// Keep the Operations flow diagram on the original spherical Gas Storage art.
-// The newer levelled Product Tank set remains available in Factory/Build/Info.
-const PRODUCT_TANK = require('../../../assets/plants/product_tank_lv1_v3.png')
+const GASOLINE_TANK = STARTER_PLANT_ART_BY_LEVEL.gasolineTank![1]
 
 type Tone = 'good' | 'warn' | 'bad' | 'idle'
 
@@ -114,7 +112,7 @@ export default function SupplyScreen() {
       : game.crudeOil <= 0
         ? { title: 'Low crude — production stopped', detail: 'Open Supply & Orders below to restock crude.', tone: 'bad' as const }
         : game.gasoline >= derived.maxGasolineStorage
-          ? { title: 'Gas storage full', detail: 'Sell gasoline or increase Product Tank capacity.', tone: 'warn' as const }
+          ? { title: 'Gasoline Tank full', detail: 'Sell gasoline or increase Gasoline Tank capacity.', tone: 'warn' as const }
           : powerStarved
             ? { title: 'Electricity too low', detail: 'The production line is waiting for more power.', tone: 'warn' as const }
             : { title: 'Production line running', detail: 'Crude is moving through the refinery normally.', tone: 'good' as const }
@@ -206,7 +204,7 @@ export default function SupplyScreen() {
               stock={distillationCount > 0 ? `Lv ${distillationLevel}` : '—'}
               status={processStatus} tone={processTone} large />
             <View style={styles.flowArrow}><ArrowRight size={18} color={storageTone === 'bad' ? '#FF8976' : '#78ED87'} /><Text style={styles.flowRate}>{flowRates.gasPerMin}/m</Text></View>
-            <PlantFlowNode image={PRODUCT_TANK} title="Gas Storage"
+            <PlantFlowNode image={GASOLINE_TANK} title="Gasoline Tank"
               stock={`${game.gasoline}/${derived.maxGasolineStorage}`}
               status={gasPct >= 1 ? 'FULL' : gasPct >= 0.8 ? 'NEAR FULL' : 'SPACE OK'} tone={storageTone} />
           </View>

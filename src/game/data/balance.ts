@@ -241,9 +241,9 @@ export const PRODUCTION_BALANCE = {
 
 export const STORAGE_BALANCE = {
   baseCrudeStorage: 10,    // was 4 — raised so starting 5 crude fits within cap
-  baseGasolineStorage: 20, // was 4 — raised so Contract 1 (20 gasoline) is reachable without a forced Product Tank purchase
+  baseGasolineStorage: 20, // was 4 — raised so Contract 1 (20 gasoline) is reachable without a forced Gasoline Tank purchase
   crudeTankStorageBonus: 25,
-  productTankStorageBonus: 25,
+  gasolineTankStorageBonus: 25,
   biggerTanksStorageBonus: 50,
   industrialStorageBonus: 150,
   mechanicStorageBonus: 25,
@@ -755,7 +755,7 @@ export const BUILDING_UPGRADE_BALANCE = {
   // Index 0 is unused; index 1/2/3 = level bonus
   // Production / storage buildings
   crudeTankStorageByLevel: [0, 25, 50, 100],
-  productTankStorageByLevel: [0, 25, 50, 100],
+  gasolineTankStorageByLevel: [0, 25, 50, 100],
   distillationUnitBonusRateByLevel: [0, 0, 0.25, 0.5],
   // Production Complexity Expansion: per-instance output bonus for the 4
   // production plants (lubricant/jetFuel/petrochemical/polymer). Same

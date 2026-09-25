@@ -720,7 +720,7 @@ already written but never shown anywhere.
   building's name/level, its full description, and one or more live effect
   lines (`getBuildingEffectLines`, new pure exported function in
   `gameCalculations.ts`, `building_info.test.ts` -- 19 assertions):
-  - **Crude Tank / Product Tank**: current storage contribution (`+25` at
+  - **Crude Tank / Gasoline Tank**: current storage contribution (`+25` at
     Lv1, `+50` at Lv2, `+100` at Lv3), with the next level's *increase*
     shown in green, e.g. `+25 (+25 at Lv2)`.
   - **Distillation Unit**: current production/feedstock speed bonus (`+0%`
@@ -918,7 +918,7 @@ branches merged into `devMobile` on 2026-06-15:
   `...OutputBonusRateByLevel` tables (Lv1=0%, Lv2=+25%, Lv3=+50%, same shape
   as `distillationUnitBonusRateByLevel`), applied as a multiplier alongside
   the specialist multiplier. Root-cause fix: `upgradeBuilding()`'s
-  `isUpgradeable` list only covered crudeTank/productTank/distillationUnit,
+  `isUpgradeable` list only covered crudeTank/gasolineTank/distillationUnit,
   so laboratory/maintenanceWorkshop/salesOffice (which already had
   `...ByLevel` tables) AND the 4 production plants were all permanently
   stuck at Lv1 in normal play -- their bonus tables were dead code. Now all
@@ -1068,8 +1068,8 @@ assignee each", though the SPECIFIC cell-to-employee pairing is arbitrary
 
 **Problem**: lubricants/jetFuel/petrochemicals/recycledMaterial/
 plasticPellets each have a FIXED `maxStorage` (200/200/200/150/200) that
-cannot be expanded -- unlike gasoline (Product Tank, Lv1-3 upgradeable,
-`productTankStorageByLevel`) and crude (Crude Tank, same pattern) and
+cannot be expanded -- unlike gasoline (Gasoline Tank, Lv1-3 upgradeable,
+`gasolineTankStorageByLevel`) and crude (Crude Tank, same pattern) and
 feedstock (scales with Distillation Unit count). Building multiple plants
 of the same type (Part A's whole premise -- "build 3 Petrochemical Plants")
 makes hitting these fixed caps much faster, at which point the plant(s)
@@ -1078,7 +1078,7 @@ makes hitting these fixed caps much faster, at which point the plant(s)
 
 **Chosen direction (per player, 2026-06-15): "Tank Farm" -- a dedicated
 storage building PER PRODUCT, not 1 shared warehouse for all secondary
-products.** This mirrors Product Tank/Crude Tank (each storage building
+products.** This mirrors Gasoline Tank/Crude Tank (each storage building
 expands ONE specific resource's cap) rather than introducing a new "expand
 everything" mechanic.
 
@@ -1091,7 +1091,7 @@ everything" mechanic.
   building types to place on an already-tight grid -- see Grid Expansion
   Tier 4 backlog item, this would make that even more pressing). **Open
   question, needs a decision before implementation**: 5 distinct buildings
-  (clearer, matches Crude/Product Tank precedent, but +5 grid slots) vs 1
+  (clearer, matches Crude/Gasoline Tank precedent, but +5 grid slots) vs 1
   generic tank with a product-choice UI (saves grid space, but is a new UI
   pattern -- "place then configure" -- not used anywhere else in this
   codebase).

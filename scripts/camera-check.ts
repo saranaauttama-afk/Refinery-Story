@@ -43,7 +43,7 @@ assert.deepEqual(worldPoint, { x: 100, y: 120 })
 // are also deliberately larger than one tile while keeping a one-cell
 // gameplay footprint.
 const tile = { x: 240, y: 360, width: 126, height: 63 }
-for (const building of ['distillationUnit', 'crudeTank', 'productTank'] as const) {
+for (const building of ['distillationUnit', 'crudeTank', 'gasolineTank'] as const) {
   const profile = getPlantSpriteProfile(building, 1)
   const beforeBuild = getPlantSpriteRect(tile.x, tile.y, tile.width, tile.height, tile.width, profile)
   const duringBuild = getPlantSpriteRect(tile.x, tile.y, tile.width, tile.height, tile.width, profile)

@@ -47,7 +47,7 @@ const STARTER_PLANT_PROFILES: Partial<Record<BuildingType, PlantSpriteProfile>> 
     groundOffsetX: -2,
     groundOffsetY: 9,
   },
-  productTank: {
+  gasolineTank: {
     scale: 1.2,
     anchorX: 0.5,
     anchorY: 0.88,

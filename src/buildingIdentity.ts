@@ -63,7 +63,7 @@ const STAFF_BADGE_BY_TYPE: Partial<Record<WorkerType, string>> = {
 export const BUILDING_CATEGORY_BY_TYPE: Record<BuildingType, BuildingCategory> = {
   crudeTank: 'storage',
   distillationUnit: 'production',
-  productTank: 'storage',
+  gasolineTank: 'storage',
   laboratory: 'research',
   maintenanceWorkshop: 'support',
   salesOffice: 'support',
@@ -101,7 +101,7 @@ export const BUILDING_CATEGORY_SURFACE: Record<BuildingCategory, string> = {
 export const BUILDING_TILE_ICONS: Record<BuildingType, TileIconComponent> = {
   crudeTank: Cylinder,
   distillationUnit: Factory,
-  productTank: Fuel,
+  gasolineTank: Fuel,
   laboratory: FlaskConical,
   maintenanceWorkshop: Wrench,
   salesOffice: BriefcaseBusiness,
@@ -189,7 +189,7 @@ export function getTileStatusBadge(
   switch (type) {
     case 'crudeTank':
       return game.crudeOil <= 0 ? { label: 'OIL', tone: 'blocked' } : null
-    case 'productTank':
+    case 'gasolineTank':
       return getStorageStatus('gasoline', game, derived)
     case 'distillationUnit':
       if (game.crudeOil <= 0) return { label: 'OIL', tone: 'blocked' }

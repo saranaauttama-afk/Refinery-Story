@@ -66,7 +66,7 @@ function getSafeGrid(value: unknown, fallback: GameState['grid']) {
       cell === null ||
       cell === 'crudeTank' ||
       cell === 'distillationUnit' ||
-      cell === 'productTank' ||
+      cell === 'gasolineTank' ||
       cell === 'laboratory' ||
       cell === 'maintenanceWorkshop' ||
       cell === 'salesOffice' ||

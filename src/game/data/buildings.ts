@@ -15,11 +15,11 @@ export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
     cost: 45,
     description: text.data.buildings.distillationUnit.description,
   },
-  productTank: {
-    name: text.data.buildings.productTank.name,
-    shortName: 'PT',
+  gasolineTank: {
+    name: text.data.buildings.gasolineTank.name,
+    shortName: 'GT',
     cost: 30,
-    description: text.data.buildings.productTank.description,
+    description: text.data.buildings.gasolineTank.description,
   },
   laboratory: {
     name: text.data.buildings.laboratory.name,

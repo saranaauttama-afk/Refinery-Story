@@ -7,7 +7,7 @@ import { colors } from './theme'
 export const BUILDING_COLORS: Record<BuildingType, string> = {
   crudeTank: colors.steelMid,
   distillationUnit: colors.steelDark,
-  productTank: colors.green,
+  gasolineTank: colors.green,
   laboratory: colors.teal,
   maintenanceWorkshop: colors.orange,
   salesOffice: colors.gold,

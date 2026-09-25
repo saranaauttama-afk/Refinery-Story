@@ -6,7 +6,7 @@ import { radii, spacing } from '../theme'
 
 // Buildings that are part of the core crude -> gasoline / feedstock ->
 // product chain -- these get the "actively producing" pulse glow when the
-// refinery has crude to process. Storage/support buildings (product tank,
+// refinery has crude to process. Storage/support buildings (gasoline tank,
 // laboratory, maintenance workshop, sales office) don't pulse.
 const PRODUCTION_BUILDING_TYPES = new Set<BuildingType>([
   'crudeTank',

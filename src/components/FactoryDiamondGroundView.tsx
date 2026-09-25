@@ -87,10 +87,10 @@ const PLANT_IMAGE_BY_BUILDING: Partial<Record<BuildingType, Record<number, Plant
     2: { source: STARTER_PLANT_ART_BY_LEVEL.crudeTank![2], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
     3: { source: STARTER_PLANT_ART_BY_LEVEL.crudeTank![3], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
-  productTank: {
-    1: { source: STARTER_PLANT_ART_BY_LEVEL.productTank![1], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    2: { source: STARTER_PLANT_ART_BY_LEVEL.productTank![2], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
-    3: { source: STARTER_PLANT_ART_BY_LEVEL.productTank![3], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+  gasolineTank: {
+    1: { source: STARTER_PLANT_ART_BY_LEVEL.gasolineTank![1], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    2: { source: STARTER_PLANT_ART_BY_LEVEL.gasolineTank![2], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
+    3: { source: STARTER_PLANT_ART_BY_LEVEL.gasolineTank![3], aspectRatio: SQUARE_PLANT_ASPECT_RATIO },
   },
   laboratory: {
     1: { source: require('../../assets/plants/laboratory_lv1.png'), aspectRatio: SQUARE_PLANT_ASPECT_RATIO },

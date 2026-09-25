@@ -32,7 +32,7 @@ function BuildingSilhouette({ type, size, accentColor, surfaceColor, Icon }: Bui
     <View style={styles.root} pointerEvents="none">
       <View style={[styles.platformShadow, { width: size * 0.62 }]} />
       <View style={[styles.platform, { width: size * 0.66, backgroundColor: surfaceColor, borderColor: accentColor }]} />
-      {type === 'crudeTank' || type === 'productTank' || type === 'lubricantTank' || type === 'jetFuelTank' || type === 'petrochemicalTank' || type === 'pelletSilo' ? (
+      {type === 'crudeTank' || type === 'gasolineTank' || type === 'lubricantTank' || type === 'jetFuelTank' || type === 'petrochemicalTank' || type === 'pelletSilo' ? (
         <View style={styles.storageWrap}>
           <View style={[styles.storageTankBack, { backgroundColor: surfaceColor, borderColor: accentColor }]} />
           <View style={[styles.storageTank, { backgroundColor: colors.white, borderColor: accentColor }]}>

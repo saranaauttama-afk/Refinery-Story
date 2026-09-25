@@ -18,10 +18,10 @@ export const STARTER_PLANT_ART_BY_LEVEL: Partial<
     2: require('../assets/plants/starter/distillation_unit_lv2.png'),
     3: require('../assets/plants/starter/distillation_unit_lv3.png'),
   },
-  productTank: {
-    1: require('../assets/plants/starter/product_tank_lv1.png'),
-    2: require('../assets/plants/starter/product_tank_lv2.png'),
-    3: require('../assets/plants/starter/product_tank_lv3.png'),
+  gasolineTank: {
+    1: require('../assets/plants/starter/gasoline_tank_lv1.png'),
+    2: require('../assets/plants/starter/gasoline_tank_lv2.png'),
+    3: require('../assets/plants/starter/gasoline_tank_lv3.png'),
   },
 }
 

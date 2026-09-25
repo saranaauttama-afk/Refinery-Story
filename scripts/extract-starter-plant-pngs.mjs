@@ -12,9 +12,9 @@ const assets = {
   crude_tank_lv1: 'crudeTankLv1',
   crude_tank_lv2: 'crudeTankLv2',
   crude_tank_lv3: 'crudeTankLv3',
-  product_tank_lv1: 'productTankLv1',
-  product_tank_lv2: 'productTankLv2',
-  product_tank_lv3: 'productTankLv3',
+  gasoline_tank_lv1: 'gasolineTankLv1',
+  gasoline_tank_lv2: 'gasolineTankLv2',
+  gasoline_tank_lv3: 'gasolineTankLv3',
 }
 
 mkdirSync(outputDir, { recursive: true })

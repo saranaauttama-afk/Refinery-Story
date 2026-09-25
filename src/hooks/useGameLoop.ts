@@ -907,7 +907,7 @@ export function useGameLoop() {
         const cell = current.grid[cellIndex]
         if (!cell) return current
         // Every building with a ...ByLevel table in BUILDING_UPGRADE_BALANCE
-        // is upgradeable. crudeTank/productTank/distillationUnit were the
+        // is upgradeable. crudeTank/gasolineTank/distillationUnit were the
         // original 3; laboratory/maintenanceWorkshop/salesOffice had tables
         // but were missing from this list (their bonuses were stuck at Lv1
         // in normal play); lubricantPlant/jetFuelPlant/petrochemicalPlant/
@@ -916,7 +916,7 @@ export function useGameLoop() {
         // at Lv1 see no change until the player upgrades).
         const isUpgradeable =
           cell === 'crudeTank' ||
-          cell === 'productTank' ||
+          cell === 'gasolineTank' ||
           cell === 'distillationUnit' ||
           cell === 'laboratory' ||
           cell === 'maintenanceWorkshop' ||

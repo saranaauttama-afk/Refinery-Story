@@ -153,8 +153,8 @@ export const text = {
     ),
     gasoline: bilingual('Gasoline', 'น้ำมันเบนซิน'),
     gasolineDescription: bilingual(
-      'Product Tanks raise finished fuel storage.',
-      'ถังเก็บผลิตภัณฑ์ช่วยเพิ่มความจุเชื้อเพลิงที่ผลิตแล้ว',
+      'Gasoline Tanks raise finished fuel storage.',
+      'ถังเก็บเบนซินช่วยเพิ่มความจุเชื้อเพลิงที่ผลิตแล้ว',
     ),
     lubricants: bilingual('Lubricants', 'สารหล่อลื่น'),
     lubricantsDescription: bilingual(
@@ -568,13 +568,13 @@ export const text = {
     status: {
       waiting: bilingual('Waiting for crude', 'รอน้ำมันดิบ'),
       processing: bilingual('Processing', 'กำลังกลั่น'),
-      tankFull: bilingual('Product tank full', 'ถังผลิตภัณฑ์เต็ม'),
+      tankFull: bilingual('Gasoline Tank full', 'ถังเก็บเบนซินเต็ม'),
       idle: bilingual('Idle', 'หยุดทำงาน'),
     },
     progressLabel: bilingual('Auto-production', 'การผลิตอัตโนมัติ'),
     helperTankFull: bilingual(
-      'Sell gasoline or build Product Tanks to resume production.',
-      'ขายเบนซินหรือสร้าง Product Tank เพื่อให้การผลิตกลับมาทำงานต่อ',
+      'Sell gasoline or build Gasoline Tanks to resume production.',
+      'ขายเบนซินหรือสร้างถังเก็บเบนซินเพื่อให้การผลิตกลับมาทำงานต่อ',
     ),
     helperProducing: (seconds: string) =>
       bilingual(
@@ -689,8 +689,8 @@ export const text = {
     ),
     distillationProductTitle: (count: number) =>
       bilingual(
-        `Distillation Unit + Product Tank x${count}`,
-        `หน่วยกลั่น + ถังเก็บผลิตภัณฑ์ x${count}`,
+        `Distillation Unit + Gasoline Tank x${count}`,
+        `หน่วยกลั่น + ถังเก็บเบนซิน x${count}`,
       ),
     distillationProductDescription: bilingual(
       '+10% gasoline sell price per orthogonal pair.',
@@ -698,8 +698,8 @@ export const text = {
     ),
     crudeProductTitle: (count: number) =>
       bilingual(
-        `Crude Tank + Product Tank x${count}`,
-        `ถังน้ำมันดิบ + ถังเก็บผลิตภัณฑ์ x${count}`,
+        `Crude Tank + Gasoline Tank x${count}`,
+        `ถังน้ำมันดิบ + ถังเก็บเบนซิน x${count}`,
       ),
     crudeProductDescription: bilingual(
       '+10% max crude and max gasoline per orthogonal pair.',
@@ -1374,8 +1374,8 @@ export const text = {
           '-120ms ต่อรอบ สร้างหลายหน่วยเพื่อเข้าใกล้ขีดจำกัดการผลิตขั้นต่ำ',
         ),
       },
-      productTank: {
-        name: bilingual('Product Tank', 'ถังเก็บผลิตภัณฑ์'),
+      gasolineTank: {
+        name: bilingual('Gasoline Tank', 'ถังเก็บเบนซิน'),
         role: bilingual('Distribution Specialist', 'ผู้เชี่ยวชาญด้านการจัดจำหน่าย'),
         description: bilingual(
           '+25 gasoline capacity. Larger inventory lets you fulfil bigger contracts.',
@@ -2209,8 +2209,8 @@ export const text = {
     step3: bilingual('Complete your first contract', 'ทำสัญญาแรกให้สำเร็จ'),
     dismissButton: bilingual('Dismiss', 'ปิด'),
     hint: bilingual(
-      'Tip: Build a Product Tank to store gasoline · Build a Crude Tank for more crude capacity',
-      'เคล็ดลับ: สร้าง Product Tank เพื่อเก็บเบนซิน · สร้าง Crude Tank เพื่อเพิ่มความจุน้ำมันดิบ',
+      'Tip: Build a Gasoline Tank to store gasoline · Build a Crude Tank for more crude capacity',
+      'เคล็ดลับ: สร้างถังเก็บเบนซินเพื่อเก็บเบนซิน · สร้างถังน้ำมันดิบเพื่อเพิ่มความจุน้ำมันดิบ',
     ),
     allDone: bilingual("You know the basics — good luck!", 'คุณรู้พื้นฐานแล้ว — โชคดี!'),
   },

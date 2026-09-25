@@ -156,7 +156,7 @@ Implemented building types: 17 total.
 - Core/storage/support:
   - `crudeTank`
   - `distillationUnit`
-  - `productTank`
+  - `gasolineTank`
   - `laboratory`
   - `maintenanceWorkshop`
   - `salesOffice`
@@ -185,7 +185,7 @@ Upgradeable buildings: 10 total.
 
 - `crudeTank`
 - `distillationUnit`
-- `productTank`
+- `gasolineTank`
 - `laboratory`
 - `maintenanceWorkshop`
 - `salesOffice`

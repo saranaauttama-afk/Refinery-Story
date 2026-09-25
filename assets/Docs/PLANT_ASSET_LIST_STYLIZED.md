@@ -26,7 +26,7 @@ Use this shared style for every image:
 ### Lv3
 `stylized isometric industrial building game asset, distillation unit, 3/4 isometric view, medium detail, clean readable silhouette, a few bold industrial elements, readable at small size, single building only, transparent background, centered object, fits inside a single square tile, same footprint across all levels, no multi-tile layout, no wide horizontal expansion, upgrade shown through slightly taller structure, one or two added modules, and clearer industrial detail, no text, no people, no vehicles, no ground tile, clearly level 3, advanced version of the same distillation unit, one very tall main column plus one substantial secondary tower nearly half as tall, a visible overhead pipe bridge connecting them, a larger base process block, denser lower pipe network, silhouette clearly different from level 2`
 
-## 3. Product Tank
+## 3. Gasoline Tank
 
 ### Lv1
 `stylized isometric industrial building game asset, product tank, 3/4 isometric view, medium detail, clean readable silhouette, a few bold industrial elements, readable at small size, single building only, transparent background, centered object, fits inside a single square tile, same footprint across all levels, no multi-tile layout, no wide horizontal expansion, upgrade shown through slightly taller structure, one or two added modules, and clearer industrial detail, no text, no people, no vehicles, no ground tile, clearly level 1, one compact finished-product tank only, small outlet pipe, simple clean storage silhouette, no catwalk, no side module`

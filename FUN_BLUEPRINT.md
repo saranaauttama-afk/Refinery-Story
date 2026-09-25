@@ -153,7 +153,7 @@ Do not add it to `CONTRACT_BALANCE` as another permanent catalogue row. It is tu
 
 After the starter order, show one deterministic operational choice:
 
-- **Storage Plan** — one free Product Tank placement.
+- **Storage Plan** — one free Gasoline Tank placement.
 - **Throughput Plan** — one free Distillation Unit Lv1→Lv2 upgrade, or one discounted extra Distillation Unit if a free upgrade is unsafe.
 
 The choice must visibly change the factory and teach a trade-off. It must not be part of the random event pool.

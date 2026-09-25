@@ -125,7 +125,7 @@ const BUILDING_KEYS = Object.keys(BUILDINGS) as BuildingType[]
 const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSourcePropType>>> = {
   crudeTank:           STARTER_PLANT_ART_BY_LEVEL.crudeTank,
   distillationUnit:    STARTER_PLANT_ART_BY_LEVEL.distillationUnit,
-  productTank:         STARTER_PLANT_ART_BY_LEVEL.productTank,
+  gasolineTank:        STARTER_PLANT_ART_BY_LEVEL.gasolineTank,
   laboratory:          { 1: require('../../../assets/plants/laboratory_lv1.png'), 2: require('../../../assets/plants/laboratory_lv2.png'), 3: require('../../../assets/plants/laboratory_lv3.png') },
   maintenanceWorkshop: { 1: require('../../../assets/plants/maintenance_workshop_lv1.png'), 2: require('../../../assets/plants/maintenance_workshop_lv2.png'), 3: require('../../../assets/plants/maintenance_workshop_lv3.png') },
   salesOffice:         { 1: require('../../../assets/plants/sales_office_lv1.png'), 2: require('../../../assets/plants/sales_office_lv2.png'), 3: require('../../../assets/plants/sales_office_lv3.png') },
@@ -146,7 +146,7 @@ const PLANT_THUMB_BY_LEVEL: Partial<Record<BuildingType, Record<number, ImageSou
 const PLANT_THUMB: Partial<Record<BuildingType, ReturnType<typeof require>>> = {
   crudeTank:           STARTER_PLANT_ART_BY_LEVEL.crudeTank![1],
   distillationUnit:    STARTER_PLANT_ART_BY_LEVEL.distillationUnit![1],
-  productTank:         STARTER_PLANT_ART_BY_LEVEL.productTank![1],
+  gasolineTank:        STARTER_PLANT_ART_BY_LEVEL.gasolineTank![1],
   laboratory:          require('../../../assets/plants/laboratory_lv1.png'),
   maintenanceWorkshop: require('../../../assets/plants/maintenance_workshop_lv1.png'),
   salesOffice:         require('../../../assets/plants/sales_office_lv1.png'),
@@ -189,7 +189,7 @@ const BUILD_REQUIRES: Partial<Record<BuildingType, string>> = {
 const UPGRADEABLE: BuildingType[] = [
   'crudeTank',
   'distillationUnit',
-  'productTank',
+  'gasolineTank',
   'laboratory',
   'maintenanceWorkshop',
   'salesOffice',
