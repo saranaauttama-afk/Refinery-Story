@@ -35,8 +35,10 @@
 - V3-16 (adjacency, optional inbox, readable names/targets): **complete in code**.
 - R3 legal full run: fixed a C1 soft-lock (decision ก); fresh-state bot now clears
   in 38.2 simulated minutes (`check:v3-legal-run`) — too fast, feeds V3-18.
-- **Current task: R3 human gate** — play the newest APK (V3-16 + C1 fix). The
-  legal full-run evidence item is done (`check:v3-legal-run`).
+- R3 gate: **passed** (player, APK #78).
+- V3-17 (production cutover, real-time loop, single writer, reset): **complete in code**.
+- **Current task: V3-18** — legal full-loop simulation and economy calibration
+  (baseline: the legal bot clears in 38.2 simulated minutes — far too fast).
 
 ## Decisions recorded
 

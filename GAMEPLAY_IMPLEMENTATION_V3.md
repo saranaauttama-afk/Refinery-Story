@@ -402,6 +402,17 @@ are a player model, not rules. R3 still needs the player's device run.
 
 ### V3-17 · Production persistence cutover and reset
 
+Status: **COMPLETE IN CODE** — see commit `feat(gameplay): implement V3-17…`.
+Check: `check:v3-persistence` plus all prior checks. Evidence notes: the app ships
+only `index` (V3 game) and `settings`; a static import-graph scan proves the old
+provider, loop and save writer are unreachable and `src/game/v3/storage.ts` is the
+only game save writer. The game now runs in real time (200 ms ticks × speed, no
+offline catch-up) instead of the preview's manual "run cycle" button. Reset from
+Settings is routed through the game screen so a stale in-memory game cannot
+overwrite it. The legacy engine source remains in the repo only for its legacy
+checks; nothing in the app imports it. **R3 gate: PASSED** — player decision after
+APK #78 ("ผ่าน").
+
 Dependencies:16. Promote the fresh V3 save to the only production writer. Remove
 the temporary old-game entry and ensure no old tick/trade/reward writer runs after
 cutover. Implement explicit full V3 reset; do not import or convert old saves.
