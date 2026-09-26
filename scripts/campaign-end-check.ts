@@ -105,7 +105,7 @@ assert.ok(!cleared.world.unlockedResearchIds.length, 'no all-research gate')
 
 // ---- Sticky clear, single payout, report restorable ----
 const cashAtClear = cleared.world.moneyCents
-let after = act(cleared, { type: 'demolish', cellIndex: 5, expectedBuilding: 'gasolineTank' })
+let after = act(cleared, { type: 'demolish', buildingId: 5, expectedBuilding: 'gasolineTank' })
 after = { ...after, world: { ...after.world, moneyCents: 0 } }
 after = evaluateV3CampaignProgress(after)
 assert.equal(after.campaignProgress.chapter, 5, 'clear is sticky')

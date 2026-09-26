@@ -55,12 +55,12 @@ state = {
   productBlueprints: { ...state.productBlueprints, [precision.id]: precision },
   plantPrograms: {
     ...state.plantPrograms,
-    0: { cellIndex: 0, blueprintId: precision.id, installedModule: 'none', setupRemainingTicks: 0, paused: false },
+    0: { buildingId: 0, blueprintId: precision.id, installedModule: 'none', setupRemainingTicks: 0, paused: false },
   },
 }
 preview = evaluateV3GasolineProduction(state, 25)
-close(preview.find((line) => line.cellIndex === 4)!.potentialOutputPerMinute, 60)
-close(preview.find((line) => line.cellIndex === 0)!.potentialOutputPerMinute, 48)
+close(preview.find((line) => line.buildingId === 4)!.potentialOutputPerMinute, 60)
+close(preview.find((line) => line.buildingId === 0)!.potentialOutputPerMinute, 48)
 result = runV3ProductionTick(state, 25)
 close(result.state.variantInventory[V3_DEFAULT_BLUEPRINT_ID.gasoline].quantity, 5)
 close(result.state.variantInventory[precision.id].quantity, 4)
@@ -110,13 +110,13 @@ assert.equal(result.state.plantPrograms[4].setupRemainingTicks, 15)
 assert.equal(getV3ProductQuantity(result.state, 'gasoline'), 0)
 
 let changed = reduceV3Action(state, {
-  type: 'set_program', sequence: state.nextActionSequence, cellIndex: 4, blueprintId: precision.id,
+  type: 'set_program', sequence: state.nextActionSequence, buildingId: 4, blueprintId: precision.id,
 })
 assert.equal(changed.events[0].messageId, 'v3.action.ok')
 assert.equal(changed.state.plantPrograms[4].blueprintId, precision.id)
 assert.equal(changed.state.plantPrograms[4].setupRemainingTicks, 25)
 changed = reduceV3Action(changed.state, {
-  type: 'set_pause', sequence: changed.state.nextActionSequence, cellIndex: 4, paused: true,
+  type: 'set_pause', sequence: changed.state.nextActionSequence, buildingId: 4, paused: true,
 })
 assert.equal(changed.state.plantPrograms[4].paused, true)
 
@@ -125,7 +125,7 @@ const buildState = {
   world: { ...createInitialV3GameState().world, moneyCents: 300_000 },
 }
 const built = reduceV3Action(buildState, {
-  type: 'build', sequence: buildState.nextActionSequence, cellIndex: 0, building: 'distillationUnit',
+  type: 'build', sequence: buildState.nextActionSequence, buildingId: 0, building: 'distillationUnit',
 })
 assert.equal(built.state.plantPrograms[0].blueprintId, V3_DEFAULT_BLUEPRINT_ID.gasoline)
 

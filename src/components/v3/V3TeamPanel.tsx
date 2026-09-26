@@ -50,7 +50,7 @@ function dutyText(duty: V3EmployeeDuty | undefined, t: Translate): string {
   if (!duty || duty.kind === 'reserve') return t({ en: 'Reserve (25% wage, no effect)', th: 'สำรอง (ค่าจ้าง 25% ไม่มีผล)' })
   if (duty.kind === 'support') return t({ en: 'Support', th: 'Support' })
   if (duty.kind === 'development') return t({ en: 'Leading R&D (line/support benefit paused)', th: 'นำ R&D (หยุดผลเดิมชั่วคราว)' })
-  return t({ en: `Line #${duty.cellIndex + 1}`, th: `ไลน์ #${duty.cellIndex + 1}` })
+  return t({ en: `Line #${duty.buildingId + 1}`, th: `ไลน์ #${duty.buildingId + 1}` })
 }
 
 function channelText(channel: V3CappedChannel, percent = true): string {
@@ -100,7 +100,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
           const threshold = V3_STAFF_LEVELS.xpToNextLevel[employee.level]
           const training = getV3TrainingCost(employee)
           const contribution = duty?.kind === 'line'
-            ? t({ en: `local crew +${(getV3LocalCrewRate(state, duty.cellIndex) * 100).toFixed(0)}%`, th: `ทีมไลน์ +${(getV3LocalCrewRate(state, duty.cellIndex) * 100).toFixed(0)}%` })
+            ? t({ en: `local crew +${(getV3LocalCrewRate(state, duty.buildingId) * 100).toFixed(0)}%`, th: `ทีมไลน์ +${(getV3LocalCrewRate(state, duty.buildingId) * 100).toFixed(0)}%` })
             : modifiers.supportContributions[employee.id]
               ? `${modifiers.supportContributions[employee.id].channel} +${modifiers.supportContributions[employee.id].value < 1 ? `${(modifiers.supportContributions[employee.id].value * 100).toFixed(1)}%` : modifiers.supportContributions[employee.id].value.toFixed(0)}`
               : t({ en: 'no active effect', th: 'ยังไม่มีผล' })
@@ -118,7 +118,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
               )}
               <View style={styles.chips}>
                 {lineCells.filter(({ cell }) => V3_ROLES[employee.type].lineBuildings.includes(cell as never)).map(({ cell, index }) => (
-                  <Gate key={`line-${index}`} label={t({ en: `→ #${index + 1} ${BUILDINGS[cell!].name.en}`, th: `→ #${index + 1} ${BUILDINGS[cell!].name.th}` })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'line', cellIndex: index } }} />
+                  <Gate key={`line-${index}`} label={t({ en: `→ #${index + 1} ${BUILDINGS[cell!].name.en}`, th: `→ #${index + 1} ${BUILDINGS[cell!].name.th}` })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'line', buildingId: index } }} />
                 ))}
                 {V3_ROLES[employee.type].support && (
                   <Gate label={t({ en: '→ Support', th: '→ Support' })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'support' } }} />

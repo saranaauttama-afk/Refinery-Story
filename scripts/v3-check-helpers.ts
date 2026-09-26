@@ -48,18 +48,18 @@ export function legalChapterTwo(): V3GameState {
   state = cycles(state, 4)
   state = act(state, { type: 'accept_job', templateId: 'tutorial:gasoline' })
   state = act(state, { type: 'dispatch_job', quantity: 20 })
-  state = act(state, { type: 'build', cellIndex: 0, building: 'laboratory' })
+  state = act(state, { type: 'build', buildingId: 0, building: 'laboratory' })
   state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 60 })
   state = cycles(state, 2)
   state = act(state, {
     type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none',
-    knowledgeRank: 0, leadEmployeeId: null, labCellIndex: 0,
+    knowledgeRank: 0, leadEmployeeId: null, labBuildingId: 0,
   })
   state = cycles(state, 4)
   const developed = Object.values(state.productBlueprints).find((blueprint) => blueprint.provenance === 'developed')
   assert.ok(developed)
   state = sellAllFree(state, 'gasoline')
-  state = act(state, { type: 'set_program', cellIndex: 4, blueprintId: developed!.id })
+  state = act(state, { type: 'set_program', buildingId: 4, blueprintId: developed!.id })
   state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 60 })
   state = cycles(state, 9)
   state = act(state, { type: 'accept_job', templateId: 'local:trial' })

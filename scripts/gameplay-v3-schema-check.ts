@@ -29,7 +29,7 @@ assert.deepEqual(first.world.grid.slice(3, 6), ['crudeTank', 'distillationUnit',
 assert.equal(first.world.moneyCents, 60_000)
 assert.equal(first.world.crudeOil, 18)
 assert.equal(first.world.employees.length, 1)
-assert.deepEqual(first.employeeDuties[first.world.employees[0].id], { kind: 'line', cellIndex: 4 })
+assert.deepEqual(first.employeeDuties[first.world.employees[0].id], { kind: 'line', buildingId: 4 })
 for (const blueprintId of Object.values(V3_DEFAULT_BLUEPRINT_ID)) {
   const blueprint = first.productBlueprints[blueprintId]
   assert.ok(blueprint)
@@ -74,11 +74,11 @@ assert.equal(corruptCurrentStorage.writes.length, 0)
 const build = reduceV3Action(first, {
   type: 'build',
   sequence: first.nextActionSequence,
-  cellIndex: 0,
+  buildingId: 0,
   building: 'gasolineTank',
 })
 assert.equal(build.actionId, 'action:build:00000001')
-assert.equal(build.state.world.grid[0], 'gasolineTank')
+assert.equal(build.getV3BuildingType(state, 0), 'gasolineTank')
 assert.equal(build.state.world.moneyCents, 45_000)
 assert.equal(build.state.operatingLedger.capexCents, 15_000)
 assert.equal(build.state.nextActionSequence, 2)
@@ -86,7 +86,7 @@ assert.equal(build.state.nextActionSequence, 2)
 const duplicate = reduceV3Action(build.state, {
   type: 'build',
   sequence: 1,
-  cellIndex: 1,
+  buildingId: 1,
   building: 'gasolineTank',
 })
 assert.equal(duplicate.changed, false)
@@ -101,10 +101,10 @@ const funded = {
 const upgrade = reduceV3Action(funded, {
   type: 'upgrade',
   sequence: funded.nextActionSequence,
-  cellIndex: 4,
+  buildingId: 4,
 })
 assert.equal(upgrade.actionId, 'action:upgrade:00000002')
-assert.equal(upgrade.state.world.gridLevels[4], 2)
+assert.equal(upgrade.getV3BuildingLevel(state, 4), 2)
 assert.equal(upgrade.state.world.moneyCents, 800_000)
 assert.equal(upgrade.state.operatingLedger.capexCents, 215_000)
 

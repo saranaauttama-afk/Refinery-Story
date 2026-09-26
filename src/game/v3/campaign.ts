@@ -1,3 +1,4 @@
+import { hasV3Building, listV3Buildings, getV3UnlockedArea } from './yard'
 import type { BuildingType } from '../types'
 import { getV3RollingOperatingProfit } from './productInventory'
 import type { V3CampaignReport, V3GameState, V3ProductFamily } from './types'
@@ -50,8 +51,7 @@ export function evaluateV3CampaignProgress(state: V3GameState): V3GameState {
   // C3: two distinct clients reached Regular + at least one processing/tank/power upgrade.
   const completed = new Set(state.jobReceipts.receipts.filter((receipt) => receipt.status === 'completed').map((receipt) => receipt.templateId))
   const regularClients = new Set([...completed].filter((id) => id.endsWith(':regular')).map((id) => id.split(':')[0]))
-  const upgraded = state.world.grid.some((cell, index) =>
-    cell !== null && UPGRADE_KINDS.has(cell) && (state.world.gridLevels[index] ?? 1) >= 2)
+  const upgraded = listV3Buildings(state).some((building) => UPGRADE_KINDS.has(building.type) && building.level >= 2)
   if (chapter === 2 && regularClients.size >= 2 && upgraded) {
     chapter = 3
     claimedFlags.add('chapter:3')
@@ -136,7 +136,7 @@ function buildV3CampaignReport(state: V3GameState, clear: V3ClearConditions): V3
     .filter(([id]) => state.productBlueprints[id]?.provenance === 'developed')
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
   const buildingCounts: Record<string, number> = {}
-  for (const cell of state.world.grid) if (cell) buildingCounts[cell] = (buildingCounts[cell] ?? 0) + 1
+  for (const building of listV3Buildings(state)) buildingCounts[building.type] = (buildingCounts[building.type] ?? 0) + 1
   return {
     clearedAtTick: state.world.tickCount,
     partners: clear.partners,
@@ -153,7 +153,7 @@ function buildV3CampaignReport(state: V3GameState, clear: V3ClearConditions): V3
         recipes: record?.blueprintIds.length ?? 0, milestones: record?.milestoneIds.length ?? 0,
       }
     }).sort((a, b) => b.milestones - a.milestones || b.recipes - a.recipes || a.employeeId.localeCompare(b.employeeId)),
-    lotsUsed: state.world.grid.filter((cell) => cell !== null).length,
+    unlockedArea: getV3UnlockedArea(state),
     buildingCounts,
     rollingProfitCents: clear.rollingProfitCents,
     lifetimeReceiptsCents: state.operatingLedger.lifetimeReceiptsCents,
@@ -174,7 +174,7 @@ export function getV3GuidanceStep(state: V3GameState): V3GuidanceStep {
     }
     return 'ship_tutorial'
   }
-  if (!state.world.grid.includes('laboratory')) return 'build_laboratory'
+  if (!hasV3Building(state, 'laboratory')) return 'build_laboratory'
   if (state.developmentProject) return 'run_development'
   const developedIds = Object.values(state.productBlueprints)
     .filter((blueprint) => blueprint.family === 'gasoline' && blueprint.provenance === 'developed')

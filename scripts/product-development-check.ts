@@ -29,7 +29,7 @@ function start(state: V3GameState, profile: V3ProcessProfile, leadEmployeeId: st
     module: 'none',
     knowledgeRank: 0,
     leadEmployeeId,
-    labCellIndex: 0,
+    labBuildingId: 0,
   })
 }
 
@@ -73,11 +73,11 @@ assert.equal(state.world.employees[0].xp, 0)
 state = advanceV3Development(state, 100)
 const precision = Object.values(state.productBlueprints).find((blueprint) => blueprint.profile === 'precision')!
 assert.equal(precision.quality, 55)
-assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', cellIndex: 4 })
+assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: 4 })
 assert.equal(state.world.employees[0].xp, 20)
 
 result = reduceV3Action(state, {
-  type: 'set_program', sequence: state.nextActionSequence, cellIndex: 4, blueprintId: precision.id,
+  type: 'set_program', sequence: state.nextActionSequence, buildingId: 4, blueprintId: precision.id,
 })
 assert.equal(result.state.plantPrograms[4].blueprintId, precision.id)
 assert.equal(result.state.plantPrograms[4].setupRemainingTicks, 25)
@@ -95,7 +95,7 @@ const afterStartGas = getV3ProductQuantity(result.state, 'gasoline')
 const afterStartMoney = result.state.world.moneyCents
 result = reduceV3Action(result.state, { type: 'cancel_development', sequence: result.state.nextActionSequence })
 assert.equal(result.state.developmentProject, null)
-assert.deepEqual(result.state.employeeDuties[niranId], { kind: 'line', cellIndex: 4 })
+assert.deepEqual(result.state.employeeDuties[niranId], { kind: 'line', buildingId: 4 })
 assert.equal(getV3ProductQuantity(result.state, 'gasoline'), afterStartGas)
 assert.equal(result.state.world.moneyCents, afterStartMoney)
 assert.equal(result.state.world.employees[0].xp, 0)

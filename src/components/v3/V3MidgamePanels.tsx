@@ -98,10 +98,10 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
   const power = plan.power
   const emptyCell = state.world.grid.findIndex((cell) => cell === null)
   const chapter = state.campaignProgress.chapter
-  const labCellIndex = state.world.grid.findIndex((cell) => cell === 'laboratory')
+  const labBuildingId = state.world.grid.findIndex((cell) => cell === 'laboratory')
   const expansion = getV3NextGridExpansion(state)
   const gridSize = Math.round(Math.sqrt(state.world.grid.length))
-  const rank = labCellIndex >= 0 ? getV3AvailableKnowledgeRank(state, labCellIndex) : 0
+  const rank = labBuildingId >= 0 ? getV3AvailableKnowledgeRank(state, labBuildingId) : 0
   const buildable = [...V3_SUPPORTED_BUILDINGS].filter((building) => V3_BUILDINGS[building].buildChapter <= chapter + 1)
 
   return (
@@ -185,16 +185,16 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Production lines', th: 'ไลน์การผลิต' })}</Text>
         {plan.lines.map((line) => {
-          const program = state.plantPrograms[line.cellIndex]
+          const program = state.plantPrograms[line.buildingId]
           const blueprint = state.productBlueprints[program.blueprintId]
-          const level = state.world.gridLevels[line.cellIndex] ?? 1
+          const level = getV3BuildingLevel(state, line.buildingId)
           const recipes = Object.values(state.productBlueprints)
             .filter((entry) => entry.family === line.family && !entry.archived)
             .sort((a, b) => a.quality - b.quality || a.id.localeCompare(b.id))
           return (
-            <View key={line.cellIndex} style={styles.line}>
+            <View key={line.buildingId} style={styles.line}>
               <Text style={styles.lineTitle}>
-                #{line.cellIndex + 1} {t(BUILDINGS[line.building].name)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality} · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
+                #{line.buildingId + 1} {t(BUILDINGS[line.building].name)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality} · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
               </Text>
               <Text style={styles.row}>{t(STATUS_TEXT[line.status])} · {t(LIMIT_TEXT[line.limitedBy])}</Text>
               <Text style={styles.row}>
@@ -204,24 +204,24 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
               </Text>
               <Gate
                 label={program.paused ? t({ en: 'Resume line', th: 'เดินไลน์ต่อ' }) : t({ en: 'Pause line', th: 'พักไลน์' })}
-                action={{ type: 'set_pause', cellIndex: line.cellIndex, paused: !program.paused }}
+                action={{ type: 'set_pause', buildingId: line.buildingId, paused: !program.paused }}
               />
               <Gate
                 label={t({
                   en: `Upgrade to Lv${level + 1}${V3_BUILDINGS[line.building].upgradeCostDollars?.[level - 1] ? ` · $${V3_BUILDINGS[line.building].upgradeCostDollars![level - 1]}` : ''}`,
                   th: `อัปเกรดเป็น Lv${level + 1}${V3_BUILDINGS[line.building].upgradeCostDollars?.[level - 1] ? ` · $${V3_BUILDINGS[line.building].upgradeCostDollars![level - 1]}` : ''}`,
                 })}
-                action={{ type: 'upgrade', cellIndex: line.cellIndex }}
+                action={{ type: 'upgrade', buildingId: line.buildingId }}
               />
               {line.building !== 'wasteTreatmentPlant' && <View style={styles.chips}>
                 {MODULES.map((module) => {
-                  const quote = getV3ModuleQuote(state, line.cellIndex, module)
+                  const quote = getV3ModuleQuote(state, line.buildingId, module)
                   if (quote.blocker === 'no_change') return <Text key={module} style={styles.chipActive}>✓ {module}</Text>
                   return (
                     <View key={module} style={styles.chipWrap}>
                       <Gate
                         label={`${module}${quote.costCents ? ` $${quote.costCents / 100}` : ''}`}
-                        action={{ type: 'set_module', cellIndex: line.cellIndex, module }}
+                        action={{ type: 'set_module', buildingId: line.buildingId, module }}
                       />
                     </View>
                   )
@@ -231,7 +231,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
                 <Gate
                   key={recipe.id}
                   label={t({ en: `Use ${recipe.name} Q${recipe.quality}`, th: `ใช้ ${recipe.name} Q${recipe.quality}` })}
-                  action={{ type: 'set_program', cellIndex: line.cellIndex, blueprintId: recipe.id }}
+                  action={{ type: 'set_program', buildingId: line.buildingId, blueprintId: recipe.id }}
                 />
               ))}
             </View>
@@ -252,17 +252,17 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           <Gate
             key={building}
             label={`${t(BUILDINGS[building].name)} · $${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}`}
-            action={{ type: 'build', cellIndex: emptyCell < 0 ? state.world.grid.length : emptyCell, building }}
+            action={{ type: 'build', buildingId: emptyCell < 0 ? state.world.grid.length : emptyCell, building }}
           />
         ))}
-        {state.world.grid.map((building, cellIndex) => building && !isV3ProcessBuilding(building) && V3_BUILDINGS[building].upgradeCostDollars ? (
+        {state.world.grid.map((building, buildingId) => building && !isV3ProcessBuilding(building) && V3_BUILDINGS[building].upgradeCostDollars ? (
           <Gate
-            key={`upgrade-${cellIndex}`}
+            key={`upgrade-${buildingId}`}
             label={t({
-              en: `Upgrade #${cellIndex + 1} ${BUILDINGS[building].name.en} Lv${state.world.gridLevels[cellIndex]}→${(state.world.gridLevels[cellIndex] ?? 1) + 1}`,
-              th: `อัปเกรด #${cellIndex + 1} ${BUILDINGS[building].name.th} Lv${state.world.gridLevels[cellIndex]}→${(state.world.gridLevels[cellIndex] ?? 1) + 1}`,
+              en: `Upgrade #${buildingId + 1} ${BUILDINGS[building].name.en} Lv${getV3BuildingLevel(state, buildingId)}→${(getV3BuildingLevel(state, buildingId)) + 1}`,
+              th: `อัปเกรด #${buildingId + 1} ${BUILDINGS[building].name.th} Lv${getV3BuildingLevel(state, buildingId)}→${(getV3BuildingLevel(state, buildingId)) + 1}`,
             })}
-            action={{ type: 'upgrade', cellIndex }}
+            action={{ type: 'upgrade', buildingId }}
           />
         ) : null)}
       </View>
@@ -310,7 +310,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
             })}
             action={{
               type: 'start_development', family: devFamily, profile, module: devModule,
-              knowledgeRank: rank, leadEmployeeId: null, labCellIndex,
+              knowledgeRank: rank, leadEmployeeId: null, labBuildingId,
             }}
           />
         ))}

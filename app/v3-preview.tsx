@@ -10,7 +10,7 @@ import { V3_BUILDINGS } from '../src/game/v3/data'
 import { V3_INITIAL_PAUSE_STATE, acquireV3Pause, getV3EffectiveSpeed, releaseV3Pause, setV3Backgrounded } from '../src/game/v3/pause'
 import { getV3CrudeCapacity, getV3ProductCapacity, getV3ProductQuantity, getV3StockAllocations } from '../src/game/v3/productInventory'
 import { evaluateV3GasolineProduction, runV3ProductionTick } from '../src/game/v3/production'
-import { getV3RecoveryOffer, isV3LoanerCell } from '../src/game/v3/recovery'
+import { getV3RecoveryOffer, isV3LoanerBuilding } from '../src/game/v3/recovery'
 import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID } from '../src/game/v3/state'
 import {
   clearV3GameState,
@@ -179,11 +179,11 @@ export default function V3PreviewScreen() {
     await saveV3GameState(result.state)
   }
 
-  const confirmDemolish = (cellIndex: number) => {
+  const confirmDemolish = (buildingId: number) => {
     if (!state) return
-    const building = state.world.grid[cellIndex]
+    const building = getV3BuildingType(state, buildingId)
     if (!building) return
-    const loaner = isV3LoanerCell(state, cellIndex)
+    const loaner = isV3LoanerBuilding(state, buildingId)
     const refundCents = loaner ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 50)
     setPauseState((current) => acquireV3Pause(current, 'demolish-confirm'))
     const release = () => setPauseState((current) => releaseV3Pause(current, 'demolish-confirm'))
@@ -197,7 +197,7 @@ export default function V3PreviewScreen() {
         { text: t({ en: 'Cancel', th: 'ยกเลิก' }), style: 'cancel', onPress: release },
         {
           text: t({ en: 'Remove', th: 'รื้อ' }), style: 'destructive',
-          onPress: () => { release(); void apply({ type: 'demolish', sequence: state.nextActionSequence, cellIndex, expectedBuilding: building }) },
+          onPress: () => { release(); void apply({ type: 'demolish', sequence: state.nextActionSequence, buildingId, expectedBuilding: building }) },
         },
       ],
       { cancelable: true, onDismiss: release },
@@ -231,10 +231,10 @@ export default function V3PreviewScreen() {
   const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialOutputPerMinute, 0)
   const actualRate = productionPreview.reduce((sum, line) => sum + line.actualOutputPerMinute, 0)
   const starterOperator = state.world.employees[0]
-  const distillationCellIndex = state.world.grid.findIndex((cell) => cell === 'distillationUnit')
-  const activeProgram = state.plantPrograms[distillationCellIndex]
+  const distillationBuildingId = state.world.grid.findIndex((cell) => cell === 'distillationUnit')
+  const activeProgram = state.plantPrograms[distillationBuildingId]
   const activeBlueprint = activeProgram ? state.productBlueprints[activeProgram.blueprintId] : null
-  const labCellIndex = state.world.grid.findIndex((cell) => cell === 'laboratory')
+  const labBuildingId = state.world.grid.findIndex((cell) => cell === 'laboratory')
   const gasolineBlueprints = Object.values(state.productBlueprints)
     .filter((blueprint) => blueprint.family === 'gasoline')
     .sort((a, b) => a.quality - b.quality || a.id.localeCompare(b.id))
@@ -277,7 +277,7 @@ export default function V3PreviewScreen() {
           <Text style={styles.body}>{guidanceText(guidance, t)}</Text>
           <Text style={styles.row}>{t({ en: 'Simulation', th: 'การจำลอง' })}: {effectiveSpeed === 0 ? t({ en: 'Paused by screen/modal', th: 'พักโดยหน้าจอ/หน้าต่างยืนยัน' }) : `${effectiveSpeed}×`}</Text>
           {guidance === 'build_laboratory' && emptyCell >= 0 && (
-            <Pressable style={styles.primary} onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, cellIndex: emptyCell, building: 'laboratory' })}>
+            <Pressable style={styles.primary} onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, buildingId: emptyCell, building: 'laboratory' })}>
               <Text style={styles.primaryText}>{t({ en: 'Build Laboratory Lv1 · $400', th: 'สร้าง Laboratory Lv1 · $400' })}</Text>
             </Pressable>
           )}
@@ -299,9 +299,9 @@ export default function V3PreviewScreen() {
                 {recoveryOffer.emptySlotsNeeded > 0 ? (
                   <>
                     <Text style={styles.warning}>{t({ en: `Clear ${recoveryOffer.emptySlotsNeeded} slot(s). Nothing is removed automatically.`, th: `เคลียร์อีก ${recoveryOffer.emptySlotsNeeded} ช่อง ระบบจะไม่รื้อให้อัตโนมัติ` })}</Text>
-                    {state.world.grid.map((building, cellIndex) => building ? (
-                      <Pressable key={`clear-${cellIndex}`} style={styles.secondary} onPress={() => confirmDemolish(cellIndex)}>
-                        <Text style={styles.secondaryText}>{t({ en: `Review removal · cell ${cellIndex + 1} · ${building}`, th: `ตรวจสอบการรื้อ · ช่อง ${cellIndex + 1} · ${building}` })}</Text>
+                    {state.world.grid.map((building, buildingId) => building ? (
+                      <Pressable key={`clear-${buildingId}`} style={styles.secondary} onPress={() => confirmDemolish(buildingId)}>
+                        <Text style={styles.secondaryText}>{t({ en: `Review removal · cell ${buildingId + 1} · ${building}`, th: `ตรวจสอบการรื้อ · ช่อง ${buildingId + 1} · ${building}` })}</Text>
                       </Pressable>
                     ) : null)}
                   </>
@@ -325,12 +325,12 @@ export default function V3PreviewScreen() {
           <Pressable style={styles.primary} onPress={runCycle}>
             <Text style={styles.primaryText}>{t({ en: 'Run one 5-second cycle', th: 'เดินเครื่อง 1 รอบ (5 วินาที)' })}</Text>
           </Pressable>
-          {distillationCellIndex >= 0 && (
+          {distillationBuildingId >= 0 && (
             <Pressable style={styles.secondary} onPress={() => apply({
-              type: 'set_pause', sequence: state.nextActionSequence, cellIndex: distillationCellIndex,
-              paused: !state.plantPrograms[distillationCellIndex]?.paused,
+              type: 'set_pause', sequence: state.nextActionSequence, buildingId: distillationBuildingId,
+              paused: !state.plantPrograms[distillationBuildingId]?.paused,
             })}>
-              <Text style={styles.secondaryText}>{state.plantPrograms[distillationCellIndex]?.paused ? t({ en: 'Resume Distillation', th: 'เดิน Distillation ต่อ' }) : t({ en: 'Pause Distillation', th: 'พัก Distillation' })}</Text>
+              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId]?.paused ? t({ en: 'Resume Distillation', th: 'เดิน Distillation ต่อ' }) : t({ en: 'Pause Distillation', th: 'พัก Distillation' })}</Text>
             </Pressable>
           )}
         </View>
@@ -393,11 +393,11 @@ export default function V3PreviewScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Gasoline development', th: 'พัฒนาสูตร Gasoline' })}</Text>
           <Text style={styles.row}>{t({ en: 'Certified recipes', th: 'สูตรที่รับรองแล้ว' })}: {gasolineBlueprints.map((blueprint) => `${blueprint.name} Q${blueprint.quality}`).join(' · ')}</Text>
-          {distillationCellIndex >= 0 && gasolineBlueprints.map((blueprint) => (
+          {distillationBuildingId >= 0 && gasolineBlueprints.map((blueprint) => (
             <Pressable key={blueprint.id} style={styles.secondary} onPress={() => apply({
-              type: 'set_program', sequence: state.nextActionSequence, cellIndex: distillationCellIndex, blueprintId: blueprint.id,
+              type: 'set_program', sequence: state.nextActionSequence, buildingId: distillationBuildingId, blueprintId: blueprint.id,
             })}>
-              <Text style={styles.secondaryText}>{state.plantPrograms[distillationCellIndex]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
+              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
             </Pressable>
           ))}
           <Text style={styles.row}>{t({ en: 'Prototype choices', th: 'สูตรต้นแบบ' })}: Volume Q35 · Standard Q40 · Precision Q55</Text>
@@ -411,12 +411,12 @@ export default function V3PreviewScreen() {
           ) : (
             <>
               <Pressable style={styles.secondary} onPress={() => apply({
-                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: null, labCellIndex,
+                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: null, labBuildingId,
               })}>
                 <Text style={styles.secondaryText}>{t({ en: 'Develop Volume Q35 · 10 Gas + $50', th: 'พัฒนา Volume Q35 · Gas 10 + $50' })}</Text>
               </Pressable>
               <Pressable style={styles.secondary} onPress={() => apply({
-                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: starterOperator.id, labCellIndex,
+                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: starterOperator.id, labBuildingId,
               })}>
                 <Text style={styles.secondaryText}>{t({ en: 'Develop Precision Q55 with Niran', th: 'พัฒนา Precision Q55 โดย Niran' })}</Text>
               </Pressable>
@@ -439,14 +439,14 @@ export default function V3PreviewScreen() {
           <Pressable
             style={styles.primary}
             disabled={emptyCell < 0}
-            onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, cellIndex: emptyCell, building: 'gasolineTank' })}
+            onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, buildingId: emptyCell, building: 'gasolineTank' })}
           >
             <Text style={styles.primaryText}>Build {t(BUILDINGS.gasolineTank.name)} · $150</Text>
           </Pressable>
-          {distillationCellIndex >= 0 && (
+          {distillationBuildingId >= 0 && (
             <Pressable
               style={styles.secondary}
-              onPress={() => apply({ type: 'upgrade', sequence: state.nextActionSequence, cellIndex: distillationCellIndex })}
+              onPress={() => apply({ type: 'upgrade', sequence: state.nextActionSequence, buildingId: distillationBuildingId })}
             >
               <Text style={styles.secondaryText}>{t({ en: 'Try Distillation upgrade', th: 'ลองอัปเกรด Distillation' })}</Text>
             </Pressable>

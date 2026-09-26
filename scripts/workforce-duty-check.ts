@@ -31,16 +31,16 @@ state = {
   },
 }
 action = reduceV3Action(state, {
-  type: 'build', sequence: state.nextActionSequence, cellIndex: 0, building: 'distillationUnit',
+  type: 'build', sequence: state.nextActionSequence, buildingId: 0, building: 'distillationUnit',
 })
 state = action.state
 action = reduceV3Action(state, {
-  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: niranId, duty: { kind: 'line', cellIndex: 0 },
+  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: niranId, duty: { kind: 'line', buildingId: 0 },
 })
 state = action.state
 preview = evaluateV3GasolineProduction(state, 25)
-close(preview.find((line) => line.cellIndex === 0)!.potentialOutputPerMinute, 72)
-close(preview.find((line) => line.cellIndex === 4)!.potentialOutputPerMinute, 60)
+close(preview.find((line) => line.buildingId === 0)!.potentialOutputPerMinute, 72)
+close(preview.find((line) => line.buildingId === 4)!.potentialOutputPerMinute, 60)
 
 const secondOperator: Employee = {
   id: 'employee:operator:000002', type: 'operator', name: 'Mali', level: 1, xp: 0,
@@ -48,7 +48,7 @@ const secondOperator: Employee = {
 }
 state = { ...state, world: { ...state.world, employees: [...state.world.employees, secondOperator] } }
 action = reduceV3Action(state, {
-  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: secondOperator.id, duty: { kind: 'line', cellIndex: 0 },
+  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: secondOperator.id, duty: { kind: 'line', buildingId: 0 },
 })
 assert.equal(action.events[0].messageId, 'v3.duty.occupied')
 
@@ -101,15 +101,15 @@ assert.equal(parseV3GameState(JSON.parse(JSON.stringify(production.state))).stat
 state = createInitialV3GameState()
 state = {
   ...state,
-  employeeDuties: { [niranId]: { kind: 'development', projectId: 'project:1', returnCellIndex: 4 } },
+  employeeDuties: { [niranId]: { kind: 'development', projectId: 'project:1', returnBuildingId: 4 } },
 }
 state = returnV3EmployeeFromDevelopment(state, niranId)
-assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', cellIndex: 4 })
+assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: 4 })
 state = {
   ...state,
   employeeDuties: {
-    [niranId]: { kind: 'development', projectId: 'project:2', returnCellIndex: 4 },
-    [secondOperator.id]: { kind: 'line', cellIndex: 4 },
+    [niranId]: { kind: 'development', projectId: 'project:2', returnBuildingId: 4 },
+    [secondOperator.id]: { kind: 'line', buildingId: 4 },
   },
 }
 state = returnV3EmployeeFromDevelopment(state, niranId)

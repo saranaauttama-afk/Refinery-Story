@@ -31,12 +31,12 @@ const person = (type: WorkerType, index = 1, level = 1): Employee => ({ id: `emp
 for (const role of ROLES) {
   let state = fixture(3, [person(role)])
   const plantCells: Record<(typeof PLANTS)[number], number> = { distillationUnit: 4, lubricantPlant: 0, jetFuelPlant: 1 }
-  state = act(state, { type: 'build', cellIndex: 0, building: 'lubricantPlant' })
-  state = act(state, { type: 'build', cellIndex: 1, building: 'jetFuelPlant' })
+  state = act(state, { type: 'build', buildingId: 0, building: 'lubricantPlant' })
+  state = act(state, { type: 'build', buildingId: 1, building: 'jetFuelPlant' })
   state = act(state, { type: 'assign_duty', employeeId: state.world.employees[0].id, duty: { kind: 'reserve' } })
   const id = person(role).id
   for (const plant of PLANTS) {
-    const result = attempt(state, { type: 'assign_duty', employeeId: id, duty: { kind: 'line', cellIndex: plantCells[plant] } })
+    const result = attempt(state, { type: 'assign_duty', employeeId: id, duty: { kind: 'line', buildingId: plantCells[plant] } })
     const allowed = V3_ROLES[role].lineBuildings.includes(plant)
     assert.equal(result.events[0].messageId, allowed ? 'v3.action.ok' : 'v3.duty.ineligible', `${role} on ${plant}`)
     if (allowed) {
@@ -50,8 +50,8 @@ for (const role of ROLES) {
 }
 // Level scaling and caps on local crew.
 let crew = fixture(3, [person('aviationSpecialist', 1, 5)])
-crew = act(crew, { type: 'build', cellIndex: 1, building: 'jetFuelPlant' })
-crew = act(crew, { type: 'assign_duty', employeeId: person('aviationSpecialist').id, duty: { kind: 'line', cellIndex: 1 } })
+crew = act(crew, { type: 'build', buildingId: 1, building: 'jetFuelPlant' })
+crew = act(crew, { type: 'assign_duty', employeeId: person('aviationSpecialist').id, duty: { kind: 'line', buildingId: 1 } })
 close(getV3LocalCrewRate(crew, 1), 0.23, 'matched Lv5 = min(0.25, 0.15+0.08)')
 
 // ---- Deterministic vacancy hiring, chapter unlocks, cap, atomic failure ----
@@ -110,21 +110,21 @@ close(chem.world.researchPoints - rpBefore, 5 * 1.1)
 
 // ---- R&D lead loses line benefit until return; Support lead returns to Support ----
 let rnd = fixture(2, [person('chemist')])
-rnd = act(rnd, { type: 'build', cellIndex: 0, building: 'laboratory' })
+rnd = act(rnd, { type: 'build', buildingId: 0, building: 'laboratory' })
 rnd = addV3VariantInventory(rnd, V3_DEFAULT_BLUEPRINT_ID.gasoline, 20, 20_000).state
 const niran = rnd.world.employees[0].id
 assert.ok(getV3LocalCrewRate(rnd, 4) > 0)
-rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: niran, labCellIndex: 0 })
+rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: niran, labBuildingId: 0 })
 close(getV3LocalCrewRate(rnd, 4), 0, 'lead left the line')
-assertBlocked(rnd, { type: 'assign_duty', employeeId: niran, duty: { kind: 'line', cellIndex: 4 } }, 'v3.duty.occupied')
+assertBlocked(rnd, { type: 'assign_duty', employeeId: niran, duty: { kind: 'line', buildingId: 4 } }, 'v3.duty.occupied')
 rnd = cycles(rnd, 4)
-assert.deepEqual(rnd.employeeDuties[niran], { kind: 'line', cellIndex: 4 }, 'returns to vacant line')
+assert.deepEqual(rnd.employeeDuties[niran], { kind: 'line', buildingId: 4 }, 'returns to vacant line')
 assert.ok(getV3LocalCrewRate(rnd, 4) > 0)
 const blueprintId = rnd.developmentHistory.at(-1)!.blueprintId
 assert.ok(rnd.employeeRecords[niran].blueprintIds.includes(blueprintId), 'accomplishment: developed blueprint')
 rnd = addV3VariantInventory(rnd, V3_DEFAULT_BLUEPRINT_ID.gasoline, 20, 20_000).state
 rnd = act(rnd, { type: 'assign_duty', employeeId: person('chemist').id, duty: { kind: 'support' } })
-rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('chemist').id, labCellIndex: 0 })
+rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('chemist').id, labBuildingId: 0 })
 assert.equal(rnd.developmentProject?.leadContribution, 5, 'Chemist lead gives Q+5 for any family')
 assert.equal(rnd.developmentProject?.quality, 40)
 close(getV3Modifiers(rnd).rp.effective, 0, 'Chemist in R&D gives no support bonus')
@@ -132,14 +132,14 @@ rnd = cycles(rnd, 4)
 assert.deepEqual(rnd.employeeDuties[person('chemist').id], { kind: 'support' })
 // Non-lead roles cannot lead a project.
 let noLead = fixture(2, [person('mechanic')])
-noLead = act(noLead, { type: 'build', cellIndex: 0, building: 'laboratory' })
+noLead = act(noLead, { type: 'build', buildingId: 0, building: 'laboratory' })
 noLead = addV3VariantInventory(noLead, V3_DEFAULT_BLUEPRINT_ID.gasoline, 20, 20_000).state
-assertBlocked(noLead, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('mechanic').id, labCellIndex: 0 }, 'v3.development.invalid_lead')
+assertBlocked(noLead, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('mechanic').id, labBuildingId: 0 }, 'v3.development.invalid_lead')
 
 // ---- XP from actual duty, legacy thresholds; training legal action ----
 let xp = createInitialV3GameState()
 xp = { ...xp, world: { ...xp.world, moneyCents: 10_000_000 } }
-xp = act(xp, { type: 'build', cellIndex: 0, building: 'crudeTank' })
+xp = act(xp, { type: 'build', buildingId: 0, building: 'crudeTank' })
 for (let index = 0; index < 50 && xp.world.employees[0].level < 2; index++) {
   xp = act(xp, { type: 'trade', direction: 'buy', product: 'crude', quantity: 6 })
   xp = cycles(xp, 1)
@@ -180,15 +180,15 @@ assertBlocked(research, { type: 'buy_research', researchId: 'storageOptimization
 let spec = fixture(2)
 spec = assertBlocked(spec, { type: 'choose_specialization', path: 'green' }, 'v3.specialization.locked')
 spec = { ...spec, campaignProgress: { ...spec.campaignProgress, chapter: 3 } }
-spec = act(spec, { type: 'build', cellIndex: 0, building: 'lubricantPlant' })
-const before = evaluateV3Production(spec, 25).lines.find((line) => line.cellIndex === 0)!
+spec = act(spec, { type: 'build', buildingId: 0, building: 'lubricantPlant' })
+const before = evaluateV3Production(spec, 25).lines.find((line) => line.buildingId === 0)!
 spec = act(spec, { type: 'choose_specialization', path: 'green' })
-const after = evaluateV3Production(spec, 25).lines.find((line) => line.cellIndex === 0)!
+const after = evaluateV3Production(spec, 25).lines.find((line) => line.buildingId === 0)!
 close(after.requestedWork, before.requestedWork * 0.95)
 close(after.energyPerWork, before.energyPerWork * 0.9)
 assertBlocked(spec, { type: 'choose_specialization', path: 'industrial' }, 'v3.specialization.chosen')
 const specTick = runV3ProductionTick({ ...spec, world: { ...spec.world, feedstock: 60, electricity: 20 }, materialCostBasis: { ...spec.materialCostBasis, feedstockCents: 4_800 } }, 25)
-const lubeLine = specTick.lines.find((line) => line.cellIndex === 0)!
+const lubeLine = specTick.lines.find((line) => line.buildingId === 0)!
 close(lubeLine.waste, lubeLine.actualWork * 0.8, 'green waste ×0.8')
 
 // ---- Milestone accomplishment credit only to contributors with positive work ----

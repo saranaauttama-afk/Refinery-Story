@@ -1,3 +1,4 @@
+import { getV3BuildingType, getV3BuildingLevel, listV3Buildings, countV3Buildings } from './yard'
 import {
   V3_DISTILLATION,
   V3_FEEDSTOCK_REFERENCE_CENTS,
@@ -23,7 +24,7 @@ import { addV3JobContribution, advanceV3JobClock, runV3AutoDispatch } from './jo
 import { advanceV3Awards } from './awards'
 import { evaluateV3CampaignProgress } from './campaign'
 import { addV3CommodityInventory, addV3VariantInventory, consumeV3ProtectedInventory, getV3ConsumableQuantity, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
-import { advanceV3Recovery, isV3LoanerCell } from './recovery'
+import { advanceV3Recovery, isV3LoanerBuilding } from './recovery'
 import type { ProductKey } from '../types'
 import type { V3GameState, V3PlantProgram, V3ProductFamily } from './types'
 import { addV3DutyXp, getV3LineEmployee, getV3LocalCrewRate, settleV3Wages } from './workforce'
@@ -33,7 +34,7 @@ const EPSILON = 1e-9
 export type V3LineStatus = 'ready' | 'paused' | 'setup' | 'invalid'
 
 export type V3LinePlan = {
-  cellIndex: number
+  buildingId: string
   building: V3ProcessBuilding
   family: ProductKey
   blueprintId: string
@@ -77,16 +78,14 @@ export type V3ProductionPlan = {
 }
 
 export function getV3FeedstockCapacity(state: V3GameState): number {
-  const cells = state.world.grid.filter((cell) => cell === 'distillationUnit').length
-  return V3_DISTILLATION.feedstockBaseCapacity + cells * V3_DISTILLATION.feedstockCapacityPerCell
+  const units = countV3Buildings(state, 'distillationUnit')
+  return V3_DISTILLATION.feedstockBaseCapacity + units * V3_DISTILLATION.feedstockCapacityPerCell
 }
 
-function generatorCells(state: V3GameState): Array<{ cellIndex: number; level: number }> {
-  const cells: Array<{ cellIndex: number; level: number }> = []
-  state.world.grid.forEach((cell, cellIndex) => {
-    if (cell === 'powerPlant') cells.push({ cellIndex, level: state.world.gridLevels[cellIndex] ?? 1 })
-  })
-  return cells
+function generatorCells(state: V3GameState): Array<{ buildingId: string; level: number }> {
+  return listV3Buildings(state)
+    .filter((building) => building.type === 'powerPlant')
+    .map((building) => ({ buildingId: building.id, level: building.level }))
 }
 
 export function getV3BatteryCapacity(state: V3GameState): number {
@@ -107,16 +106,16 @@ function lineRequest(
   boostRate: number,
   globalRate: number,
 ): V3LinePlan | null {
-  const building = state.world.grid[program.cellIndex]
+  const building = getV3BuildingType(state, program.buildingId)
   if (!isV3ProcessBuilding(building)) return null
   const unit = V3_PROCESS_UNITS[building]
   // Emergency line runs default Standard at Lv1 with no crew/module/bonus; the
   // saved program is retained and resumes on player-confirmed restoration.
-  const baseline = state.maintenanceEmergency?.cellIndex === program.cellIndex
+  const baseline = state.maintenanceEmergency?.buildingId === program.buildingId
   const blueprint = baseline
     ? state.productBlueprints[V3_DEFAULT_BLUEPRINT_ID.gasoline] ?? null
     : state.productBlueprints[program.blueprintId] ?? null
-  const level = baseline ? 1 : state.world.gridLevels[program.cellIndex] ?? 1
+  const level = baseline ? 1 : getV3BuildingLevel(state, program.buildingId)
   const commodityLine = unit.family === 'recycledMaterial'
   let status: V3LineStatus = 'ready'
   if (state.maintenanceEmergency && !baseline) status = 'paused'
@@ -131,10 +130,10 @@ function lineRequest(
   ) status = 'invalid'
   const profile = blueprint ? V3_PROFILE_MULTIPLIERS[blueprint.profile] : V3_PROFILE_MULTIPLIERS.standard
   const module = V3_MODULE_MULTIPLIERS[baseline ? 'none' : program.installedModule]
-  const employee = getV3LineEmployee(state, program.cellIndex)
-  const loanerRate = isV3LoanerCell(state, program.cellIndex) ? 0.5 : 1
+  const employee = getV3LineEmployee(state, program.buildingId)
+  const loanerRate = isV3LoanerBuilding(state, program.buildingId) ? 0.5 : 1
   const noBonus = loanerRate !== 1 || baseline
-  const crewRate = status === 'ready' && !noBonus ? getV3LocalCrewRate(state, program.cellIndex) : 0
+  const crewRate = status === 'ready' && !noBonus ? getV3LocalCrewRate(state, program.buildingId) : 0
   // Loaners and the emergency line run the Lv1 baseline without crew, global or specialization effects.
   const specialization = state.world.specialization && !baseline ? V3_SPECIALIZATION[state.world.specialization] : null
   const specializationRate = !noBonus ? specialization?.rate ?? 1 : 1
@@ -146,7 +145,7 @@ function lineRequest(
   const perMinute = 300 / Math.max(deltaTicks, 1)
   const energyPerWork = unit.energyPerWork * profile.energy * module.energy * (specialization?.energy ?? 1)
   return {
-    cellIndex: program.cellIndex,
+    buildingId: program.buildingId,
     building,
     family: unit.family,
     blueprintId: baseline ? V3_DEFAULT_BLUEPRINT_ID.gasoline : program.blueprintId,
@@ -241,7 +240,7 @@ function planGeneration(state: V3GameState, deltaTicks: number, crudeReserved: n
 
 export function evaluateV3Production(state: V3GameState, deltaTicks = 1, boostRate = 1): V3ProductionPlan {
   const lines = Object.values(state.plantPrograms)
-    .sort((a, b) => a.cellIndex - b.cellIndex)
+    .sort((a, b) => a.buildingId.localeCompare(b.buildingId))
     .map((program) => lineRequest(state, program, deltaTicks, boostRate, getV3Modifiers(state).globalRate.effective))
     .filter((line): line is V3LinePlan => line !== null)
   const outputBound = boundByOutputSpace(state, lines)
@@ -403,7 +402,7 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
   const programs = { ...next.plantPrograms }
   for (const program of Object.values(programs)) {
     if (program.setupRemainingTicks > 0) {
-      programs[program.cellIndex] = { ...program, setupRemainingTicks: Math.max(0, program.setupRemainingTicks - deltaTicks) }
+      programs[program.buildingId] = { ...program, setupRemainingTicks: Math.max(0, program.setupRemainingTicks - deltaTicks) }
     }
   }
   const remainingEnergy = Math.max(0, chargedEnergy - power.energyUsed)
@@ -425,6 +424,6 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
       electricityCents: remainingEnergy > EPSILON ? Math.max(0, chargedBasis - power.energyUsed * energyUnitBasis) : 0,
     },
     plantPrograms: programs,
-  }, Object.fromEntries(lines.map((line) => [line.cellIndex, line.actualWork])))
+  }, Object.fromEntries(lines.map((line) => [line.buildingId, line.actualWork])))
   return { lines, power, state: evaluateV3CampaignProgress(advanceV3Awards(advanceV3Recovery(advanceV3JobClock(runV3AutoDispatch(producedState)), deltaTicks))) }
 }
