@@ -40,8 +40,9 @@
 - V3-20 (Kairosoft-style main screen, isometric yard with existing art): **complete in code**.
 - V3-21 a–e (fame, market, rivals, expo, careers): **complete in code**.
 - V3-21f (walking staff/trucks) moved to the art backlog by the owner.
-- **Current task: V3-18** calibration (target 5–8 h; legal bot baseline ~36 min),
-  then V3-19 acceptance.
+- V3-18 first calibration: **complete** (legal bot clears at 288 simulated min).
+- **Current task: V3-19** Android acceptance and handoff (owner device play).
+- Backlog (owner): per-recipe stock table; Crude → Gasoline + Feedstock → Lube flow bar.
 
 ## Decisions recorded
 

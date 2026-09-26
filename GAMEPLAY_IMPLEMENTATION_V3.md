@@ -448,6 +448,15 @@ after every system (campaign pacing unchanged: ~36 simulated minutes).
 
 ### V3-18 · Legal full-loop simulation and economy calibration
 
+Status: **COMPLETE (first calibration)**. Owner decision ก: clear = Master
+conditions + #1 year-end industry ranking + one Expo win. Legal bot baseline:
+clears at **288 simulated minutes** (C2 4.0 · C3 15.7 · C4 25.0). Human play is
+expected to be ~1.5–2× slower (≈ 5–8 h target). Knobs: stage order scale
+(Regular ×6, Partner ×10, Showcase ×5), rival bases/growth, Expo field and
+experience. Known shape: early chapters are quick and the endgame (C4 → clear)
+is long; revisit after device play. Backlog (owner): per-recipe stock table and
+a Crude → Gasoline + Feedstock → Lube flow bar in the Supply tab.
+
 Dependencies:17. Subtasks:18a replace simulator shortcuts;18b baselineV3-A;
 18c data-only retune with report. UI and policies share every action validator.
 Policies volume/spot,quality/client,economy/compact,automation control; fixed seeds
