@@ -22,8 +22,8 @@ export function V3RankingPanel({ state, t }: { state: V3GameState; t: (value: Bi
         </View>
       ))}
       <Text style={styles.muted}>{t({
-        en: `Your score = fame ${score.fame} + business ${score.business} + recipes ${score.recipes}. Rivals grow every month.`,
-        th: `คะแนนคุณ = ชื่อเสียง ${score.fame} + ธุรกิจ ${score.business} + สูตรที่พัฒนา ${score.recipes} คู่แข่งโตขึ้นทุกเดือน`,
+        en: `Your score = fame ${score.fame} + business ${score.business} + factory ${score.factory} + recipes ${score.recipes}. Rivals grow every month.`,
+        th: `คะแนนคุณ = ชื่อเสียง ${score.fame} + ธุรกิจ ${score.business} + ขนาดโรงงาน ${score.factory} + สูตรที่พัฒนา ${score.recipes} คู่แข่งโตขึ้นทุกเดือน`,
       })}</Text>
       <Text style={styles.muted}>{t({
         en: `Year-end rank rewards (once): #3 +${V3_RANK_REWARDS[3]} · #2 +${V3_RANK_REWARDS[2]} · #1 +${V3_RANK_REWARDS[1]} reputation.`,

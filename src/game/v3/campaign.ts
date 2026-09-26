@@ -98,6 +98,10 @@ export type V3ClearConditions = {
   showcase: boolean
   rollingProfitCents: number
   profitWindowComplete: boolean
+  /** Owner decision ก (2026-09-26): reach #1 at a year-end industry ranking. */
+  industryLeader: boolean
+  /** Owner decision ก: win at least one annual Refinery Expo. */
+  expoWin: boolean
   met: boolean
 }
 
@@ -121,8 +125,14 @@ export function evaluateV3ClearConditions(state: V3GameState): V3ClearConditions
   const advancedClient = partners.includes('airline') || partners.includes('materials')
   const showcase = Boolean(state.campaignProgress.showcaseReceiptId)
   const rolling = getV3RollingOperatingProfit(state)
-  const met = partners.length >= 3 && families.size >= 2 && advancedClient && showcase && rolling.complete && rolling.cents > 0
-  return { partners, families: [...families].sort(), advancedClient, showcase, rollingProfitCents: rolling.cents, profitWindowComplete: rolling.complete, met }
+  const industryLeader = state.campaignProgress.claimedFlags.includes('rank:1')
+  const expoWin = state.expoResults.some((entry) => entry.rank === 1)
+  const met = partners.length >= 3 && families.size >= 2 && advancedClient && showcase && rolling.complete && rolling.cents > 0 &&
+    industryLeader && expoWin
+  return {
+    partners, families: [...families].sort(), advancedClient, showcase,
+    rollingProfitCents: rolling.cents, profitWindowComplete: rolling.complete, industryLeader, expoWin, met,
+  }
 }
 
 function buildV3CampaignReport(state: V3GameState, clear: V3ClearConditions): V3CampaignReport {

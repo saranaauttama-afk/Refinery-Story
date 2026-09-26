@@ -33,8 +33,8 @@ export function V3ExpoPanel({ state, apply, t, describe }: Props) {
           : t({ en: `Held every month ${V3_EXPO_MONTH}. Next in ${monthsLeft} month(s).`, th: `จัดทุกเดือน ${V3_EXPO_MONTH} ครั้งถัดไปอีก ${monthsLeft} เดือน` })}
       </Text>
       <Text style={styles.muted}>{t({
-        en: `Score = recipe Q + fame bonus. Prizes: 1st $${V3_EXPO_PRIZES[0].cashCents / 100} +${V3_EXPO_PRIZES[0].reputation} fame · 2nd $${V3_EXPO_PRIZES[1].cashCents / 100} +${V3_EXPO_PRIZES[1].reputation} · 3rd $${V3_EXPO_PRIZES[2].cashCents / 100} +${V3_EXPO_PRIZES[2].reputation}. Prize money is a grant (not operating profit).`,
-        th: `คะแนน = Q ของสูตร + โบนัสชื่อเสียง รางวัล: ที่ 1 $${V3_EXPO_PRIZES[0].cashCents / 100} +${V3_EXPO_PRIZES[0].reputation} ชื่อเสียง · ที่ 2 $${V3_EXPO_PRIZES[1].cashCents / 100} +${V3_EXPO_PRIZES[1].reputation} · ที่ 3 $${V3_EXPO_PRIZES[2].cashCents / 100} +${V3_EXPO_PRIZES[2].reputation} เงินรางวัลไม่นับเป็นกำไรดำเนินงาน`,
+        en: `Score = recipe Q + fame (+2/level) + portfolio (+1 per recipe, max 8) + experience (+1 per 5 expos attended, max 5). Prizes: 1st $${V3_EXPO_PRIZES[0].cashCents / 100} +${V3_EXPO_PRIZES[0].reputation} fame · 2nd $${V3_EXPO_PRIZES[1].cashCents / 100} +${V3_EXPO_PRIZES[1].reputation} · 3rd $${V3_EXPO_PRIZES[2].cashCents / 100} +${V3_EXPO_PRIZES[2].reputation}. Prize money is a grant (not operating profit).`,
+        th: `คะแนน = Q ของสูตร + ชื่อเสียง (+2/ระดับ) + จำนวนสูตร (+1 ต่อสูตร สูงสุด 8) + ประสบการณ์ (+1 ทุก 5 ครั้งที่ร่วมงาน สูงสุด 5) รางวัล: ที่ 1 $${V3_EXPO_PRIZES[0].cashCents / 100} +${V3_EXPO_PRIZES[0].reputation} ชื่อเสียง · ที่ 2 $${V3_EXPO_PRIZES[1].cashCents / 100} +${V3_EXPO_PRIZES[1].reputation} · ที่ 3 $${V3_EXPO_PRIZES[2].cashCents / 100} +${V3_EXPO_PRIZES[2].reputation} เงินรางวัลไม่นับเป็นกำไรดำเนินงาน`,
       })}</Text>
       <Text style={styles.sub}>{t({ en: `Rival entries this year`, th: 'ผลงานคู่แข่งปีนี้' })}: {rivals.map((rival) => `${t(rival.name)} ${rival.score}`).join(' · ')}</Text>
       {thisYear ? (
