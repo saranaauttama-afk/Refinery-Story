@@ -2,6 +2,8 @@ import { memo, useMemo } from 'react'
 import { Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native'
 import {
   Canvas,
+  FilterMode,
+  MipmapMode,
   Group,
   Image as SkiaImage,
   Path,
@@ -30,7 +32,7 @@ import { getV3BuildingArt } from './v3Art'
 
 const MIN_SCALE = 0.35
 const MAX_SCALE = 2.2
-const PIXEL = { filter: 0, mipmap: 0 } as const // nearest-neighbour for pixel art
+const PIXEL = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const // nearest-neighbour, same as the legacy map
 
 export type V3Floater = { id: string; x: number; y: number; text: string; color: string; age: number }
 
