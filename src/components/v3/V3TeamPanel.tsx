@@ -42,7 +42,7 @@ const ROLE_DUTY: Record<WorkerType, BilingualTextValue> = {
   chemist: { en: 'Support: job RP +10% · R&D lead Q+5 for any family', th: 'Support: RP จากงาน +10% · นำ R&D ได้ทุก family Q+5' },
   mechanic: { en: 'Support: +25 storage each family (max 3 staff)', th: 'Support: ความจุ +25 ทุกชนิด (นับสูงสุด 3 คน)' },
   salesAgent: { en: 'Support: prices +4% (shared cap 15%)', th: 'Support: ราคาขาย +4% (รวมสูงสุด 15%)' },
-  safetyOfficer: { en: 'Upkeep/safety — needs V3 maintenance (not yet built)', th: 'ค่าบำรุง/ความปลอดภัย — ต้องรอระบบบำรุงรักษา V3' },
+  safetyOfficer: { en: 'Support: maintenance −5% (all upkeep cuts cap 25%)', th: 'Support: ค่าบำรุง −5% (ส่วนลดค่าบำรุงรวมสูงสุด 25%)' },
   logisticsCoordinator: { en: 'Support: storage +10% (shared cap 50%)', th: 'Support: ความจุ +10% (รวมสูงสุด 50%)' },
 }
 
@@ -148,7 +148,8 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
         <Text style={styles.row}>{t({ en: 'Storage bonus', th: 'ความจุเพิ่ม' })}: {channelText(modifiers.storagePercent)} · +{modifiers.mechanicStorageFlat.toFixed(0)} {t({ en: 'flat (mechanics)', th: 'หน่วย (ช่าง)' })} · +{modifiers.coreStorageFlat} {t({ en: 'core tanks', th: 'ถังหลัก' })}</Text>
         <Text style={styles.row}>{t({ en: 'Trade / quotes', th: 'ราคาขาย/ใบเสนอราคา' })}: {channelText(modifiers.trade)}</Text>
         <Text style={styles.row}>{t({ en: 'Job RP', th: 'RP จากงาน' })}: {channelText(modifiers.rp)}</Text>
-        <Text style={styles.muted}>{t({ en: 'Safety/upkeep skills are inactive until V3 maintenance exists.', th: 'ทักษะความปลอดภัย/ค่าบำรุงยังไม่มีผลจนกว่าจะมีระบบบำรุงรักษา V3' })}</Text>
+        <Text style={styles.row}>{t({ en: 'Maintenance cut (staff + research)', th: 'ลดค่าบำรุง (ทีม + งานวิจัย)' })}: {channelText(modifiers.upkeep)}</Text>
+        <Text style={styles.muted}>{t({ en: 'Safety skills are inactive in V3 (no incident system).', th: 'ทักษะด้านความปลอดภัยยังไม่มีผลใน V3 (ไม่มีระบบอุบัติเหตุ)' })}</Text>
       </View>
 
       <View style={styles.card}>

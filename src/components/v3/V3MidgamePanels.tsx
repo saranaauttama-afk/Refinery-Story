@@ -11,6 +11,7 @@ import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity } fro
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
 import type { V3Action, V3ActionEvent, V3GameState, V3ModuleKey, V3ProcessProfile, V3ProductFamily } from '../../game/v3/types'
+import { evaluateV3Maintenance, getV3EmergencyExitCents } from '../../game/v3/maintenance'
 import { fonts } from '../../theme'
 import { V3OffersPanel } from './V3OffersPanel'
 
@@ -59,6 +60,7 @@ function researchEffectText(effect: V3ResearchEffect): BilingualTextValue {
     case 'coreStorage': return { en: `crude & gasoline storage +${effect.value}`, th: `ถัง crude และ gasoline +${effect.value}` }
     case 'storagePercent': return { en: `storage +${effect.value * 100}% (cap 50%)`, th: `ความจุ +${effect.value * 100}% (สูงสุด 50%)` }
     case 'trade': return { en: `prices +${effect.value * 100}% (cap 15%)`, th: `ราคาขาย +${effect.value * 100}% (สูงสุด 15%)` }
+    case 'upkeep': return { en: `maintenance −${effect.value * 100}% (cap 25%)`, th: `ค่าบำรุง −${effect.value * 100}% (สูงสุด 25%)` }
     case 'jobRp': return { en: `job RP +${effect.value * 100}% (cap 50%)`, th: `RP จากงาน +${effect.value * 100}% (สูงสุด 50%)` }
   }
 }
@@ -92,6 +94,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
   }
 
   const plan = evaluateV3Production(state, 25)
+  const maintenance = evaluateV3Maintenance(state, 25)
   const power = plan.power
   const emptyCell = state.world.grid.findIndex((cell) => cell === null)
   const chapter = state.campaignProgress.chapter
@@ -143,6 +146,28 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           label={t({ en: 'Convert 10 crude → 10 asphalt (side product)', th: 'แปลง crude 10 → ยางมะตอย 10 (สินค้ารอง)' })}
           action={{ type: 'convert_asphalt', quantity: 10 }}
         />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t({ en: 'Maintenance', th: 'ค่าบำรุงรักษา' })}</Text>
+        {state.maintenanceEmergency ? (
+          <>
+            <Text style={styles.warning}>{t({
+              en: 'EMERGENCY: maintenance could not be paid. Only the first Distillation runs Standard at Lv1 (no crew/module/bonus); other lines are paused and maintenance is suspended. Your saved programs are kept.',
+              th: 'โหมดฉุกเฉิน: จ่ายค่าบำรุงไม่พอ มีเพียง Distillation แรกที่ทำงานแบบ Standard Lv1 (ไม่มีทีม/โมดูล/โบนัส) ไลน์อื่นหยุด และพักการเก็บค่าบำรุง โปรแกรมที่ตั้งไว้ยังอยู่ครบ',
+            })}</Text>
+            <Gate
+              primary
+              label={t({ en: `Restore normal operation (needs $${(getV3EmergencyExitCents(state) / 100).toFixed(2)} = 1 min of maintenance)`, th: `กลับสู่การทำงานปกติ (ต้องมี $${(getV3EmergencyExitCents(state) / 100).toFixed(2)} = ค่าบำรุง 1 นาที)` })}
+              action={{ type: 'restore_operations' }}
+            />
+          </>
+        ) : (
+          <Text style={styles.row}>{t({ en: 'Paid per 5s', th: 'จ่ายทุก 5 วินาที' })}: ${(maintenance.dueCents / 100).toFixed(2)} · ${(maintenance.perMinuteCents / 100).toFixed(2)}/min · {t({ en: 'cut', th: 'ลด' })} {(maintenance.globalCut * 100).toFixed(0)}% / 25%</Text>
+        )}
+        {state.campaignProgress.chapter < 2 && (
+          <Text style={styles.row}>{t({ en: 'Starter Distillation and core tanks are free until C2.', th: 'Distillation และถังหลักเริ่มต้นไม่เสียค่าบำรุงจนถึงบท C2' })}</Text>
+        )}
       </View>
 
       <View style={styles.card}>
