@@ -66,7 +66,28 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   }
   // Revision 9 (builds #72/#73) predates maintenance; start without an emergency.
   if (isRecord(value) && value.schemaRevision === 9 && value.rulesetVersion === V3_RULESET_VERSION) {
-    value = { ...value, schemaRevision: V3_PREVIEW_SCHEMA_REVISION, maintenanceEmergency: null }
+    value = { ...value, schemaRevision: 10, maintenanceEmergency: null }
+  }
+  // Revision 10 (build #74) predates recognized profit, awards and the clear report.
+  if (isRecord(value) && value.schemaRevision === 10 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.operatingLedger) && isRecord(value.world)) {
+    const ledger = value.operatingLedger as Record<string, unknown>
+    const tick = Number.isInteger(value.world.tickCount) ? value.world.tickCount as number : 0
+    value = {
+      ...value,
+      schemaRevision: V3_PREVIEW_SCHEMA_REVISION,
+      operatingLedger: {
+        ...ledger,
+        // Profit before this build is unknown, so the counter starts at zero (no fake history).
+        lifetimeRecognizedProfitCents: 0,
+        buckets: Array.isArray(ledger.buckets) ? ledger.buckets.map((bucket) => isRecord(bucket) ? { ...bucket, unrecognizedCents: bucket.receiptsCents ?? 0 } : bucket) : ledger.buckets,
+      },
+      awards: {
+        current: { startTick: tick, familyCount: 1, deliveryTarget: 60, varietyTarget: 1, startRecognizedProfitCents: 0, qualifiedUnits: 0, qualifiedFamilies: [] },
+        history: [],
+        paidGradeRp: 0,
+      },
+      campaignReport: null,
+    }
   }
   if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   if (value.schemaRevision !== V3_PREVIEW_SCHEMA_REVISION) {
@@ -122,6 +143,22 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   const emergency = value.maintenanceEmergency
   if (emergency !== null && !(isRecord(emergency) && Number.isInteger(emergency.sinceTick) && Number.isInteger(emergency.cellIndex))) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 maintenance emergency.' }
+  }
+  const awards = value.awards
+  const period = isRecord(awards) ? awards.current : null
+  if (
+    !isRecord(awards) || !isRecord(period) ||
+    !Number.isInteger(period.startTick) || !isFiniteNonnegative(period.familyCount) ||
+    !isFiniteNonnegative(period.deliveryTarget) || (period.deliveryTarget as number) <= 0 ||
+    !isFiniteNonnegative(period.varietyTarget) || (period.varietyTarget as number) <= 0 ||
+    typeof period.startRecognizedProfitCents !== 'number' || !Number.isFinite(period.startRecognizedProfitCents) ||
+    !isFiniteNonnegative(period.qualifiedUnits) ||
+    !Array.isArray(period.qualifiedFamilies) || !period.qualifiedFamilies.every((family) => PRODUCT_FAMILIES.has(family as string)) ||
+    !Array.isArray(awards.history) || !isFiniteNonnegative(awards.paidGradeRp) || (awards.paidGradeRp as number) > 15 ||
+    (value.campaignReport !== null && !isRecord(value.campaignReport)) ||
+    (value.campaignReport !== null && (value.campaignProgress as Record<string, unknown>).chapter !== 5)
+  ) {
+    return { status: 'invalid', state: null, reason: 'Invalid V3 awards or campaign report.' }
   }
   const employees = world.employees as Array<Record<string, unknown>>
   const employeeIds = new Set(employees.map((employee) => employee.id as string))
@@ -192,9 +229,10 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     !operatingLedger.buckets.every((bucket) =>
       isRecord(bucket) &&
       Number.isInteger(bucket.second) && (bucket.second as number) >= 0 &&
-      ['receiptsCents', 'cashOutflowsCents', 'cogsCents', 'wagesCents', 'maintenanceCents']
+      ['receiptsCents', 'cashOutflowsCents', 'cogsCents', 'wagesCents', 'maintenanceCents', 'unrecognizedCents']
         .every((key) => isFiniteNonnegative(bucket[key])),
-    )
+    ) ||
+    typeof operatingLedger.lifetimeRecognizedProfitCents !== 'number' || !Number.isFinite(operatingLedger.lifetimeRecognizedProfitCents)
   ) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 operating ledger.' }
   }

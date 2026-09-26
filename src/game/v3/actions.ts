@@ -739,7 +739,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     return consumedResult(
       state,
       action,
-      recordV3Ledger(sold, { receiptsCents, cogsCents: consumed.costBasisCents }),
+      recordV3Ledger(sold, { receiptsCents, cogsCents: consumed.costBasisCents, unrecognizedCents: consumed.estimatedBasis ? receiptsCents : 0 }),
       event('success', 'v3.action.ok', { quantity: consumed.quantity, receiptsCents }),
     )
   }

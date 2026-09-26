@@ -9,7 +9,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 10 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 11 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -158,6 +158,7 @@ export type V3LedgerBucket = {
   cogsCents: number
   wagesCents: number
   maintenanceCents: number
+  unrecognizedCents: number
 }
 
 export type V3OperatingLedger = {
@@ -169,6 +170,40 @@ export type V3OperatingLedger = {
   lifetimeReceiptsCents: number
   lifetimeCogsCents: number
   lifetimeOperatingExpenseCents: number
+  /** Receipts − bonuses/estimated-basis receipts − COGS − wages − maintenance (may be negative). */
+  lifetimeRecognizedProfitCents: number
+}
+
+export type V3AwardGrade = 'S' | 'A' | 'B' | '-'
+
+export type V3AwardPeriod = {
+  startTick: number
+  familyCount: number
+  deliveryTarget: number
+  varietyTarget: number
+  startRecognizedProfitCents: number
+  qualifiedUnits: number
+  qualifiedFamilies: V3ProductFamily[]
+}
+
+export type V3AwardState = {
+  current: V3AwardPeriod
+  history: Array<{ startTick: number; score: number; grade: V3AwardGrade; profitCents: number; rpAwarded: number }>
+  /** Highest grade RP already paid this run (B5/A10/S15; cumulative cap 15). */
+  paidGradeRp: number
+}
+
+export type V3CampaignReport = {
+  clearedAtTick: number
+  partners: string[]
+  families: V3ProductFamily[]
+  showcaseTemplateId: string
+  starProduct: { blueprintId: string; name: string; quality: number; delivered: number } | null
+  team: Array<{ employeeId: string; name: string; role: string; level: number; recipes: number; milestones: number }>
+  lotsUsed: number
+  buildingCounts: Record<string, number>
+  rollingProfitCents: number
+  lifetimeReceiptsCents: number
 }
 
 export type V3RecoveryState = {
@@ -216,6 +251,8 @@ export type V3GameState = {
   employeeRecords: Record<string, V3EmployeeRecord>
   /** Set when maintenance could not be paid; cleared only by player confirmation. */
   maintenanceEmergency: { sinceTick: number; cellIndex: number } | null
+  awards: V3AwardState
+  campaignReport: V3CampaignReport | null
   clientProgress: Record<string, V3ClientProgress>
   acceptedJob: V3AcceptedJob | null
   jobReceipts: V3JobReceipts

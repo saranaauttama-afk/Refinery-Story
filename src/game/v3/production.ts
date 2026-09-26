@@ -20,6 +20,7 @@ import { getV3Modifiers } from './modifiers'
 import { settleV3Maintenance } from './maintenance'
 import { V3_DEFAULT_BLUEPRINT_ID } from './state'
 import { addV3JobContribution, advanceV3JobClock, runV3AutoDispatch } from './jobs'
+import { advanceV3Awards } from './awards'
 import { evaluateV3CampaignProgress } from './campaign'
 import { addV3CommodityInventory, addV3VariantInventory, consumeV3ProtectedInventory, getV3ConsumableQuantity, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
 import { advanceV3Recovery, isV3LoanerCell } from './recovery'
@@ -425,5 +426,5 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
     },
     plantPrograms: programs,
   }, Object.fromEntries(lines.map((line) => [line.cellIndex, line.actualWork])))
-  return { lines, power, state: evaluateV3CampaignProgress(advanceV3Recovery(advanceV3JobClock(runV3AutoDispatch(producedState)), deltaTicks)) }
+  return { lines, power, state: evaluateV3CampaignProgress(advanceV3Awards(advanceV3Recovery(advanceV3JobClock(runV3AutoDispatch(producedState)), deltaTicks))) }
 }

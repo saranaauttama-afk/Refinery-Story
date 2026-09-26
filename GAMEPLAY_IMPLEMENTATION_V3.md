@@ -323,6 +323,19 @@ all Q prerequisites checked; no parallel inventory writer left for any product.
 
 ### V3-15 · Campaign end, reports and freeplay
 
+Status: **COMPLETE IN CODE** — engine `feat(gameplay): implement V3-15…`, UI
+`feat(ui): V3-15…`. Check: `check:v3-campaign-end` plus all prior checks.
+Evidence notes: clear requires exactly 3 of 5 Partners, ≥2 families, Airline or
+Materials among them, a Showcase from a developed Q65+ recipe and positive
+recognized operating profit over a complete 180s window; completion bonuses,
+grants and estimated-basis receipts are excluded, and revision-10 saves upgrade
+with all earlier receipts unrecognized. Clear is sticky, saves one report (restored
+from save) and pays nothing extra. Award periods (3,600 ticks) freeze targets at
+period start and pay grade RP only above the best already paid (cap 15). 6×6
+($100,000) opens only after clear. Reset starts a fresh V3 state; there is no
+NewGame+. Clear/award cases use **constructed fixtures**; a legal full run to C5
+belongs to V3-18.
+
 Dependencies:14. Implement showcase predicates/reward, rolling180s profitability
 gate, sticky clear, report, optional challenges and6×6 unlock. Add frozen-period
 award targets and capped one-time award RP. The old Legend system is not imported.

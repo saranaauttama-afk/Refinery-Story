@@ -114,6 +114,15 @@ export function createInitialV3GameState(): V3GameState {
     },
     unpaidEmployeeIds: [],
     maintenanceEmergency: null,
+    awards: {
+      current: {
+        startTick: 0, familyCount: 1, deliveryTarget: 60, varietyTarget: 1,
+        startRecognizedProfitCents: 0, qualifiedUnits: 0, qualifiedFamilies: [],
+      },
+      history: [],
+      paidGradeRp: 0,
+    },
+    campaignReport: null,
     employeeRecords: { [operator.id]: { workTicks: 0, blueprintIds: [], milestoneIds: [] } },
     clientProgress: {},
     acceptedJob: null,
@@ -135,6 +144,7 @@ export function createInitialV3GameState(): V3GameState {
       lifetimeReceiptsCents: 0,
       lifetimeCogsCents: 0,
       lifetimeOperatingExpenseCents: 0,
+      lifetimeRecognizedProfitCents: 0,
     },
     recoveryState: null,
     nextActionSequence: 1,

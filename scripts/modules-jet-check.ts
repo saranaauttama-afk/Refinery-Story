@@ -57,12 +57,12 @@ while ((state.variantInventory[precisionGas.id]?.quantity ?? 0) < 35) {
 }
 state = act(state, { type: 'accept_job', templateId: 'performance:trial' })
 state = act(state, { type: 'dispatch_job', quantity: 35, blueprintId: precisionGas.id })
-assert.equal(state.world.researchPoints, 20, 'Tutorial + Local + Performance trials = 20 RP')
+assert.equal(state.world.researchPoints, 20 + state.awards.paidGradeRp, 'Tutorial + Local + Performance trials = 20 RP (+ any period award RP)')
 
 state = earnGasolineCash(state, 800_000).state
 state = act(state, { type: 'upgrade', cellIndex: LAB })
 state = act(state, { type: 'buy_research', researchId: 'premiumFuel' })
-assert.equal(state.world.researchPoints, 0)
+assert.equal(state.world.researchPoints, state.awards.paidGradeRp, 'premiumFuel spent the 20 trial RP')
 assert.equal(getV3AvailableKnowledgeRank(state, LAB), 1)
 state = assertBlocked(state, { type: 'buy_research', researchId: 'premiumFuel' }, 'v3.research.owned')
 state = assertBlocked(state, { type: 'buy_research', researchId: 'advancedProcessing' }, 'v3.research.locked')
