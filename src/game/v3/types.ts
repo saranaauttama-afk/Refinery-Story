@@ -9,7 +9,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 9 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 10 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -214,6 +214,8 @@ export type V3GameState = {
   employeeDuties: Record<string, V3EmployeeDuty>
   unpaidEmployeeIds: string[]
   employeeRecords: Record<string, V3EmployeeRecord>
+  /** Set when maintenance could not be paid; cleared only by player confirmation. */
+  maintenanceEmergency: { sinceTick: number; cellIndex: number } | null
   clientProgress: Record<string, V3ClientProgress>
   acceptedJob: V3AcceptedJob | null
   jobReceipts: V3JobReceipts
@@ -267,6 +269,8 @@ export type V3ActionMessageId =
   | 'v3.job.rush_unavailable'
   | 'v3.job.auto_repeat_locked'
   | 'v3.job.auto_repeat_invalid'
+  | 'v3.maintenance.not_in_emergency'
+  | 'v3.maintenance.unaffordable'
   | 'v3.specialization.locked'
   | 'v3.specialization.chosen'
   | 'v3.development.chapter_locked'
@@ -474,6 +478,11 @@ export type V3ChooseSpecializationAction = {
   path: SpecializationPath
 }
 
+export type V3RestoreOperationsAction = {
+  type: 'restore_operations'
+  sequence: number
+}
+
 export type V3ConvertAsphaltAction = {
   type: 'convert_asphalt'
   sequence: number
@@ -491,7 +500,7 @@ export type V3ExpandGridAction = {
   sequence: number
 }
 
-export type V3Action = V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

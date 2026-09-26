@@ -16,6 +16,8 @@ export type V3Modifiers = {
   storagePercent: V3CappedChannel
   trade: V3CappedChannel
   rp: V3CappedChannel
+  /** Global upkeep reduction from research + Support (workshop added in maintenance.ts). */
+  upkeep: V3CappedChannel
   coreStorageFlat: number
   mechanicStorageFlat: number
   /** Per-employee effective contribution while on an active, paid support duty. */
@@ -40,6 +42,7 @@ export function getV3Modifiers(state: V3GameState): V3Modifiers {
   let storagePercent = 0
   let trade = 0
   let rp = 0
+  let upkeep = 0
   let coreStorageFlat = 0
   for (const [id, rule] of Object.entries(V3_RESEARCH)) {
     if (!owns(state, id as V3SupportedResearch)) continue
@@ -48,6 +51,7 @@ export function getV3Modifiers(state: V3GameState): V3Modifiers {
     else if (effect.kind === 'storagePercent') storagePercent += effect.value
     else if (effect.kind === 'trade') trade += effect.value
     else if (effect.kind === 'jobRp') rp += effect.value
+    else if (effect.kind === 'upkeep') upkeep += effect.value
     else if (effect.kind === 'coreStorage') coreStorageFlat += effect.value
   }
   // Sales Office: only the highest office counts, never stacked.
@@ -78,14 +82,18 @@ export function getV3Modifiers(state: V3GameState): V3Modifiers {
     } else if (role.support === 'trade') {
       trade += role.supportValue * effectiveness
       supportContributions[employee.id] = { channel: 'trade', value: role.supportValue * effectiveness }
+    } else if (role.support === 'upkeep') {
+      upkeep += role.supportValue * effectiveness
+      supportContributions[employee.id] = { channel: 'upkeep', value: role.supportValue * effectiveness }
     } else if (role.support === 'storagePercent') {
       storagePercent += role.supportValue * effectiveness
       supportContributions[employee.id] = { channel: 'storagePercent', value: role.supportValue * effectiveness }
     }
-    // Support skills feed matching global channels; safety/upkeep stay inactive.
+    // Support skills feed matching global channels; the safety channel stays inactive.
     for (const skill of employee.skills ?? []) {
       if (skill.channel === 'output') globalRate += skill.value
       else if (skill.channel === 'trade') trade += skill.value
+      else if (skill.channel === 'upkeep') upkeep += skill.value
     }
   }
   return {
@@ -93,6 +101,7 @@ export function getV3Modifiers(state: V3GameState): V3Modifiers {
     storagePercent: capped(storagePercent, V3_CAPS.storagePercent),
     trade: capped(trade, V3_CAPS.trade),
     rp: capped(rp, V3_CAPS.rp),
+    upkeep: capped(upkeep, V3_CAPS.upkeep),
     coreStorageFlat,
     mechanicStorageFlat: mechanicStaff * V3_ROLES.mechanic.supportValue,
     supportContributions,

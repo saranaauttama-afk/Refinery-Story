@@ -62,7 +62,11 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   // Revision 8 (build #71) only lacks the auto-repeat opt-in, which defaults to off.
   if (value.schemaRevision === 8 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.jobReceipts)) {
-    value = { ...value, schemaRevision: V3_PREVIEW_SCHEMA_REVISION, jobReceipts: { ...value.jobReceipts, autoRepeatTemplateId: null } }
+    value = { ...value, schemaRevision: 9, jobReceipts: { ...value.jobReceipts, autoRepeatTemplateId: null } }
+  }
+  // Revision 9 (builds #72/#73) predates maintenance; start without an emergency.
+  if (isRecord(value) && value.schemaRevision === 9 && value.rulesetVersion === V3_RULESET_VERSION) {
+    value = { ...value, schemaRevision: V3_PREVIEW_SCHEMA_REVISION, maintenanceEmergency: null }
   }
   if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   if (value.schemaRevision !== V3_PREVIEW_SCHEMA_REVISION) {
@@ -114,6 +118,10 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     entry.blueprintId === V3_COMMODITY_ID[commodity] && isFiniteNonnegative(entry.quantity) &&
     isFiniteNonnegative(entry.totalCostBasisCents) && typeof entry.estimatedBasis === 'boolean')) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 commodity inventory.' }
+  }
+  const emergency = value.maintenanceEmergency
+  if (emergency !== null && !(isRecord(emergency) && Number.isInteger(emergency.sinceTick) && Number.isInteger(emergency.cellIndex))) {
+    return { status: 'invalid', state: null, reason: 'Invalid V3 maintenance emergency.' }
   }
   const employees = world.employees as Array<Record<string, unknown>>
   const employeeIds = new Set(employees.map((employee) => employee.id as string))

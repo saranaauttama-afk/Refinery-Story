@@ -17,6 +17,8 @@ import {
 } from './data'
 import { advanceV3Development } from './development'
 import { getV3Modifiers } from './modifiers'
+import { settleV3Maintenance } from './maintenance'
+import { V3_DEFAULT_BLUEPRINT_ID } from './state'
 import { addV3JobContribution, advanceV3JobClock, runV3AutoDispatch } from './jobs'
 import { evaluateV3CampaignProgress } from './campaign'
 import { addV3CommodityInventory, addV3VariantInventory, consumeV3ProtectedInventory, getV3ConsumableQuantity, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
@@ -107,11 +109,18 @@ function lineRequest(
   const building = state.world.grid[program.cellIndex]
   if (!isV3ProcessBuilding(building)) return null
   const unit = V3_PROCESS_UNITS[building]
-  const blueprint = state.productBlueprints[program.blueprintId] ?? null
-  const level = state.world.gridLevels[program.cellIndex] ?? 1
+  // Emergency line runs default Standard at Lv1 with no crew/module/bonus; the
+  // saved program is retained and resumes on player-confirmed restoration.
+  const baseline = state.maintenanceEmergency?.cellIndex === program.cellIndex
+  const blueprint = baseline
+    ? state.productBlueprints[V3_DEFAULT_BLUEPRINT_ID.gasoline] ?? null
+    : state.productBlueprints[program.blueprintId] ?? null
+  const level = baseline ? 1 : state.world.gridLevels[program.cellIndex] ?? 1
   const commodityLine = unit.family === 'recycledMaterial'
   let status: V3LineStatus = 'ready'
-  if (program.paused) status = 'paused'
+  if (state.maintenanceEmergency && !baseline) status = 'paused'
+  else if (baseline) status = 'ready'
+  else if (program.paused) status = 'paused'
   else if (program.setupRemainingTicks > 0) status = 'setup'
   else if (commodityLine
     ? program.blueprintId !== V3_COMMODITY_ID.recycledMaterial || program.installedModule !== 'none'
@@ -120,14 +129,15 @@ function lineRequest(
       level < blueprint.minPlantLevel
   ) status = 'invalid'
   const profile = blueprint ? V3_PROFILE_MULTIPLIERS[blueprint.profile] : V3_PROFILE_MULTIPLIERS.standard
-  const module = V3_MODULE_MULTIPLIERS[program.installedModule]
+  const module = V3_MODULE_MULTIPLIERS[baseline ? 'none' : program.installedModule]
   const employee = getV3LineEmployee(state, program.cellIndex)
   const loanerRate = isV3LoanerCell(state, program.cellIndex) ? 0.5 : 1
-  const crewRate = status === 'ready' && loanerRate === 1 ? getV3LocalCrewRate(state, program.cellIndex) : 0
-  // Loaners run the Lv1 baseline without crew, global or specialization effects.
-  const specialization = state.world.specialization ? V3_SPECIALIZATION[state.world.specialization] : null
-  const specializationRate = loanerRate === 1 ? specialization?.rate ?? 1 : 1
-  const cappedGlobal = loanerRate === 1 ? globalRate : 0
+  const noBonus = loanerRate !== 1 || baseline
+  const crewRate = status === 'ready' && !noBonus ? getV3LocalCrewRate(state, program.cellIndex) : 0
+  // Loaners and the emergency line run the Lv1 baseline without crew, global or specialization effects.
+  const specialization = state.world.specialization && !baseline ? V3_SPECIALIZATION[state.world.specialization] : null
+  const specializationRate = !noBonus ? specialization?.rate ?? 1 : 1
+  const cappedGlobal = !noBonus ? globalRate : 0
   const requestedWork = status === 'ready'
     ? deltaTicks / V3_TICKS_PER_CYCLE * (V3_LEVEL_RATE[level] ?? 0) * profile.work * module.work *
       (1 + crewRate) * (1 + cappedGlobal) * specializationRate * boostRate * loanerRate
@@ -138,7 +148,7 @@ function lineRequest(
     cellIndex: program.cellIndex,
     building,
     family: unit.family,
-    blueprintId: program.blueprintId,
+    blueprintId: baseline ? V3_DEFAULT_BLUEPRINT_ID.gasoline : program.blueprintId,
     status,
     requestedWork,
     actualWork: 0,
@@ -318,7 +328,7 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
   const settlement = state.recoveryState?.status === 'running'
     ? { state, paidEmployeeIds: [], unpaidEmployeeIds: state.unpaidEmployeeIds, wagesCents: 0 }
     : settleV3Wages(state, deltaTicks)
-  const developed = advanceV3Development(settlement.state, deltaTicks)
+  const developed = advanceV3Development(settleV3Maintenance(settlement.state, deltaTicks), deltaTicks)
   const { lines, power } = evaluateV3Production(developed, deltaTicks, boostRate)
   const world = developed.world
   const basis = developed.materialCostBasis

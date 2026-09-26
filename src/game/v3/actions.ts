@@ -22,6 +22,7 @@ import { expandV3Grid } from './expansion'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
+import { getV3EmergencyExitCents } from './maintenance'
 import { evaluateV3CampaignProgress } from './campaign'
 import {
   addV3CommodityInventory,
@@ -83,6 +84,7 @@ export const V3_SUPPORTED_BUILDINGS: ReadonlySet<BuildingType> = new Set<Buildin
   'pelletSilo',
   'wasteTreatmentPlant',
   'recyclingBunker',
+  'maintenanceWorkshop',
 ])
 
 const V3_ROLE_NAME: Record<WorkerType, string> = {
@@ -506,6 +508,15 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       return consumedResult(state, action, state, event('blocked', `v3.job.${accepted.blocker}` as V3ActionEvent['messageId']))
     }
     return consumedResult(state, action, accepted.state, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'restore_operations') {
+    if (!state.maintenanceEmergency) return consumedResult(state, action, state, event('blocked', 'v3.maintenance.not_in_emergency'))
+    const exitCents = getV3EmergencyExitCents(state)
+    if (state.world.moneyCents + 1e-8 < exitCents) {
+      return consumedResult(state, action, state, event('blocked', 'v3.maintenance.unaffordable', { costCents: Math.ceil(exitCents) }))
+    }
+    return consumedResult(state, action, { ...state, maintenanceEmergency: null }, event('success', 'v3.action.ok'))
   }
 
   if (action.type === 'convert_asphalt') {

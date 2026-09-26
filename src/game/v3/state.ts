@@ -113,6 +113,7 @@ export function createInitialV3GameState(): V3GameState {
       [operator.id]: { kind: 'line', cellIndex: 4 },
     },
     unpaidEmployeeIds: [],
+    maintenanceEmergency: null,
     employeeRecords: { [operator.id]: { workTicks: 0, blueprintIds: [], milestoneIds: [] } },
     clientProgress: {},
     acceptedJob: null,

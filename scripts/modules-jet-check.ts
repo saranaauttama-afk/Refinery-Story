@@ -33,7 +33,6 @@ function developed(state: V3GameState, family: V3ProductFamily, quality: number)
 let state = legalChapterTwo()
 const niranId = state.world.employees[0].id
 assert.equal(state.world.researchPoints, 15)
-state = assertBlocked(state, { type: 'buy_research', researchId: 'saferOperations' }, 'v3.research.unsupported')
 state = assertBlocked(state, { type: 'buy_research', researchId: 'premiumFuel' }, 'v3.research.lab_level')
 state = assertBlocked(state, {
   type: 'start_development', family: 'gasoline', profile: 'precision', module: 'none',
