@@ -228,7 +228,10 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
               {recipes.map((recipe) => recipe.id === program.blueprintId ? null : (
                 <Gate
                   key={recipe.id}
-                  label={t({ en: `Use ${recipe.name} Q${recipe.quality}`, th: `ใช้ ${recipe.name} Q${recipe.quality}` })}
+                  label={t({
+                    en: `Use ${recipe.name} Q${recipe.quality}${recipe.minPlantLevel > 1 ? ` · plant Lv${recipe.minPlantLevel}` : ''}${recipe.module !== 'none' ? ` · ${recipe.module} module` : ''}`,
+                    th: `ใช้ ${recipe.name} Q${recipe.quality}${recipe.minPlantLevel > 1 ? ` · โรงงาน Lv${recipe.minPlantLevel}` : ''}${recipe.module !== 'none' ? ` · โมดูล ${recipe.module}` : ''}`,
+                  })}
                   action={{ type: 'set_program', buildingId: line.buildingId, blueprintId: recipe.id }}
                 />
               ))}

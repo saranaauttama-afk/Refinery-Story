@@ -164,7 +164,8 @@ export function advanceV3Development(state: V3GameState, deltaTicks: number): V3
     signature: project.signature,
     revision,
     family: project.family,
-    name: `${project.profile[0].toUpperCase()}${project.profile.slice(1)}${project.module === 'none' ? '' : ` ${project.module[0].toUpperCase()}${project.module.slice(1)}`} ${FAMILY_NAME[project.family]}`,
+    // Profile + product, with the required line module named explicitly (no "Precision Precision").
+      name: `${project.profile[0].toUpperCase()}${project.profile.slice(1)} ${FAMILY_NAME[project.family]}${project.module === 'none' ? '' : ` (${project.module[0].toUpperCase()}${project.module.slice(1)} module)`}`,
     quality: project.quality,
     profile: project.profile,
     module: project.module,

@@ -158,6 +158,31 @@ export function getV3DefaultProgramId(building: V3ProcessBuilding): string {
   return family === 'recycledMaterial' ? V3_COMMODITY_ID.recycledMaterial : V3_DEFAULT_BLUEPRINT_ID[family]
 }
 
+/**
+ * Why a certified recipe cannot run on a line (development is never blocked by
+ * this). Shared by set_program and the recipe buttons, so the UI shows the
+ * exact missing requirement: plant level, installed module, family or loaner.
+ */
+export function explainV3ProgramFit(
+  state: V3GameState,
+  buildingId: string,
+  blueprintId: string,
+): { messageId: V3ActionEvent['messageId']; params?: Record<string, number | string> } | null {
+  const program = state.plantPrograms[buildingId]
+  const building = getV3BuildingType(state, buildingId)
+  const blueprint = state.productBlueprints[blueprintId]
+  if (!program || !isV3ProcessBuilding(building)) return { messageId: 'v3.program.invalid_cell' }
+  if (!blueprint) return { messageId: 'v3.program.invalid_blueprint' }
+  if (blueprint.family !== V3_PROCESS_UNITS[building].family) return { messageId: 'v3.program.wrong_family' }
+  const level = getV3BuildingLevel(state, buildingId)
+  if (level < blueprint.minPlantLevel) return { messageId: 'v3.program.plant_level', params: { need: blueprint.minPlantLevel, have: level } }
+  if (blueprint.module !== program.installedModule) {
+    return { messageId: 'v3.program.module_mismatch', params: { need: blueprint.module, installed: program.installedModule } }
+  }
+  if (isV3LoanerBuilding(state, buildingId) && blueprintId !== V3_DEFAULT_BLUEPRINT_ID.gasoline) return { messageId: 'v3.program.loaner_default_only' }
+  return null
+}
+
 export function getV3ActionId(action: Pick<V3Action, 'type' | 'sequence'>): string {
   return `action:${action.type}:${String(action.sequence).padStart(8, '0')}`
 }
@@ -710,15 +735,8 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     if (!program || !isV3ProcessBuilding(building)) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_cell'))
     }
-    if (!blueprint || blueprint.family !== V3_PROCESS_UNITS[building].family || (getV3BuildingLevel(state, action.buildingId)) < blueprint.minPlantLevel) {
-      return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_blueprint'))
-    }
-    if (blueprint.module !== program.installedModule) {
-      return consumedResult(state, action, state, event('blocked', 'v3.program.module_mismatch'))
-    }
-    if (isV3LoanerBuilding(state, action.buildingId) && action.blueprintId !== V3_DEFAULT_BLUEPRINT_ID.gasoline) {
-      return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_blueprint'))
-    }
+    const fit = explainV3ProgramFit(state, action.buildingId, action.blueprintId)
+    if (fit) return consumedResult(state, action, state, event('blocked', fit.messageId, fit.params))
     const changedProgram = program.blueprintId === blueprint.id
       ? program
       : { ...program, blueprintId: blueprint.id, setupRemainingTicks: 25 }
