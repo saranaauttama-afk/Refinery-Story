@@ -39,8 +39,9 @@
 - V3-17 (production cutover, real-time loop, single writer, reset): **complete in code**.
 - V3-20 (Kairosoft-style main screen, isometric yard with existing art): **complete in code**.
 - V3-21 a–e (fame, market, rivals, expo, careers): **complete in code**.
-- **Current task: V3-21f** (walking staff/trucks), then V3-18 calibration
-  (target 5–8 h; legal bot baseline ~36 min), V3-19 acceptance.
+- V3-21f (walking staff/trucks) moved to the art backlog by the owner.
+- **Current task: V3-18** calibration (target 5–8 h; legal bot baseline ~36 min),
+  then V3-19 acceptance.
 
 ## Decisions recorded
 
