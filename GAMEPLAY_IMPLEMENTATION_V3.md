@@ -420,6 +420,16 @@ Acceptance:fresh/reload/reset round-trips are exact; corrupt/newer versions fail
 safely without overwrite; no project/job/inventory/reward contamination across
 runs; recovery and loaner provenance survive reload; exactly one writer runs.
 
+### V3-20 · Kairosoft-style main screen (inserted, owner request 2026-09-26)
+
+Status: **COMPLETE IN CODE**. The V3 screen was a text dashboard after V3-17; the
+old art was never lost. V3-20 reuses the existing isometric pixel art on a
+full-screen yard with HUD, calendar, tab sheets and feedback floaters (see commit
+`feat(ui): V3-20…`). Pure projection/calendar maths is covered in `check:v3-yard`.
+Planned order from here (owner-approved recommendation): V3-20 device check →
+V3-21 content chosen by the owner (rivals/ranking, market trends, expos, fame,
+staff careers) → V3-18 calibration toward a 5–8 h campaign → V3-19 acceptance.
+
 ### V3-18 · Legal full-loop simulation and economy calibration
 
 Dependencies:17. Subtasks:18a replace simulator shortcuts;18b baselineV3-A;
