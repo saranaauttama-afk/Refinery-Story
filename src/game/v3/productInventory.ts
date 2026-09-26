@@ -1,3 +1,4 @@
+import { listV3Buildings } from './yard'
 import type { ProductKey } from '../types'
 import { V3_COMMODITY_ID, V3_STORAGE } from './data'
 import { getV3Modifiers } from './modifiers'
@@ -52,10 +53,8 @@ export function getV3CrudeCapacity(state: V3GameState): number {
 
 export function getV3PhysicalCrudeCapacity(state: V3GameState): number {
   let capacity = V3_STORAGE.baseCrude
-  for (let index = 0; index < state.world.grid.length; index++) {
-    if (state.world.grid[index] === 'crudeTank') {
-      capacity += V3_STORAGE.crudeTankByLevel[state.world.gridLevels[index] ?? 1] ?? 0
-    }
+  for (const building of listV3Buildings(state)) {
+    if (building.type === 'crudeTank') capacity += V3_STORAGE.crudeTankByLevel[building.level] ?? 0
   }
   return capacity
 }
@@ -68,10 +67,8 @@ export function getV3PhysicalProductCapacity(state: V3GameState, product: Produc
   let capacity = V3_STORAGE.baseByProduct[product]
   const storageBuilding = STORAGE_BUILDING_BY_PRODUCT[product]
   if (!storageBuilding) return capacity
-  for (let index = 0; index < state.world.grid.length; index++) {
-    if (state.world.grid[index] === storageBuilding) {
-      capacity += storageContribution(storageBuilding, state.world.gridLevels[index] ?? 1)
-    }
+  for (const building of listV3Buildings(state)) {
+    if (building.type === storageBuilding) capacity += storageContribution(storageBuilding, building.level)
   }
   return capacity
 }

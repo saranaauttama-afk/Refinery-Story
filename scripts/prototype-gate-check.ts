@@ -5,6 +5,7 @@ import { runV3ProductionTick } from '../src/game/v3/production'
 import { getV3ProductQuantity } from '../src/game/v3/productInventory'
 import { createInitialV3GameState } from '../src/game/v3/state'
 import type { V3GameState, V3ProcessProfile, V3ProductBlueprint } from '../src/game/v3/types'
+import { slotId } from './v3-check-helpers'
 
 type Market = 'spot' | 'job'
 type ScenarioResult = {
@@ -47,7 +48,7 @@ function fixture(profile: 'volume' | 'precision'): { state: V3GameState; bluepri
       materialCostBasis: { ...base.materialCostBasis, crudeCents: 60_000 },
       campaignProgress: { ...base.campaignProgress, chapter: 1 },
       plantPrograms: {
-        4: { ...base.plantPrograms[4], blueprintId: blueprint.id },
+        4: { ...base.plantPrograms[slotId(base, 4)], blueprintId: blueprint.id },
       },
     },
   }

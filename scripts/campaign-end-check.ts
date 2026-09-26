@@ -8,7 +8,7 @@ import { runV3ProductionTick } from '../src/game/v3/production'
 import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3JobReceipt, V3ProductBlueprint, V3ProductFamily } from '../src/game/v3/types'
-import { act, assertBlocked } from './v3-check-helpers'
+import { act, assertBlocked, slotId } from './v3-check-helpers'
 
 // ---- Showcase catalog (Master §11) ----
 const showcases = Object.values(V3_JOB_TEMPLATES).filter((template) => template.kind === 'showcase')
@@ -100,12 +100,12 @@ assert.deepEqual(report.partners, ['airline', 'local', 'performance'])
 assert.deepEqual(report.families, ['gasoline', 'jetFuel'])
 assert.equal(report.showcaseTemplateId, 'showcase:gasoline')
 assert.equal(report.starProduct?.blueprintId, developed.id)
-assert.ok(report.lotsUsed <= 9, 'no requirement to own every building')
+assert.equal(report.unlockedArea, 100, 'cleared on the starting 10×10: no need for every building or all land')
 assert.ok(!cleared.world.unlockedResearchIds.length, 'no all-research gate')
 
 // ---- Sticky clear, single payout, report restorable ----
 const cashAtClear = cleared.world.moneyCents
-let after = act(cleared, { type: 'demolish', cellIndex: 5, expectedBuilding: 'gasolineTank' })
+let after = act(cleared, { type: 'demolish', buildingId: slotId(cleared, 5), expectedBuilding: 'gasolineTank' })
 after = { ...after, world: { ...after.world, moneyCents: 0 } }
 after = evaluateV3CampaignProgress(after)
 assert.equal(after.campaignProgress.chapter, 5, 'clear is sticky')
@@ -115,13 +115,12 @@ const reloaded = parseV3GameState(JSON.parse(JSON.stringify(cleared)))
 assert.equal(reloaded.status, 'loaded')
 assert.deepEqual(reloaded.state!.campaignReport, report)
 
-// ---- 6×6 only after clear ----
-let yard = act(act(cleared, { type: 'expand_grid' }), { type: 'expand_grid' })
-const beforeSix = yard.world.moneyCents
-yard = act(yard, { type: 'expand_grid' })
-assert.equal(yard.world.grid.length, 36)
-assert.equal(beforeSix - yard.world.moneyCents, 10_000_000)
-assertBlocked(yard, { type: 'expand_grid' }, 'v3.expand.unavailable')
+// ---- Outer land ring (to 28×28) only after clear ----
+let yard = act(act(cleared, { type: 'unlock_land_parcel', parcelId: 'ring1:west' }), { type: 'unlock_land_parcel', parcelId: 'ring2:west' })
+const beforeRing3 = yard.world.moneyCents
+yard = act(yard, { type: 'unlock_land_parcel', parcelId: 'ring3:west' })
+assert.equal(beforeRing3 - yard.world.moneyCents, 2_500_000)
+assertBlocked(act(act({ ...cleared, campaignProgress: { ...cleared.campaignProgress, chapter: 4 } }, { type: 'unlock_land_parcel', parcelId: 'ring1:west' }), { type: 'unlock_land_parcel', parcelId: 'ring2:west' }), { type: 'unlock_land_parcel', parcelId: 'ring3:west' }, 'v3.land.locked')
 
 // ---- Award periods: frozen targets, grade RP only above best, no penalty ----
 let award = createInitialV3GameState()
@@ -147,20 +146,14 @@ award = runV3ProductionTick(award, 25).state
 assert.equal(award.awards.history.at(-1)!.grade, '-')
 assert.ok(award.world.moneyCents >= moneyBefore - 1_000, 'low grade has no penalty beyond normal costs')
 
-// ---- Revision-10 saves: old receipts become unrecognized (no fake profit) ----
+// ---- Fresh-save only: older revisions are rejected (no migration, no fake profit) ----
 const rev10 = JSON.parse(JSON.stringify(profitable(c4())))
 rev10.schemaRevision = 10
-delete rev10.awards
-delete rev10.campaignReport
-delete rev10.operatingLedger.lifetimeRecognizedProfitCents
-for (const bucket of rev10.operatingLedger.buckets) delete bucket.unrecognizedCents
-const upgraded = parseV3GameState(rev10)
-assert.equal(upgraded.status, 'loaded')
-assert.ok(getV3RollingOperatingProfit(upgraded.state!).cents <= 0, 'pre-upgrade sales cannot fake clear profit')
+assert.notEqual(parseV3GameState(rev10).status, 'loaded')
 
 // ---- Reset path is a fresh state, not NewGame+ ----
 const fresh = createInitialV3GameState()
 assert.equal(fresh.campaignProgress.chapter, 0)
 assert.equal(fresh.campaignReport, null)
 
-console.log('PASS: V3-15 showcase (developed Q65), exact clear conditions, unrecognized bonuses/estimated sales, sticky clear/report, 6x6, frozen awards, rev10 load')
+console.log('PASS: V3-15 showcase (developed Q65), exact clear conditions, unrecognized bonuses/estimated sales, sticky clear/report, outer land after clear, frozen awards, rev10 load')

@@ -1,7 +1,6 @@
 import type {
   BuildingType,
   Employee,
-  GridCell,
   ProductKey,
   ResearchKey,
   SpecializationPath,
@@ -9,7 +8,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 11 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 12 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -51,7 +50,7 @@ export type V3MaterialCostBasis = {
 }
 
 export type V3PlantProgram = {
-  cellIndex: number
+  buildingId: string
   blueprintId: string
   installedModule: V3ModuleKey
   setupRemainingTicks: number
@@ -64,7 +63,7 @@ export type V3DevelopmentProject = {
   family: V3ProductFamily
   leadEmployeeId: string
   contributorEmployeeIds: string[]
-  labCellIndex: number
+  labBuildingId: string
   remainingTicks: number
   profile: V3ProcessProfile
   module: V3ModuleKey
@@ -83,8 +82,8 @@ export type V3DevelopmentHistoryEntry = {
 }
 
 export type V3EmployeeDuty =
-  | { kind: 'line'; cellIndex: number }
-  | { kind: 'development'; projectId: string; returnCellIndex: number | null; returnSupport?: boolean }
+  | { kind: 'line'; buildingId: string }
+  | { kind: 'development'; projectId: string; returnBuildingId: string | null; returnSupport?: boolean }
   | { kind: 'support' }
   | { kind: 'reserve' }
 
@@ -200,7 +199,7 @@ export type V3CampaignReport = {
   showcaseTemplateId: string
   starProduct: { blueprintId: string; name: string; quality: number; delivered: number } | null
   team: Array<{ employeeId: string; name: string; role: string; level: number; recipes: number; milestones: number }>
-  lotsUsed: number
+  unlockedArea: number
   buildingCounts: Record<string, number>
   rollingProfitCents: number
   lifetimeReceiptsCents: number
@@ -208,13 +207,22 @@ export type V3CampaignReport = {
 
 export type V3RecoveryState = {
   rescueJobId: string
-  loanerCellIndices: number[]
+  loanerBuildingIds: string[]
   status: 'running' | 'completed'
   quoteCents: number
   targetCashCents: number
   startedAtTick: number
   remainingTicks: number
   paidCents: number
+}
+
+export type V3Building = {
+  id: string
+  type: BuildingType
+  level: 1 | 2 | 3
+  /** Top-left anchor in 100×100 world coordinates; footprint comes from data by type × level. */
+  x: number
+  y: number
 }
 
 export type V3WorldState = {
@@ -226,9 +234,9 @@ export type V3WorldState = {
   feedstock: number
   electricity: number
   waste: number
-  grid: GridCell[]
-  gridLevels: number[]
-  gridExpansionLevel: number
+  /** Every placed building; occupancy is derived from these, never stored. */
+  buildingsById: Record<string, V3Building>
+  unlockedParcelIds: string[]
   employees: Employee[]
   unlockedResearchIds: ResearchKey[]
   specialization: SpecializationPath | null
@@ -243,14 +251,14 @@ export type V3GameState = {
   variantInventory: Record<string, V3InventoryEntry>
   commodityInventory: Partial<Record<V3CommodityFamily, V3InventoryEntry>>
   materialCostBasis: V3MaterialCostBasis
-  plantPrograms: Record<number, V3PlantProgram>
+  plantPrograms: Record<string, V3PlantProgram>
   developmentProject: V3DevelopmentProject | null
   developmentHistory: V3DevelopmentHistoryEntry[]
   employeeDuties: Record<string, V3EmployeeDuty>
   unpaidEmployeeIds: string[]
   employeeRecords: Record<string, V3EmployeeRecord>
   /** Set when maintenance could not be paid; cleared only by player confirmation. */
-  maintenanceEmergency: { sinceTick: number; cellIndex: number } | null
+  maintenanceEmergency: { sinceTick: number; buildingId: string | null } | null
   awards: V3AwardState
   campaignReport: V3CampaignReport | null
   clientProgress: Record<string, V3ClientProgress>
@@ -272,9 +280,17 @@ export type V3ActionMessageId =
   | 'v3.build.insufficient_cash'
   | 'v3.build.unsupported'
   | 'v3.build.requires_route'
-  | 'v3.expand.unavailable'
-  | 'v3.expand.locked'
-  | 'v3.expand.insufficient_cash'
+  | 'v3.place.out_of_bounds'
+  | 'v3.place.locked_land'
+  | 'v3.place.overlap'
+  | 'v3.place.no_footprint'
+  | 'v3.place.building_limit'
+  | 'v3.building.missing'
+  | 'v3.land.unknown'
+  | 'v3.land.owned'
+  | 'v3.land.locked'
+  | 'v3.land.requires_parcel'
+  | 'v3.land.insufficient_cash'
   | 'v3.upgrade.invalid_cell'
   | 'v3.upgrade.unsupported'
   | 'v3.upgrade.locked'
@@ -364,14 +380,30 @@ export type V3ActionResult = {
 export type V3BuildAction = {
   type: 'build'
   sequence: number
-  cellIndex: number
+  /** Top-left anchor in world coordinates. */
+  x: number
+  y: number
   building: BuildingType
 }
 
 export type V3UpgradeAction = {
   type: 'upgrade'
   sequence: number
-  cellIndex: number
+  buildingId: string
+}
+
+export type V3MoveBuildingAction = {
+  type: 'move_building'
+  sequence: number
+  buildingId: string
+  x: number
+  y: number
+}
+
+export type V3UnlockLandParcelAction = {
+  type: 'unlock_land_parcel'
+  sequence: number
+  parcelId: string
 }
 
 export type V3TradeDirection = 'buy' | 'sell'
@@ -389,14 +421,14 @@ export type V3TradeAction = {
 export type V3SetProgramAction = {
   type: 'set_program'
   sequence: number
-  cellIndex: number
+  buildingId: string
   blueprintId: string
 }
 
 export type V3SetPauseAction = {
   type: 'set_pause'
   sequence: number
-  cellIndex: number
+  buildingId: string
   paused: boolean
 }
 
@@ -421,7 +453,7 @@ export type V3StartDevelopmentAction = {
   module: V3ModuleKey
   knowledgeRank: 0 | 1 | 2
   leadEmployeeId: string | null
-  labCellIndex: number
+  labBuildingId: string
 }
 
 export type V3CancelDevelopmentAction = {
@@ -480,14 +512,14 @@ export type V3RestoreStarterLoanersAction = {
 export type V3DemolishAction = {
   type: 'demolish'
   sequence: number
-  cellIndex: number
+  buildingId: string
   expectedBuilding: BuildingType
 }
 
 export type V3SetModuleAction = {
   type: 'set_module'
   sequence: number
-  cellIndex: number
+  buildingId: string
   module: V3ModuleKey
 }
 
@@ -532,12 +564,7 @@ export type V3SetAutoRepeatAction = {
   templateId: string | null
 }
 
-export type V3ExpandGridAction = {
-  type: 'expand_grid'
-  sequence: number
-}
-
-export type V3Action = V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

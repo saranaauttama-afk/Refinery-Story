@@ -1,3 +1,4 @@
+import { listV3Buildings } from './yard'
 import type { Employee } from '../types'
 import {
   V3_CAPS,
@@ -56,9 +57,9 @@ export function getV3Modifiers(state: V3GameState): V3Modifiers {
   }
   // Sales Office: only the highest office counts, never stacked.
   let bestOffice = 0
-  state.world.grid.forEach((cell, index) => {
-    if (cell === 'salesOffice') bestOffice = Math.max(bestOffice, V3_SALES_OFFICE_TRADE_BY_LEVEL[state.world.gridLevels[index] ?? 1] ?? 0)
-  })
+  for (const building of listV3Buildings(state)) {
+    if (building.type === 'salesOffice') bestOffice = Math.max(bestOffice, V3_SALES_OFFICE_TRADE_BY_LEVEL[building.level] ?? 0)
+  }
   trade += bestOffice
 
   let mechanicStaff = 0

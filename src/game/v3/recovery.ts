@@ -1,6 +1,8 @@
+import type { BuildingType } from '../types'
 import { V3_BUILDINGS, V3_CRUDE_PRICE_CENTS, V3_SPOT_PRICE_CENTS } from './data'
 import { getV3SellableQuantity } from './productInventory'
-import { V3_DEFAULT_BLUEPRINT_ID } from './state'
+import { V3_DEFAULT_BLUEPRINT_ID, V3_STARTER_BUILDINGS } from './state'
+import { findV3PlacementSpot, hasV3Building, validateV3Placement } from './yard'
 import type { V3GameState } from './types'
 
 export const V3_RECOVERY_INPUT_QUANTITY = 6
@@ -20,14 +22,15 @@ export function getV3RecoveryOffer(state: V3GameState): V3RecoveryOffer {
   const targetCashCents = V3_RECOVERY_INPUT_QUANTITY * V3_CRUDE_PRICE_CENTS
   const cashDeficitCents = Math.max(0, targetCashCents - state.world.moneyCents)
   const saleableValueCents = getV3SellableQuantity(state, 'gasoline') * V3_SPOT_PRICE_CENTS.gasoline
-  const missingBuildings = STARTER_ROUTE.filter((building) => !state.world.grid.includes(building))
+  const missingBuildings = STARTER_ROUTE.filter((building) => !hasV3Building(state, building))
   const restoreCostCents = missingBuildings.reduce((sum, building) => sum + V3_BUILDINGS[building].buildCostDollars * 100, 0)
-  const emptySlots = state.world.grid.filter((cell) => cell === null).length
+  const placed = placeV3StarterLoaners(state, missingBuildings)
+  const placeable = placed ? missingBuildings.length : 0
   return {
     tollingAvailable: state.recoveryState?.status !== 'running' && cashDeficitCents > 0 && saleableValueCents + 1e-8 < cashDeficitCents,
     missingBuildings: [...missingBuildings],
-    loanersAvailable: missingBuildings.length > 0 && state.world.moneyCents + 1e-8 < restoreCostCents && emptySlots >= missingBuildings.length,
-    emptySlotsNeeded: Math.max(0, missingBuildings.length - emptySlots),
+    loanersAvailable: missingBuildings.length > 0 && state.world.moneyCents + 1e-8 < restoreCostCents && Boolean(placed),
+    emptySlotsNeeded: Math.max(0, missingBuildings.length - placeable),
     cashDeficitCents,
   }
 }
@@ -39,7 +42,7 @@ export function startV3Recovery(state: V3GameState, sequence: number): V3GameSta
     ...state,
     recoveryState: {
       rescueJobId: `rescue:${String(sequence).padStart(8, '0')}`,
-      loanerCellIndices: state.recoveryState?.loanerCellIndices ?? [],
+      loanerBuildingIds: state.recoveryState?.loanerBuildingIds ?? [],
       status: 'running',
       quoteCents: V3_CRUDE_PRICE_CENTS,
       targetCashCents: V3_RECOVERY_INPUT_QUANTITY * V3_CRUDE_PRICE_CENTS,
@@ -53,33 +56,15 @@ export function startV3Recovery(state: V3GameState, sequence: number): V3GameSta
 export function restoreV3StarterLoaners(state: V3GameState): V3GameState | null {
   const offer = getV3RecoveryOffer(state)
   if (!offer.loanersAvailable) return null
-  const grid = [...state.world.grid]
-  const gridLevels = [...state.world.gridLevels]
-  const programs = { ...state.plantPrograms }
-  const loanerCellIndices = [...(state.recoveryState?.loanerCellIndices ?? [])]
-  for (const building of offer.missingBuildings) {
-    const cellIndex = grid.findIndex((cell) => cell === null)
-    if (cellIndex < 0) return null
-    grid[cellIndex] = building
-    gridLevels[cellIndex] = 1
-    loanerCellIndices.push(cellIndex)
-    if (building === 'distillationUnit') {
-      programs[cellIndex] = {
-        cellIndex,
-        blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline,
-        installedModule: 'none',
-        setupRemainingTicks: 0,
-        paused: false,
-      }
-    }
-  }
+  const placed = placeV3StarterLoaners(state, offer.missingBuildings)
+  if (!placed) return null
   return {
     ...state,
-    world: { ...state.world, grid, gridLevels },
-    plantPrograms: programs,
+    world: { ...state.world, buildingsById: placed.buildingsById },
+    plantPrograms: placed.programs,
     recoveryState: {
       rescueJobId: state.recoveryState?.rescueJobId ?? 'loaner:starter',
-      loanerCellIndices,
+      loanerBuildingIds: placed.loanerBuildingIds,
       status: state.recoveryState?.status ?? 'completed',
       quoteCents: state.recoveryState?.quoteCents ?? V3_CRUDE_PRICE_CENTS,
       targetCashCents: state.recoveryState?.targetCashCents ?? 0,
@@ -88,6 +73,30 @@ export function restoreV3StarterLoaners(state: V3GameState): V3GameState | null 
       paidCents: state.recoveryState?.paidCents ?? 0,
     },
   }
+}
+
+/**
+ * Places missing starter buildings as loaners: the original starter anchor when
+ * free, otherwise the first valid spot. Returns null when any of them cannot fit.
+ */
+function placeV3StarterLoaners(state: V3GameState, missing: readonly BuildingType[]) {
+  let working = state
+  const programs = { ...state.plantPrograms }
+  const loanerBuildingIds = [...(state.recoveryState?.loanerBuildingIds ?? [])]
+  for (const type of missing) {
+    const starter = Object.values(V3_STARTER_BUILDINGS).find((entry) => entry.type === type)!
+    const id = `building:loaner:${type}`
+    const spot = !validateV3Placement(working, type, 1, starter.x, starter.y)
+      ? { x: starter.x, y: starter.y }
+      : findV3PlacementSpot(working, type, 1)
+    if (!spot || working.world.buildingsById[id]) return null
+    working = { ...working, world: { ...working.world, buildingsById: { ...working.world.buildingsById, [id]: { id, type, level: 1, ...spot } } } }
+    loanerBuildingIds.push(id)
+    if (type === 'distillationUnit') {
+      programs[id] = { buildingId: id, blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline, installedModule: 'none', setupRemainingTicks: 0, paused: false }
+    }
+  }
+  return { buildingsById: working.world.buildingsById, programs, loanerBuildingIds }
 }
 
 export function advanceV3Recovery(state: V3GameState, deltaTicks: number): V3GameState {
@@ -107,6 +116,6 @@ export function advanceV3Recovery(state: V3GameState, deltaTicks: number): V3Gam
   }
 }
 
-export function isV3LoanerCell(state: V3GameState, cellIndex: number): boolean {
-  return state.recoveryState?.loanerCellIndices.includes(cellIndex) ?? false
+export function isV3LoanerBuilding(state: V3GameState, buildingId: string): boolean {
+  return state.recoveryState?.loanerBuildingIds.includes(buildingId) ?? false
 }

@@ -2,10 +2,11 @@ import assert from 'node:assert/strict'
 
 import { reduceV3Action } from '../src/game/v3/actions'
 import { evaluateV3GasolineProduction, runV3ProductionTick } from '../src/game/v3/production'
-import { createInitialV3GameState } from '../src/game/v3/state'
+import { createInitialV3GameState, V3_STARTER_BUILDINGS } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { Employee } from '../src/game/types'
 import { returnV3EmployeeFromDevelopment } from '../src/game/v3/workforce'
+import { SLOT, slotId } from './v3-check-helpers'
 
 const close = (actual: number, expected: number, message?: string) =>
   assert.ok(Math.abs(actual - expected) < 1e-8, `${message ?? 'value'}: ${actual} != ${expected}`)
@@ -24,23 +25,22 @@ close(evaluateV3GasolineProduction(state, 25)[0].potentialOutputPerMinute, 60)
 
 state = {
   ...state,
-  world: {
-    ...state.world,
-    moneyCents: 300_000,
-    grid: state.world.grid.map((cell, index) => index === 0 ? null : cell),
-  },
+  world: { ...state.world, moneyCents: 300_000 },
+  // Labelled fixture: C2 allows a second Distillation (V3-15.5 building limit).
+  campaignProgress: { ...state.campaignProgress, chapter: 2 },
 }
 action = reduceV3Action(state, {
-  type: 'build', sequence: state.nextActionSequence, cellIndex: 0, building: 'distillationUnit',
+  type: 'build', sequence: state.nextActionSequence, ...SLOT(0), building: 'distillationUnit',
 })
 state = action.state
+const secondLine = slotId(state, 0)
 action = reduceV3Action(state, {
-  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: niranId, duty: { kind: 'line', cellIndex: 0 },
+  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: niranId, duty: { kind: 'line', buildingId: secondLine },
 })
 state = action.state
 preview = evaluateV3GasolineProduction(state, 25)
-close(preview.find((line) => line.cellIndex === 0)!.potentialOutputPerMinute, 72)
-close(preview.find((line) => line.cellIndex === 4)!.potentialOutputPerMinute, 60)
+close(preview.find((line) => line.buildingId === secondLine)!.potentialOutputPerMinute, 72)
+close(preview.find((line) => line.buildingId === V3_STARTER_BUILDINGS.distillationUnit.id)!.potentialOutputPerMinute, 60)
 
 const secondOperator: Employee = {
   id: 'employee:operator:000002', type: 'operator', name: 'Mali', level: 1, xp: 0,
@@ -48,7 +48,7 @@ const secondOperator: Employee = {
 }
 state = { ...state, world: { ...state.world, employees: [...state.world.employees, secondOperator] } }
 action = reduceV3Action(state, {
-  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: secondOperator.id, duty: { kind: 'line', cellIndex: 0 },
+  type: 'assign_duty', sequence: state.nextActionSequence, employeeId: secondOperator.id, duty: { kind: 'line', buildingId: secondLine },
 })
 assert.equal(action.events[0].messageId, 'v3.duty.occupied')
 
@@ -63,7 +63,7 @@ close(production.state.world.employees[0].xp, beforeXp + 1.2 * 25)
 
 const paused = {
   ...createInitialV3GameState(),
-  plantPrograms: { 4: { ...createInitialV3GameState().plantPrograms[4], paused: true } },
+  plantPrograms: { [V3_STARTER_BUILDINGS.distillationUnit.id]: { ...createInitialV3GameState().plantPrograms[V3_STARTER_BUILDINGS.distillationUnit.id], paused: true } },
 }
 production = runV3ProductionTick(paused, 25)
 close(production.state.world.employees[0].xp, 0)
@@ -101,15 +101,15 @@ assert.equal(parseV3GameState(JSON.parse(JSON.stringify(production.state))).stat
 state = createInitialV3GameState()
 state = {
   ...state,
-  employeeDuties: { [niranId]: { kind: 'development', projectId: 'project:1', returnCellIndex: 4 } },
+  employeeDuties: { [niranId]: { kind: 'development', projectId: 'project:1', returnBuildingId: V3_STARTER_BUILDINGS.distillationUnit.id } },
 }
 state = returnV3EmployeeFromDevelopment(state, niranId)
-assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', cellIndex: 4 })
+assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id })
 state = {
   ...state,
   employeeDuties: {
-    [niranId]: { kind: 'development', projectId: 'project:2', returnCellIndex: 4 },
-    [secondOperator.id]: { kind: 'line', cellIndex: 4 },
+    [niranId]: { kind: 'development', projectId: 'project:2', returnBuildingId: V3_STARTER_BUILDINGS.distillationUnit.id },
+    [secondOperator.id]: { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id },
   },
 }
 state = returnV3EmployeeFromDevelopment(state, niranId)

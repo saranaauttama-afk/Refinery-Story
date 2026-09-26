@@ -4,10 +4,10 @@ import { V3_JOB_TEMPLATES, V3_REPEAT_COOLDOWN_TICKS } from '../src/game/v3/jobs'
 import { getV3AttainableQuality, getV3OfferView, getV3RushTerms } from '../src/game/v3/offers'
 import { addV3VariantInventory, getV3ProductCapacity, getV3ProductQuantity } from '../src/game/v3/productInventory'
 import { runV3ProductionTick } from '../src/game/v3/production'
-import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState } from '../src/game/v3/state'
+import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState, V3_STARTER_BUILDINGS } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3ProductBlueprint, V3ProductFamily } from '../src/game/v3/types'
-import { act, assertBlocked, attempt, legalChapterTwo } from './v3-check-helpers'
+import { act, assertBlocked, slotId, attempt, legalChapterTwo, SLOT } from './v3-check-helpers'
 
 // ---- Catalog: 12 milestones for 4 clients, S6 economics, no Materials yet ----
 // V3-13 scope: the four fuel clients (Materials joined in V3-14, see check:v3-materials).
@@ -90,7 +90,7 @@ let routeA = complete(state, 'local:regular', q75.id)
 routeA = complete(routeA, 'performance:regular', q75.id)
 assert.equal(routeA.campaignProgress.chapter, 2, 'two Regulars alone are not enough')
 routeA = { ...routeA, world: { ...routeA.world, moneyCents: routeA.world.moneyCents + 500_000 } }
-routeA = act(routeA, { type: 'upgrade', cellIndex: 5 })
+routeA = act(routeA, { type: 'upgrade', buildingId: slotId(routeA, 5) })
 assert.equal(routeA.campaignProgress.chapter, 3, 'upgrade transaction triggers C3')
 
 // ---- C3 route B: Local Regular + Fleet Regular (Lube) + power upgrade ----
@@ -99,9 +99,9 @@ const lube = withBlueprint(routeB, 'lubricants', 55)
 routeB = complete(lube.state, 'fleet:trial', lube.id)
 routeB = complete(routeB, 'fleet:regular', lube.id)
 routeB = { ...routeB, world: { ...routeB.world, moneyCents: routeB.world.moneyCents + 2_000_000 } }
-routeB = act(routeB, { type: 'build', cellIndex: 1, building: 'powerPlant' })
+routeB = act(routeB, { type: 'build', ...SLOT(1), building: 'powerPlant' })
 assert.equal(routeB.campaignProgress.chapter, 2)
-routeB = act(routeB, { type: 'upgrade', cellIndex: 1 })
+routeB = act(routeB, { type: 'upgrade', buildingId: slotId(routeB, 1) })
 assert.equal(routeB.campaignProgress.chapter, 3, 'distinct non-Performance C3 route')
 
 // ---- Repeats: income only, no RP/reputation/XP; cooldown from acceptance ----
@@ -140,12 +140,12 @@ assert.equal(auto.acceptedJob, null, 'auto-repeat off: no new job')
 
 // ---- Rush: proven route, ≤90s output, deadline ≥180s & ≥2×ETA, pauses, expiry keeps pay ----
 let rush = { ...routeA, world: { ...routeA.world, crudeOil: 60 } }
-rush = act(rush, { type: 'set_program', cellIndex: 4, blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline })
+rush = act(rush, { type: 'set_program', buildingId: slotId(rush, 4), blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline })
 rush = tick(rush, 150)
 assertBlocked(rush, { type: 'accept_job', templateId: 'fleet:rush' }, 'v3.job.requires_previous')
 const terms = getV3RushTerms(rush, 'local:rush')!
 assert.ok(terms, 'Rush offered on proven Local route with a qualifying line')
-const gasLine = runV3ProductionTick(rush, 25).lines.find((line) => line.cellIndex === 4)!
+const gasLine = runV3ProductionTick(rush, 25).lines.find((line) => line.buildingId === V3_STARTER_BUILDINGS.distillationUnit.id)!
 assert.ok(terms.quantity <= gasLine.potentialOutputPerMinute * 1.5 + 1e-9)
 assert.ok(terms.deadlineTicks >= 900)
 assert.ok(terms.deadlineTicks / 5 >= 2 * terms.quantity / gasLine.potentialOutputPerMinute * 60 - 1)
@@ -157,7 +157,7 @@ assert.equal(job.completionBonusCents, Math.round(terms.quantity * 2_160 * 0.25)
 assert.equal(job.deadlineTick, rush.world.tickCount + terms.deadlineTicks)
 const paused = parseV3GameState(JSON.parse(JSON.stringify(rush))).state!
 assert.equal(paused.acceptedJob!.deadlineTick, job.deadlineTick, 'closing/reloading does not run the clock')
-let expired = act({ ...rush, stockPolicies: {} }, { type: 'set_pause', cellIndex: 4, paused: true })
+let expired = ((__s) => act(__s, { type: 'set_pause', buildingId: slotId(__s, 4), paused: true }))({ ...rush, stockPolicies: {} })
 expired = { ...expired, variantInventory: Object.fromEntries(Object.entries(expired.variantInventory).filter(([id]) => expired.productBlueprints[id].family !== 'gasoline')) }
 expired = stock(expired, V3_DEFAULT_BLUEPRINT_ID.gasoline, 1)
 expired = act(expired, { type: 'dispatch_job', quantity: 1 })

@@ -4,9 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, BuildingType } from '../../game/types'
 import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../game/v3/actions'
-import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
+import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_LAND_PARCELS, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
-import { getV3NextGridExpansion } from '../../game/v3/expansion'
+import { findV3PlacementSpot, getV3BuildingLevel, getV3Footprint, getV3UnlockedArea, listV3Buildings } from '../../game/v3/yard'
 import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
@@ -96,12 +96,10 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
   const plan = evaluateV3Production(state, 25)
   const maintenance = evaluateV3Maintenance(state, 25)
   const power = plan.power
-  const emptyCell = state.world.grid.findIndex((cell) => cell === null)
   const chapter = state.campaignProgress.chapter
-  const labCellIndex = state.world.grid.findIndex((cell) => cell === 'laboratory')
-  const expansion = getV3NextGridExpansion(state)
-  const gridSize = Math.round(Math.sqrt(state.world.grid.length))
-  const rank = labCellIndex >= 0 ? getV3AvailableKnowledgeRank(state, labCellIndex) : 0
+  const buildings = listV3Buildings(state)
+  const labBuildingId = buildings.find((building) => building.type === 'laboratory')?.id ?? null
+  const rank = labBuildingId ? getV3AvailableKnowledgeRank(state, labBuildingId) : 0
   const buildable = [...V3_SUPPORTED_BUILDINGS].filter((building) => V3_BUILDINGS[building].buildChapter <= chapter + 1)
 
   return (
@@ -185,16 +183,16 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Production lines', th: 'ไลน์การผลิต' })}</Text>
         {plan.lines.map((line) => {
-          const program = state.plantPrograms[line.cellIndex]
+          const program = state.plantPrograms[line.buildingId]
           const blueprint = state.productBlueprints[program.blueprintId]
-          const level = state.world.gridLevels[line.cellIndex] ?? 1
+          const level = getV3BuildingLevel(state, line.buildingId)
           const recipes = Object.values(state.productBlueprints)
             .filter((entry) => entry.family === line.family && !entry.archived)
             .sort((a, b) => a.quality - b.quality || a.id.localeCompare(b.id))
           return (
-            <View key={line.cellIndex} style={styles.line}>
+            <View key={line.buildingId} style={styles.line}>
               <Text style={styles.lineTitle}>
-                #{line.cellIndex + 1} {t(BUILDINGS[line.building].name)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality} · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
+                {t(BUILDINGS[line.building].name)} @({state.world.buildingsById[line.buildingId].x},{state.world.buildingsById[line.buildingId].y}) Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality} · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
               </Text>
               <Text style={styles.row}>{t(STATUS_TEXT[line.status])} · {t(LIMIT_TEXT[line.limitedBy])}</Text>
               <Text style={styles.row}>
@@ -204,24 +202,24 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
               </Text>
               <Gate
                 label={program.paused ? t({ en: 'Resume line', th: 'เดินไลน์ต่อ' }) : t({ en: 'Pause line', th: 'พักไลน์' })}
-                action={{ type: 'set_pause', cellIndex: line.cellIndex, paused: !program.paused }}
+                action={{ type: 'set_pause', buildingId: line.buildingId, paused: !program.paused }}
               />
               <Gate
                 label={t({
                   en: `Upgrade to Lv${level + 1}${V3_BUILDINGS[line.building].upgradeCostDollars?.[level - 1] ? ` · $${V3_BUILDINGS[line.building].upgradeCostDollars![level - 1]}` : ''}`,
                   th: `อัปเกรดเป็น Lv${level + 1}${V3_BUILDINGS[line.building].upgradeCostDollars?.[level - 1] ? ` · $${V3_BUILDINGS[line.building].upgradeCostDollars![level - 1]}` : ''}`,
                 })}
-                action={{ type: 'upgrade', cellIndex: line.cellIndex }}
+                action={{ type: 'upgrade', buildingId: line.buildingId }}
               />
               {line.building !== 'wasteTreatmentPlant' && <View style={styles.chips}>
                 {MODULES.map((module) => {
-                  const quote = getV3ModuleQuote(state, line.cellIndex, module)
+                  const quote = getV3ModuleQuote(state, line.buildingId, module)
                   if (quote.blocker === 'no_change') return <Text key={module} style={styles.chipActive}>✓ {module}</Text>
                   return (
                     <View key={module} style={styles.chipWrap}>
                       <Gate
                         label={`${module}${quote.costCents ? ` $${quote.costCents / 100}` : ''}`}
-                        action={{ type: 'set_module', cellIndex: line.cellIndex, module }}
+                        action={{ type: 'set_module', buildingId: line.buildingId, module }}
                       />
                     </View>
                   )
@@ -231,7 +229,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
                 <Gate
                   key={recipe.id}
                   label={t({ en: `Use ${recipe.name} Q${recipe.quality}`, th: `ใช้ ${recipe.name} Q${recipe.quality}` })}
-                  action={{ type: 'set_program', cellIndex: line.cellIndex, blueprintId: recipe.id }}
+                  action={{ type: 'set_program', buildingId: line.buildingId, blueprintId: recipe.id }}
                 />
               ))}
             </View>
@@ -240,31 +238,39 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t({ en: 'Build & expand', th: 'สร้างและขยาย' })}</Text>
-        <Text style={styles.row}>{t({ en: 'Yard', th: 'พื้นที่' })}: {gridSize}×{gridSize} · {t({ en: 'empty slots', th: 'ช่องว่าง' })} {state.world.grid.filter((cell) => cell === null).length}</Text>
-        {expansion && (
+        <Text style={styles.cardTitle}>{t({ en: 'Build & land', th: 'สร้างและที่ดิน' })}</Text>
+        <Text style={styles.row}>{t({ en: 'Unlocked land', th: 'ที่ดินที่ปลดแล้ว' })}: {getV3UnlockedArea(state)} {t({ en: 'tiles', th: 'ช่อง' })} · {buildings.length} {t({ en: 'buildings', th: 'อาคาร' })}</Text>
+        {V3_LAND_PARCELS.filter((parcel) => !state.world.unlockedParcelIds.includes(parcel.id)).slice(0, 4).map((parcel) => (
           <Gate
-            label={t({ en: `Expand to ${expansion.toSize}×${expansion.toSize} · $${expansion.costCents / 100}`, th: `ขยายเป็น ${expansion.toSize}×${expansion.toSize} · $${expansion.costCents / 100}` })}
-            action={{ type: 'expand_grid' }}
-          />
-        )}
-        {buildable.map((building: BuildingType) => (
-          <Gate
-            key={building}
-            label={`${t(BUILDINGS[building].name)} · $${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}`}
-            action={{ type: 'build', cellIndex: emptyCell < 0 ? state.world.grid.length : emptyCell, building }}
+            key={parcel.id}
+            label={t({ en: `Unlock land ${parcel.id} (${parcel.w}×${parcel.h}) · $${parcel.costDollars.toLocaleString()} · C${parcel.chapter}`, th: `ปลดที่ดิน ${parcel.id} (${parcel.w}×${parcel.h}) · $${parcel.costDollars.toLocaleString()} · C${parcel.chapter}` })}
+            action={{ type: 'unlock_land_parcel', parcelId: parcel.id }}
           />
         ))}
-        {state.world.grid.map((building, cellIndex) => building && !isV3ProcessBuilding(building) && V3_BUILDINGS[building].upgradeCostDollars ? (
-          <Gate
-            key={`upgrade-${cellIndex}`}
-            label={t({
-              en: `Upgrade #${cellIndex + 1} ${BUILDINGS[building].name.en} Lv${state.world.gridLevels[cellIndex]}→${(state.world.gridLevels[cellIndex] ?? 1) + 1}`,
-              th: `อัปเกรด #${cellIndex + 1} ${BUILDINGS[building].name.th} Lv${state.world.gridLevels[cellIndex]}→${(state.world.gridLevels[cellIndex] ?? 1) + 1}`,
-            })}
-            action={{ type: 'upgrade', cellIndex }}
-          />
-        ) : null)}
+        {buildable.map((building: BuildingType) => {
+          const spot = findV3PlacementSpot(state, building) ?? { x: -1, y: -1 }
+          const footprint = getV3Footprint(building, 1)
+          return (
+            <Gate
+              key={building}
+              label={`${t(BUILDINGS[building].name)} ${footprint ? `${footprint.w}×${footprint.h}` : ''} · $${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}${spot.x >= 0 ? ` @(${spot.x},${spot.y})` : ''}`}
+              action={{ type: 'build', building, ...spot }}
+            />
+          )
+        })}
+        {buildings.filter((building) => V3_BUILDINGS[building.type].upgradeCostDollars).map((building) => {
+          const next = getV3Footprint(building.type, building.level + 1)
+          return (
+            <Gate
+              key={`upgrade-${building.id}`}
+              label={t({
+                en: `Upgrade ${BUILDINGS[building.type].name.en} @(${building.x},${building.y}) Lv${building.level}→${building.level + 1}${next ? ` · needs ${next.w}×${next.h}` : ''}`,
+                th: `อัปเกรด ${BUILDINGS[building.type].name.th} @(${building.x},${building.y}) Lv${building.level}→${building.level + 1}${next ? ` · ใช้พื้นที่ ${next.w}×${next.h}` : ''}`,
+              })}
+              action={{ type: 'upgrade', buildingId: building.id }}
+            />
+          )
+        })}
       </View>
 
       <View style={styles.card}>
@@ -310,7 +316,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
             })}
             action={{
               type: 'start_development', family: devFamily, profile, module: devModule,
-              knowledgeRank: rank, leadEmployeeId: null, labCellIndex,
+              knowledgeRank: rank, leadEmployeeId: null, labBuildingId: labBuildingId ?? '',
             }}
           />
         ))}
