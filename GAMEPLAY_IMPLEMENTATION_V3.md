@@ -386,6 +386,20 @@ UI includes empty/blocked states, not placeholders presented as finished systems
 
 ## R4 — Persistence, calibration and release quality
 
+#### R3 evidence — legal full run (2026-09-26)
+
+`check:v3-legal-run` is a deterministic bot that starts from a fresh state and uses
+only the shared reducer and production tick (no fixtures). First run found a
+**C1→C2 soft-lock**: after both one-time C1 trials were completed with default or
+mixed stock, no job could deliver 40 units of one developed Gasoline recipe.
+Owner decision **ก**: added `local:starter-repeat` (C1, income only); regression
+`check:v3-c1-softlock`. After the fix the bot clears legally in **38.2 simulated
+minutes** (C1 0.5m, C2 5.3m, C3 18.7m, C4 19.7m, C5 38.2m; partners Local,
+Performance, Fleet, Airline; ≈$29k cash at clear). This is far faster than a
+campaign should feel — **input for V3-18 calibration**, not tuned here. The bot's
+heuristics (cash reserve, cancelling a job that locks stock during a cash crisis)
+are a player model, not rules. R3 still needs the player's device run.
+
 ### V3-17 · Production persistence cutover and reset
 
 Dependencies:16. Promote the fresh V3 save to the only production writer. Remove
