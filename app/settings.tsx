@@ -3,7 +3,8 @@ import Constants from 'expo-constants'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { useGame } from '../src/hooks/GameContext'
+import { clearV3GameState } from '../src/game/v3/storage'
+import { requestV3Reset } from '../src/game/v3/session'
 import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
 import ScreenHeader from '../src/components/ScreenHeader'
 import { colors, fonts, spacing, modernUi } from '../src/theme'
@@ -43,7 +44,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function SettingsScreen() {
   const router = useRouter()
   const { settings, update } = useSettingsContext()
-  const { resetGame } = useGame()
   const { t } = useLang()
   const ss = text.settingsScreen
   const version = Constants.expoConfig?.version ?? '0.1.1'
@@ -115,8 +115,10 @@ export default function SettingsScreen() {
                   text: t(text.common.reset),
                   style: 'destructive',
                   onPress: () => {
-                    resetGame()
-                    router.replace('/')
+                    // Full V3 reset through the game screen (the only save writer);
+                    // if it is not mounted, clearing storage is enough: next load is fresh.
+                    if (!requestV3Reset()) void clearV3GameState()
+                    router.back()
                   },
                 },
               ])
