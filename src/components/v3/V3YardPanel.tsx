@@ -11,6 +11,8 @@ import { getV3Building, getV3BuildingAt, getV3BuildingLimit, countV3Buildings, g
 import { getV3ParcelViews, getV3PlacementPreview, getV3UpgradePreview } from '../../game/v3/yardView'
 import { fonts } from '../../theme'
 import V3YardView from './V3YardView'
+import { v3ParcelLabel } from './v3Labels'
+import { getV3AdjacencyPreview, getV3LineAdjacency } from '../../game/v3/adjacency'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -91,6 +93,15 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
         <Text style={styles.cardTitle}>{t(BUILDINGS[selected.type].name)} Lv{selected.level} @({selected.x},{selected.y})</Text>
         <Text style={styles.row}>{t({ en: 'Footprint', th: 'พื้นที่' })}: {footprint.w}×{footprint.h}{upgrade && upgrade.status !== 'max' ? ` → +${upgrade.growth.length} ${t({ en: 'tiles for next level', th: 'ช่องสำหรับเลเวลถัดไป' })}` : ''}</Text>
         {line && <Text style={styles.row}>{t({ en: 'Power demand', th: 'ใช้ไฟ' })}: {line.potentialEnergyPerMinute.toFixed(1)}/min · {t({ en: 'output', th: 'ผลผลิต' })} {line.actualOutputPerMinute.toFixed(1)}/{line.potentialOutputPerMinute.toFixed(1)} min · {line.limitedBy}</Text>}
+        {isV3ProcessBuilding(selected.type) && (() => {
+          const adjacency = getV3LineAdjacency(state, selected.id)
+          return (
+            <Text style={adjacency.tank || adjacency.workshop ? styles.good : styles.muted}>{t({
+              en: `Layout: matching tank ${adjacency.tank ? '✓ +5% rate' : '— place one touching this line for +5%'} · workshop ${adjacency.workshop ? '✓ -10% upkeep' : '—'}`,
+              th: `ผัง: ถังตรงชนิด ${adjacency.tank ? '✓ เร็วขึ้น 5%' : '— วางให้ติดไลน์นี้เพื่อ +5%'} · โรงซ่อม ${adjacency.workshop ? '✓ ค่าบำรุงลด 10%' : '—'}`,
+            })}</Text>
+          )
+        })()}
         {generator && <Text style={styles.row}>{t({ en: 'Power supply', th: 'ผลิตไฟ' })}: {generator.energyPerCycle * 12}/min · battery +{generator.battery}</Text>}
         {!isV3ProcessBuilding(selected.type) && !generator && <Text style={styles.muted}>{t({ en: 'Storage/support building — see Stock for live capacity.', th: 'อาคารเก็บ/สนับสนุน — ดูความจุจริงที่หน้าสต็อก' })}</Text>}
         {upgrade && upgrade.status !== 'max' && upgrade.status !== 'valid' && (
@@ -122,6 +133,18 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
             : t({ en: 'Move building', th: 'ย้ายอาคาร' })}
         </Text>
         <Text style={styles.muted}>{anchor ? `@(${anchor.x},${anchor.y})` : t({ en: 'Tap a tile for the top-left corner.', th: 'แตะช่องที่จะเป็นมุมซ้ายบน' })}</Text>
+        {anchor && (() => {
+          const moving = mode.kind === 'move' ? getV3Building(state, mode.buildingId) : null
+          const type = mode.kind === 'build' ? mode.building : moving?.type
+          if (!type) return null
+          const effects = getV3AdjacencyPreview(state, type, moving?.level ?? 1, anchor.x, anchor.y, moving?.id ?? null)
+          return effects.length ? (
+            <Text style={styles.good}>{t({
+              en: `Layout bonus: ${effects.map((effect) => effect.kind === 'tank' ? '+5% line rate' : '-10% line upkeep').join(', ')}`,
+              th: `โบนัสผัง: ${effects.map((effect) => effect.kind === 'tank' ? 'ไลน์เร็วขึ้น 5%' : 'ค่าบำรุงไลน์ลด 10%').join(', ')}`,
+            })}</Text>
+          ) : null
+        })()}
         <View style={styles.row2}>
           {action && <Gate label={t({ en: 'Confirm', th: 'ยืนยัน' })} action={action} onDone={() => setMode({ kind: 'inspect' })} />}
           <Pressable style={styles.button} onPress={() => setMode({ kind: 'inspect' })}>
@@ -175,7 +198,7 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
             <View key={parcel.id}>
               <Pressable onPress={() => setParcelId(parcel.id === parcelId ? null : parcel.id)}>
                 <Text style={[styles.row, parcel.id === parcelId && styles.highlight]}>
-                  {parcel.id} · {parcel.w}×{parcel.h} · ${parcel.costDollars.toLocaleString()} · C{parcel.chapter}
+                  {t(v3ParcelLabel(parcel.id))} · {parcel.w}×{parcel.h} · ${parcel.costDollars.toLocaleString()} · C{parcel.chapter}
                 </Text>
               </Pressable>
               {parcel.id === parcelId && <Gate label={t({ en: 'Unlock this land', th: 'ปลดที่ดินแปลงนี้' })} action={{ type: 'unlock_land_parcel', parcelId: parcel.id }} onDone={() => setParcelId(null)} />}
@@ -194,6 +217,7 @@ const styles = StyleSheet.create({
   row2: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
   highlight: { color: '#FFD447' },
+  good: { color: '#A9F3D9', fontSize: 12 },
   reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
   gate: { minWidth: '30%', flexGrow: 1 },
   button: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 10, alignItems: 'center', minHeight: 44, justifyContent: 'center', flexGrow: 1 },
