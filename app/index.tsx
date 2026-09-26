@@ -30,6 +30,8 @@ import { V3YardPanel, useV3YardController } from '../src/components/v3/V3YardPan
 import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
 import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
 import { V3SupplyPanel } from '../src/components/v3/V3SupplyPanel'
+import { V3FamePanel } from '../src/components/v3/V3FamePanel'
+import { getV3Fame } from '../src/game/v3/fame'
 import { getV3Calendar } from '../src/game/v3/yardView'
 import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
@@ -379,7 +381,7 @@ export default function V3GameScreen() {
           <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
           <Text style={styles.hudItem}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} เดือน ${calendar.month} สัปดาห์ ${calendar.week}` })}</Text>
           <Text style={styles.hudItem}>🔬 {Math.floor(state.world.researchPoints)}</Text>
-          <Text style={styles.hudItem}>C{state.campaignProgress.chapter}</Text>
+          <Pressable onPress={() => setTab('reports')} hitSlop={8}><Text style={styles.hudItem}>⭐{getV3Fame(state).level} · C{state.campaignProgress.chapter}</Text></Pressable>
           <Pressable onPress={() => router.push('/settings')} hitSlop={10}><Text style={styles.hudItem}>⚙️</Text></Pressable>
         </View>
         <View style={styles.hudRow}>
@@ -582,6 +584,7 @@ export default function V3GameScreen() {
             )}
           </View>
         )}
+                <V3FamePanel state={state} t={t} />
                 <V3CampaignPanel state={state} t={t} />
                 <V3InboxPanel state={state} apply={(action) => { void apply(action) }} t={t} />
         <View style={styles.card}>

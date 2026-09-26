@@ -1,4 +1,4 @@
-import { V3_BUILDINGS, V3_PLANT_BY_FAMILY } from './data'
+import { V3_AWARD_REPUTATION, V3_BUILDINGS, V3_PLANT_BY_FAMILY } from './data'
 import type { V3AwardGrade, V3AwardPeriod, V3GameState, V3ProductFamily } from './types'
 
 export const V3_AWARD_PERIOD_TICKS = 3_600
@@ -45,7 +45,12 @@ export function advanceV3Awards(state: V3GameState): V3GameState {
     const rpAwarded = Math.max(0, GRADE_RP[grade] - next.awards.paidGradeRp)
     next = {
       ...next,
-      world: { ...next.world, researchPoints: next.world.researchPoints + rpAwarded },
+      world: {
+        ...next.world,
+        researchPoints: next.world.researchPoints + rpAwarded,
+        // Fame grows every period by grade (uncapped, no money).
+        reputation: next.world.reputation + V3_AWARD_REPUTATION[grade],
+      },
       awards: {
         current: startV3AwardPeriod(next, period.startTick + V3_AWARD_PERIOD_TICKS),
         history: [...next.awards.history, { startTick: period.startTick, score, grade, profitCents, rpAwarded }].slice(-50),

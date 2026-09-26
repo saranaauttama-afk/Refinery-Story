@@ -14,7 +14,6 @@ import type { BuildingType, ProductKey, WorkerType } from '../types'
 import { unlockV3Research, validateV3Research } from './research'
 import {
   V3_BUILDINGS,
-  V3_CRUDE_PRICE_CENTS,
   V3_MODULE_CHAPTER,
   V3_MODULE_FIT_COST_RATE,
   V3_MODULE_MIN_PLANT_LEVEL,
@@ -30,6 +29,7 @@ import {
   isV3ProcessBuilding,
 } from './data'
 import { getV3Modifiers } from './modifiers'
+import { getV3CrudeUnitPriceCents } from './fame'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
@@ -244,7 +244,7 @@ export function validateV3Trade(state: V3GameState, action: V3TradeAction): V3Ac
   }
   if (action.direction === 'buy') {
     if (action.product !== 'crude') return event('info', 'v3.trade.inventory_pending')
-    if (state.world.moneyCents < V3_CRUDE_PRICE_CENTS) return event('blocked', 'v3.trade.insufficient_cash')
+    if (state.world.moneyCents < getV3CrudeUnitPriceCents(state)) return event('blocked', 'v3.trade.insufficient_cash')
     if (state.world.crudeOil >= getV3CrudeCapacity(state) - 1e-8) return event('blocked', 'v3.trade.storage_full')
   } else {
     if (action.product === 'crude') {
@@ -747,10 +747,10 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   if (action.direction === 'buy' && action.product === 'crude') {
     const actual = Math.min(
       action.quantity,
-      Math.floor(state.world.moneyCents / V3_CRUDE_PRICE_CENTS),
+      Math.floor(state.world.moneyCents / getV3CrudeUnitPriceCents(state)),
       Math.max(0, getV3CrudeCapacity(state) - state.world.crudeOil),
     )
-    const costCents = actual * V3_CRUDE_PRICE_CENTS
+    const costCents = actual * getV3CrudeUnitPriceCents(state)
     const purchased = {
       ...state,
       world: {
