@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { BUILDINGS } from '../data/buildings'
-import { V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
+import { V3_COMMODITY_ID, V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
 import { createInitialV3GameState } from './state'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
@@ -109,6 +109,12 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   if (requiredRecords.some((entry) => !isRecord(entry))) {
     return { status: 'invalid', state: null, reason: 'Missing V3 system collection.' }
   }
+  if (!Object.entries(value.commodityInventory as Record<string, unknown>).every(([commodity, entry]) =>
+    (commodity === 'asphalt' || commodity === 'recycledMaterial') && isRecord(entry) &&
+    entry.blueprintId === V3_COMMODITY_ID[commodity] && isFiniteNonnegative(entry.quantity) &&
+    isFiniteNonnegative(entry.totalCostBasisCents) && typeof entry.estimatedBasis === 'boolean')) {
+    return { status: 'invalid', state: null, reason: 'Invalid V3 commodity inventory.' }
+  }
   const employees = world.employees as Array<Record<string, unknown>>
   const employeeIds = new Set(employees.map((employee) => employee.id as string))
   const employeeTypes = new Map(employees.map((employee) => [employee.id as string, employee.type]))
@@ -192,7 +198,8 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     (program.cellIndex as number) >= 0 && (program.cellIndex as number) < grid.length &&
     isV3ProcessBuilding(grid[program.cellIndex as number] as never) &&
     typeof program.blueprintId === 'string' &&
-    Object.hasOwn(value.productBlueprints as Record<string, unknown>, program.blueprintId) &&
+    (Object.hasOwn(value.productBlueprints as Record<string, unknown>, program.blueprintId) ||
+      (grid[program.cellIndex as number] === 'wasteTreatmentPlant' && program.blueprintId === V3_COMMODITY_ID.recycledMaterial)) &&
     ['none', 'throughput', 'economy', 'precision'].includes(program.installedModule as string) &&
     isFiniteNonnegative(program.setupRemainingTicks) &&
     typeof program.paused === 'boolean',

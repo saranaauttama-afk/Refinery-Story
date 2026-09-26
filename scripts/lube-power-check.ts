@@ -25,7 +25,7 @@ const POWER = 6
 // ---- Legal route: C2 via Gasoline, then earn the Lube investment at spot ----
 let state = legalChapterTwo()
 const niranId = state.world.employees[0].id
-state = assertBlocked(state, { type: 'build', cellIndex: LUBE_A, building: 'wasteTreatmentPlant' }, 'v3.build.unsupported')
+state = assertBlocked(state, { type: 'build', cellIndex: LUBE_A, building: 'maintenanceWorkshop' }, 'v3.build.unsupported')
 state = assertBlocked(state, { type: 'build', cellIndex: LUBE_A, building: 'jetFuelPlant' }, 'v3.build.locked')
 state = assertBlocked(state, { type: 'expand_grid' }, 'v3.expand.insufficient_cash')
 const earned = earnGasolineCash(state, 2_300_000)
@@ -215,7 +215,7 @@ assert.deepEqual(
   planBefore.lines.map((line) => [line.building, line.actualWork]),
   'expansion does not change production',
 )
-assertBlocked(expanded, { type: 'expand_grid' }, 'v3.expand.unavailable')
+assertBlocked(expanded, { type: 'expand_grid' }, 'v3.expand.locked') // 5×5 waits for C4
 assert.equal(parseV3GameState(JSON.parse(JSON.stringify(expanded))).status, 'loaded')
 void attempt
 

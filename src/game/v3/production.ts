@@ -8,6 +8,7 @@ import {
   V3_PROFILE_MULTIPLIERS,
   V3_SITE_POWER,
   V3_SPECIALIZATION,
+  V3_COMMODITY_ID,
   V3_SPOT_PRICE_CENTS,
   V3_TICKS_PER_CYCLE,
   isV3ProcessBuilding,
@@ -18,8 +19,9 @@ import { advanceV3Development } from './development'
 import { getV3Modifiers } from './modifiers'
 import { addV3JobContribution, advanceV3JobClock, runV3AutoDispatch } from './jobs'
 import { evaluateV3CampaignProgress } from './campaign'
-import { addV3VariantInventory, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
+import { addV3CommodityInventory, addV3VariantInventory, consumeV3ProtectedInventory, getV3ConsumableQuantity, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
 import { advanceV3Recovery, isV3LoanerCell } from './recovery'
+import type { ProductKey } from '../types'
 import type { V3GameState, V3PlantProgram, V3ProductFamily } from './types'
 import { addV3DutyXp, getV3LineEmployee, getV3LocalCrewRate, settleV3Wages } from './workforce'
 
@@ -30,7 +32,7 @@ export type V3LineStatus = 'ready' | 'paused' | 'setup' | 'invalid'
 export type V3LinePlan = {
   cellIndex: number
   building: V3ProcessBuilding
-  family: V3ProductFamily
+  family: ProductKey
   blueprintId: string
   status: V3LineStatus
   requestedWork: number
@@ -107,13 +109,15 @@ function lineRequest(
   const unit = V3_PROCESS_UNITS[building]
   const blueprint = state.productBlueprints[program.blueprintId] ?? null
   const level = state.world.gridLevels[program.cellIndex] ?? 1
+  const commodityLine = unit.family === 'recycledMaterial'
   let status: V3LineStatus = 'ready'
   if (program.paused) status = 'paused'
   else if (program.setupRemainingTicks > 0) status = 'setup'
-  else if (
-    blueprint?.family !== unit.family ||
-    blueprint.module !== program.installedModule ||
-    level < blueprint.minPlantLevel
+  else if (commodityLine
+    ? program.blueprintId !== V3_COMMODITY_ID.recycledMaterial || program.installedModule !== 'none'
+    : blueprint?.family !== unit.family ||
+      blueprint.module !== program.installedModule ||
+      level < blueprint.minPlantLevel
   ) status = 'invalid'
   const profile = blueprint ? V3_PROFILE_MULTIPLIERS[blueprint.profile] : V3_PROFILE_MULTIPLIERS.standard
   const module = V3_MODULE_MULTIPLIERS[program.installedModule]
@@ -244,19 +248,27 @@ export function evaluateV3Production(state: V3GameState, deltaTicks = 1, boostRa
 
   const generation = planGeneration(state, deltaTicks, crudeReserved)
 
-  // Downstream lines share opening feedstock, then the charged battery.
-  const feedIndices = lines.map((line, index) => (line.input === 'feedstock' ? index : -1)).filter((index) => index >= 0)
-  const feedWork = allocateV3Work(
-    feedIndices.map((index) => outputBound[index]),
-    state.world.feedstock,
-    feedIndices.map((index) => lines[index].inputPerWork),
-  )
+  // Every advanced line first bounds its own input group from opening stock
+  // (feedstock / free Petro / waste), then ALL energy consumers share the battery
+  // in one allocator, so no product type starves another by fixed order.
+  const inputAvailable: Record<Exclude<V3ProcessInput, 'crude'>, number> = {
+    feedstock: state.world.feedstock,
+    petro: getV3ConsumableQuantity(state, 'petrochemicals', { purpose: 'processing' }),
+    waste: state.world.waste,
+  }
+  const inputBound = lines.map(() => 0)
+  for (const input of ['feedstock', 'petro', 'waste'] as const) {
+    const indices = lines.map((line, index) => (line.input === input ? index : -1)).filter((index) => index >= 0)
+    const work = allocateV3Work(indices.map((index) => outputBound[index]), inputAvailable[input], indices.map((index) => lines[index].inputPerWork))
+    indices.forEach((lineIndex, position) => { inputBound[lineIndex] = work[position] })
+  }
+  const energyIndices = lines.map((line, index) => (line.input !== 'crude' ? index : -1)).filter((index) => index >= 0)
   const energyWork = allocateV3Work(
-    feedWork,
+    energyIndices.map((index) => inputBound[index]),
     generation.chargeAfterGeneration,
-    feedIndices.map((index) => lines[index].energyPerWork),
+    energyIndices.map((index) => lines[index].energyPerWork),
   )
-  feedIndices.forEach((lineIndex, position) => { actual[lineIndex] = energyWork[position] })
+  energyIndices.forEach((lineIndex, position) => { actual[lineIndex] = energyWork[position] })
 
   const perMinute = 300 / Math.max(deltaTicks, 1)
   const planned = lines.map((line, index) => {
@@ -266,10 +278,7 @@ export function evaluateV3Production(state: V3GameState, deltaTicks = 1, boostRa
     if (line.requestedWork > EPSILON && work + 1e-7 < line.requestedWork) {
       if (outputBound[index] + 1e-7 < line.requestedWork) limitedBy = 'output_space'
       else if (line.input === 'crude') limitedBy = 'input'
-      else {
-        const position = feedIndices.indexOf(index)
-        limitedBy = feedWork[position] + 1e-7 < outputBound[index] ? 'input' : 'power'
-      }
+      else limitedBy = inputBound[index] + 1e-7 < outputBound[index] ? 'input' : 'power'
     }
     return {
       ...line,
@@ -328,10 +337,23 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
   const feedUnitBasis = world.feedstock > EPSILON ? basis.feedstockCents / world.feedstock : 0
   const feedConsumed = lines.reduce((sum, line) => sum + (line.input === 'feedstock' ? line.actualWork * line.inputPerWork : 0), 0)
 
+  // Waste consumed by Waste Treatment from opening stock (zero-value byproduct basis).
+  const wasteUnitBasis = world.waste > EPSILON ? basis.wasteCents / world.waste : 0
+  const wasteConsumed = lines.reduce((sum, line) => sum + (line.input === 'waste' ? line.actualWork * line.inputPerWork : 0), 0)
+
   let next: V3GameState = developed
+  // Polymer: free Petro only (keep floors and job reservations excluded), lowest Q first.
+  const petroConsumed = lines.reduce((sum, line) => sum + (line.input === 'petro' ? line.actualWork * line.inputPerWork : 0), 0)
+  let petroUnitBasis = 0
+  if (petroConsumed > EPSILON) {
+    const consumed = consumeV3ProtectedInventory(next, 'petrochemicals', petroConsumed, { purpose: 'processing' })
+    next = consumed.state
+    petroUnitBasis = consumed.costBasisCents / petroConsumed
+  }
   let feedstock = Math.max(0, world.feedstock - feedConsumed)
   let feedstockBasis = Math.max(0, basis.feedstockCents - feedConsumed * feedUnitBasis)
-  let waste = world.waste
+  let waste = Math.max(0, world.waste - wasteConsumed)
+  const wasteBasis = Math.max(0, basis.wasteCents - wasteConsumed * wasteUnitBasis)
   const feedstockCapacity = getV3FeedstockCapacity(developed)
   for (const line of lines) {
     if (line.actualWork <= EPSILON) continue
@@ -354,12 +376,17 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
       line.feedstock = retainedFeedstock
       line.discardedFeedstock = producedFeedstock - retainedFeedstock
     } else {
-      outputCost = line.actualWork * line.inputPerWork * feedUnitBasis + line.energyUsed * energyUnitBasis
+      const inputUnitBasis = line.input === 'feedstock' ? feedUnitBasis : line.input === 'petro' ? petroUnitBasis : wasteUnitBasis
+      outputCost = line.actualWork * line.inputPerWork * inputUnitBasis + line.energyUsed * energyUnitBasis
+    }
+    if (line.family === 'recycledMaterial') {
+      next = addV3CommodityInventory(next, 'recycledMaterial', line.outputQuantity, outputCost).state
+      continue
     }
     const added = addV3VariantInventory(next, line.blueprintId, line.outputQuantity, outputCost)
     next = added.state
     const quality = next.productBlueprints[line.blueprintId]?.quality ?? 0
-    next = addV3JobContribution(next, line.employeeId, line.family, quality, added.quantity)
+    next = addV3JobContribution(next, line.employeeId, line.family as V3ProductFamily, quality, added.quantity)
   }
 
   const programs = { ...next.plantPrograms }
@@ -383,6 +410,7 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
       ...next.materialCostBasis,
       crudeCents: Math.max(0, basis.crudeCents - (distillCrude + power.generatorFuel) * crudeUnitBasis),
       feedstockCents: feedstockBasis,
+      wasteCents: wasteBasis,
       electricityCents: remainingEnergy > EPSILON ? Math.max(0, chargedBasis - power.energyUsed * energyUnitBasis) : 0,
     },
     plantPrograms: programs,

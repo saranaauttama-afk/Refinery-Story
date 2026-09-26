@@ -7,8 +7,11 @@ import {
   V3_MODULE_FIT_COST_RATE,
   V3_MODULE_MIN_PLANT_LEVEL,
   V3_PLANT_BY_FAMILY,
+  V3_ASPHALT_CONVERSION,
+  V3_COMMODITY_ID,
   V3_PROCESS_UNITS,
   V3_ROLES,
+  type V3ProcessBuilding,
   V3_SPECIALIZATION_CHAPTER,
   V3_SPOT_PRICE_CENTS,
   V3_STAFF_LEVELS,
@@ -21,6 +24,8 @@ import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dis
 import { getV3RushTerms } from './offers'
 import { evaluateV3CampaignProgress } from './campaign'
 import {
+  addV3CommodityInventory,
+  consumeV3Commodity,
   consumeV3SellableInventory,
   getV3CrudeCapacity,
   getV3ProductCapacity,
@@ -72,6 +77,12 @@ export const V3_SUPPORTED_BUILDINGS: ReadonlySet<BuildingType> = new Set<Buildin
   'jetFuelPlant',
   'jetFuelTank',
   'salesOffice',
+  'petrochemicalPlant',
+  'petrochemicalTank',
+  'polymerPlant',
+  'pelletSilo',
+  'wasteTreatmentPlant',
+  'recyclingBunker',
 ])
 
 const V3_ROLE_NAME: Record<WorkerType, string> = {
@@ -87,10 +98,17 @@ const V3_ROLE_NAME: Record<WorkerType, string> = {
   polymerEngineer: 'Polymer Engineer',
 }
 
-const STORAGE_PRODUCT: Partial<Record<BuildingType, V3ProductFamily>> = {
+const STORAGE_PRODUCT: Partial<Record<BuildingType, ProductKey>> = {
   gasolineTank: 'gasoline',
   lubricantTank: 'lubricants',
   jetFuelTank: 'jetFuel',
+  petrochemicalTank: 'petrochemicals',
+  pelletSilo: 'plasticPellets',
+  recyclingBunker: 'recycledMaterial',
+}
+
+export function isV3Commodity(product: ProductKey | 'crude'): product is 'asphalt' | 'recycledMaterial' {
+  return product === 'asphalt' || product === 'recycledMaterial'
 }
 
 export function isV3TradableFamily(product: ProductKey | 'crude'): product is V3ProductFamily {
@@ -105,7 +123,7 @@ export type V3ModuleQuote =
 export function getV3ModuleQuote(state: V3GameState, cellIndex: number, module: V3ModuleKey): V3ModuleQuote {
   const building = state.world.grid[cellIndex]
   const program = state.plantPrograms[cellIndex]
-  if (!isV3ProcessBuilding(building) || !program || isV3LoanerCell(state, cellIndex)) return { blocker: 'invalid_cell', costCents: 0 }
+  if (!isV3ProcessBuilding(building) || !program || isV3LoanerCell(state, cellIndex) || building === 'wasteTreatmentPlant') return { blocker: 'invalid_cell', costCents: 0 }
   if (program.installedModule === module) return { blocker: 'no_change', costCents: 0 }
   const costCents = module === 'none' ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 100 * V3_MODULE_FIT_COST_RATE)
   if (module !== 'none') {
@@ -114,6 +132,12 @@ export function getV3ModuleQuote(state: V3GameState, cellIndex: number, module: 
     if (state.world.moneyCents < costCents) return { blocker: 'insufficient_cash', costCents, params: { costCents } }
   }
   return { blocker: null, costCents }
+}
+
+/** Default program for a new line: the family's Standard blueprint, or the commodity key. */
+export function getV3DefaultProgramId(building: V3ProcessBuilding): string {
+  const family = V3_PROCESS_UNITS[building].family
+  return family === 'recycledMaterial' ? V3_COMMODITY_ID.recycledMaterial : V3_DEFAULT_BLUEPRINT_ID[family]
 }
 
 export function getV3ActionId(action: Pick<V3Action, 'type' | 'sequence'>): string {
@@ -129,6 +153,10 @@ export function validateV3Build(state: V3GameState, action: V3BuildAction): V3Ac
   }
   if (!V3_SUPPORTED_BUILDINGS.has(action.building)) {
     return event('blocked', 'v3.build.unsupported')
+  }
+  // Polymer needs a Petro route (Systems S3 building table).
+  if (action.building === 'polymerPlant' && !state.world.grid.includes('petrochemicalPlant')) {
+    return event('blocked', 'v3.build.requires_route')
   }
   const capability = V3_BUILDINGS[action.building]
   const requiredChapter = capability.buildChapter
@@ -178,6 +206,10 @@ export function validateV3Trade(state: V3GameState, action: V3TradeAction): V3Ac
   } else {
     if (action.product === 'crude') {
       return event('blocked', 'v3.trade.insufficient_stock')
+    }
+    if (isV3Commodity(action.product)) {
+      if ((state.commodityInventory[action.product]?.quantity ?? 0) + 1e-8 < action.quantity) return event('blocked', 'v3.trade.insufficient_stock')
+      return null
     }
     if (!isV3TradableFamily(action.product)) return event('info', 'v3.trade.inventory_pending')
     if (getV3SellableQuantity(state, action.product, action) + 1e-8 < action.quantity) {
@@ -230,7 +262,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
         ...state.plantPrograms,
         [action.cellIndex]: {
           cellIndex: action.cellIndex,
-          blueprintId: V3_DEFAULT_BLUEPRINT_ID[V3_PROCESS_UNITS[action.building].family],
+          blueprintId: getV3DefaultProgramId(action.building),
           installedModule: 'none' as const,
           setupRemainingTicks: 0,
           paused: false,
@@ -476,6 +508,27 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     return consumedResult(state, action, accepted.state, event('success', 'v3.action.ok'))
   }
 
+  if (action.type === 'convert_asphalt') {
+    const quantity = action.quantity
+    if (!Number.isInteger(quantity) || quantity <= 0) return consumedResult(state, action, state, event('blocked', 'v3.trade.invalid_amount'))
+    if (state.campaignProgress.chapter < V3_ASPHALT_CONVERSION.chapter) {
+      return consumedResult(state, action, state, event('blocked', 'v3.build.locked', { chapter: V3_ASPHALT_CONVERSION.chapter }))
+    }
+    const crude = quantity * V3_ASPHALT_CONVERSION.crudePerUnit
+    if (state.world.crudeOil + 1e-8 < crude) return consumedResult(state, action, state, event('blocked', 'v3.trade.insufficient_stock'))
+    if (getV3ProductQuantity(state, 'asphalt') + quantity > getV3ProductCapacity(state, 'asphalt') + 1e-8) {
+      return consumedResult(state, action, state, event('blocked', 'v3.trade.storage_full'))
+    }
+    // Goods only: crude basis moves into asphalt; no per-click reward.
+    const crudeBasis = state.world.crudeOil > 1e-8 ? state.materialCostBasis.crudeCents * crude / state.world.crudeOil : 0
+    const converted = addV3CommodityInventory({
+      ...state,
+      world: { ...state.world, crudeOil: state.world.crudeOil - crude },
+      materialCostBasis: { ...state.materialCostBasis, crudeCents: Math.max(0, state.materialCostBasis.crudeCents - crudeBasis) },
+    }, 'asphalt', quantity, crudeBasis)
+    return consumedResult(state, action, converted.state, event('success', 'v3.action.ok', { quantity }))
+  }
+
   if (action.type === 'set_auto_repeat') {
     if (action.templateId !== null) {
       if (state.campaignProgress.chapter < V3_AUTO_REPEAT_CHAPTER) {
@@ -658,8 +711,10 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       event('success', 'v3.action.ok', { quantity: actual, costCents }),
     )
   }
-  if (action.direction === 'sell' && isV3TradableFamily(action.product)) {
-    const consumed = consumeV3SellableInventory(state, action.product, action.quantity, action)
+  if (action.direction === 'sell' && (isV3TradableFamily(action.product) || isV3Commodity(action.product))) {
+    const consumed = isV3Commodity(action.product)
+      ? consumeV3Commodity(state, action.product, action.quantity)
+      : consumeV3SellableInventory(state, action.product, action.quantity, action)
     // Spot uses the base price plus the capped trade channel; no Q multiplier.
     const receiptsCents = Math.round(consumed.quantity * V3_SPOT_PRICE_CENTS[action.product] * (1 + getV3Modifiers(state).trade.effective))
     const sold = {

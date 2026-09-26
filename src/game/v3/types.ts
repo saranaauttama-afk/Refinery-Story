@@ -232,6 +232,7 @@ export type V3ActionMessageId =
   | 'v3.build.locked'
   | 'v3.build.insufficient_cash'
   | 'v3.build.unsupported'
+  | 'v3.build.requires_route'
   | 'v3.expand.unavailable'
   | 'v3.expand.locked'
   | 'v3.expand.insufficient_cash'
@@ -470,6 +471,12 @@ export type V3ChooseSpecializationAction = {
   path: SpecializationPath
 }
 
+export type V3ConvertAsphaltAction = {
+  type: 'convert_asphalt'
+  sequence: number
+  quantity: number
+}
+
 export type V3SetAutoRepeatAction = {
   type: 'set_auto_repeat'
   sequence: number
@@ -481,7 +488,7 @@ export type V3ExpandGridAction = {
   sequence: number
 }
 
-export type V3Action = V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3ExpandGridAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

@@ -1,7 +1,8 @@
 import type { ProductKey } from '../types'
-import { V3_STORAGE } from './data'
+import { V3_COMMODITY_ID, V3_STORAGE } from './data'
 import { getV3Modifiers } from './modifiers'
 import type {
+  V3CommodityFamily,
   V3GameState,
   V3InventoryEntry,
   V3LedgerBucket,
@@ -120,6 +121,48 @@ export function addV3VariantInventory(
     costBasisCents: acceptedCost,
     estimatedBasis: entry.estimatedBasis,
   }
+}
+
+/** Commodity (Q-less) stock: recycled material and asphalt share the same capacity rules. */
+export function addV3CommodityInventory(
+  state: V3GameState,
+  commodity: V3CommodityFamily,
+  quantity: number,
+  costBasisCents: number,
+): V3InventoryMutation {
+  if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(costBasisCents) || costBasisCents < 0) {
+    return { state, quantity: 0, costBasisCents: 0, estimatedBasis: false }
+  }
+  const space = Math.max(0, getV3ProductCapacity(state, commodity) - getV3ProductQuantity(state, commodity))
+  const added = Math.min(quantity, space)
+  if (added <= EPSILON) return { state, quantity: 0, costBasisCents: 0, estimatedBasis: false }
+  const acceptedCost = costBasisCents * (added / quantity)
+  const previous = state.commodityInventory[commodity]
+  const entry: V3InventoryEntry = {
+    blueprintId: V3_COMMODITY_ID[commodity],
+    quantity: (previous?.quantity ?? 0) + added,
+    totalCostBasisCents: (previous?.totalCostBasisCents ?? 0) + acceptedCost,
+    estimatedBasis: false,
+  }
+  return {
+    state: { ...state, commodityInventory: { ...state.commodityInventory, [commodity]: entry } },
+    quantity: added,
+    costBasisCents: acceptedCost,
+    estimatedBasis: false,
+  }
+}
+
+export function consumeV3Commodity(state: V3GameState, commodity: V3CommodityFamily, quantity: number): V3InventoryMutation {
+  const entry = state.commodityInventory[commodity]
+  if (!entry || !Number.isFinite(quantity) || quantity <= 0 || entry.quantity + EPSILON < quantity) {
+    return { state, quantity: 0, costBasisCents: 0, estimatedBasis: false }
+  }
+  const costBasisCents = entry.totalCostBasisCents * (quantity / entry.quantity)
+  const remaining = entry.quantity - quantity
+  const commodityInventory = { ...state.commodityInventory }
+  if (remaining <= EPSILON) delete commodityInventory[commodity]
+  else commodityInventory[commodity] = { ...entry, quantity: remaining, totalCostBasisCents: Math.max(0, entry.totalCostBasisCents - costBasisCents) }
+  return { state: { ...state, commodityInventory }, quantity, costBasisCents, estimatedBasis: false }
 }
 
 export type V3StockAllocation = {

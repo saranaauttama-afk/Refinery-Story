@@ -12,7 +12,7 @@ import { getV3LocalCrewRate } from '../src/game/v3/workforce'
 import { act, assertBlocked, attempt, close, cycles } from './v3-check-helpers'
 
 const ROLES = Object.keys(V3_ROLES) as WorkerType[]
-const PLANTS: V3ProcessBuilding[] = ['distillationUnit', 'lubricantPlant', 'jetFuelPlant']
+const PLANTS = ['distillationUnit', 'lubricantPlant', 'jetFuelPlant'] as const satisfies readonly V3ProcessBuilding[]
 
 /** Labelled fixture: chapter/cash/roster set directly to isolate one rule. */
 function fixture(chapter: 0 | 1 | 2 | 3 | 4, extra: Employee[] = [], moneyCents = 10_000_000): V3GameState {
@@ -30,7 +30,7 @@ const person = (type: WorkerType, index = 1, level = 1): Employee => ({ id: `emp
 // ---- Role × plant eligibility (every role, every ported line, plus Support) ----
 for (const role of ROLES) {
   let state = fixture(3, [person(role)])
-  const plantCells: Record<V3ProcessBuilding, number> = { distillationUnit: 4, lubricantPlant: 0, jetFuelPlant: 1 }
+  const plantCells: Record<(typeof PLANTS)[number], number> = { distillationUnit: 4, lubricantPlant: 0, jetFuelPlant: 1 }
   state = act(state, { type: 'build', cellIndex: 0, building: 'lubricantPlant' })
   state = act(state, { type: 'build', cellIndex: 1, building: 'jetFuelPlant' })
   state = act(state, { type: 'assign_duty', employeeId: state.world.employees[0].id, duty: { kind: 'reserve' } })
