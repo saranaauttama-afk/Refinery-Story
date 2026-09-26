@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BUILDINGS } from '../src/game/data/buildings'
-import { reduceV3Action, validateV3Demolish } from '../src/game/v3/actions'
+import { explainV3ProgramFit, reduceV3Action, validateV3Demolish } from '../src/game/v3/actions'
 import { getV3GuidanceStep, type V3GuidanceStep } from '../src/game/v3/campaign'
 import { V3_BUILDINGS } from '../src/game/v3/data'
 import { V3_INITIAL_PAUSE_STATE, acquireV3Pause, getV3EffectiveSpeed, releaseV3Pause, setV3Backgrounded, setV3SelectedSpeed } from '../src/game/v3/pause'
@@ -88,8 +88,6 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.module.plant_level': return translate({ en: `Upgrade this plant to Lv${p?.level} first.`, th: `ต้องอัปเกรดโรงงานเป็น Lv${p?.level} ก่อน` })
     case 'v3.module.no_change': return translate({ en: 'This module is already installed.', th: 'ติดตั้งโมดูลนี้อยู่แล้ว' })
     case 'v3.module.insufficient_cash': return translate({ en: `Module needs $${Number(p?.costCents ?? 0) / 100}.`, th: `โมดูลต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
-    case 'v3.program.module_mismatch': return translate({ en: 'Recipe needs a different installed module.', th: 'สูตรนี้ต้องใช้โมดูลอื่น' })
-    case 'v3.program.invalid_blueprint': return translate({ en: 'Recipe does not fit this plant or its level.', th: 'สูตรนี้ไม่ตรงกับโรงงานหรือเลเวล' })
     case 'v3.hire.locked': return translate({ en: `Hiring this role unlocks in C${p?.chapter}.`, th: `จ้างตำแหน่งนี้ได้ในบท C${p?.chapter}` })
     case 'v3.hire.unsupported': return translate({ en: 'This role has no working V3 duty yet.', th: 'ตำแหน่งนี้ยังไม่มีหน้าที่ใน V3' })
     case 'v3.hire.staff_cap': return translate({ en: `Team is at the ${p?.cap}-person cap for this chapter.`, th: `ทีมเต็ม ${p?.cap} คนสำหรับบทนี้แล้ว` })
@@ -111,6 +109,11 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.expo.already_entered': return translate({ en: 'You already entered this year.', th: 'ปีนี้ส่งเข้าประกวดแล้ว' })
     case 'v3.expo.invalid_recipe': return translate({ en: 'Only recipes you developed can enter.', th: 'ส่งได้เฉพาะสูตรที่พัฒนาเอง' })
     case 'v3.expo.insufficient_samples': return translate({ en: `Needs ${p?.quantity} free units of this recipe.`, th: `ต้องมีสินค้าสูตรนี้ว่างอยู่ ${p?.quantity} หน่วย` })
+    case 'v3.program.invalid_blueprint': return translate({ en: 'Recipe not found.', th: 'ไม่พบสูตรนี้' })
+    case 'v3.program.wrong_family': return translate({ en: 'This recipe is for a different product line.', th: 'สูตรนี้เป็นของสินค้าอีกสาย ใช้กับไลน์นี้ไม่ได้' })
+    case 'v3.program.plant_level': return translate({ en: `Needs this plant at Lv${p?.need} (now Lv${p?.have}). Upgrade it from the map or Build tab.`, th: `ต้องอัปเกรดโรงงานนี้เป็น Lv${p?.need} ก่อน (ตอนนี้ Lv${p?.have}) กดที่ตึกบนแผนที่เพื่ออัปเกรด` })
+    case 'v3.program.module_mismatch': return translate({ en: `Needs the ${({ none: 'no module', throughput: 'Throughput', economy: 'Economy', precision: 'Precision' } as Record<string, string>)[String(p?.need)]} module on this line (installed: ${({ none: 'no module', throughput: 'Throughput', economy: 'Economy', precision: 'Precision' } as Record<string, string>)[String(p?.installed)]}). Fit it in the line card below.`, th: `ต้องติดตั้งโมดูล ${({ none: 'ไม่มีโมดูล', throughput: 'Throughput', economy: 'Economy', precision: 'Precision' } as Record<string, string>)[String(p?.need)]} ที่ไลน์นี้ (ตอนนี้: ${({ none: 'ไม่มีโมดูล', throughput: 'Throughput', economy: 'Economy', precision: 'Precision' } as Record<string, string>)[String(p?.installed)]}) ติดตั้งได้ที่การ์ดไลน์ผลิตด้านล่าง` })
+    case 'v3.program.loaner_default_only': return translate({ en: 'A loaned unit only runs the Standard recipe.', th: 'เครื่องยืมใช้ได้เฉพาะสูตร Standard' })
     case 'v3.job.requires_previous': return translate({ en: 'Complete this client’s previous stage first.', th: 'ต้องทำขั้นก่อนหน้าของลูกค้ารายนี้ให้เสร็จก่อน' })
     case 'v3.job.rush_unavailable': return translate({ en: 'No qualifying running line to size a Rush.', th: 'ยังไม่มีไลน์ที่ผลิตคุณภาพถึงสำหรับงานด่วน' })
     case 'v3.job.auto_repeat_locked': return translate({ en: `Auto-repeat opens in C${p?.chapter}.`, th: `ทำซ้ำอัตโนมัติเปิดในบท C${p?.chapter}` })
@@ -482,13 +485,27 @@ export default function V3GameScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Gasoline development', th: 'พัฒนาสูตร Gasoline' })}</Text>
           <Text style={styles.row}>{t({ en: 'Certified recipes', th: 'สูตรที่รับรองแล้ว' })}: {gasolineBlueprints.map((blueprint) => `${blueprint.name} Q${blueprint.quality}`).join(' · ')}</Text>
-          {distillationBuildingId && gasolineBlueprints.map((blueprint) => (
-            <Pressable key={blueprint.id} style={styles.secondary} onPress={() => apply({
-              type: 'set_program', sequence: state.nextActionSequence, buildingId: distillationBuildingId!, blueprintId: blueprint.id,
-            })}>
-              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId!]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
-            </Pressable>
-          ))}
+          {distillationBuildingId && gasolineBlueprints.map((blueprint) => {
+            const fit = explainV3ProgramFit(state, distillationBuildingId, blueprint.id)
+            const active = state.plantPrograms[distillationBuildingId]?.blueprintId === blueprint.id
+            const needs = [
+              blueprint.minPlantLevel > 1 ? t({ en: `plant Lv${blueprint.minPlantLevel}`, th: `โรงงาน Lv${blueprint.minPlantLevel}` }) : null,
+              blueprint.module !== 'none' ? t({ en: `${blueprint.module} module`, th: `โมดูล ${blueprint.module}` }) : null,
+            ].filter(Boolean).join(' + ')
+            return (
+              <View key={blueprint.id}>
+                <Pressable
+                  disabled={Boolean(fit) && !active}
+                  accessibilityState={{ disabled: Boolean(fit) && !active }}
+                  style={[styles.secondary, fit && !active && { opacity: 0.5 }]}
+                  onPress={() => apply({ type: 'set_program', sequence: state.nextActionSequence, buildingId: distillationBuildingId!, blueprintId: blueprint.id })}
+                >
+                  <Text style={styles.secondaryText}>{active ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}{needs ? ` · ${needs}` : ''}</Text>
+                </Pressable>
+                {fit && !active && <Text style={styles.warning}>{eventText({ tone: 'blocked', messageId: fit.messageId, params: fit.params } as V3ActionEvent, t)}</Text>}
+              </View>
+            )
+          })}
           <Text style={styles.row}>{t({ en: 'Prototype choices', th: 'สูตรต้นแบบ' })}: Volume Q35 · Standard Q40 · Precision Q55</Text>
           {state.developmentProject ? (
             <>

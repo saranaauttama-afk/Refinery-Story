@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 
-import { getV3ModuleQuote } from '../src/game/v3/actions'
+import { explainV3ProgramFit, getV3ModuleQuote } from '../src/game/v3/actions'
 import { getV3BlueprintQuality } from '../src/game/v3/development'
 import { addV3VariantInventory, getV3ProductQuantity } from '../src/game/v3/productInventory'
 import { evaluateV3Production, runV3ProductionTick } from '../src/game/v3/production'
@@ -69,6 +69,8 @@ assert.equal(state.plantPrograms[slotId(state, DISTILL)].paused, true, 'incompat
 assert.equal(evaluateV3Production(state, 25).lines.find((line) => line.buildingId === slotId(state, DISTILL))!.actualWork, 0)
 state = assertBlocked(state, { type: 'set_module', buildingId: slotId(state, DISTILL), module: 'precision' }, 'v3.module.no_change')
 state = assertBlocked(state, { type: 'set_program', buildingId: slotId(state, DISTILL), blueprintId: precisionGas.id }, 'v3.program.module_mismatch')
+// Development is never blocked by line fit; the reason names what is missing.
+assert.deepEqual(explainV3ProgramFit(state, slotId(state, DISTILL), precisionGas.id)?.params, { need: 'none', installed: 'precision' })
 
 // Q65 at C2 without research; Q70 with rank1. Lab uses the proposed module, not a bought one.
 state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 1 })
@@ -156,8 +158,8 @@ assert.equal(jet.developmentProject?.feeDebitedCents, 20_000)
 assert.equal(jet.developmentProject?.remainingTicks, 150)
 jet = cycles(jet, 6)
 const q75 = developed(jet, 'jetFuel', 75)
-assert.equal(q75.name, 'Precision Precision Jet Fuel')
-assertBlocked(jet, { type: 'set_program', buildingId: slotId(jet, 1), blueprintId: q75.id }, 'v3.program.invalid_blueprint')
+assert.equal(q75.name, 'Precision Jet Fuel (Precision module)')
+assertBlocked(jet, { type: 'set_program', buildingId: slotId(jet, 1), blueprintId: q75.id }, 'v3.program.plant_level')
 jet = act(jet, { type: 'upgrade', buildingId: slotId(jet, 1) })
 jet = act(jet, { type: 'set_module', buildingId: slotId(jet, 1), module: 'precision' })
 jet = act(jet, { type: 'set_program', buildingId: slotId(jet, 1), blueprintId: q75.id })
