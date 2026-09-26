@@ -1,4 +1,5 @@
 import { V3_AWARD_REPUTATION, V3_BUILDINGS, V3_PLANT_BY_FAMILY } from './data'
+import { V3_RANK_REWARDS, getV3PlayerRank } from './rivals'
 import type { V3AwardGrade, V3AwardPeriod, V3GameState, V3ProductFamily } from './types'
 
 export const V3_AWARD_PERIOD_TICKS = 3_600
@@ -43,13 +44,21 @@ export function advanceV3Awards(state: V3GameState): V3GameState {
     const period = next.awards.current
     const { score, grade, profitCents } = scoreV3AwardPeriod(next, period)
     const rpAwarded = Math.max(0, GRADE_RP[grade] - next.awards.paidGradeRp)
+    // Year-end industry ranking: first time reaching #3/#2/#1 grants reputation once.
+    const rank = getV3PlayerRank({ ...next, world: { ...next.world, tickCount: period.startTick + V3_AWARD_PERIOD_TICKS } })
+    const rankFlags = Object.keys(V3_RANK_REWARDS).map(Number)
+      .filter((reward) => rank <= reward && !next.campaignProgress.claimedFlags.includes(`rank:${reward}`))
+    const rankReputation = rankFlags.reduce((sum, reward) => sum + V3_RANK_REWARDS[reward], 0)
     next = {
       ...next,
+      campaignProgress: rankFlags.length
+        ? { ...next.campaignProgress, claimedFlags: [...next.campaignProgress.claimedFlags, ...rankFlags.map((reward) => `rank:${reward}`)] }
+        : next.campaignProgress,
       world: {
         ...next.world,
         researchPoints: next.world.researchPoints + rpAwarded,
-        // Fame grows every period by grade (uncapped, no money).
-        reputation: next.world.reputation + V3_AWARD_REPUTATION[grade],
+        // Fame grows every period by grade (uncapped, no money) plus first-time rank rewards.
+        reputation: next.world.reputation + V3_AWARD_REPUTATION[grade] + rankReputation,
       },
       awards: {
         current: startV3AwardPeriod(next, period.startTick + V3_AWARD_PERIOD_TICKS),
