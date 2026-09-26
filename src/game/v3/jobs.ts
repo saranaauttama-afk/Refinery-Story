@@ -46,6 +46,14 @@ export function getV3QuoteMultiplier(quality: number): number {
 type LadderRow = { clientId: string; family: V3ProductFamily; rows: Array<[number, number]>; chapters: [0 | 1 | 2 | 3 | 4, 0 | 1 | 2 | 3 | 4, 0 | 1 | 2 | 3 | 4] }
 
 // Master §7 client table (Materials arrives with V3-14).
+/**
+ * V3-18 pacing: later stages order more units (Trial ×1, Regular ×3, Partner ×5;
+ * Showcase ×3) so mid/late chapters take real production time. Master table
+ * quantities are the ×1 base. Calibrated with the legal full-run bot.
+ */
+export const V3_STAGE_QUANTITY_SCALE = [1, 3, 5] as const
+export const V3_SHOWCASE_QUANTITY_SCALE = 3
+
 const LADDERS: LadderRow[] = [
   { clientId: 'local', family: 'gasoline', rows: [[35, 40], [40, 80], [55, 150]], chapters: [1, 2, 3] },
   { clientId: 'performance', family: 'gasoline', rows: [[55, 35], [65, 70], [75, 120]], chapters: [1, 2, 3] },
@@ -65,7 +73,8 @@ function buildCatalog(): Record<string, V3JobTemplate> {
     },
   }
   for (const ladder of LADDERS) {
-    ladder.rows.forEach(([quality, quantity], stage) => {
+    ladder.rows.forEach(([quality, baseQuantity], stage) => {
+      const quantity = baseQuantity * V3_STAGE_QUANTITY_SCALE[stage]
       const unitPriceCents = Math.round(V3_SPOT_PRICE_CENTS[ladder.family] * getV3QuoteMultiplier(quality))
       const id = `${ladder.clientId}:${STAGES[stage]}`
       catalog[id] = {
@@ -104,7 +113,9 @@ function buildCatalog(): Record<string, V3JobTemplate> {
   }
   // Materials (C4): Petro OR Pellets per job (Master §7); one product per job.
   const materials: Array<[[number, number], [number, number]]> = [[[40, 40], [50, 25]], [[55, 80], [65, 50]], [[65, 160], [75, 100]]]
-  materials.forEach(([[petroQ, petroQty], [pelletQ, pelletQty]], stage) => {
+  materials.forEach(([[petroQ, petroBase], [pelletQ, pelletBase]], stage) => {
+    const petroQty = petroBase * V3_STAGE_QUANTITY_SCALE[stage]
+    const pelletQty = pelletBase * V3_STAGE_QUANTITY_SCALE[stage]
     const branch = (family: V3ProductFamily, quality: number, quantity: number): V3JobBranch => {
       const unitPriceCents = Math.round(V3_SPOT_PRICE_CENTS[family] * getV3QuoteMultiplier(quality))
       return { family, minimumQuality: quality, quantity, unitPriceCents, completionBonusCents: Math.round(quantity * unitPriceCents * 0.1) }
@@ -130,7 +141,8 @@ function buildCatalog(): Record<string, V3JobTemplate> {
   const showcase: Array<[V3ProductFamily, number]> = [
     ['gasoline', 150], ['lubricants', 120], ['jetFuel', 100], ['petrochemicals', 100], ['plasticPellets', 80],
   ]
-  for (const [family, quantity] of showcase) {
+  for (const [family, baseQuantity] of showcase) {
+    const quantity = baseQuantity * V3_SHOWCASE_QUANTITY_SCALE
     const unitPriceCents = Math.round(V3_SPOT_PRICE_CENTS[family] * getV3QuoteMultiplier(65))
     catalog[`showcase:${family}`] = {
       id: `showcase:${family}`, clientId: 'showcase', kind: 'showcase', family, minimumQuality: 65, quantity,

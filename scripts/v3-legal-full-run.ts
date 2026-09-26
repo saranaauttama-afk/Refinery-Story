@@ -12,8 +12,9 @@ import { V3_BUILDINGS, V3_LAND_PARCELS, V3_PLANT_BY_FAMILY, V3_ROLES, V3_SPOT_PR
 import { evaluateV3ClearConditions } from '../src/game/v3/campaign'
 import { V3_JOB_TEMPLATES } from '../src/game/v3/jobs'
 import { getV3OfferView } from '../src/game/v3/offers'
+import { getV3RecoveryOffer } from '../src/game/v3/recovery'
 import { validateV3ExpoEntry } from '../src/game/v3/expo'
-import { getV3PlayerRank, getV3IndustryScore } from '../src/game/v3/rivals'
+import { V3_RIVALS, getV3PlayerRank, getV3IndustryScore, getV3RivalScore } from '../src/game/v3/rivals'
 import { getV3CrudeCapacity, getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity, getV3StockAllocations } from '../src/game/v3/productInventory'
 import { evaluateV3Production, runV3ProductionTick } from '../src/game/v3/production'
 import { getV3AvailableKnowledgeRank, validateV3Research } from '../src/game/v3/research'
@@ -115,6 +116,26 @@ function nextMilestone() {
     .sort((a, b) => a.minimumChapter - b.minimumChapter || a.minimumQuality - b.minimumQuality || a.id.localeCompare(b.id))
 }
 
+/** Operating burn (wages + maintenance) per simulated second over the last minute. */
+function burnPerSecond(): number {
+  const now = Math.floor(state.world.tickCount / 5)
+  const recent = state.operatingLedger.buckets.filter((bucket) => bucket.second > now - 60)
+  const spent = recent.reduce((sum, bucket) => sum + bucket.wagesCents + bucket.maintenanceCents, 0)
+  return spent / Math.max(1, Math.min(60, now))
+}
+const runwaySeconds = () => { const burn = burnPerSecond(); return burn > 0 ? cash() / burn : Infinity }
+
+/** Cash discipline a careful player would use: recovery, and dropping jobs that outlast the money. */
+function manageSafety() {
+  if (getV3RecoveryOffer(state).tollingAvailable && tryAct({ type: 'start_recovery' })) note('started recovery tolling')
+  const job = state.acceptedJob
+  if (job && runwaySeconds() < 60) {
+    const view = getV3OfferView(state, job.templateId, job.family)
+    const remaining = job.quantity - job.deliveredQuantity
+    if ((view.etaSeconds ?? Infinity) > 120 && remaining > 0 && tryAct({ type: 'cancel_job' })) note(`cancelled ${job.templateId} (cash runway)`)
+  }
+}
+
 function manageJobs() {
   const job = state.acceptedJob
   // Cash crisis: a human would cancel a job that locks up sellable stock (paid shipments stay paid).
@@ -138,6 +159,8 @@ function manageJobs() {
       if (!plant || countV3Buildings(state, plant) === 0) continue
       const view = getV3OfferView(state, template.id, branch?.family ?? null)
       if (view.acceptBlocker || view.etaSeconds === null) continue
+      // Do not start an order the cash cannot outlast.
+      if (view.etaSeconds > Math.max(180, runwaySeconds() * 0.7)) continue
       if (tryAct(branch ? { type: 'accept_job', templateId: template.id, branch: branch.family } : { type: 'accept_job', templateId: template.id })) {
         note(`accepted ${template.id}${branch ? ` (${branch.family})` : ''}`)
         return
@@ -165,6 +188,13 @@ function neededQuality(): Partial<Record<V3ProductFamily, number>> {
 function manageDevelopment() {
   const labId = lab()
   if (!labId || state.developmentProject) return
+  // Expo flagship: once rank2 + an Operator Lv3 lead exist, certify a Q80 recipe.
+  const lead80 = state.world.employees.find((employee) => employee.type === 'operator' && employee.level >= 3 && state.employeeDuties[employee.id]?.kind !== 'development')
+  if (bestQuality('gasoline') < 80 && getV3AvailableKnowledgeRank(state, labId) >= 2 && lead80 &&
+    tryAct({ type: 'start_development', family: 'gasoline', profile: 'precision', module: 'precision', knowledgeRank: 2, leadEmployeeId: lead80.id, labBuildingId: labId })) {
+    note('develop gasoline Q80 flagship')
+    return
+  }
   for (const [family, quality] of Object.entries(neededQuality()) as Array<[V3ProductFamily, number]>) {
     // C2 needs 40 units of one DEVELOPED Gasoline recipe, so at C1 only developed ones count.
     const developedOnly = state.campaignProgress.chapter === 1
@@ -246,10 +276,11 @@ function manageTrade() {
   // Sell free stock above a development-sample float; never touch job reservations.
   for (const family of ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'] as V3ProductFamily[]) {
     const free = Math.floor(getV3SellableQuantity(state, family) + 1e-8)
+    // Free stock excludes job reservations, so selling it never harms an order.
+    // Keep a small float for Lab samples unless the tank is filling or cash is short.
     const full = getV3ProductQuantity(state, family) > getV3ProductCapacity(state, family) * 0.6
-    const job = state.acceptedJob?.family === family
-    const float = job ? Infinity : 12
-    const sell = full ? free - (job ? free : 12) : free - float
+    const float = full || runwaySeconds() < 120 ? 0 : 12
+    const sell = free - float
     if (sell > 0 && V3_SPOT_PRICE_CENTS[family]) tryAct({ type: 'trade', direction: 'sell', product: family, quantity: sell })
   }
   for (const commodity of ['recycledMaterial', 'asphalt'] as const) {
@@ -286,12 +317,14 @@ function manageInvestment() {
   }
 }
 
+const trajectory: string[] = []
 const reached: Record<number, string> = {}
 const outcome = { cleared: false, stalledReason: '' }
 let lastProgressTick = 0
 let lastSignature = ''
 while (state.world.tickCount < MAX_TICKS) {
   if (state.maintenanceEmergency) tryAct({ type: 'restore_operations' })
+  manageSafety()
   manageJobs()
   manageDevelopment()
   managePrograms()
@@ -301,6 +334,10 @@ while (state.world.tickCount < MAX_TICKS) {
   manageInvestment()
   manageTrade()
   for (let index = 0; index < DECISION_TICKS; index += 25) state = runV3ProductionTick(state, 25).state
+  if (state.world.tickCount % 3_000 < DECISION_TICKS) {
+    const rivalsNow = V3_RIVALS.map((rival) => getV3RivalScore(rival, state.world.tickCount))
+    trajectory.push(`${minutes()}m score ${getV3IndustryScore(state).total} rivals ${rivalsNow.join('/')} rep ${state.world.reputation} bestQ ${Math.max(0, ...Object.values(state.productBlueprints).map((blueprint) => blueprint.quality))}`)
+  }
   const chapter = state.campaignProgress.chapter
   if (!reached[chapter]) { reached[chapter] = minutes(); note(`reached chapter ${chapter}`) }
   const signature = `${chapter}|${state.jobReceipts.receipts.length}|${Object.keys(state.productBlueprints).length}|${Object.keys(state.world.buildingsById).length}`
@@ -311,7 +348,14 @@ while (state.world.tickCount < MAX_TICKS) {
 if (!outcome.cleared && !outcome.stalledReason) outcome.stalledReason = `tick cap ${MAX_TICKS}`
 
 const clear = evaluateV3ClearConditions(state)
+const nowSecond = Math.floor(state.world.tickCount / 5)
+const window = state.operatingLedger.buckets.filter((bucket) => bucket.second > nowSecond - 180)
+const perMinute = (key: 'receiptsCents' | 'cogsCents' | 'wagesCents' | 'maintenanceCents' | 'cashOutflowsCents') => Math.round(window.reduce((sum, bucket) => sum + bucket[key], 0) / 3 / 100)
+const economy = { receipts: perMinute('receiptsCents'), cogs: perMinute('cogsCents'), wages: perMinute('wagesCents'), maintenance: perMinute('maintenanceCents'), outflows: perMinute('cashOutflowsCents') }
+const lines = evaluateV3Production(state, 25).lines.map((line) => `${line.building}:${line.status}:${line.limitedBy}:${line.actualOutputPerMinute.toFixed(0)}/${line.potentialOutputPerMinute.toFixed(0)}`)
 console.log(log.join('\n'))
+console.log('--- trajectory (every 10 min)')
+console.log(trajectory.join('\n'))
 console.log('\n=== V3 legal full run (fresh state, reducer + tick only) ===')
 console.log(JSON.stringify({
   cleared: outcome.cleared,
@@ -320,6 +364,7 @@ console.log(JSON.stringify({
   chapterReachedAtMinute: reached,
   actions, rejectedActions: rejected, blockedCounts,
   moneyDollars: Math.round(cash() / 100),
+  economyPerMinuteDollars: economy, lines, crude: Math.round(state.world.crudeOil),
   partners: clear.partners, families: clear.families, showcase: clear.showcase,
   industryLeader: clear.industryLeader, expoWin: clear.expoWin, rank: getV3PlayerRank(state), industryScore: getV3IndustryScore(state),
   expoResults: state.expoResults.map((entry) => `Y${entry.year}:#${entry.rank}(Q${entry.quality})`),
