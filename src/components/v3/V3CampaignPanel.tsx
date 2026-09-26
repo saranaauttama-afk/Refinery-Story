@@ -36,6 +36,8 @@ export function V3CampaignPanel({ state, t }: { state: V3GameState; t: Translate
               <Text style={styles.row}>{mark(clear.advancedClient)} {t({ en: 'Airline or Materials among Partners', th: 'มี Airline หรือ Materials เป็น Partner' })}</Text>
               <Text style={styles.row}>{mark(clear.showcase)} {t({ en: 'Showcase with a developed Q65+ recipe', th: 'ส่ง Showcase ด้วยสูตรที่พัฒนาเอง Q65+' })}</Text>
               <Text style={styles.row}>{mark(clear.profitWindowComplete && clear.rollingProfitCents > 0)} {t({ en: `Operating profit last 180s: ${money(clear.rollingProfitCents)}`, th: `กำไรดำเนินงาน 180 วินาทีล่าสุด: ${money(clear.rollingProfitCents)}` })}</Text>
+              <Text style={styles.row}>{mark(clear.industryLeader)} {t({ en: 'Reach #1 in a year-end industry ranking', th: 'ขึ้นอันดับ 1 ของอุตสาหกรรมตอนสิ้นปี' })}</Text>
+              <Text style={styles.row}>{mark(clear.expoWin)} {t({ en: 'Win an annual Refinery Expo', th: 'ชนะงานแสดงโรงกลั่นประจำปี 1 ครั้ง' })}</Text>
               <Text style={styles.muted}>{t({ en: 'Bonuses, grants and estimated-cost sales do not count. No need for every building or research.', th: 'โบนัส เงินช่วยเหลือ และการขายที่ต้นทุนเป็นค่าประมาณไม่นับ ไม่ต้องมีทุกตึกหรือทุกงานวิจัย' })}</Text>
             </>
           )}

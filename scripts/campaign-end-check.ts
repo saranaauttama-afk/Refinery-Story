@@ -59,7 +59,18 @@ assert.ok(shown.world.researchPoints - rpBefore >= 15)
 assertBlocked(shown, { type: 'accept_job', templateId: 'showcase:gasoline' }, 'v3.job.locked')
 
 // ---- Clear conditions are exact ----
-const jet = blueprint(shown, 'jetFuel', 75, 'developed')
+const jetBase = blueprint(shown, 'jetFuel', 75, 'developed')
+// Owner decision ก: #1 year-end ranking and an Expo win are part of the clear.
+// The shared base holds both so each negative case below removes one condition.
+const expoWin = { year: 1, blueprintId: developed.id, family: 'gasoline' as const, quality: 65, score: 65, rank: 1, rivalScores: [50, 50, 50, 50], cashCents: 0, reputation: 0 }
+const jet = {
+  id: jetBase.id,
+  state: {
+    ...jetBase.state,
+    campaignProgress: { ...jetBase.state.campaignProgress, claimedFlags: [...jetBase.state.campaignProgress.claimedFlags, 'rank:1'] },
+    expoResults: [expoWin],
+  } as V3GameState,
+}
 const withPartners = (base: V3GameState, templates: string[]): V3GameState => ({
   ...base,
   jobReceipts: { ...base.jobReceipts, receipts: [...base.jobReceipts.receipts, ...templates.map((id) => partnerReceipt(id, id.startsWith('airline') ? jet.id : developed.id, base.world.tickCount))] },
@@ -91,7 +102,12 @@ const early = withPartners({ ...jet.state, world: { ...jet.state.world, tickCoun
 const earlySale = act(addV3VariantInventory(early, V3_DEFAULT_BLUEPRINT_ID.gasoline, 10, 100).state, { type: 'trade', direction: 'sell', product: 'gasoline', quantity: 10 })
 assert.equal(earlySale.campaignProgress.chapter, 4, 'rolling 180s window not complete yet')
 
-// Positive case: exactly the Master conditions, nothing else required.
+const noLeader = profitable(withPartners({ ...jet.state, campaignProgress: { ...jet.state.campaignProgress, claimedFlags: jet.state.campaignProgress.claimedFlags.filter((flag) => flag !== 'rank:1') } }, ['local:partner', 'performance:partner', 'airline:partner']))
+assert.equal(noLeader.campaignProgress.chapter, 4, 'needs #1 at a year-end ranking')
+const noExpo = profitable(withPartners({ ...jet.state, expoResults: [{ ...expoWin, rank: 2 }] }, ['local:partner', 'performance:partner', 'airline:partner']))
+assert.equal(noExpo.campaignProgress.chapter, 4, 'needs an Expo win (2nd place is not enough)')
+
+// Positive case: exactly the Master conditions + owner decision ก, nothing else required.
 const cleared = profitable(withPartners(jet.state, ['local:partner', 'performance:partner', 'airline:partner']))
 assert.equal(cleared.campaignProgress.chapter, 5)
 assert.ok(cleared.campaignProgress.claimedFlags.includes('clear'))

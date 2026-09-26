@@ -12,6 +12,8 @@ import { V3_BUILDINGS, V3_LAND_PARCELS, V3_PLANT_BY_FAMILY, V3_ROLES, V3_SPOT_PR
 import { evaluateV3ClearConditions } from '../src/game/v3/campaign'
 import { V3_JOB_TEMPLATES } from '../src/game/v3/jobs'
 import { getV3OfferView } from '../src/game/v3/offers'
+import { validateV3ExpoEntry } from '../src/game/v3/expo'
+import { getV3PlayerRank, getV3IndustryScore } from '../src/game/v3/rivals'
 import { getV3CrudeCapacity, getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity, getV3StockAllocations } from '../src/game/v3/productInventory'
 import { evaluateV3Production, runV3ProductionTick } from '../src/game/v3/production'
 import { getV3AvailableKnowledgeRank, validateV3Research } from '../src/game/v3/research'
@@ -218,6 +220,19 @@ function manageStaff() {
   for (const employee of state.world.employees) if (state.unpaidEmployeeIds.includes(employee.id)) tryAct({ type: 'resume_employee', employeeId: employee.id })
 }
 
+/** Enter the annual Expo with the best developed recipe that has samples. */
+function manageExpo() {
+  const recipes = Object.values(state.productBlueprints)
+    .filter((blueprint) => blueprint.provenance === 'developed')
+    .sort((a, b) => b.quality - a.quality)
+  for (const recipe of recipes) {
+    if (!validateV3ExpoEntry(state, recipe.id)) {
+      if (tryAct({ type: 'enter_expo', blueprintId: recipe.id })) note(`expo entry ${recipe.name} → #${state.expoResults.at(-1)?.rank}`)
+      return
+    }
+  }
+}
+
 function manageResearch() {
   const order: ResearchKey[] = ['premiumFuel', 'betterPumps', 'biggerTanks', 'advancedProcessing', 'advancedDistillation', 'industrialStorage', 'premiumContracts', 'contractAnalytics', 'storageOptimization']
   for (const id of order) if (!validateV3Research(state, id) && tryAct({ type: 'buy_research', researchId: id })) note(`research ${id}`)
@@ -282,6 +297,7 @@ while (state.world.tickCount < MAX_TICKS) {
   managePrograms()
   manageStaff()
   manageResearch()
+  manageExpo()
   manageInvestment()
   manageTrade()
   for (let index = 0; index < DECISION_TICKS; index += 25) state = runV3ProductionTick(state, 25).state
@@ -305,6 +321,8 @@ console.log(JSON.stringify({
   actions, rejectedActions: rejected, blockedCounts,
   moneyDollars: Math.round(cash() / 100),
   partners: clear.partners, families: clear.families, showcase: clear.showcase,
+  industryLeader: clear.industryLeader, expoWin: clear.expoWin, rank: getV3PlayerRank(state), industryScore: getV3IndustryScore(state),
+  expoResults: state.expoResults.map((entry) => `Y${entry.year}:#${entry.rank}(Q${entry.quality})`),
   rolling180ProfitDollars: Math.round(clear.rollingProfitCents / 100),
   milestones: state.jobReceipts.receipts.filter((receipt) => receipt.status === 'completed').map((receipt) => receipt.templateId),
   blueprints: Object.values(state.productBlueprints).filter((blueprint) => blueprint.provenance === 'developed').map((blueprint) => `${blueprint.family}:Q${blueprint.quality}`),
