@@ -33,9 +33,10 @@
 - V3-15.5 (expandable yard foundation): **complete in code** (`ee38f2b`, `afb1fe8`).
 - V3-15.5 device check: **passed** (player, APK #76).
 - V3-16 (adjacency, optional inbox, readable names/targets): **complete in code**.
-- **Current task: R3 human gate** — play the V3-16 APK. Open evidence item: a
-  labelled legal full run to the ending (clear) is still missing; decide whether
-  to require it before V3-17 or produce it in V3-18.
+- R3 legal full run: fixed a C1 soft-lock (decision ก); fresh-state bot now clears
+  in 38.2 simulated minutes (`check:v3-legal-run`) — too fast, feeds V3-18.
+- **Current task: R3 human gate** — play the newest APK (V3-16 + C1 fix). The
+  legal full-run evidence item is done (`check:v3-legal-run`).
 
 ## Decisions recorded
 

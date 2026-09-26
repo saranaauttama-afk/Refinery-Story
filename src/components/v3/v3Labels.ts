@@ -18,6 +18,7 @@ const STAGE: Record<string, BilingualTextValue> = {
   partner: { en: 'Partner', th: 'พาร์ทเนอร์' },
   repeat: { en: 'Repeat order', th: 'สั่งซ้ำ' },
   'partner-repeat': { en: 'Partner repeat', th: 'พาร์ทเนอร์สั่งซ้ำ' },
+  'starter-repeat': { en: 'Starter repeat (C1)', th: 'สั่งซ้ำเริ่มต้น (C1)' },
   rush: { en: 'Rush order', th: 'งานด่วน' },
   lubricants: { en: 'Lubricants', th: 'น้ำมันหล่อลื่น' },
   jetFuel: { en: 'Jet Fuel', th: 'น้ำมันเครื่องบิน' },
