@@ -179,6 +179,8 @@ export const V3_DEVELOPMENT_SAMPLE_QUANTITY = 10
 export const V3_GRID_EXPANSIONS = [
   { fromSize: 3, toSize: 4, costDollars: 6_000, chapter: 2 },
   { fromSize: 4, toSize: 5, costDollars: 25_000, chapter: 4 },
+  // Optional freeplay yard after the sticky clear (C5).
+  { fromSize: 5, toSize: 6, costDollars: 100_000, chapter: 5 },
 ] as const
 
 // Systems S2 module table: fit cost is 20% of the plant's base build cost.

@@ -182,7 +182,7 @@ assert.equal(grid.world.grid.length, 25)
 assert.equal(before5 - grid.world.moneyCents, 2_500_000)
 assert.equal(grid.world.grid[18], 'petrochemicalPlant', '(3,3) keeps its row/column')
 assert.equal(grid.plantPrograms[18].cellIndex, 18)
-assertBlocked(grid, { type: 'expand_grid' }, 'v3.expand.unavailable')
+assertBlocked(grid, { type: 'expand_grid' }, 'v3.expand.locked') // 6×6 only after clear
 const earlyExpand = act(createInitialV3GameState(), { type: 'trade', direction: 'buy', product: 'crude', quantity: 1 })
 assertBlocked({ ...earlyExpand, campaignProgress: { ...earlyExpand.campaignProgress, chapter: 2 }, world: { ...earlyExpand.world, moneyCents: 10_000_000, grid: [...earlyExpand.world.grid, ...Array(7).fill(null)], gridLevels: [...earlyExpand.world.gridLevels, ...Array(7).fill(1)] } }, { type: 'expand_grid' }, 'v3.expand.locked')
 

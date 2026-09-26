@@ -165,6 +165,16 @@ export function consumeV3Commodity(state: V3GameState, commodity: V3CommodityFam
   return { state: { ...state, commodityInventory }, quantity, costBasisCents, estimatedBasis: false }
 }
 
+/**
+ * Q-eligibility for the accepted job. Showcase orders additionally require a
+ * blueprint the player developed (provenance `developed`), never starter stock.
+ */
+export function isV3JobEligibleVariant(state: V3GameState, blueprintId: string, quality: number): boolean {
+  const job = state.acceptedJob
+  if (!job || quality + EPSILON < job.minimumQuality) return false
+  return !job.templateId.startsWith('showcase:') || state.productBlueprints[blueprintId]?.provenance === 'developed'
+}
+
 export type V3StockAllocation = {
   blueprintId: string
   quality: number
@@ -206,7 +216,7 @@ export function getV3StockAllocations(state: V3GameState, product: ProductKey): 
   if (job?.status === 'accepted' && job.family === product) {
     let remaining = Math.max(0, job.quantity - job.deliveredQuantity)
     for (const allocation of allocations) {
-      if (allocation.quality + EPSILON < job.minimumQuality) continue
+      if (!isV3JobEligibleVariant(state, allocation.blueprintId, allocation.quality)) continue
       const reserved = Math.min(allocation.free, remaining)
       allocation.jobReserved = reserved
       allocation.free -= reserved
@@ -244,7 +254,7 @@ export function getV3ConsumableQuantity(
     .reduce((sum, entry) => {
       if (purpose === 'job-dispatch') {
         const job = state.acceptedJob
-        if (options.blueprintId && job && entry.quality + EPSILON >= job.minimumQuality) {
+        if (options.blueprintId && job && isV3JobEligibleVariant(state, entry.blueprintId, entry.quality)) {
           return sum + Math.max(0, entry.quantity - entry.kept)
         }
         return sum + entry.jobReserved
@@ -299,7 +309,7 @@ export function consumeV3ProtectedInventory(
   for (const allocation of allocations) {
     const keep = purpose === 'manual-sale' && options.overrideKeep ? 0 : allocation.kept
     const available = purpose === 'job-dispatch'
-      ? options.blueprintId && state.acceptedJob && allocation.quality + EPSILON >= state.acceptedJob.minimumQuality
+      ? options.blueprintId && state.acceptedJob && isV3JobEligibleVariant(state, allocation.blueprintId, allocation.quality)
         ? Math.max(0, allocation.quantity - allocation.kept)
         : allocation.jobReserved
       : Math.max(0, allocation.quantity - keep - allocation.jobReserved)
@@ -338,6 +348,8 @@ export type V3LedgerDelta = {
   cogsCents?: number
   wagesCents?: number
   maintenanceCents?: number
+  /** Part of receiptsCents excluded from recognized operating profit (bonuses, estimated-basis sales). */
+  unrecognizedCents?: number
 }
 
 export function recordV3Ledger(state: V3GameState, delta: V3LedgerDelta): V3GameState {
@@ -345,12 +357,15 @@ export function recordV3Ledger(state: V3GameState, delta: V3LedgerDelta): V3Game
   const previous = state.operatingLedger.buckets.at(-1)
   const bucket: V3LedgerBucket = previous?.second === second
     ? { ...previous }
-    : { second, receiptsCents: 0, cashOutflowsCents: 0, cogsCents: 0, wagesCents: 0, maintenanceCents: 0 }
+    : { second, receiptsCents: 0, cashOutflowsCents: 0, cogsCents: 0, wagesCents: 0, maintenanceCents: 0, unrecognizedCents: 0 }
   bucket.receiptsCents += delta.receiptsCents ?? 0
   bucket.cashOutflowsCents += delta.cashOutflowsCents ?? 0
   bucket.cogsCents += delta.cogsCents ?? 0
   bucket.wagesCents += delta.wagesCents ?? 0
   bucket.maintenanceCents += delta.maintenanceCents ?? 0
+  bucket.unrecognizedCents += delta.unrecognizedCents ?? 0
+  const recognized = (delta.receiptsCents ?? 0) - (delta.unrecognizedCents ?? 0) -
+    (delta.cogsCents ?? 0) - (delta.wagesCents ?? 0) - (delta.maintenanceCents ?? 0)
   const buckets = previous?.second === second
     ? [...state.operatingLedger.buckets.slice(0, -1), bucket]
     : [...state.operatingLedger.buckets, bucket].slice(-180)
@@ -364,6 +379,16 @@ export function recordV3Ledger(state: V3GameState, delta: V3LedgerDelta): V3Game
       lifetimeCogsCents: state.operatingLedger.lifetimeCogsCents + (delta.cogsCents ?? 0),
       lifetimeOperatingExpenseCents: state.operatingLedger.lifetimeOperatingExpenseCents +
         (delta.wagesCents ?? 0) + (delta.maintenanceCents ?? 0),
+      lifetimeRecognizedProfitCents: state.operatingLedger.lifetimeRecognizedProfitCents + recognized,
     },
   }
+}
+
+/** Rolling recognized operating profit over the last `seconds` of simulated time. */
+export function getV3RollingOperatingProfit(state: V3GameState, seconds = 180): { cents: number; complete: boolean } {
+  const now = Math.floor(state.world.tickCount / 5)
+  const cents = state.operatingLedger.buckets
+    .filter((bucket) => bucket.second > now - seconds)
+    .reduce((sum, bucket) => sum + bucket.receiptsCents - bucket.unrecognizedCents - bucket.cogsCents - bucket.wagesCents - bucket.maintenanceCents, 0)
+  return { cents, complete: state.world.tickCount >= seconds * 5 }
 }

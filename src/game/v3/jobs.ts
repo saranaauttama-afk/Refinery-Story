@@ -5,7 +5,7 @@ import { applyV3LevelUps, creditV3EmployeeRecords } from './workforce'
 import { V3_SPOT_PRICE_CENTS } from './data'
 import type { V3AcceptedJob, V3GameState, V3ProductFamily } from './types'
 
-export type V3JobKind = 'tutorial' | 'milestone' | 'repeat' | 'rush'
+export type V3JobKind = 'tutorial' | 'milestone' | 'repeat' | 'rush' | 'showcase'
 
 export type V3JobTemplate = {
   id: string
@@ -113,6 +113,19 @@ function buildCatalog(): Record<string, V3JobTemplate> {
       ...base, id: `materials:${suffix}`, kind: 'repeat', completionBonusCents: 0, researchReward: 0,
       reputationReward: 0, milestone: false, requires: base.id,
       branches: base.branches!.map((entry) => ({ ...entry, completionBonusCents: 0 })),
+    }
+  }
+  // Showcase (Master §11): developed blueprint Q≥65, Q65 quote tier, 10% bonus,
+  // RP15 once per template, no client rank change, no deadline.
+  const showcase: Array<[V3ProductFamily, number]> = [
+    ['gasoline', 150], ['lubricants', 120], ['jetFuel', 100], ['petrochemicals', 100], ['plasticPellets', 80],
+  ]
+  for (const [family, quantity] of showcase) {
+    const unitPriceCents = Math.round(V3_SPOT_PRICE_CENTS[family] * getV3QuoteMultiplier(65))
+    catalog[`showcase:${family}`] = {
+      id: `showcase:${family}`, clientId: 'showcase', kind: 'showcase', family, minimumQuality: 65, quantity,
+      unitPriceCents, completionBonusCents: Math.round(quantity * unitPriceCents * 0.1),
+      researchReward: 15, reputationReward: 0, minimumChapter: 4, milestone: true, requires: null, branches: null,
     }
   }
   return catalog
@@ -252,12 +265,30 @@ export function dispatchV3Job(state: V3GameState, requestedQuantity: number, blu
       deliveredByBlueprint,
     },
   }
+  // Award period: qualified (accepted-job, Q-eligible) deliveries only; spot never counts.
+  next = {
+    ...next,
+    awards: {
+      ...next.awards,
+      current: {
+        ...next.awards.current,
+        qualifiedUnits: next.awards.current.qualifiedUnits + consumed.quantity,
+        qualifiedFamilies: next.awards.current.qualifiedFamilies.includes(job.family)
+          ? next.awards.current.qualifiedFamilies
+          : [...next.awards.current.qualifiedFamilies, job.family],
+      },
+    },
+  }
   if (completed) {
     const credited = Object.entries(job.contributorWork).filter(([, work]) => work > 0).map(([id]) => id).sort()
     if (template?.milestone) next = creditV3EmployeeRecords(next, credited, { milestoneId: template.id })
     next = {
       ...next,
-      clientProgress: template ? {
+      campaignProgress: template?.kind === 'showcase' && !next.campaignProgress.showcaseReceiptId
+        ? { ...next.campaignProgress, showcaseReceiptId: `receipt:${job.id}` }
+        : next.campaignProgress,
+      // Showcase changes no client rank.
+      clientProgress: template && template.kind !== 'showcase' ? {
         ...next.clientProgress,
         [template.clientId]: {
           clientId: template.clientId,
@@ -280,7 +311,9 @@ export function dispatchV3Job(state: V3GameState, requestedQuantity: number, blu
       },
     }
   }
-  next = evaluateV3CampaignProgress(recordV3Ledger(next, { receiptsCents: totalPaidCents, cogsCents: consumed.costBasisCents }))
+  // Completion bonuses and receipts for goods with estimated basis never count as recognized profit.
+  const unrecognizedCents = completionPaidCents + (consumed.estimatedBasis ? shipmentPaidCents : 0)
+  next = evaluateV3CampaignProgress(recordV3Ledger(next, { receiptsCents: totalPaidCents, cogsCents: consumed.costBasisCents, unrecognizedCents }))
   return { state: next, blocker: null, quantity: consumed.quantity, paidCents: totalPaidCents }
 }
 
