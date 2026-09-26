@@ -1,5 +1,6 @@
 import { getV3BuildingType, getV3BuildingLevel } from './yard'
 import { getV3AvailableKnowledgeRank } from './research'
+import { getV3UniqueGradeName } from './gradeNames'
 import {
   V3_DEVELOPMENT_BY_FAMILY,
   V3_MODULE_CHAPTER,
@@ -22,13 +23,6 @@ export const V3_GASOLINE_DEVELOPMENT_FEE_CENTS = V3_DEVELOPMENT_BY_FAMILY.gasoli
 export const V3_GASOLINE_SAMPLE_QUANTITY = V3_DEVELOPMENT_SAMPLE_QUANTITY
 export const V3_GASOLINE_DEVELOPMENT_TICKS = V3_DEVELOPMENT_BY_FAMILY.gasoline.ticks
 
-const FAMILY_NAME: Record<V3ProductFamily, string> = {
-  gasoline: 'Gasoline',
-  lubricants: 'Lubricants',
-  jetFuel: 'Jet Fuel',
-  petrochemicals: 'Petrochemicals',
-  plasticPellets: 'Plastic Pellets',
-}
 
 /** Systems S2: Q = clamp(40 + profile + module + 5*rank + lead, 20, 80). */
 export function getV3BlueprintQuality(
@@ -164,8 +158,8 @@ export function advanceV3Development(state: V3GameState, deltaTicks: number): V3
     signature: project.signature,
     revision,
     family: project.family,
-    // Profile + product, with the required line module named explicitly (no "Precision Precision").
-      name: `${project.profile[0].toUpperCase()}${project.profile.slice(1)} ${FAMILY_NAME[project.family]}${project.module === 'none' ? '' : ` (${project.module[0].toUpperCase()}${project.module.slice(1)} module)`}`,
+    // Real-world grade name for its quality, unique within the product family.
+    name: getV3UniqueGradeName(state, project.family, project.quality),
     quality: project.quality,
     profile: project.profile,
     module: project.module,

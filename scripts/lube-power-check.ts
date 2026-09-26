@@ -164,7 +164,7 @@ dev = cycles(act(dev, { type: 'set_pause', buildingId: slotId(dev, LUBE_A), paus
 const precisionLube = Object.values(dev.productBlueprints).find((blueprint) => blueprint.family === 'lubricants' && blueprint.provenance === 'developed')
 assert.ok(precisionLube)
 assert.equal(precisionLube!.quality, 55)
-assert.equal(precisionLube!.name, 'Precision Lubricants')
+assert.equal(precisionLube!.name, 'Synthetic 10W-30', 'real-world grade name for Q55 lube')
 assertBlocked(dev, { type: 'set_program', buildingId: slotId(dev, DISTILL), blueprintId: precisionLube!.id }, 'v3.program.wrong_family')
 dev = act(dev, { type: 'set_program', buildingId: slotId(dev, LUBE_A), blueprintId: precisionLube!.id })
 assert.equal(dev.plantPrograms[slotId(dev, LUBE_A)].setupRemainingTicks, 25)

@@ -1,4 +1,5 @@
 import type { Employee } from '../types'
+import { getV3GradeName } from './gradeNames'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
   V3_RULESET_VERSION,
@@ -26,13 +27,6 @@ export const V3_DEFAULT_BLUEPRINT_ID: Record<V3ProductFamily, string> = {
   plasticPellets: 'blueprint:plasticPellets:standard:1',
 }
 
-const FAMILY_LABEL: Record<V3ProductFamily, string> = {
-  gasoline: 'Standard Gasoline',
-  lubricants: 'Standard Lubricants',
-  jetFuel: 'Standard Jet Fuel',
-  petrochemicals: 'Standard Petrochemicals',
-  plasticPellets: 'Standard Plastic Pellets',
-}
 
 function createDefaultBlueprint(family: V3ProductFamily): V3ProductBlueprint {
   const id = V3_DEFAULT_BLUEPRINT_ID[family]
@@ -41,7 +35,7 @@ function createDefaultBlueprint(family: V3ProductFamily): V3ProductBlueprint {
     signature: `${family}|standard|none|0|0`,
     revision: 1,
     family,
-    name: FAMILY_LABEL[family],
+    name: getV3GradeName(family, 40),
     quality: 40,
     profile: 'standard',
     module: 'none',
