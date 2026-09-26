@@ -165,7 +165,7 @@ const precisionLube = Object.values(dev.productBlueprints).find((blueprint) => b
 assert.ok(precisionLube)
 assert.equal(precisionLube!.quality, 55)
 assert.equal(precisionLube!.name, 'Precision Lubricants')
-assertBlocked(dev, { type: 'set_program', buildingId: slotId(dev, DISTILL), blueprintId: precisionLube!.id }, 'v3.program.invalid_blueprint')
+assertBlocked(dev, { type: 'set_program', buildingId: slotId(dev, DISTILL), blueprintId: precisionLube!.id }, 'v3.program.wrong_family')
 dev = act(dev, { type: 'set_program', buildingId: slotId(dev, LUBE_A), blueprintId: precisionLube!.id })
 assert.equal(dev.plantPrograms[slotId(dev, LUBE_A)].setupRemainingTicks, 25)
 

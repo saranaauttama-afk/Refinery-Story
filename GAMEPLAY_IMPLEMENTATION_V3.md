@@ -432,7 +432,8 @@ staff careers) → V3-18 calibration toward a 5–8 h campaign → V3-19 accepta
 
 ### V3-21 · Kairosoft content (owner-selected: all six)
 
-Status: **a–e COMPLETE IN CODE**, f (walking staff/trucks) pending.
+Status: **a–e COMPLETE IN CODE**. f (walking staff/trucks on the map) moved to
+the art backlog by the owner (2026-09-26: not needed now).
 - 21a fame levels (`45b8deb`, `check:v3-fame`): derived from reputation; crude
   discount, staff slots; yearly award reputation.
 - 21b seasonal spot market (`9f9650b`, `check:v3-market`): calendar seasons +
