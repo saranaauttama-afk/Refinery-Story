@@ -22,6 +22,7 @@ export type V3GuidanceStep =
   | 'chapter_two'
   | 'chapter_three'
   | 'chapter_four'
+  | 'cleared'
 
 export function evaluateV3CampaignProgress(state: V3GameState): V3GameState {
   let chapter = state.campaignProgress.chapter
@@ -160,7 +161,8 @@ function buildV3CampaignReport(state: V3GameState, clear: V3ClearConditions): V3
 }
 
 export function getV3GuidanceStep(state: V3GameState): V3GuidanceStep {
-  if (state.campaignProgress.chapter >= 4) return 'chapter_four'
+  if (state.campaignProgress.chapter >= 5) return 'cleared'
+  if (state.campaignProgress.chapter === 4) return 'chapter_four'
   if (state.campaignProgress.chapter === 3) return 'chapter_three'
   if (state.campaignProgress.chapter === 2) return 'chapter_two'
   if (state.campaignProgress.chapter === 0) {

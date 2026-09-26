@@ -22,6 +22,7 @@ import type { BilingualTextValue } from '../src/game/types'
 import type { V3ActionEvent, V3GameState } from '../src/game/v3/types'
 import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
+import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
 import { useLang } from '../src/hooks/SettingsContext'
 import { colors, fonts, spacing } from '../src/theme'
 
@@ -121,7 +122,8 @@ function guidanceText(step: V3GuidanceStep, translate: (value: BilingualTextValu
     ship_developed_product: { en: 'Ship 40 developed units to reach C2.', th: 'ส่งสูตรที่พัฒนาเอง 40 หน่วยเพื่อเข้าสู่ C2' },
     chapter_two: { en: 'C2: choose Lube, a Power Plant, modules (plant Lv2) or Lab Lv2 research. C3 needs two clients at Regular + one processing/tank/power upgrade.', th: 'C2: เลือกลงทุน Lube, โรงไฟฟ้า, โมดูล (โรงงาน Lv2) หรือวิจัย Lab Lv2 · ขึ้น C3 ต้องมีลูกค้า 2 รายถึง Regular + อัปเกรดโรงผลิต/ถัง/ไฟ 1 ครั้ง' },
     chapter_three: { en: 'C3: Jet and Airline open; Rush and auto-repeat available. C4 needs one Partner + a certified recipe Q65+.', th: 'C3: เปิด Jet และ Airline มีงานด่วนและทำซ้ำอัตโนมัติ · ขึ้น C4 ต้องมีลูกค้า Partner 1 ราย + สูตรที่รับรอง Q65 ขึ้นไป' },
-    chapter_four: { en: 'C4 reached. Petro/Polymer/Materials arrive in the next update (V3-14).', th: 'ถึงบท C4 แล้ว · Petro/Polymer/Materials จะมาในอัปเดตถัดไป (V3-14)' },
+    chapter_four: { en: 'C4: Petro, Polymer and Materials are open. Clear = 3 Partners (incl. Airline or Materials) + a Showcase + positive 180s profit.', th: 'C4: เปิด Petro, Polymer และ Materials · จบเกม = Partner 3 ราย (มี Airline หรือ Materials) + Showcase + กำไร 180 วินาทีเป็นบวก' },
+    cleared: { en: 'Campaign cleared! Freeplay: challenges, awards and the optional 6×6 yard.', th: 'จบแคมเปญแล้ว! เล่นต่อได้: ภารกิจเสริม รางวัลประจำรอบ และขยาย 6×6' },
   }
   return translate(copy[step])
 }
@@ -383,6 +385,8 @@ export default function V3PreviewScreen() {
             </>
           )}
         </View>
+
+        <V3CampaignPanel state={state} t={t} />
 
         <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
 
