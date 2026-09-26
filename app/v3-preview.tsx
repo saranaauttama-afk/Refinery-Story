@@ -71,6 +71,7 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.train.insufficient_cash': return translate({ en: `Training needs $${Number(p?.costCents ?? 0) / 100}.`, th: `ฝึกต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
     case 'v3.train.insufficient_rp': return translate({ en: `Training needs ${p?.rp} RP.`, th: `ฝึกต้องใช้ ${p?.rp} RP` })
     case 'v3.build.requires_route': return translate({ en: 'Build a Petrochemical Plant first (Polymer uses Petro).', th: 'ต้องสร้าง Petrochemical Plant ก่อน (Polymer ใช้ Petro)' })
+    case 'v3.job.invalid_branch': return translate({ en: 'Choose Petro or Pellets for this Materials job.', th: 'เลือก Petro หรือ Pellets สำหรับงาน Materials นี้' })
     case 'v3.job.requires_previous': return translate({ en: 'Complete this client’s previous stage first.', th: 'ต้องทำขั้นก่อนหน้าของลูกค้ารายนี้ให้เสร็จก่อน' })
     case 'v3.job.rush_unavailable': return translate({ en: 'No qualifying running line to size a Rush.', th: 'ยังไม่มีไลน์ที่ผลิตคุณภาพถึงสำหรับงานด่วน' })
     case 'v3.job.auto_repeat_locked': return translate({ en: `Auto-repeat opens in C${p?.chapter}.`, th: `ทำซ้ำอัตโนมัติเปิดในบท C${p?.chapter}` })

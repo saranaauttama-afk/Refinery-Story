@@ -52,15 +52,16 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{t({ en: 'Customer offers', th: 'ข้อเสนอลูกค้า' })}</Text>
       <Text style={styles.muted}>{t({ en: 'Quotes lock when accepted. ETA = qualifying stock + fully supplied qualifying lines.', th: 'ราคาถูกล็อกตอนรับงาน ETA = สต็อกที่ผ่านเกณฑ์ + ไลน์ที่ผลิตคุณภาพถึงเมื่อวัตถุดิบพอ' })}</Text>
-      {visible.map((template) => {
-        const view = getV3OfferView(state, template.id)
-        const accept: ActionInput = { type: 'accept_job', templateId: template.id }
+      {visible.flatMap((template) => (template.branches ?? [null]).map((branch) => ({ template, branch: branch?.family ?? null }))).map(({ template, branch }) => {
+        const view = getV3OfferView(state, template.id, branch)
+        const accept: ActionInput = branch ? { type: 'accept_job', templateId: template.id, branch } : { type: 'accept_job', templateId: template.id }
         const blocked = check(accept)
         return (
-          <View key={template.id} style={styles.offer}>
-            <Text style={styles.offerTitle}>{template.id} · {t(KIND[template.kind])}</Text>
+          <View key={`${template.id}:${branch ?? ''}`} style={styles.offer}>
+            <Text style={styles.offerTitle}>{template.id}{branch ? ` · ${branch === 'petrochemicals' ? 'Petro' : 'Pellets'}` : ''} · {t(KIND[template.kind])}</Text>
+            {branch && <Text style={styles.muted}>{t({ en: 'Materials: pick ONE product for this job; the other cannot be shipped to it.', th: 'Materials: เลือกสินค้าเพียงชนิดเดียวต่องาน ส่งอีกชนิดเข้างานนี้ไม่ได้' })}</Text>}
             <Text style={styles.row}>
-              Q{template.minimumQuality}+ · {view.quantity} {t({ en: 'units', th: 'หน่วย' })} · ${(view.unitPriceCents / 100).toFixed(2)}/{t({ en: 'unit', th: 'หน่วย' })}
+              Q{view.minimumQuality}+ · {view.quantity} {t({ en: 'units', th: 'หน่วย' })} · ${(view.unitPriceCents / 100).toFixed(2)}/{t({ en: 'unit', th: 'หน่วย' })}
               {view.completionBonusCents > 0 ? ` · +$${(view.completionBonusCents / 100).toFixed(0)} ${t({ en: 'on completion', th: 'เมื่อส่งครบ' })}` : ''}
               {template.researchReward > 0 ? ` · ${template.researchReward} RP` : ''}
             </Text>
@@ -81,7 +82,7 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
               <Text style={styles.secondaryText}>{t({ en: 'Accept', th: 'รับงาน' })}</Text>
             </Pressable>
             {blocked && <Text style={styles.reason}>{describe(blocked)}</Text>}
-            {template.kind === 'repeat' && chapter >= V3_AUTO_REPEAT_CHAPTER - 1 && (() => {
+            {template.kind === 'repeat' && !template.branches && chapter >= V3_AUTO_REPEAT_CHAPTER - 1 && (() => {
               const toggle: ActionInput = { type: 'set_auto_repeat', templateId: autoId === template.id ? null : template.id }
               const toggleBlocked = check(toggle)
               return (
