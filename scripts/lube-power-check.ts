@@ -6,6 +6,7 @@ import { V3_DEFAULT_BLUEPRINT_ID, V3_STARTER_BUILDINGS } from '../src/game/v3/st
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState } from '../src/game/v3/types'
 import { act, assertBlocked, slotId, attempt, close, cycles, earnGasolineCash, legalChapterTwo, materialBasisTotal, SLOT } from './v3-check-helpers'
+import { getV3MarketMultiplier } from '../src/game/v3/market'
 
 const LUBE = V3_DEFAULT_BLUEPRINT_ID.lubricants
 const DISTILL = 4
@@ -148,7 +149,7 @@ close(whole.operatingLedger.lifetimeCogsCents - market.operatingLedger.lifetimeC
 assert.equal(whole.clientProgress.fleet.lastCompletedMilestoneId, 'fleet:trial')
 assertBlocked(whole, { type: 'accept_job', templateId: 'fleet:trial' }, 'v3.job.locked')
 let spot = act(whole, { type: 'trade', direction: 'sell', product: 'lubricants', quantity: 10, overrideKeep: true })
-assert.equal(spot.world.moneyCents - whole.world.moneyCents, 10 * 3_000, 'Lube spot $30')
+assert.equal(spot.world.moneyCents - whole.world.moneyCents, Math.round(10 * 3_000 * getV3MarketMultiplier(whole, 'lubricants')), 'Lube spot $30 × market')
 
 // ---- Development: Lube family uses the same evaluator/fees ----
 let dev = addV3VariantInventory(fixture(staffed, 0, 0), LUBE, 12, 1_200).state

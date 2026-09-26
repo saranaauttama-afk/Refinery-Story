@@ -14,7 +14,6 @@ import type { BuildingType, ProductKey, WorkerType } from '../types'
 import { unlockV3Research, validateV3Research } from './research'
 import {
   V3_BUILDINGS,
-  V3_CRUDE_PRICE_CENTS,
   V3_MODULE_CHAPTER,
   V3_MODULE_FIT_COST_RATE,
   V3_MODULE_MIN_PLANT_LEVEL,
@@ -30,6 +29,10 @@ import {
   isV3ProcessBuilding,
 } from './data'
 import { getV3Modifiers } from './modifiers'
+import { getV3CrudeUnitPriceCents } from './fame'
+import { getV3MarketMultiplier } from './market'
+import { enterV3Expo, validateV3ExpoEntry } from './expo'
+import { getV3RareCandidate, promoteV3Employee, validateV3Promotion } from './careers'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
@@ -244,7 +247,7 @@ export function validateV3Trade(state: V3GameState, action: V3TradeAction): V3Ac
   }
   if (action.direction === 'buy') {
     if (action.product !== 'crude') return event('info', 'v3.trade.inventory_pending')
-    if (state.world.moneyCents < V3_CRUDE_PRICE_CENTS) return event('blocked', 'v3.trade.insufficient_cash')
+    if (state.world.moneyCents < getV3CrudeUnitPriceCents(state)) return event('blocked', 'v3.trade.insufficient_cash')
     if (state.world.crudeOil >= getV3CrudeCapacity(state) - 1e-8) return event('blocked', 'v3.trade.storage_full')
   } else {
     if (action.product === 'crude') {
@@ -290,6 +293,35 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
         received: action.sequence,
       })],
     }
+  }
+
+  if (action.type === 'promote_employee') {
+    const invalid = validateV3Promotion(state, action.employeeId)
+    if (invalid) return consumedResult(state, action, state, event('blocked', `v3.career.${invalid.blocker}` as V3ActionEvent['messageId'], invalid.params))
+    return consumedResult(state, action, promoteV3Employee(state, action.employeeId), event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'hire_candidate') {
+    const candidate = getV3RareCandidate(state)
+    if (!candidate || candidate.id !== action.candidateId) return consumedResult(state, action, state, event('blocked', 'v3.candidate.unavailable'))
+    if (state.world.employees.length >= getV3StaffCap(state)) return consumedResult(state, action, state, event('blocked', 'v3.hire.staff_cap', { cap: getV3StaffCap(state) }))
+    if (state.world.moneyCents < candidate.costCents) return consumedResult(state, action, state, event('blocked', 'v3.hire.insufficient_cash', { costCents: candidate.costCents }))
+    const hired = candidate.employee
+    return consumedResult(state, action, {
+      ...state,
+      world: { ...state.world, moneyCents: state.world.moneyCents - candidate.costCents, employees: [...state.world.employees, hired] },
+      employeeDuties: { ...state.employeeDuties, [hired.id]: { kind: 'reserve' } },
+      employeeRecords: { ...state.employeeRecords, [hired.id]: emptyV3EmployeeRecord() },
+      campaignProgress: { ...state.campaignProgress, claimedFlags: [...state.campaignProgress.claimedFlags, candidate.id] },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + candidate.costCents },
+    }, event('success', 'v3.action.ok', { costCents: candidate.costCents }))
+  }
+
+  if (action.type === 'enter_expo') {
+    const invalid = validateV3ExpoEntry(state, action.blueprintId)
+    if (invalid) return consumedResult(state, action, state, event('blocked', `v3.expo.${invalid.blocker}` as V3ActionEvent['messageId'], invalid.params))
+    const entered = enterV3Expo(state, action.blueprintId)
+    return consumedResult(state, action, entered.state, event('success', 'v3.action.ok', { rank: entered.entry.rank }))
   }
 
   if (action.type === 'build') {
@@ -747,10 +779,10 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   if (action.direction === 'buy' && action.product === 'crude') {
     const actual = Math.min(
       action.quantity,
-      Math.floor(state.world.moneyCents / V3_CRUDE_PRICE_CENTS),
+      Math.floor(state.world.moneyCents / getV3CrudeUnitPriceCents(state)),
       Math.max(0, getV3CrudeCapacity(state) - state.world.crudeOil),
     )
-    const costCents = actual * V3_CRUDE_PRICE_CENTS
+    const costCents = actual * getV3CrudeUnitPriceCents(state)
     const purchased = {
       ...state,
       world: {
@@ -775,7 +807,9 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       ? consumeV3Commodity(state, action.product, action.quantity)
       : consumeV3SellableInventory(state, action.product, action.quantity, action)
     // Spot uses the base price plus the capped trade channel; no Q multiplier.
-    const receiptsCents = Math.round(consumed.quantity * V3_SPOT_PRICE_CENTS[action.product] * (1 + getV3Modifiers(state).trade.effective))
+    // Seasonal market applies to Q-graded families only; commodities sell at list.
+    const market = isV3Commodity(action.product) ? 1 : getV3MarketMultiplier(state, action.product)
+    const receiptsCents = Math.round(consumed.quantity * V3_SPOT_PRICE_CENTS[action.product] * market * (1 + getV3Modifiers(state).trade.effective))
     const sold = {
       ...consumed.state,
       world: {

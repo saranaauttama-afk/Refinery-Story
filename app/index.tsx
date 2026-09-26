@@ -30,6 +30,12 @@ import { V3YardPanel, useV3YardController } from '../src/components/v3/V3YardPan
 import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
 import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
 import { V3SupplyPanel } from '../src/components/v3/V3SupplyPanel'
+import { V3FamePanel } from '../src/components/v3/V3FamePanel'
+import { V3MarketPanel } from '../src/components/v3/V3MarketPanel'
+import { V3RankingPanel } from '../src/components/v3/V3RankingPanel'
+import { V3ExpoPanel } from '../src/components/v3/V3ExpoPanel'
+import { getV3PlayerRank } from '../src/game/v3/rivals'
+import { getV3Fame } from '../src/game/v3/fame'
 import { getV3Calendar } from '../src/game/v3/yardView'
 import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
@@ -94,6 +100,17 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.train.insufficient_rp': return translate({ en: `Training needs ${p?.rp} RP.`, th: `ฝึกต้องใช้ ${p?.rp} RP` })
     case 'v3.build.requires_route': return translate({ en: 'Build a Petrochemical Plant first (Polymer uses Petro).', th: 'ต้องสร้าง Petrochemical Plant ก่อน (Polymer ใช้ Petro)' })
     case 'v3.job.invalid_branch': return translate({ en: 'Choose Petro or Pellets for this Materials job.', th: 'เลือก Petro หรือ Pellets สำหรับงาน Materials นี้' })
+    case 'v3.career.employee_missing': return translate({ en: 'Employee not found.', th: 'ไม่พบพนักงาน' })
+    case 'v3.career.max_rank': return translate({ en: 'Already at the top career rank.', th: 'ตำแหน่งสูงสุดแล้ว' })
+    case 'v3.career.level_required': return translate({ en: `Reach Lv${p?.level} before promotion.`, th: `ต้องถึง Lv${p?.level} ก่อนเลื่อนตำแหน่ง` })
+    case 'v3.career.insufficient_cash': return translate({ en: `Promotion needs $${Number(p?.costCents ?? 0) / 100}.`, th: `เลื่อนตำแหน่งต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
+    case 'v3.career.insufficient_rp': return translate({ en: `Promotion needs ${p?.rp} RP.`, th: `เลื่อนตำแหน่งต้องใช้ ${p?.rp} RP` })
+    case 'v3.candidate.unavailable': return translate({ en: 'This candidate is no longer available.', th: 'ผู้สมัครคนนี้ไม่อยู่แล้ว' })
+    case 'v3.expo.not_expo_month': return translate({ en: `The Expo only runs in month ${p?.month}.`, th: `งานแสดงจัดเฉพาะเดือน ${p?.month}` })
+    case 'v3.expo.fame_locked': return translate({ en: `Needs company fame Lv${p?.level}.`, th: `ต้องมีชื่อเสียงบริษัท Lv${p?.level}` })
+    case 'v3.expo.already_entered': return translate({ en: 'You already entered this year.', th: 'ปีนี้ส่งเข้าประกวดแล้ว' })
+    case 'v3.expo.invalid_recipe': return translate({ en: 'Only recipes you developed can enter.', th: 'ส่งได้เฉพาะสูตรที่พัฒนาเอง' })
+    case 'v3.expo.insufficient_samples': return translate({ en: `Needs ${p?.quantity} free units of this recipe.`, th: `ต้องมีสินค้าสูตรนี้ว่างอยู่ ${p?.quantity} หน่วย` })
     case 'v3.job.requires_previous': return translate({ en: 'Complete this client’s previous stage first.', th: 'ต้องทำขั้นก่อนหน้าของลูกค้ารายนี้ให้เสร็จก่อน' })
     case 'v3.job.rush_unavailable': return translate({ en: 'No qualifying running line to size a Rush.', th: 'ยังไม่มีไลน์ที่ผลิตคุณภาพถึงสำหรับงานด่วน' })
     case 'v3.job.auto_repeat_locked': return translate({ en: `Auto-repeat opens in C${p?.chapter}.`, th: `ทำซ้ำอัตโนมัติเปิดในบท C${p?.chapter}` })
@@ -379,7 +396,7 @@ export default function V3GameScreen() {
           <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
           <Text style={styles.hudItem}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} เดือน ${calendar.month} สัปดาห์ ${calendar.week}` })}</Text>
           <Text style={styles.hudItem}>🔬 {Math.floor(state.world.researchPoints)}</Text>
-          <Text style={styles.hudItem}>C{state.campaignProgress.chapter}</Text>
+          <Pressable onPress={() => setTab('reports')} hitSlop={8}><Text style={styles.hudItem}>⭐{getV3Fame(state).level} · 🏆#{getV3PlayerRank(state)} · C{state.campaignProgress.chapter}</Text></Pressable>
           <Pressable onPress={() => router.push('/settings')} hitSlop={10}><Text style={styles.hudItem}>⚙️</Text></Pressable>
         </View>
         <View style={styles.hudRow}>
@@ -443,6 +460,7 @@ export default function V3GameScreen() {
             {tab === 'staff' && <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />}
             {tab === 'products' && (
               <>
+                <V3MarketPanel state={state} t={t} />
                 <V3SupplyPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{activeBlueprint
@@ -547,6 +565,7 @@ export default function V3GameScreen() {
           )}
         </View>
                 <V3OffersPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
+                <V3ExpoPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
               </>
             )}
             {tab === 'reports' && (
@@ -582,6 +601,8 @@ export default function V3GameScreen() {
             )}
           </View>
         )}
+                <V3FamePanel state={state} t={t} />
+                <V3RankingPanel state={state} t={t} />
                 <V3CampaignPanel state={state} t={t} />
                 <V3InboxPanel state={state} apply={(action) => { void apply(action) }} t={t} />
         <View style={styles.card}>

@@ -8,7 +8,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 13 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 14 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -92,6 +92,8 @@ export type V3EmployeeRecord = {
   workTicks: number
   blueprintIds: string[]
   milestoneIds: string[]
+  /** V3-21e career rank (0 = none, 1 = Senior, 2 = Chief). */
+  careerRank?: number
 }
 
 export type V3ClientProgress = {
@@ -193,6 +195,18 @@ export type V3InboxState = {
   lastIssuedTick: number | null
 }
 
+export type V3ExpoEntry = {
+  year: number
+  blueprintId: string
+  family: V3ProductFamily
+  quality: number
+  score: number
+  rank: number
+  rivalScores: number[]
+  cashCents: number
+  reputation: number
+}
+
 export type V3AwardGrade = 'S' | 'A' | 'B' | '-'
 
 export type V3AwardPeriod = {
@@ -280,6 +294,8 @@ export type V3GameState = {
   /** Set when maintenance could not be paid; cleared only by player confirmation. */
   maintenanceEmergency: { sinceTick: number; buildingId: string | null } | null
   awards: V3AwardState
+  /** One judged entry per in-game year (V3-21d). */
+  expoResults: V3ExpoEntry[]
   campaignReport: V3CampaignReport | null
   /** Adjacency kinds formed at least once (history only; never rewarded). */
   discoveredAdjacencies: string[]
@@ -342,6 +358,17 @@ export type V3ActionMessageId =
   | 'v3.train.max_level'
   | 'v3.train.insufficient_cash'
   | 'v3.train.insufficient_rp'
+  | 'v3.career.employee_missing'
+  | 'v3.career.max_rank'
+  | 'v3.career.level_required'
+  | 'v3.career.insufficient_cash'
+  | 'v3.career.insufficient_rp'
+  | 'v3.candidate.unavailable'
+  | 'v3.expo.not_expo_month'
+  | 'v3.expo.fame_locked'
+  | 'v3.expo.already_entered'
+  | 'v3.expo.invalid_recipe'
+  | 'v3.expo.insufficient_samples'
   | 'v3.job.requires_previous'
   | 'v3.job.invalid_branch'
   | 'v3.job.rush_unavailable'
@@ -590,13 +617,31 @@ export type V3ResolveInboxAction = {
   choice: 'claim' | 'dismiss'
 }
 
+export type V3PromoteEmployeeAction = {
+  type: 'promote_employee'
+  sequence: number
+  employeeId: string
+}
+
+export type V3HireCandidateAction = {
+  type: 'hire_candidate'
+  sequence: number
+  candidateId: string
+}
+
+export type V3EnterExpoAction = {
+  type: 'enter_expo'
+  sequence: number
+  blueprintId: string
+}
+
 export type V3SetAutoRepeatAction = {
   type: 'set_auto_repeat'
   sequence: number
   templateId: string | null
 }
 
-export type V3Action = V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3PromoteEmployeeAction | V3HireCandidateAction | V3EnterExpoAction | V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

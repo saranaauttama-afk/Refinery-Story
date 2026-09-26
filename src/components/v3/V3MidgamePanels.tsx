@@ -13,6 +13,7 @@ import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
 import type { V3Action, V3ActionEvent, V3GameState, V3ModuleKey, V3ProcessProfile, V3ProductFamily } from '../../game/v3/types'
 import { evaluateV3Maintenance, getV3EmergencyExitCents } from '../../game/v3/maintenance'
 import { fonts } from '../../theme'
+import { getV3MarketMultiplier } from '../../game/v3/market'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -122,8 +123,8 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
             <Gate
               key={`sell-${family}`}
               label={t({
-                en: `Sell ${quantity} ${FAMILY_LABEL[family].en} · $${(quantity * V3_SPOT_PRICE_CENTS[family] / 100).toFixed(0)}`,
-                th: `ขาย ${FAMILY_LABEL[family].th} ${quantity} หน่วย · $${(quantity * V3_SPOT_PRICE_CENTS[family] / 100).toFixed(0)}`,
+                en: `Sell ${quantity} ${FAMILY_LABEL[family].en} · ~$${(quantity * V3_SPOT_PRICE_CENTS[family] * getV3MarketMultiplier(state, family) / 100).toFixed(0)}`,
+                th: `ขาย ${FAMILY_LABEL[family].th} ${quantity} หน่วย · ~$${(quantity * V3_SPOT_PRICE_CENTS[family] * getV3MarketMultiplier(state, family) / 100).toFixed(0)}`,
               })}
               action={{ type: 'trade', direction: 'sell', product: family, quantity }}
             />

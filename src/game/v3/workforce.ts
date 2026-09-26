@@ -8,6 +8,7 @@ import {
   isV3ProcessBuilding,
   type V3ProcessBuilding,
 } from './data'
+import { getV3Fame } from './fame'
 import { recordV3Ledger } from './productInventory'
 import type { V3EmployeeDuty, V3EmployeeRecord, V3GameState, V3ProductFamily } from './types'
 
@@ -70,11 +71,13 @@ export function getV3LocalCrewRate(state: V3GameState, buildingId: string): numb
   const skillRate = (employee.skills ?? [])
     .filter((skill) => skill.channel === 'output')
     .reduce((sum, skill) => sum + skill.value, 0)
-  return Math.min(V3_CAPS.localCrewRate, roleRate + skillRate)
+  // Career rank: +5% crew per rank and the local cap rises by the same amount.
+  const rank = state.employeeRecords[employee.id]?.careerRank ?? 0
+  return Math.min(V3_CAPS.localCrewRate + rank * 0.05, roleRate + skillRate + rank * 0.05)
 }
 
 export function getV3StaffCap(state: V3GameState): number {
-  return V3_STAFF_CAP_BY_CHAPTER[state.campaignProgress.chapter] ?? V3_STAFF_CAP_BY_CHAPTER[0]
+  return (V3_STAFF_CAP_BY_CHAPTER[state.campaignProgress.chapter] ?? V3_STAFF_CAP_BY_CHAPTER[0]) + getV3Fame(state).staffBonus
 }
 
 export function getV3TrainingCost(employee: Employee): { cents: number; rp: number } {

@@ -430,6 +430,21 @@ Planned order from here (owner-approved recommendation): V3-20 device check →
 V3-21 content chosen by the owner (rivals/ranking, market trends, expos, fame,
 staff careers) → V3-18 calibration toward a 5–8 h campaign → V3-19 acceptance.
 
+### V3-21 · Kairosoft content (owner-selected: all six)
+
+Status: **a–e COMPLETE IN CODE**, f (walking staff/trucks) pending.
+- 21a fame levels (`45b8deb`, `check:v3-fame`): derived from reputation; crude
+  discount, staff slots; yearly award reputation.
+- 21b seasonal spot market (`9f9650b`, `check:v3-market`): calendar seasons +
+  yearly hot product; spot only, contracts unaffected.
+- 21c rivals and industry ranking (`7c779f4`, `check:v3-rivals`): deterministic
+  rivals; one-time year-end rank rewards.
+- 21d annual Refinery Expo (`45d4af6`, `check:v3-expo`): September entries,
+  deterministic judging, grant prizes (never operating profit); schema 14.
+- 21e staff careers and rare candidates (`01861a8`, `check:v3-careers`).
+All numbers are V3-A hypotheses for V3-18. The legal full run still clears
+after every system (campaign pacing unchanged: ~36 simulated minutes).
+
 ### V3-18 · Legal full-loop simulation and economy calibration
 
 Dependencies:17. Subtasks:18a replace simulator shortcuts;18b baselineV3-A;

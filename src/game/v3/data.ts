@@ -362,3 +362,24 @@ export const V3_MAINTENANCE = {
   starterFreeUntilChapter: 2,
   workshopCutByLevel: [0, 0.05, 0.08, 0.1],
 } as const
+
+// ---- V3-21a Company fame (derived from reputation; V3-A hypotheses for V3-18) ----
+export type V3FameLevel = {
+  level: number
+  threshold: number
+  name: { en: string; th: string }
+  /** Crude supplier discount (fraction of list price). */
+  crudeDiscount: number
+  /** Extra staff slots on top of the chapter cap. */
+  staffBonus: number
+}
+export const V3_FAME_LEVELS: readonly V3FameLevel[] = [
+  { level: 1, threshold: 0, name: { en: 'Backyard refinery', th: 'โรงกลั่นหลังบ้าน' }, crudeDiscount: 0, staffBonus: 0 },
+  { level: 2, threshold: 10, name: { en: 'Local supplier', th: 'ผู้ผลิตท้องถิ่น' }, crudeDiscount: 0.03, staffBonus: 0 },
+  { level: 3, threshold: 30, name: { en: 'Regional refinery', th: 'โรงกลั่นระดับภูมิภาค' }, crudeDiscount: 0.03, staffBonus: 1 },
+  { level: 4, threshold: 60, name: { en: 'National brand', th: 'แบรนด์ระดับประเทศ' }, crudeDiscount: 0.06, staffBonus: 1 },
+  { level: 5, threshold: 100, name: { en: 'Industry leader', th: 'ผู้นำอุตสาหกรรม' }, crudeDiscount: 0.06, staffBonus: 2 },
+  { level: 6, threshold: 150, name: { en: 'Refinery legend', th: 'ตำนานโรงกลั่น' }, crudeDiscount: 0.1, staffBonus: 2 },
+]
+/** Reputation from each closed award period (no money; RP stays capped separately). */
+export const V3_AWARD_REPUTATION = { S: 5, A: 3, B: 1, '-': 0 } as const
