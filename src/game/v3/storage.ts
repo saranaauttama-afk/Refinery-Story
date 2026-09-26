@@ -2,9 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { BUILDINGS } from '../data/buildings'
 import { V3_COMMODITY_ID, V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
 import { createInitialV3GameState } from './state'
+import { getV3Parcel, validateV3Placement } from './yard'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
   V3_RULESET_VERSION,
+  type V3Building,
   type V3GameState,
 } from './types'
 
@@ -33,12 +35,29 @@ function isFiniteNonnegative(value: unknown): value is number {
 const BUILDING_KEYS = new Set(Object.keys(BUILDINGS))
 const PRODUCT_FAMILIES = new Set(['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'])
 
-function isValidGridCell(value: unknown): boolean {
-  return value === null || (typeof value === 'string' && BUILDING_KEYS.has(value))
+/** Yard validation: known types, levels 1–3, integer anchors, unlocked land, no overlap. */
+function validYard(world: Record<string, unknown>): boolean {
+  if (!isRecord(world.buildingsById) || !Array.isArray(world.unlockedParcelIds)) return false
+  const parcels = world.unlockedParcelIds as unknown[]
+  if (!parcels.every((id) => typeof id === 'string' && getV3Parcel(id)) || new Set(parcels).size !== parcels.length || !parcels.includes('core')) return false
+  for (const id of parcels as string[]) {
+    const requires = getV3Parcel(id)!.requires
+    if (requires && !parcels.includes(requires)) return false
+  }
+  const buildings = Object.entries(world.buildingsById)
+  if (!buildings.every(([key, building]) =>
+    isRecord(building) && building.id === key && typeof building.type === 'string' && BUILDING_KEYS.has(building.type) &&
+    [1, 2, 3].includes(building.level as number) && Number.isInteger(building.x) && Number.isInteger(building.y))) return false
+  // Re-place every building through the shared validator against the rest.
+  const probe = { world: { buildingsById: world.buildingsById, unlockedParcelIds: parcels } } as unknown as V3GameState
+  return buildings.every(([id, building]) => {
+    const entry = building as V3Building
+    return validateV3Placement(probe, entry.type, entry.level, entry.x, entry.y, id) === null
+  })
 }
 
 export function parseV3GameState(input: unknown): V3LoadResult {
-  let value = input
+  const value = input
   if (!isRecord(value)) {
     return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   }
@@ -49,46 +68,7 @@ export function parseV3GameState(input: unknown): V3LoadResult {
       reason: `Unsupported ruleset version: ${String(value.rulesetVersion)}`,
     }
   }
-  // Revision 7 (build #69/#70 preview saves) only lacks accomplishment records.
-  if (value.schemaRevision === 7 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.world) && Array.isArray(value.world.employees)) {
-    value = {
-      ...value,
-      schemaRevision: 8,
-      employeeRecords: Object.fromEntries((value.world.employees as Array<Record<string, unknown>>)
-        .filter((employee) => isRecord(employee) && typeof employee.id === 'string')
-        .map((employee) => [employee.id, { workTicks: 0, blueprintIds: [], milestoneIds: [] }])),
-    }
-  }
-  if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
-  // Revision 8 (build #71) only lacks the auto-repeat opt-in, which defaults to off.
-  if (value.schemaRevision === 8 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.jobReceipts)) {
-    value = { ...value, schemaRevision: 9, jobReceipts: { ...value.jobReceipts, autoRepeatTemplateId: null } }
-  }
-  // Revision 9 (builds #72/#73) predates maintenance; start without an emergency.
-  if (isRecord(value) && value.schemaRevision === 9 && value.rulesetVersion === V3_RULESET_VERSION) {
-    value = { ...value, schemaRevision: 10, maintenanceEmergency: null }
-  }
-  // Revision 10 (build #74) predates recognized profit, awards and the clear report.
-  if (isRecord(value) && value.schemaRevision === 10 && value.rulesetVersion === V3_RULESET_VERSION && isRecord(value.operatingLedger) && isRecord(value.world)) {
-    const ledger = value.operatingLedger as Record<string, unknown>
-    const tick = Number.isInteger(value.world.tickCount) ? value.world.tickCount as number : 0
-    value = {
-      ...value,
-      schemaRevision: V3_PREVIEW_SCHEMA_REVISION,
-      operatingLedger: {
-        ...ledger,
-        // Profit before this build is unknown, so the counter starts at zero (no fake history).
-        lifetimeRecognizedProfitCents: 0,
-        buckets: Array.isArray(ledger.buckets) ? ledger.buckets.map((bucket) => isRecord(bucket) ? { ...bucket, unrecognizedCents: bucket.receiptsCents ?? 0 } : bucket) : ledger.buckets,
-      },
-      awards: {
-        current: { startTick: tick, familyCount: 1, deliveryTarget: 60, varietyTarget: 1, startRecognizedProfitCents: 0, qualifiedUnits: 0, qualifiedFamilies: [] },
-        history: [],
-        paidGradeRp: 0,
-      },
-      campaignReport: null,
-    }
-  }
+  // V3-15.5 is fresh-save only: earlier preview revisions (fixed grid) are not migrated.
   if (!isRecord(value)) return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   if (value.schemaRevision !== V3_PREVIEW_SCHEMA_REVISION) {
     return {
@@ -108,11 +88,7 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     !isFiniteNonnegative(world.feedstock) ||
     !isFiniteNonnegative(world.electricity) ||
     !isFiniteNonnegative(world.waste) ||
-    !Array.isArray(world.grid) ||
-    !Array.isArray(world.gridLevels) ||
-    world.grid.length !== world.gridLevels.length ||
-    !world.grid.every(isValidGridCell) ||
-    !world.gridLevels.every((level) => level === 1 || level === 2 || level === 3) ||
+    !validYard(world) ||
     !Array.isArray(world.employees) ||
     !world.employees.every((employee) => isRecord(employee) && typeof employee.id === 'string')
   ) {
@@ -141,7 +117,7 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     return { status: 'invalid', state: null, reason: 'Invalid V3 commodity inventory.' }
   }
   const emergency = value.maintenanceEmergency
-  if (emergency !== null && !(isRecord(emergency) && Number.isInteger(emergency.sinceTick) && Number.isInteger(emergency.cellIndex))) {
+  if (emergency !== null && !(isRecord(emergency) && Number.isInteger(emergency.sinceTick) && (emergency.buildingId === null || typeof emergency.buildingId === 'string'))) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 maintenance emergency.' }
   }
   const awards = value.awards
@@ -237,15 +213,14 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     return { status: 'invalid', state: null, reason: 'Invalid V3 operating ledger.' }
   }
   const plantPrograms = value.plantPrograms as Record<string, unknown>
-  const grid = world.grid as unknown[]
+  const typeOf = (id: unknown): string | null => (typeof id === 'string' ? ((world.buildingsById as Record<string, V3Building>)[id]?.type ?? null) : null)
   if (!Object.entries(plantPrograms).every(([key, program]) =>
     isRecord(program) &&
-    Number.isInteger(program.cellIndex) && String(program.cellIndex) === key &&
-    (program.cellIndex as number) >= 0 && (program.cellIndex as number) < grid.length &&
-    isV3ProcessBuilding(grid[program.cellIndex as number] as never) &&
+    typeof program.buildingId === 'string' && program.buildingId === key &&
+    isV3ProcessBuilding(typeOf(program.buildingId) as never) &&
     typeof program.blueprintId === 'string' &&
     (Object.hasOwn(value.productBlueprints as Record<string, unknown>, program.blueprintId) ||
-      (grid[program.cellIndex as number] === 'wasteTreatmentPlant' && program.blueprintId === V3_COMMODITY_ID.recycledMaterial)) &&
+      (typeOf(program.buildingId) === 'wasteTreatmentPlant' && program.blueprintId === V3_COMMODITY_ID.recycledMaterial)) &&
     ['none', 'throughput', 'economy', 'precision'].includes(program.installedModule as string) &&
     isFiniteNonnegative(program.setupRemainingTicks) &&
     typeof program.paused === 'boolean',
@@ -253,7 +228,7 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     return { status: 'invalid', state: null, reason: 'Invalid V3 plant program.' }
   }
   const employeeDuties = value.employeeDuties as Record<string, unknown>
-  const occupiedLineCells = new Set<number>()
+  const occupiedLineCells = new Set<string>()
   if (Object.keys(employeeDuties).length !== employeeIds.size || !Object.entries(employeeDuties).every(([employeeId, duty]) => {
     if (!employeeIds.has(employeeId) || !isRecord(duty) || typeof duty.kind !== 'string') return false
     const role = V3_ROLES[employeeTypes.get(employeeId) as keyof typeof V3_ROLES]
@@ -262,13 +237,13 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     if (duty.kind === 'support') return role.support !== null
     if (duty.kind === 'development') {
       return typeof duty.projectId === 'string' &&
-        (duty.returnCellIndex === null || Number.isInteger(duty.returnCellIndex)) &&
+        (duty.returnBuildingId === null || typeof duty.returnBuildingId === 'string') &&
         (duty.returnSupport === undefined || typeof duty.returnSupport === 'boolean')
     }
-    if (duty.kind !== 'line' || !Number.isInteger(duty.cellIndex)) return false
-    const cellIndex = duty.cellIndex as number
-    if (!isV3ProcessBuilding(grid[cellIndex] as never) || !role.lineBuildings.includes(grid[cellIndex] as V3ProcessBuilding) || occupiedLineCells.has(cellIndex)) return false
-    occupiedLineCells.add(cellIndex)
+    if (duty.kind !== 'line' || typeof duty.buildingId !== 'string') return false
+    const buildingId = duty.buildingId
+    if (!isV3ProcessBuilding(typeOf(buildingId) as never) || !role.lineBuildings.includes(typeOf(buildingId) as V3ProcessBuilding) || occupiedLineCells.has(buildingId)) return false
+    occupiedLineCells.add(buildingId)
     return true
   })) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 employee duties.' }
@@ -281,7 +256,7 @@ export function parseV3GameState(input: unknown): V3LoadResult {
       !['none', 'throughput', 'economy', 'precision'].includes(project.module as string) ||
       ![0, 1, 2].includes(project.knowledgeRank as number) || ![0, 5].includes(project.leadContribution as number) ||
       !isFiniteNonnegative(project.quality) || !isFiniteNonnegative(project.remainingTicks) ||
-      grid[project.labCellIndex as number] !== 'laboratory' ||
+      typeOf(project.labBuildingId) !== 'laboratory' ||
       typeof project.leadEmployeeId !== 'string' ||
       (project.leadEmployeeId !== '' && !employeeIds.has(project.leadEmployeeId)) ||
       !Array.isArray(project.contributorEmployeeIds) ||
@@ -346,11 +321,10 @@ export function parseV3GameState(input: unknown): V3LoadResult {
       !isFiniteNonnegative(recovery.quoteCents) || !isFiniteNonnegative(recovery.targetCashCents) ||
       !Number.isInteger(recovery.startedAtTick) || (recovery.startedAtTick as number) < 0 ||
       !isFiniteNonnegative(recovery.remainingTicks) || !isFiniteNonnegative(recovery.paidCents) ||
-      !Array.isArray(recovery.loanerCellIndices) ||
-      !recovery.loanerCellIndices.every((index) =>
-        Number.isInteger(index) && (index as number) >= 0 && (index as number) < grid.length &&
-        ['crudeTank', 'distillationUnit', 'gasolineTank'].includes(grid[index as number] as string)) ||
-      new Set(recovery.loanerCellIndices).size !== recovery.loanerCellIndices.length
+      !Array.isArray(recovery.loanerBuildingIds) ||
+      !recovery.loanerBuildingIds.every((id) =>
+        ['crudeTank', 'distillationUnit', 'gasolineTank'].includes(typeOf(id) as string)) ||
+      new Set(recovery.loanerBuildingIds).size !== recovery.loanerBuildingIds.length
     ) {
       return { status: 'invalid', state: null, reason: 'Invalid V3 recovery state.' }
     }

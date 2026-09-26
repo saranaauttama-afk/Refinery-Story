@@ -7,6 +7,7 @@ import { addV3VariantInventory } from '../src/game/v3/productInventory'
 import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3ProductBlueprint } from '../src/game/v3/types'
+import { slotId } from './v3-check-helpers'
 
 function stocked(quantity: number, chapter: 0 | 1 = 0): V3GameState {
   let state = createInitialV3GameState()

@@ -4,13 +4,13 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BUILDINGS } from '../src/game/data/buildings'
-import { reduceV3Action } from '../src/game/v3/actions'
+import { reduceV3Action, validateV3Demolish } from '../src/game/v3/actions'
 import { getV3GuidanceStep, type V3GuidanceStep } from '../src/game/v3/campaign'
 import { V3_BUILDINGS } from '../src/game/v3/data'
 import { V3_INITIAL_PAUSE_STATE, acquireV3Pause, getV3EffectiveSpeed, releaseV3Pause, setV3Backgrounded } from '../src/game/v3/pause'
 import { getV3CrudeCapacity, getV3ProductCapacity, getV3ProductQuantity, getV3StockAllocations } from '../src/game/v3/productInventory'
 import { evaluateV3GasolineProduction, runV3ProductionTick } from '../src/game/v3/production'
-import { getV3RecoveryOffer, isV3LoanerCell } from '../src/game/v3/recovery'
+import { getV3RecoveryOffer, isV3LoanerBuilding } from '../src/game/v3/recovery'
 import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID } from '../src/game/v3/state'
 import {
   clearV3GameState,
@@ -22,7 +22,9 @@ import type { BilingualTextValue } from '../src/game/types'
 import type { V3ActionEvent, V3GameState } from '../src/game/v3/types'
 import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
+import { findV3PlacementSpot, getV3BuildingType, listV3Buildings } from '../src/game/v3/yard'
 import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
+import { V3YardPanel } from '../src/components/v3/V3YardPanel'
 import { useLang } from '../src/hooks/SettingsContext'
 import { colors, fonts, spacing } from '../src/theme'
 
@@ -53,9 +55,17 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.build.invalid_cell': return translate({ en: 'No empty slot. Expand the yard or remove a building.', th: 'ไม่มีช่องว่าง ขยายพื้นที่หรือรื้ออาคารก่อน' })
     case 'v3.upgrade.max_level': return translate({ en: 'Already at the highest level.', th: 'ถึงเลเวลสูงสุดแล้ว' })
     case 'v3.upgrade.unsupported': return translate({ en: 'This building cannot be upgraded here.', th: 'อาคารนี้อัปเกรดไม่ได้' })
-    case 'v3.expand.unavailable': return translate({ en: 'No further expansion in this chapter.', th: 'ยังไม่มีการขยายเพิ่มในบทนี้' })
-    case 'v3.expand.locked': return translate({ en: `Expansion unlocks in C${p?.chapter}.`, th: `ขยายพื้นที่ได้ในบท C${p?.chapter}` })
-    case 'v3.expand.insufficient_cash': return translate({ en: `Expansion needs $${Number(p?.costCents ?? 0) / 100}.`, th: `ขยายพื้นที่ต้องใช้ $${Number(p?.costCents ?? 0) / 100}` })
+    case 'v3.place.out_of_bounds': return translate({ en: 'Outside the refinery yard.', th: 'อยู่นอกพื้นที่โรงงาน' })
+    case 'v3.place.locked_land': return translate({ en: 'Part of this footprint is on land you have not unlocked.', th: 'บางส่วนของพื้นที่อาคารอยู่บนที่ดินที่ยังไม่ปลด' })
+    case 'v3.place.overlap': return translate({ en: 'Another building is in the way (move it or pick another spot).', th: 'มีอาคารอื่นขวางอยู่ (ย้ายอาคารหรือเลือกที่ใหม่)' })
+    case 'v3.place.no_footprint': return translate({ en: 'This building has no yard footprint.', th: 'อาคารนี้ไม่มีขนาดพื้นที่' })
+    case 'v3.place.building_limit': return translate({ en: `Limit reached for this building (${p?.limit}) in this chapter.`, th: `อาคารนี้สร้างได้ครบ ${p?.limit} หลังแล้วในบทนี้` })
+    case 'v3.building.missing': return translate({ en: 'That building no longer exists.', th: 'ไม่มีอาคารนี้แล้ว' })
+    case 'v3.land.unknown': return translate({ en: 'Unknown land parcel.', th: 'ไม่พบแปลงที่ดินนี้' })
+    case 'v3.land.owned': return translate({ en: 'This land is already yours.', th: 'ที่ดินนี้ปลดแล้ว' })
+    case 'v3.land.locked': return translate({ en: `This land opens in C${p?.chapter}.`, th: `ที่ดินแปลงนี้เปิดในบท C${p?.chapter}` })
+    case 'v3.land.requires_parcel': return translate({ en: `Unlock ${p?.parcel} first.`, th: `ต้องปลดแปลง ${p?.parcel} ก่อน` })
+    case 'v3.land.insufficient_cash': return translate({ en: `This land costs $${Number(p?.costCents ?? 0) / 100}.`, th: `ที่ดินแปลงนี้ราคา $${Number(p?.costCents ?? 0) / 100}` })
     case 'v3.module.invalid_cell': return translate({ en: 'Modules fit owned production lines only.', th: 'ติดโมดูลได้เฉพาะไลน์ผลิตของเรา' })
     case 'v3.module.locked': return translate({ en: `Modules unlock in C${p?.chapter}.`, th: `โมดูลปลดล็อกในบท C${p?.chapter}` })
     case 'v3.module.plant_level': return translate({ en: `Upgrade this plant to Lv${p?.level} first.`, th: `ต้องอัปเกรดโรงงานเป็น Lv${p?.level} ก่อน` })
@@ -179,25 +189,30 @@ export default function V3PreviewScreen() {
     await saveV3GameState(result.state)
   }
 
-  const confirmDemolish = (cellIndex: number) => {
+  const confirmDemolish = (buildingId: string) => {
     if (!state) return
-    const building = state.world.grid[cellIndex]
+    const building = getV3BuildingType(state, buildingId)
     if (!building) return
-    const loaner = isV3LoanerCell(state, cellIndex)
+    const blocked = validateV3Demolish(state, buildingId, building)
+    if (blocked) {
+      Alert.alert(t({ en: 'Cannot remove', th: 'รื้อไม่ได้' }), eventText(blocked, t))
+      return
+    }
+    const loaner = isV3LoanerBuilding(state, buildingId)
     const refundCents = loaner ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 50)
     setPauseState((current) => acquireV3Pause(current, 'demolish-confirm'))
     const release = () => setPauseState((current) => releaseV3Pause(current, 'demolish-confirm'))
     Alert.alert(
       t({ en: `Remove ${building}?`, th: `รื้อ ${building}?` }),
       t({
-        en: `Refund $${(refundCents / 100).toFixed(0)}. Assigned staff move to Reserve. Tanks must be emptied below remaining capacity.`,
-        th: `คืนเงิน $${(refundCents / 100).toFixed(0)} พนักงานจะย้ายไปทีมสำรอง และต้องลดสต็อกให้ไม่เกินความจุที่เหลือก่อน`,
+        en: `Refund $${(refundCents / 100).toFixed(0)}. Assigned staff move to Reserve; this line's program is removed. Stock is kept (capacity was checked).`,
+        th: `คืนเงิน $${(refundCents / 100).toFixed(0)} พนักงานประจำจะย้ายไปทีมสำรอง สูตรของไลน์นี้จะถูกลบ สต็อกยังอยู่ครบ (ตรวจความจุแล้ว)`,
       }),
       [
         { text: t({ en: 'Cancel', th: 'ยกเลิก' }), style: 'cancel', onPress: release },
         {
           text: t({ en: 'Remove', th: 'รื้อ' }), style: 'destructive',
-          onPress: () => { release(); void apply({ type: 'demolish', sequence: state.nextActionSequence, cellIndex, expectedBuilding: building }) },
+          onPress: () => { release(); void apply({ type: 'demolish', sequence: state.nextActionSequence, buildingId, expectedBuilding: building }) },
         },
       ],
       { cancelable: true, onDismiss: release },
@@ -222,8 +237,9 @@ export default function V3PreviewScreen() {
     )
   }
 
-  const emptyCell = state.world.grid.findIndex((cell) => cell === null)
-  const buildings = state.world.grid.filter(Boolean).length
+  const labSpot = findV3PlacementSpot(state, 'laboratory')
+  const tankSpot = findV3PlacementSpot(state, 'gasolineTank')
+  const buildings = Object.keys(state.world.buildingsById).length
   const crudeCapacity = getV3CrudeCapacity(state)
   const gasoline = getV3ProductQuantity(state, 'gasoline')
   const gasolineCapacity = getV3ProductCapacity(state, 'gasoline')
@@ -231,10 +247,10 @@ export default function V3PreviewScreen() {
   const potentialRate = productionPreview.reduce((sum, line) => sum + line.potentialOutputPerMinute, 0)
   const actualRate = productionPreview.reduce((sum, line) => sum + line.actualOutputPerMinute, 0)
   const starterOperator = state.world.employees[0]
-  const distillationCellIndex = state.world.grid.findIndex((cell) => cell === 'distillationUnit')
-  const activeProgram = state.plantPrograms[distillationCellIndex]
+  const distillationBuildingId = listV3Buildings(state).find((building) => building.type === 'distillationUnit')?.id ?? null
+  const activeProgram = distillationBuildingId ? state.plantPrograms[distillationBuildingId] : undefined
   const activeBlueprint = activeProgram ? state.productBlueprints[activeProgram.blueprintId] : null
-  const labCellIndex = state.world.grid.findIndex((cell) => cell === 'laboratory')
+  const labBuildingId = listV3Buildings(state).find((building) => building.type === 'laboratory')?.id ?? null
   const gasolineBlueprints = Object.values(state.productBlueprints)
     .filter((blueprint) => blueprint.family === 'gasoline')
     .sort((a, b) => a.quality - b.quality || a.id.localeCompare(b.id))
@@ -276,8 +292,8 @@ export default function V3PreviewScreen() {
           <Text style={styles.noticeTitle}>{t({ en: 'Next objective', th: 'เป้าหมายถัดไป' })}</Text>
           <Text style={styles.body}>{guidanceText(guidance, t)}</Text>
           <Text style={styles.row}>{t({ en: 'Simulation', th: 'การจำลอง' })}: {effectiveSpeed === 0 ? t({ en: 'Paused by screen/modal', th: 'พักโดยหน้าจอ/หน้าต่างยืนยัน' }) : `${effectiveSpeed}×`}</Text>
-          {guidance === 'build_laboratory' && emptyCell >= 0 && (
-            <Pressable style={styles.primary} onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, cellIndex: emptyCell, building: 'laboratory' })}>
+          {guidance === 'build_laboratory' && labSpot && (
+            <Pressable style={styles.primary} onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, ...labSpot, building: 'laboratory' })}>
               <Text style={styles.primaryText}>{t({ en: 'Build Laboratory Lv1 · $400', th: 'สร้าง Laboratory Lv1 · $400' })}</Text>
             </Pressable>
           )}
@@ -298,10 +314,10 @@ export default function V3PreviewScreen() {
                 <Text style={styles.row}>{t({ en: 'Missing starter route', th: 'เส้นเริ่มต้นที่ขาด' })}: {recoveryOffer.missingBuildings.join(', ')}</Text>
                 {recoveryOffer.emptySlotsNeeded > 0 ? (
                   <>
-                    <Text style={styles.warning}>{t({ en: `Clear ${recoveryOffer.emptySlotsNeeded} slot(s). Nothing is removed automatically.`, th: `เคลียร์อีก ${recoveryOffer.emptySlotsNeeded} ช่อง ระบบจะไม่รื้อให้อัตโนมัติ` })}</Text>
-                    {state.world.grid.map((building, cellIndex) => building ? (
-                      <Pressable key={`clear-${cellIndex}`} style={styles.secondary} onPress={() => confirmDemolish(cellIndex)}>
-                        <Text style={styles.secondaryText}>{t({ en: `Review removal · cell ${cellIndex + 1} · ${building}`, th: `ตรวจสอบการรื้อ · ช่อง ${cellIndex + 1} · ${building}` })}</Text>
+                    <Text style={styles.warning}>{t({ en: 'Not enough free land for the loaners. Nothing is removed automatically.', th: 'ที่ดินว่างไม่พอสำหรับอาคารยืม ระบบจะไม่รื้อให้อัตโนมัติ' })}</Text>
+                    {listV3Buildings(state).map((building) => building ? (
+                      <Pressable key={`clear-${building.id}`} style={styles.secondary} onPress={() => confirmDemolish(building.id)}>
+                        <Text style={styles.secondaryText}>{t({ en: `Review removal · ${building.type} @(${building.x},${building.y})`, th: `ตรวจสอบการรื้อ · ${building.type} @(${building.x},${building.y})` })}</Text>
                       </Pressable>
                     ) : null)}
                   </>
@@ -325,12 +341,12 @@ export default function V3PreviewScreen() {
           <Pressable style={styles.primary} onPress={runCycle}>
             <Text style={styles.primaryText}>{t({ en: 'Run one 5-second cycle', th: 'เดินเครื่อง 1 รอบ (5 วินาที)' })}</Text>
           </Pressable>
-          {distillationCellIndex >= 0 && (
+          {distillationBuildingId && (
             <Pressable style={styles.secondary} onPress={() => apply({
-              type: 'set_pause', sequence: state.nextActionSequence, cellIndex: distillationCellIndex,
-              paused: !state.plantPrograms[distillationCellIndex]?.paused,
+              type: 'set_pause', sequence: state.nextActionSequence, buildingId: distillationBuildingId,
+              paused: !state.plantPrograms[distillationBuildingId]?.paused,
             })}>
-              <Text style={styles.secondaryText}>{state.plantPrograms[distillationCellIndex]?.paused ? t({ en: 'Resume Distillation', th: 'เดิน Distillation ต่อ' }) : t({ en: 'Pause Distillation', th: 'พัก Distillation' })}</Text>
+              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId]?.paused ? t({ en: 'Resume Distillation', th: 'เดิน Distillation ต่อ' }) : t({ en: 'Pause Distillation', th: 'พัก Distillation' })}</Text>
             </Pressable>
           )}
         </View>
@@ -386,6 +402,8 @@ export default function V3PreviewScreen() {
           )}
         </View>
 
+        <V3YardPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
+
         <V3CampaignPanel state={state} t={t} />
 
         <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
@@ -393,11 +411,11 @@ export default function V3PreviewScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Gasoline development', th: 'พัฒนาสูตร Gasoline' })}</Text>
           <Text style={styles.row}>{t({ en: 'Certified recipes', th: 'สูตรที่รับรองแล้ว' })}: {gasolineBlueprints.map((blueprint) => `${blueprint.name} Q${blueprint.quality}`).join(' · ')}</Text>
-          {distillationCellIndex >= 0 && gasolineBlueprints.map((blueprint) => (
+          {distillationBuildingId && gasolineBlueprints.map((blueprint) => (
             <Pressable key={blueprint.id} style={styles.secondary} onPress={() => apply({
-              type: 'set_program', sequence: state.nextActionSequence, cellIndex: distillationCellIndex, blueprintId: blueprint.id,
+              type: 'set_program', sequence: state.nextActionSequence, buildingId: distillationBuildingId!, blueprintId: blueprint.id,
             })}>
-              <Text style={styles.secondaryText}>{state.plantPrograms[distillationCellIndex]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
+              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId!]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
             </Pressable>
           ))}
           <Text style={styles.row}>{t({ en: 'Prototype choices', th: 'สูตรต้นแบบ' })}: Volume Q35 · Standard Q40 · Precision Q55</Text>
@@ -411,12 +429,12 @@ export default function V3PreviewScreen() {
           ) : (
             <>
               <Pressable style={styles.secondary} onPress={() => apply({
-                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: null, labCellIndex,
+                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: null, labBuildingId: labBuildingId ?? '',
               })}>
                 <Text style={styles.secondaryText}>{t({ en: 'Develop Volume Q35 · 10 Gas + $50', th: 'พัฒนา Volume Q35 · Gas 10 + $50' })}</Text>
               </Pressable>
               <Pressable style={styles.secondary} onPress={() => apply({
-                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: starterOperator.id, labCellIndex,
+                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: starterOperator.id, labBuildingId: labBuildingId ?? '',
               })}>
                 <Text style={styles.secondaryText}>{t({ en: 'Develop Precision Q55 with Niran', th: 'พัฒนา Precision Q55 โดย Niran' })}</Text>
               </Pressable>
@@ -438,15 +456,15 @@ export default function V3PreviewScreen() {
           <Text style={styles.body}>{eventText(lastEvent, t)}</Text>
           <Pressable
             style={styles.primary}
-            disabled={emptyCell < 0}
-            onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, cellIndex: emptyCell, building: 'gasolineTank' })}
+            disabled={!tankSpot}
+            onPress={() => tankSpot && apply({ type: 'build', sequence: state.nextActionSequence, ...tankSpot, building: 'gasolineTank' })}
           >
             <Text style={styles.primaryText}>Build {t(BUILDINGS.gasolineTank.name)} · $150</Text>
           </Pressable>
-          {distillationCellIndex >= 0 && (
+          {distillationBuildingId && (
             <Pressable
               style={styles.secondary}
-              onPress={() => apply({ type: 'upgrade', sequence: state.nextActionSequence, cellIndex: distillationCellIndex })}
+              onPress={() => apply({ type: 'upgrade', sequence: state.nextActionSequence, buildingId: distillationBuildingId })}
             >
               <Text style={styles.secondaryText}>{t({ en: 'Try Distillation upgrade', th: 'ลองอัปเกรด Distillation' })}</Text>
             </Pressable>
@@ -461,7 +479,7 @@ export default function V3PreviewScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Financial ledger', th: 'บัญชีการเงิน' })}</Text>
-          <Text style={styles.row}>{t({ en: 'Buildings', th: 'อาคาร' })}: {buildings}/{state.world.grid.length}</Text>
+          <Text style={styles.row}>{t({ en: 'Buildings', th: 'อาคาร' })}: {buildings}</Text>
           <Text style={styles.row}>{t({ en: 'Operating receipts', th: 'รายรับดำเนินงาน' })}: ${(state.operatingLedger.lifetimeReceiptsCents / 100).toFixed(2)}</Text>
           <Text style={styles.row}>{t({ en: 'Cash outflows', th: 'เงินจ่ายดำเนินงาน' })}: ${(state.operatingLedger.lifetimeCashOutflowsCents / 100).toFixed(2)}</Text>
           <Text style={styles.row}>CAPEX: ${(state.operatingLedger.capexCents / 100).toFixed(2)}</Text>

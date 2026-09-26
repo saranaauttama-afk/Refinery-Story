@@ -41,7 +41,7 @@ export function V3CampaignPanel({ state, t }: { state: V3GameState; t: Translate
           )}
           {report && (
             <>
-              <Text style={styles.row}>{t({ en: `Cleared at ${Math.round(report.clearedAtTick / 300)} min · ${report.lotsUsed} lots used`, th: `จบที่นาทีที่ ${Math.round(report.clearedAtTick / 300)} · ใช้พื้นที่ ${report.lotsUsed} ช่อง` })}</Text>
+              <Text style={styles.row}>{t({ en: `Cleared at ${Math.round(report.clearedAtTick / 300)} min · ${report.unlockedArea} tiles of land`, th: `จบที่นาทีที่ ${Math.round(report.clearedAtTick / 300)} · ที่ดิน ${report.unlockedArea} ช่อง` })}</Text>
               <Text style={styles.row}>{t({ en: 'Partners', th: 'ลูกค้า Partner' })}: {report.partners.join(', ')} · {report.families.join(', ')}</Text>
               {report.starProduct && <Text style={styles.row}>⭐ {report.starProduct.name} Q{report.starProduct.quality} · {report.starProduct.delivered.toFixed(0)} {t({ en: 'delivered', th: 'หน่วยที่ส่ง' })}</Text>}
               {report.team.slice(0, 3).map((member) => (
@@ -49,7 +49,7 @@ export function V3CampaignPanel({ state, t }: { state: V3GameState; t: Translate
               ))}
               <Text style={styles.row}>{t({ en: 'Profit last 180s at clear', th: 'กำไร 180 วินาทีตอนจบ' })}: {money(report.rollingProfitCents)}</Text>
               <Text style={styles.cardTitle}>{t({ en: 'Freeplay challenges (optional)', th: 'ภารกิจเสริม (ไม่บังคับ)' })}</Text>
-              <Text style={styles.row}>{mark(report.lotsUsed <= 16)} {t({ en: 'Clear within 16 lots', th: 'จบโดยใช้ไม่เกิน 16 ช่อง' })}</Text>
+              <Text style={styles.row}>{mark(report.unlockedArea <= 196)} {t({ en: 'Clear with at most 14×14 land (196 tiles)', th: 'จบเกมโดยปลดที่ดินไม่เกิน 14×14 (196 ช่อง)' })}</Text>
               <Text style={styles.row}>{mark(showcaseFamilies.size >= 2)} {t({ en: `Showcase two families (${showcaseFamilies.size}/2)`, th: `Showcase สองชนิดสินค้า (${showcaseFamilies.size}/2)` })}</Text>
               <Text style={styles.row}>{mark(profitablePeriods >= 3)} {t({ en: `Positive margin in three periods (${profitablePeriods}/3)`, th: `กำไรเป็นบวกสามรอบ (${profitablePeriods}/3)` })}</Text>
             </>

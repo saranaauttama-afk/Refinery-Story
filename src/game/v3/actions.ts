@@ -1,3 +1,15 @@
+import {
+  countV3Buildings,
+  getV3Building,
+  getV3BuildingLevel,
+  getV3BuildingLimit,
+  getV3BuildingType,
+  getV3Parcel,
+  hasV3Building,
+  validateV3ParcelUnlock,
+  validateV3Placement,
+} from './yard'
+import { getV3FeedstockCapacity } from './production'
 import type { BuildingType, ProductKey, WorkerType } from '../types'
 import { unlockV3Research, validateV3Research } from './research'
 import {
@@ -18,7 +30,6 @@ import {
   isV3ProcessBuilding,
 } from './data'
 import { getV3Modifiers } from './modifiers'
-import { expandV3Grid } from './expansion'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
@@ -35,7 +46,7 @@ import {
   recordV3Ledger,
 } from './productInventory'
 import { V3_DEFAULT_BLUEPRINT_ID } from './state'
-import { getV3RecoveryOffer, isV3LoanerCell, restoreV3StarterLoaners, startV3Recovery } from './recovery'
+import { getV3RecoveryOffer, isV3LoanerBuilding, restoreV3StarterLoaners, startV3Recovery } from './recovery'
 import {
   canV3StaffLine,
   canV3Support,
@@ -122,15 +133,15 @@ export type V3ModuleQuote =
   | { blocker: 'invalid_cell' | 'locked' | 'plant_level' | 'no_change' | 'insufficient_cash'; costCents: number; params?: Record<string, number> }
 
 /** Shared module fit validation used by the action and the UI preview. */
-export function getV3ModuleQuote(state: V3GameState, cellIndex: number, module: V3ModuleKey): V3ModuleQuote {
-  const building = state.world.grid[cellIndex]
-  const program = state.plantPrograms[cellIndex]
-  if (!isV3ProcessBuilding(building) || !program || isV3LoanerCell(state, cellIndex) || building === 'wasteTreatmentPlant') return { blocker: 'invalid_cell', costCents: 0 }
+export function getV3ModuleQuote(state: V3GameState, buildingId: string, module: V3ModuleKey): V3ModuleQuote {
+  const building = getV3BuildingType(state, buildingId)
+  const program = state.plantPrograms[buildingId]
+  if (!isV3ProcessBuilding(building) || !program || isV3LoanerBuilding(state, buildingId) || building === 'wasteTreatmentPlant') return { blocker: 'invalid_cell', costCents: 0 }
   if (program.installedModule === module) return { blocker: 'no_change', costCents: 0 }
   const costCents = module === 'none' ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 100 * V3_MODULE_FIT_COST_RATE)
   if (module !== 'none') {
     if (state.campaignProgress.chapter < V3_MODULE_CHAPTER) return { blocker: 'locked', costCents, params: { chapter: V3_MODULE_CHAPTER } }
-    if ((state.world.gridLevels[cellIndex] ?? 1) < V3_MODULE_MIN_PLANT_LEVEL) return { blocker: 'plant_level', costCents, params: { level: V3_MODULE_MIN_PLANT_LEVEL } }
+    if ((getV3BuildingLevel(state, buildingId)) < V3_MODULE_MIN_PLANT_LEVEL) return { blocker: 'plant_level', costCents, params: { level: V3_MODULE_MIN_PLANT_LEVEL } }
     if (state.world.moneyCents < costCents) return { blocker: 'insufficient_cash', costCents, params: { costCents } }
   }
   return { blocker: null, costCents }
@@ -147,17 +158,11 @@ export function getV3ActionId(action: Pick<V3Action, 'type' | 'sequence'>): stri
 }
 
 export function validateV3Build(state: V3GameState, action: V3BuildAction): V3ActionEvent | null {
-  if (!Number.isInteger(action.cellIndex) || action.cellIndex < 0 || action.cellIndex >= state.world.grid.length) {
-    return event('blocked', 'v3.build.invalid_cell')
-  }
-  if (state.world.grid[action.cellIndex] !== null) {
-    return event('blocked', 'v3.build.occupied')
-  }
   if (!V3_SUPPORTED_BUILDINGS.has(action.building)) {
     return event('blocked', 'v3.build.unsupported')
   }
   // Polymer needs a Petro route (Systems S3 building table).
-  if (action.building === 'polymerPlant' && !state.world.grid.includes('petrochemicalPlant')) {
+  if (action.building === 'polymerPlant' && !hasV3Building(state, 'petrochemicalPlant')) {
     return event('blocked', 'v3.build.requires_route')
   }
   const capability = V3_BUILDINGS[action.building]
@@ -165,6 +170,13 @@ export function validateV3Build(state: V3GameState, action: V3BuildAction): V3Ac
   if (state.campaignProgress.chapter < requiredChapter) {
     return event('blocked', 'v3.build.locked', { chapter: requiredChapter })
   }
+  const limit = getV3BuildingLimit(state, action.building)
+  if (limit !== null && countV3Buildings(state, action.building) >= limit) {
+    return event('blocked', 'v3.place.building_limit', { limit })
+  }
+  // Placement uses the same yard validator as move/upgrade previews.
+  const placement = validateV3Placement(state, action.building, 1, action.x, action.y)
+  if (placement) return event('blocked', `v3.place.${placement}`)
   const costCents = capability.buildCostDollars * 100
   if (state.world.moneyCents < costCents) {
     return event('blocked', 'v3.build.insufficient_cash', { costCents })
@@ -172,15 +184,39 @@ export function validateV3Build(state: V3GameState, action: V3BuildAction): V3Ac
   return null
 }
 
-export function validateV3Upgrade(state: V3GameState, action: V3UpgradeAction): V3ActionEvent | null {
-  if (!Number.isInteger(action.cellIndex) || action.cellIndex < 0 || action.cellIndex >= state.world.grid.length) {
-    return event('blocked', 'v3.upgrade.invalid_cell')
+/**
+ * Demolition safeguards: never silently break an active project, the emergency
+ * line or stored stock (capacity may not drop below what is held).
+ */
+export function validateV3Demolish(state: V3GameState, buildingId: string, expectedBuilding: BuildingType): V3ActionEvent | null {
+  const building = getV3BuildingType(state, buildingId)
+  if (!building) return event('blocked', 'v3.demolish.invalid_cell')
+  if (building !== expectedBuilding) return event('blocked', 'v3.demolish.building_changed')
+  if (building === 'laboratory' && state.developmentProject?.labBuildingId === buildingId) {
+    return event('blocked', 'v3.demolish.active_project')
   }
-  const building = state.world.grid[action.cellIndex]
+  const buildingsById = { ...state.world.buildingsById }
+  delete buildingsById[buildingId]
+  const hypothetical = { ...state, world: { ...state.world, buildingsById } }
+  const storedProduct = STORAGE_PRODUCT[building]
+  if (
+    (building === 'crudeTank' && state.world.crudeOil > getV3CrudeCapacity(hypothetical) + 1e-8) ||
+    (storedProduct && getV3ProductQuantity(state, storedProduct) > getV3ProductCapacity(hypothetical, storedProduct) + 1e-8) ||
+    (building === 'distillationUnit' && state.world.feedstock > getV3FeedstockCapacity(hypothetical) + 1e-8)
+  ) {
+    return event('blocked', 'v3.demolish.stock_overflow')
+  }
+  return null
+}
+
+export function validateV3Upgrade(state: V3GameState, action: V3UpgradeAction): V3ActionEvent | null {
+  const placed = getV3Building(state, action.buildingId)
+  if (!placed) return event('blocked', 'v3.building.missing')
+  const building = placed.type
   if (!building || !V3_SUPPORTED_BUILDINGS.has(building) || V3_BUILDINGS[building].upgradeCostDollars === null) {
     return event('blocked', 'v3.upgrade.unsupported')
   }
-  const level = state.world.gridLevels[action.cellIndex] ?? 1
+  const level = getV3BuildingLevel(state, action.buildingId)
   const capability = V3_BUILDINGS[building]
   const cost = capability.upgradeCostDollars?.[level - 1]
   if (cost === undefined) {
@@ -190,6 +226,9 @@ export function validateV3Upgrade(state: V3GameState, action: V3UpgradeAction): 
   if (requiredChapter !== undefined && state.campaignProgress.chapter < requiredChapter) {
     return event('blocked', 'v3.upgrade.locked', { chapter: requiredChapter })
   }
+  // The larger footprint must fit on unlocked, free land before any money moves.
+  const placement = validateV3Placement(state, building, level + 1, placed.x, placed.y, placed.id)
+  if (placement) return event('blocked', `v3.place.${placement}`)
   const costCents = cost * 100
   if (state.world.moneyCents < costCents) {
     return event('blocked', 'v3.upgrade.insufficient_cash', { costCents })
@@ -255,15 +294,12 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     const blocker = validateV3Build(state, action)
     if (blocker) return consumedResult(state, action, state, blocker)
     const costCents = V3_BUILDINGS[action.building].buildCostDollars * 100
-    const grid = [...state.world.grid]
-    const gridLevels = [...state.world.gridLevels]
-    grid[action.cellIndex] = action.building
-    gridLevels[action.cellIndex] = 1
+    const id = `building:${String(action.sequence).padStart(8, '0')}`
     const plantPrograms = isV3ProcessBuilding(action.building)
       ? {
         ...state.plantPrograms,
-        [action.cellIndex]: {
-          cellIndex: action.cellIndex,
+        [id]: {
+          buildingId: id,
           blueprintId: getV3DefaultProgramId(action.building),
           installedModule: 'none' as const,
           setupRemainingTicks: 0,
@@ -276,82 +312,91 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       world: {
         ...state.world,
         moneyCents: state.world.moneyCents - costCents,
-        grid,
-        gridLevels,
+        buildingsById: { ...state.world.buildingsById, [id]: { id, type: action.building, level: 1, x: action.x, y: action.y } },
       },
       operatingLedger: {
         ...state.operatingLedger,
         capexCents: state.operatingLedger.capexCents + costCents,
       },
       plantPrograms,
-    }, event('success', 'v3.action.ok'))
+    }, event('success', 'v3.action.ok', { buildingId: id }))
   }
 
   if (action.type === 'demolish') {
-    if (!Number.isInteger(action.cellIndex) || action.cellIndex < 0 || action.cellIndex >= state.world.grid.length) {
-      return consumedResult(state, action, state, event('blocked', 'v3.demolish.invalid_cell'))
-    }
-    const building = state.world.grid[action.cellIndex]
-    if (!building) return consumedResult(state, action, state, event('blocked', 'v3.demolish.invalid_cell'))
-    if (building !== action.expectedBuilding) {
-      return consumedResult(state, action, state, event('blocked', 'v3.demolish.building_changed'))
-    }
-    if (building === 'laboratory' && state.developmentProject?.labCellIndex === action.cellIndex) {
-      return consumedResult(state, action, state, event('blocked', 'v3.demolish.active_project'))
-    }
-    const grid = [...state.world.grid]
-    grid[action.cellIndex] = null
-    const hypothetical = { ...state, world: { ...state.world, grid } }
-    const storedProduct = STORAGE_PRODUCT[building]
-    if (
-      (building === 'crudeTank' && state.world.crudeOil > getV3CrudeCapacity(hypothetical) + 1e-8) ||
-      (storedProduct && getV3ProductQuantity(state, storedProduct) > getV3ProductCapacity(hypothetical, storedProduct) + 1e-8)
-    ) {
-      return consumedResult(state, action, state, event('blocked', 'v3.demolish.stock_overflow'))
-    }
-    const loaner = isV3LoanerCell(state, action.cellIndex)
+    const blocker = validateV3Demolish(state, action.buildingId, action.expectedBuilding)
+    if (blocker) return consumedResult(state, action, state, blocker)
+    const building = getV3BuildingType(state, action.buildingId)!
+    const buildingsById = { ...state.world.buildingsById }
+    delete buildingsById[action.buildingId]
+    const loaner = isV3LoanerBuilding(state, action.buildingId)
     const refundCents = loaner ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 100 * 0.5)
     const plantPrograms = { ...state.plantPrograms }
-    delete plantPrograms[action.cellIndex]
+    delete plantPrograms[action.buildingId]
     const employeeDuties = Object.fromEntries(Object.entries(state.employeeDuties).map(([employeeId, duty]) => [
       employeeId,
-      duty.kind === 'line' && duty.cellIndex === action.cellIndex ? { kind: 'reserve' as const } : duty,
+      duty.kind === 'line' && duty.buildingId === action.buildingId ? { kind: 'reserve' as const } : duty,
     ]))
     return consumedResult(state, action, {
       ...state,
-      world: { ...state.world, moneyCents: state.world.moneyCents + refundCents, grid },
+      world: { ...state.world, moneyCents: state.world.moneyCents + refundCents, buildingsById },
       plantPrograms,
       employeeDuties,
       recoveryState: state.recoveryState ? {
         ...state.recoveryState,
-        loanerCellIndices: state.recoveryState.loanerCellIndices.filter((index) => index !== action.cellIndex),
+        loanerBuildingIds: state.recoveryState.loanerBuildingIds.filter((id) => id !== action.buildingId),
       } : null,
     }, event('success', 'v3.action.ok', { refundCents }))
   }
 
   if (action.type === 'upgrade') {
-    if (isV3LoanerCell(state, action.cellIndex)) {
+    if (isV3LoanerBuilding(state, action.buildingId)) {
       return consumedResult(state, action, state, event('blocked', 'v3.upgrade.unsupported'))
     }
     const blocker = validateV3Upgrade(state, action)
     if (blocker) return consumedResult(state, action, state, blocker)
-    const building = state.world.grid[action.cellIndex]!
-    const level = state.world.gridLevels[action.cellIndex] ?? 1
-    const costCents = V3_BUILDINGS[building].upgradeCostDollars![level - 1] * 100
-    const gridLevels = [...state.world.gridLevels]
-    gridLevels[action.cellIndex] = level + 1
+    const placed = getV3Building(state, action.buildingId)!
+    const costCents = V3_BUILDINGS[placed.type].upgradeCostDollars![placed.level - 1] * 100
     return consumedResult(state, action, {
       ...state,
       world: {
         ...state.world,
         moneyCents: state.world.moneyCents - costCents,
-        gridLevels,
+        buildingsById: { ...state.world.buildingsById, [placed.id]: { ...placed, level: (placed.level + 1) as 2 | 3 } },
       },
       operatingLedger: {
         ...state.operatingLedger,
         capexCents: state.operatingLedger.capexCents + costCents,
       },
     }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'move_building') {
+    const placed = getV3Building(state, action.buildingId)
+    if (!placed) return consumedResult(state, action, state, event('blocked', 'v3.building.missing'))
+    if (placed.x === action.x && placed.y === action.y) return consumedResult(state, action, state, event('blocked', 'v3.place.overlap'))
+    const placement = validateV3Placement(state, placed.type, placed.level, action.x, action.y, placed.id)
+    if (placement) return consumedResult(state, action, state, event('blocked', `v3.place.${placement}`))
+    // Only the anchor changes: level, program, duties, projects and stock stay keyed by ID.
+    // Architecture point for a future move cost/downtime: charge or set setup ticks here.
+    return consumedResult(state, action, {
+      ...state,
+      world: { ...state.world, buildingsById: { ...state.world.buildingsById, [placed.id]: { ...placed, x: action.x, y: action.y } } },
+    }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'unlock_land_parcel') {
+    const invalid = validateV3ParcelUnlock(state, action.parcelId)
+    if (invalid) return consumedResult(state, action, state, event('blocked', `v3.land.${invalid.blocker}`, invalid.params))
+    const costCents = getV3Parcel(action.parcelId)!.costDollars * 100
+    return consumedResult(state, action, {
+      ...state,
+      world: {
+        ...state.world,
+        moneyCents: state.world.moneyCents - costCents,
+        unlockedParcelIds: [...state.world.unlockedParcelIds, action.parcelId],
+      },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + costCents },
+    }, event('success', 'v3.action.ok', { costCents }))
   }
 
   if (action.type === 'assign_duty') {
@@ -367,15 +412,15 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       return consumedResult(state, action, state, event('blocked', 'v3.duty.ineligible'))
     }
     if (action.duty.kind === 'line') {
-      const targetCellIndex = action.duty.cellIndex
-      if (!isV3ProcessBuilding(state.world.grid[targetCellIndex]) || !state.plantPrograms[targetCellIndex]) {
+      const targetBuildingId = action.duty.buildingId
+      if (!isV3ProcessBuilding(getV3BuildingType(state, targetBuildingId)) || !state.plantPrograms[targetBuildingId]) {
         return consumedResult(state, action, state, event('blocked', 'v3.duty.invalid_target'))
       }
-      if (!canV3StaffLine(employee.type, state.world.grid[targetCellIndex])) {
+      if (!canV3StaffLine(employee.type, getV3BuildingType(state, targetBuildingId))) {
         return consumedResult(state, action, state, event('blocked', 'v3.duty.ineligible'))
       }
       const occupant = Object.entries(state.employeeDuties).find(([id, duty]) =>
-        id !== employee.id && duty.kind === 'line' && duty.cellIndex === targetCellIndex,
+        id !== employee.id && duty.kind === 'line' && duty.buildingId === targetBuildingId,
       )
       if (occupant) return consumedResult(state, action, state, event('blocked', 'v3.duty.occupied'))
     }
@@ -619,19 +664,19 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   }
 
   if (action.type === 'set_program') {
-    const program = state.plantPrograms[action.cellIndex]
+    const program = state.plantPrograms[action.buildingId]
     const blueprint = state.productBlueprints[action.blueprintId]
-    const building = state.world.grid[action.cellIndex]
+    const building = getV3BuildingType(state, action.buildingId)
     if (!program || !isV3ProcessBuilding(building)) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_cell'))
     }
-    if (!blueprint || blueprint.family !== V3_PROCESS_UNITS[building].family || (state.world.gridLevels[action.cellIndex] ?? 1) < blueprint.minPlantLevel) {
+    if (!blueprint || blueprint.family !== V3_PROCESS_UNITS[building].family || (getV3BuildingLevel(state, action.buildingId)) < blueprint.minPlantLevel) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_blueprint'))
     }
     if (blueprint.module !== program.installedModule) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.module_mismatch'))
     }
-    if (isV3LoanerCell(state, action.cellIndex) && action.blueprintId !== V3_DEFAULT_BLUEPRINT_ID.gasoline) {
+    if (isV3LoanerBuilding(state, action.buildingId) && action.blueprintId !== V3_DEFAULT_BLUEPRINT_ID.gasoline) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_blueprint'))
     }
     const changedProgram = program.blueprintId === blueprint.id
@@ -639,30 +684,30 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       : { ...program, blueprintId: blueprint.id, setupRemainingTicks: 25 }
     return consumedResult(state, action, {
       ...state,
-      plantPrograms: { ...state.plantPrograms, [action.cellIndex]: changedProgram },
+      plantPrograms: { ...state.plantPrograms, [action.buildingId]: changedProgram },
     }, event('success', 'v3.action.ok'))
   }
 
   if (action.type === 'set_pause') {
-    const program = state.plantPrograms[action.cellIndex]
-    if (!program || !isV3ProcessBuilding(state.world.grid[action.cellIndex])) {
+    const program = state.plantPrograms[action.buildingId]
+    if (!program || !isV3ProcessBuilding(getV3BuildingType(state, action.buildingId))) {
       return consumedResult(state, action, state, event('blocked', 'v3.program.invalid_cell'))
     }
     return consumedResult(state, action, {
       ...state,
       plantPrograms: {
         ...state.plantPrograms,
-        [action.cellIndex]: { ...program, paused: action.paused },
+        [action.buildingId]: { ...program, paused: action.paused },
       },
     }, event('success', 'v3.action.ok'))
   }
 
   if (action.type === 'set_module') {
-    const quote = getV3ModuleQuote(state, action.cellIndex, action.module)
+    const quote = getV3ModuleQuote(state, action.buildingId, action.module)
     if (quote.blocker) {
       return consumedResult(state, action, state, event('blocked', `v3.module.${quote.blocker}` as V3ActionEvent['messageId'], quote.params))
     }
-    const program = state.plantPrograms[action.cellIndex]
+    const program = state.plantPrograms[action.buildingId]
     const blueprint = state.productBlueprints[program.blueprintId]
     // Never silently run a blueprint on hardware it was not certified for:
     // an incompatible line pauses until the player selects a matching program.
@@ -673,7 +718,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + quote.costCents },
       plantPrograms: {
         ...state.plantPrograms,
-        [action.cellIndex]: { ...program, installedModule: action.module, paused: compatible ? program.paused : true },
+        [action.buildingId]: { ...program, installedModule: action.module, paused: compatible ? program.paused : true },
       },
     }
     return consumedResult(state, action, next, event('success', 'v3.action.ok', { costCents: quote.costCents, paused: compatible ? 0 : 1 }))
@@ -687,13 +732,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
     return consumedResult(state, action, unlockV3Research(state, action.researchId), event('success', 'v3.action.ok'))
   }
 
-  if (action.type === 'expand_grid') {
-    const expanded = expandV3Grid(state)
-    if (expanded.blocker) {
-      return consumedResult(state, action, state, event('blocked', `v3.expand.${expanded.blocker}` as V3ActionEvent['messageId'], expanded.params))
-    }
-    return consumedResult(state, action, expanded.state, event('success', 'v3.action.ok'))
-  }
+
 
   const blocker = validateV3Trade(state, action)
   if (blocker) return consumedResult(state, action, state, blocker)

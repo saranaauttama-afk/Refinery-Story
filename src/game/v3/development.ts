@@ -1,3 +1,4 @@
+import { getV3BuildingType, getV3BuildingLevel } from './yard'
 import { getV3AvailableKnowledgeRank } from './research'
 import {
   V3_DEVELOPMENT_BY_FAMILY,
@@ -57,12 +58,12 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
   const familyRules = V3_DEVELOPMENT_BY_FAMILY[action.family]
   if (state.campaignProgress.chapter < familyRules.chapter) return { state, blocker: 'chapter_locked' }
   if (state.developmentProject) return { state, blocker: 'project_active' }
-  if (state.world.grid[action.labCellIndex] !== 'laboratory') return { state, blocker: 'invalid_lab' }
-  const labLevel = state.world.gridLevels[action.labCellIndex] ?? 1
+  if (getV3BuildingType(state, action.labBuildingId) !== 'laboratory') return { state, blocker: 'invalid_lab' }
+  const labLevel = getV3BuildingLevel(state, action.labBuildingId)
   if (labLevel < 1 || ![0, 1, 2].includes(action.knowledgeRank)) return { state, blocker: 'invalid_config' }
   if (action.module !== 'none' && state.campaignProgress.chapter < V3_MODULE_CHAPTER) return { state, blocker: 'invalid_config' }
   // Rank uses the selected lab only (never the sum of labs) plus owned research.
-  if (action.knowledgeRank > getV3AvailableKnowledgeRank(state, action.labCellIndex)) return { state, blocker: 'knowledge_locked' }
+  if (action.knowledgeRank > getV3AvailableKnowledgeRank(state, action.labBuildingId)) return { state, blocker: 'knowledge_locked' }
   const feeCents = familyRules.feeCents
 
   const lead = action.leadEmployeeId ? getV3Employee(state, action.leadEmployeeId) : undefined
@@ -117,7 +118,7 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
       family: action.family,
       leadEmployeeId: lead?.id ?? '',
       contributorEmployeeIds: lead ? [lead.id] : [],
-      labCellIndex: action.labCellIndex,
+      labBuildingId: action.labBuildingId,
       remainingTicks: familyRules.ticks,
       profile: action.profile,
       module: action.module,
@@ -132,7 +133,7 @@ export function startV3Development(state: V3GameState, action: V3StartDevelopmen
       [lead.id]: {
         kind: 'development',
         projectId,
-        returnCellIndex: priorDuty?.kind === 'line' ? priorDuty.cellIndex : null,
+        returnBuildingId: priorDuty?.kind === 'line' ? priorDuty.buildingId : null,
         ...(priorDuty?.kind === 'support' ? { returnSupport: true } : {}),
       },
     } : sampledState.employeeDuties,

@@ -1,5 +1,12 @@
 # Refinery Story — แผนหลัก V3: โรงกลั่นและผลิตภัณฑ์ของเรา
 
+> **V3-15.5 supersession (2026-09-26):** the fixed 3×3 → 4×4 → 5×5 → 6×6 grid,
+> "lots"/slot counts and `expand_grid` are **superseded by the expandable refinery
+> yard** (see *Expandable yard* below). Any grid, lot or slot figure elsewhere in
+> this document is historical. V3 is fresh-save only: earlier preview saves are
+> rejected, not migrated.
+
+
 วันที่: 25 กันยายน 2026 · สถานะ: **กำลัง IMPLEMENT — เสร็จถึง V3-09; V3 เป็นเกม/เซฟใหม่เท่านั้น**
 
 ผู้ใช้เลือกแนวพัฒนาผลิตภัณฑ์และทีมงาน และขอแผนครบสำหรับส่งต่อโมเดลเขียนโค้ด
@@ -408,3 +415,27 @@ Player: อธิบายได้ว่าติดอะไร เลือ�
 
 แผนนี้ตัดสินระบบหลักครบแล้ว ความไม่แน่นอนที่เหลือคือค่าบาลานซ์และความสนุกจากการเล่นจริง
 งานแรกเมื่อได้รับคำสั่ง implement คือ **V3-00** ใน Implementation ไม่ใช่ทำทุกระบบพร้อมกัน
+
+## Expandable yard (V3-15.5)
+
+- World: 100×100 logical tile coordinates. Only owned land and the next ring
+  pieces are drawn; the full world is never rendered tile by tile.
+- Buildings: `{id, type, level, x, y}` (top-left anchor). Footprint per type ×
+  level comes from one table (`V3_FOOTPRINTS`); upgrades grow right/down.
+  Occupancy is always derived from buildings, never stored.
+- Land: 10×10 core, then ring pieces per side (N/E/S/W): 14×14 at C2 ($1,500 each),
+  20×20 at C4 ($6,250 each), 28×28 after clear ($25,000 each). A ring piece needs
+  the same side of the previous ring. Prices are V3-A hypotheses for the V3-18
+  simulator, not tuned by hand.
+- One validator (bounds, unlocked land, overlap) governs build, upgrade growth,
+  move and save loading; a failed action never charges money.
+- Limits: land, money, chapter, power, workforce and specific caps —
+  Distillation 1/1/2/2/3 by chapter C0–C4 (owner decision "ก"), Laboratory,
+  Sales Office and Maintenance Workshop 1, Power Plant 1/1/1/2/3; tanks and other
+  plants are uncapped.
+- Move keeps level, program, duties, projects and stock (all keyed by building
+  ID); no cost/downtime yet, but the action is the single place to add them.
+- Service roads are a derived visual layer along parcel outlines and seams
+  (straight/corner/tee/cross nodes); they never gate production in V3-15.5.
+- The "clear with little space" challenge is now: clear with at most 14×14
+  (196 tiles) of land.

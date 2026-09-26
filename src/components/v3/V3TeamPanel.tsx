@@ -6,6 +6,7 @@ import { reduceV3Action } from '../../game/v3/actions'
 import { V3_ROLES, V3_SPECIALIZATION, V3_STAFF_LEVELS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3Modifiers, type V3CappedChannel } from '../../game/v3/modifiers'
 import type { V3Action, V3ActionEvent, V3EmployeeDuty, V3GameState } from '../../game/v3/types'
+import { listV3Buildings } from '../../game/v3/yard'
 import { getV3LocalCrewRate, getV3StaffCap, getV3TrainingCost, getV3WageCents } from '../../game/v3/workforce'
 import { fonts } from '../../theme'
 
@@ -50,7 +51,7 @@ function dutyText(duty: V3EmployeeDuty | undefined, t: Translate): string {
   if (!duty || duty.kind === 'reserve') return t({ en: 'Reserve (25% wage, no effect)', th: 'สำรอง (ค่าจ้าง 25% ไม่มีผล)' })
   if (duty.kind === 'support') return t({ en: 'Support', th: 'Support' })
   if (duty.kind === 'development') return t({ en: 'Leading R&D (line/support benefit paused)', th: 'นำ R&D (หยุดผลเดิมชั่วคราว)' })
-  return t({ en: `Line #${duty.cellIndex + 1}`, th: `ไลน์ #${duty.cellIndex + 1}` })
+  return t({ en: 'Line duty', th: 'ประจำไลน์' })
 }
 
 function channelText(channel: V3CappedChannel, percent = true): string {
@@ -84,9 +85,9 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
   }
 
   const modifiers = getV3Modifiers(state)
-  const lineCells = state.world.grid
-    .map((cell, index) => ({ cell, index }))
-    .filter(({ cell, index }) => isV3ProcessBuilding(cell) && state.plantPrograms[index])
+  const lineCells = listV3Buildings(state)
+    .filter((building) => isV3ProcessBuilding(building.type) && state.plantPrograms[building.id])
+    .map((building) => ({ cell: building.type, index: building.id, label: `@(${building.x},${building.y})` }))
   const cap = getV3StaffCap(state)
 
   return (
@@ -100,7 +101,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
           const threshold = V3_STAFF_LEVELS.xpToNextLevel[employee.level]
           const training = getV3TrainingCost(employee)
           const contribution = duty?.kind === 'line'
-            ? t({ en: `local crew +${(getV3LocalCrewRate(state, duty.cellIndex) * 100).toFixed(0)}%`, th: `ทีมไลน์ +${(getV3LocalCrewRate(state, duty.cellIndex) * 100).toFixed(0)}%` })
+            ? t({ en: `local crew +${(getV3LocalCrewRate(state, duty.buildingId) * 100).toFixed(0)}%`, th: `ทีมไลน์ +${(getV3LocalCrewRate(state, duty.buildingId) * 100).toFixed(0)}%` })
             : modifiers.supportContributions[employee.id]
               ? `${modifiers.supportContributions[employee.id].channel} +${modifiers.supportContributions[employee.id].value < 1 ? `${(modifiers.supportContributions[employee.id].value * 100).toFixed(1)}%` : modifiers.supportContributions[employee.id].value.toFixed(0)}`
               : t({ en: 'no active effect', th: 'ยังไม่มีผล' })
@@ -117,8 +118,8 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
                 })}</Text>
               )}
               <View style={styles.chips}>
-                {lineCells.filter(({ cell }) => V3_ROLES[employee.type].lineBuildings.includes(cell as never)).map(({ cell, index }) => (
-                  <Gate key={`line-${index}`} label={t({ en: `→ #${index + 1} ${BUILDINGS[cell!].name.en}`, th: `→ #${index + 1} ${BUILDINGS[cell!].name.th}` })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'line', cellIndex: index } }} />
+                {lineCells.filter(({ cell }) => V3_ROLES[employee.type].lineBuildings.includes(cell as never)).map(({ cell, index, label }) => (
+                  <Gate key={`line-${index}`} label={t({ en: `→ ${BUILDINGS[cell].name.en} ${label}`, th: `→ ${BUILDINGS[cell].name.th} ${label}` })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'line', buildingId: index } }} />
                 ))}
                 {V3_ROLES[employee.type].support && (
                   <Gate label={t({ en: '→ Support', th: '→ Support' })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'support' } }} />

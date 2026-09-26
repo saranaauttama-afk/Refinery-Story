@@ -175,13 +175,78 @@ export const V3_DEVELOPMENT_BY_FAMILY = {
 
 export const V3_DEVELOPMENT_SAMPLE_QUANTITY = 10
 
-// Anchored square expansion: 3x3 -> 4x4 at C2, 4x4 -> 5x5 at C4 (V3-14).
-export const V3_GRID_EXPANSIONS = [
-  { fromSize: 3, toSize: 4, costDollars: 6_000, chapter: 2 },
-  { fromSize: 4, toSize: 5, costDollars: 25_000, chapter: 4 },
-  // Optional freeplay yard after the sticky clear (C5).
-  { fromSize: 5, toSize: 6, costDollars: 100_000, chapter: 5 },
-] as const
+// ---- Expandable yard (V3-15.5) — supersedes the fixed 3×3→6×6 grid ----
+export const V3_WORLD_SIZE = 100
+
+export type V3Footprint = { w: number; h: number }
+const fp = (w: number, h: number): V3Footprint => ({ w, h })
+
+/** Single source of footprint truth per type × level (index 1..3), used by rules and UI. */
+export const V3_FOOTPRINTS: Partial<Record<BuildingType, [V3Footprint, V3Footprint, V3Footprint]>> = {
+  distillationUnit: [fp(1, 1), fp(2, 2), fp(2, 3)],
+  crudeTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  gasolineTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  lubricantTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  jetFuelTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  petrochemicalTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  pelletSilo: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  recyclingBunker: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  laboratory: [fp(1, 1), fp(2, 2), fp(2, 2)],
+  powerPlant: [fp(2, 2), fp(2, 2), fp(3, 2)],
+  lubricantPlant: [fp(2, 2), fp(2, 2), fp(3, 2)],
+  jetFuelPlant: [fp(2, 2), fp(3, 2), fp(3, 3)],
+  petrochemicalPlant: [fp(2, 2), fp(3, 2), fp(3, 3)],
+  polymerPlant: [fp(2, 2), fp(3, 2), fp(3, 3)],
+  wasteTreatmentPlant: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  maintenanceWorkshop: [fp(1, 1), fp(2, 1), fp(2, 2)],
+  salesOffice: [fp(1, 1), fp(1, 1), fp(2, 1)],
+}
+
+export type V3LandParcel = {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  /** V3-A hypotheses; tuned by the V3-18 simulator, not by guesswork here. */
+  costDollars: number
+  chapter: 0 | 1 | 2 | 3 | 4 | 5
+  requires: string | null
+}
+
+const CENTER = 50
+function ring(ring: number, inner: number, outer: number, costDollars: number, chapter: V3LandParcel['chapter']): V3LandParcel[] {
+  const a = inner / 2
+  const b = outer / 2
+  const lo = CENTER - b
+  const previous = (side: string) => (ring === 1 ? 'core' : `ring${ring - 1}:${side}`)
+  return [
+    { id: `ring${ring}:north`, x: lo, y: lo, w: outer, h: b - a, costDollars, chapter, requires: previous('north') },
+    { id: `ring${ring}:south`, x: lo, y: CENTER + a, w: outer, h: b - a, costDollars, chapter, requires: previous('south') },
+    { id: `ring${ring}:west`, x: lo, y: CENTER - a, w: b - a, h: inner, costDollars, chapter, requires: previous('west') },
+    { id: `ring${ring}:east`, x: CENTER + a, y: CENTER - a, w: b - a, h: inner, costDollars, chapter, requires: previous('east') },
+  ]
+}
+
+/**
+ * Start 10×10, then rings to 14×14 (C2), 20×20 (C4) and 28×28 (after clear).
+ * Ring totals mirror the old 4×4/5×5/6×6 prices; the engine supports 100×100.
+ */
+export const V3_LAND_PARCELS: V3LandParcel[] = [
+  { id: 'core', x: 45, y: 45, w: 10, h: 10, costDollars: 0, chapter: 0, requires: null },
+  ...ring(1, 10, 14, 1_500, 2),
+  ...ring(2, 14, 20, 6_250, 4),
+  ...ring(3, 20, 28, 25_000, 5),
+]
+
+/** Specific building caps by chapter (index = chapter); absent types are uncapped. */
+export const V3_BUILDING_LIMITS: Partial<Record<BuildingType, readonly number[]>> = {
+  distillationUnit: [1, 1, 2, 2, 3, 3],
+  laboratory: [1, 1, 1, 1, 1, 1],
+  salesOffice: [1, 1, 1, 1, 1, 1],
+  maintenanceWorkshop: [1, 1, 1, 1, 1, 1],
+  powerPlant: [1, 1, 1, 2, 3, 3],
+}
 
 // Systems S2 module table: fit cost is 20% of the plant's base build cost.
 export const V3_MODULE_FIT_COST_RATE = 0.2

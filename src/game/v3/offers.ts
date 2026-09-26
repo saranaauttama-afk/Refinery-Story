@@ -1,3 +1,4 @@
+import { hasV3Building } from './yard'
 import { V3_BUILDINGS, V3_MODULE_CHAPTER, V3_PLANT_BY_FAMILY, V3_TICKS_PER_CYCLE } from './data'
 import { V3_JOB_TEMPLATES, getV3AcceptBlocker, resolveV3JobTemplate, type V3JobBlocker, type V3RushTerms } from './jobs'
 import { getV3Modifiers } from './modifiers'
@@ -72,7 +73,7 @@ export function getV3OfferView(state: V3GameState, templateId: string, branch: V
   const plant = V3_PLANT_BY_FAMILY[template.family]
   const chapter = state.campaignProgress.chapter
   if (!plant || V3_BUILDINGS[plant].buildChapter > Math.max(chapter, template.minimumChapter)) reasons.push('route_locked')
-  else if (!state.world.grid.includes(plant)) reasons.push('no_plant')
+  else if (!hasV3Building(state, plant)) reasons.push('no_plant')
   if (getV3AttainableQuality(Math.max(chapter, template.minimumChapter)) < template.minimumQuality) reasons.push('quality_unreachable')
   const hasBlueprint = Object.values(state.productBlueprints)
     .some((blueprint) => blueprint.family === template.family && blueprint.quality >= template.minimumQuality)

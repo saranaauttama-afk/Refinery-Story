@@ -1,3 +1,4 @@
+import { getV3BuildingType } from './yard'
 import type { Employee, WorkerType } from '../types'
 import {
   V3_CAPS,
@@ -33,10 +34,10 @@ export function getV3WageCents(employee: Employee, duty: V3EmployeeDuty, deltaTi
   return WAGE_DOLLARS_PER_MINUTE[employee.type] * 100 * levelScale * dutyScale * deltaTicks / 300
 }
 
-export function getV3LineEmployee(state: V3GameState, cellIndex: number): Employee | undefined {
+export function getV3LineEmployee(state: V3GameState, buildingId: string): Employee | undefined {
   const employeeId = Object.keys(state.employeeDuties).sort().find((id) => {
     const duty = state.employeeDuties[id]
-    return duty.kind === 'line' && duty.cellIndex === cellIndex
+    return duty.kind === 'line' && duty.buildingId === buildingId
   })
   return employeeId ? getV3Employee(state, employeeId) : undefined
 }
@@ -59,9 +60,9 @@ export function canV3Lead(employee: Employee, family: V3ProductFamily): boolean 
   return V3_ROLES[employee.type].leadFamilies.includes(family)
 }
 
-export function getV3LocalCrewRate(state: V3GameState, cellIndex: number): number {
-  const employee = getV3LineEmployee(state, cellIndex)
-  const building = state.world.grid[cellIndex]
+export function getV3LocalCrewRate(state: V3GameState, buildingId: string): number {
+  const employee = getV3LineEmployee(state, buildingId)
+  const building = getV3BuildingType(state, buildingId)
   if (!employee || state.unpaidEmployeeIds.includes(employee.id) || !canV3StaffLine(employee.type, building)) return 0
   const level = Math.max(0, employee.level - 1)
   const matched = V3_ROLES[employee.type].matchedBuildings.includes(building as V3ProcessBuilding)
@@ -160,11 +161,11 @@ export function settleV3Wages(state: V3GameState, deltaTicks: number): V3WageSet
  * XP only for actual productive line work: the legacy rate of 1 XP per active
  * tick, where a full-rate cycle of work equals 25 ticks. Level-ups apply once.
  */
-export function addV3DutyXp(state: V3GameState, actualWorkByCell: Record<number, number>): V3GameState {
+export function addV3DutyXp(state: V3GameState, actualWorkByCell: Record<string, number>): V3GameState {
   let employeeRecords = state.employeeRecords
   const employees = state.world.employees.map((employee) => {
     const duty = state.employeeDuties[employee.id]
-    const work = duty?.kind === 'line' ? actualWorkByCell[duty.cellIndex] ?? 0 : 0
+    const work = duty?.kind === 'line' ? actualWorkByCell[duty.buildingId] ?? 0 : 0
     if (!duty || duty.kind !== 'line' || state.unpaidEmployeeIds.includes(employee.id) || work <= 0) return employee
     const ticks = work * 25
     const record = employeeRecords[employee.id] ?? emptyV3EmployeeRecord()
@@ -181,18 +182,18 @@ export function returnV3EmployeeFromDevelopment(state: V3GameState, employeeId: 
   if (duty.returnSupport && employee && canV3Support(employee.type)) {
     return { ...state, employeeDuties: { ...state.employeeDuties, [employeeId]: { kind: 'support' } } }
   }
-  const targetAvailable = duty.returnCellIndex !== null && Boolean(employee) &&
-    canV3StaffLine(employee!.type, state.world.grid[duty.returnCellIndex]) &&
-    Boolean(state.plantPrograms[duty.returnCellIndex]) &&
+  const targetAvailable = duty.returnBuildingId !== null && Boolean(employee) &&
+    canV3StaffLine(employee!.type, getV3BuildingType(state, duty.returnBuildingId)) &&
+    Boolean(state.plantPrograms[duty.returnBuildingId]) &&
     !Object.entries(state.employeeDuties).some(([id, otherDuty]) =>
-      id !== employeeId && otherDuty.kind === 'line' && otherDuty.cellIndex === duty.returnCellIndex,
+      id !== employeeId && otherDuty.kind === 'line' && otherDuty.buildingId === duty.returnBuildingId,
     )
   return {
     ...state,
     employeeDuties: {
       ...state.employeeDuties,
-      [employeeId]: targetAvailable && duty.returnCellIndex !== null
-        ? { kind: 'line', cellIndex: duty.returnCellIndex }
+      [employeeId]: targetAvailable && duty.returnBuildingId !== null
+        ? { kind: 'line', buildingId: duty.returnBuildingId }
         : { kind: 'reserve' },
     },
   }

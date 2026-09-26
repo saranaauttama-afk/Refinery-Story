@@ -29,8 +29,10 @@
   5×5) plus V3-14d maintenance/upkeep: **complete in code** on `claude/gameplay-v3`;
   V3-14a–c merged at `2ec7db7`, APK run **#73** succeeded.
 - V3-15 (showcase, clear, report, awards, 6×6): **complete in code**.
-- **Current task: V3-16** — layout feedback and controlled events. R3 human gate
-  follows V3-16.
+- **Direction change:** fixed-grid expansion is superseded by the expandable yard.
+- V3-15.5 (expandable yard foundation): **complete in code** (`ee38f2b`, `afb1fe8`).
+- **Current task: V3-15.5 device check** — play the yard on the new APK. V3-16,
+  V3-17, V3-18 and V3-19 must not start before V3-15.5 passes.
 
 ## Decisions recorded
 
