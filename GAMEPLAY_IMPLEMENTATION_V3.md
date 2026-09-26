@@ -268,7 +268,10 @@ specialist path can eventually achieve required Q with knowledge/modules.
 ### V3-13 · Fleet/Airline ladder and repeat/rush progression
 
 Status: **COMPLETE IN CODE** — engine `42c8ed4`, UI `7469d7b`. Check:
-`check:v3-clients` plus all prior V3/legacy checks. **R2 human gate pending.**
+`check:v3-clients` plus all prior V3/legacy checks. **R2 human gate: PASSED** —
+recorded 2026-09-26 as the player's decision after playing Android Preview APK
+run #72 (player answer: "ผ่าน"). No per-item measurements were supplied; none are
+invented here.
 Evidence notes: 12 milestones for 4 clients generated from the Master table and S6
 multipliers; ladder order, cooldown-from-acceptance, cancel/expire without bonus,
 RP or XP, repeat income-only, C3 auto-repeat and Rush sizing/deadline/expiry are
@@ -291,6 +294,20 @@ quality and quantity decisions; report fixture limitations, no wrong tank power 
 ## R3 — Complete campaign
 
 ### V3-14 · Advanced products and Materials
+
+Status: **COMPLETE IN CODE** — 14a/b engine `3f19d0d`, UI `60b9c2b`; 14c engine
+`9f7ff88`, UI `0533be7`. Checks: `check:v3-petro-polymer`, `check:v3-materials`
+plus all prior checks. Evidence notes: Petro/Polymer/Waste Treatment recipes run in
+the shared planner with one energy allocator; Polymer eats only unkept/unreserved
+Petro (lowest Q first) with real basis; accepted Materials Petro is never eaten;
+wrong branch cannot ship; family cap is shared by Q variants; Q75 without a
+specialist at C4 via rank2 (Lab3 + advancedProcessing); 5×5 at C4 ($25,000) and a
+17-building full chain fit the 25-lot budget; every V3 stock write goes through
+productInventory.ts (asserted). All tests at C4 use **constructed fixtures**.
+Deferred with reason: V3 maintenance/upkeep is not implemented, so Maintenance
+Workshop, Safety Officer and `saferOperations` stay locked with a visible reason
+(needs a decision — see CURRENT_TASK); Materials has no Rush (branch is per job);
+waste disposal is shown per tick but not yet a persisted lifetime statistic.
 
 Dependencies:13 pass. Split14a Petro,14b Polymer/reservations,14c Materials/Lab3.
 Port Petro/Pellets/recycled/asphalt manual paths to ledger, remaining research

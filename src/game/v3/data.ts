@@ -89,17 +89,24 @@ export const V3_DISTILLATION = {
   wasteCapacity: 200,
 } as const
 
-export type V3ProcessBuilding = 'distillationUnit' | 'lubricantPlant' | 'jetFuelPlant'
-export type V3ProcessInput = 'crude' | 'feedstock'
+export type V3ProcessBuilding =
+  | 'distillationUnit'
+  | 'lubricantPlant'
+  | 'jetFuelPlant'
+  | 'petrochemicalPlant'
+  | 'polymerPlant'
+  | 'wasteTreatmentPlant'
+export type V3ProcessInput = 'crude' | 'feedstock' | 'petro' | 'waste'
 
 export type V3ProcessUnit = {
-  family: 'gasoline' | 'lubricants' | 'jetFuel'
+  /** Product written by the line: a blueprint family, or recycled commodity. */
+  family: 'gasoline' | 'lubricants' | 'jetFuel' | 'petrochemicals' | 'plasticPellets' | 'recycledMaterial'
   input: V3ProcessInput
   inputPerWork: number
   outputPerWork: number
   energyPerWork: number
   wastePerWork: number
-  chapter: 0 | 2 | 3
+  chapter: 0 | 2 | 3 | 4
 }
 
 // Systems S3 dataset V3-A. Only families listed here have a ported V3 route;
@@ -108,16 +115,35 @@ export const V3_PROCESS_UNITS: Record<V3ProcessBuilding, V3ProcessUnit> = {
   distillationUnit: { family: 'gasoline', input: 'crude', inputPerWork: 6, outputPerWork: 5, energyPerWork: 0, wastePerWork: 0.5, chapter: 0 },
   lubricantPlant: { family: 'lubricants', input: 'feedstock', inputPerWork: 6, outputPerWork: 5, energyPerWork: 3, wastePerWork: 1, chapter: 2 },
   jetFuelPlant: { family: 'jetFuel', input: 'feedstock', inputPerWork: 8, outputPerWork: 5, energyPerWork: 4, wastePerWork: 1, chapter: 3 },
+  petrochemicalPlant: { family: 'petrochemicals', input: 'feedstock', inputPerWork: 10, outputPerWork: 5, energyPerWork: 5, wastePerWork: 1, chapter: 4 },
+  // Polymer uses unreserved, unkept Petro of any Q; pellets do not inherit that Q.
+  polymerPlant: { family: 'plasticPellets', input: 'petro', inputPerWork: 6, outputPerWork: 5, energyPerWork: 6, wastePerWork: 1, chapter: 4 },
+  wasteTreatmentPlant: { family: 'recycledMaterial', input: 'waste', inputPerWork: 4, outputPerWork: 2, energyPerWork: 1, wastePerWork: 0, chapter: 2 },
 }
+
+/** Program key for lines that write a commodity instead of a blueprint variant. */
+export const V3_COMMODITY_ID = {
+  recycledMaterial: 'commodity:recycledMaterial',
+  asphalt: 'commodity:asphalt',
+} as const
+
+/** Manual side conversion (Systems S3): crude → asphalt 1:1, goods only. */
+export const V3_ASPHALT_CONVERSION = { crudePerUnit: 1, chapter: 1 } as const
 
 export const V3_PLANT_BY_FAMILY: Partial<Record<ProductKey, V3ProcessBuilding>> = {
   gasoline: 'distillationUnit',
   lubricants: 'lubricantPlant',
   jetFuel: 'jetFuelPlant',
+  petrochemicals: 'petrochemicalPlant',
+  plasticPellets: 'polymerPlant',
 }
 
+const PROCESS_BUILDINGS: ReadonlySet<string> = new Set([
+  'distillationUnit', 'lubricantPlant', 'jetFuelPlant', 'petrochemicalPlant', 'polymerPlant', 'wasteTreatmentPlant',
+])
+
 export function isV3ProcessBuilding(building: BuildingType | null | undefined): building is V3ProcessBuilding {
-  return building === 'distillationUnit' || building === 'lubricantPlant' || building === 'jetFuelPlant'
+  return typeof building === 'string' && PROCESS_BUILDINGS.has(building)
 }
 
 // Energy per full 5s cycle, crude per full cycle and battery contribution.
@@ -152,6 +178,7 @@ export const V3_DEVELOPMENT_SAMPLE_QUANTITY = 10
 // Anchored square expansion: 3x3 -> 4x4 at C2, 4x4 -> 5x5 at C4 (V3-14).
 export const V3_GRID_EXPANSIONS = [
   { fromSize: 3, toSize: 4, costDollars: 6_000, chapter: 2 },
+  { fromSize: 4, toSize: 5, costDollars: 25_000, chapter: 4 },
 ] as const
 
 // Systems S2 module table: fit cost is 20% of the plant's base build cost.
@@ -207,11 +234,11 @@ export type V3RoleRule = {
 }
 
 export const V3_ROLES: Record<WorkerType, V3RoleRule> = {
-  operator: { lineBuildings: ['distillationUnit', 'lubricantPlant', 'jetFuelPlant'], matchedBuildings: [], leadFamilies: ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'], support: null, supportValue: 0, hireChapter: 0, hireCostDollars: 500, hireable: true },
+  operator: { lineBuildings: ['distillationUnit', 'lubricantPlant', 'jetFuelPlant', 'petrochemicalPlant', 'polymerPlant'], matchedBuildings: [], leadFamilies: ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'], support: null, supportValue: 0, hireChapter: 0, hireCostDollars: 500, hireable: true },
   fuelSpecialist: { lineBuildings: ['distillationUnit', 'lubricantPlant'], matchedBuildings: ['distillationUnit', 'lubricantPlant'], leadFamilies: ['gasoline', 'lubricants'], support: null, supportValue: 0, hireChapter: 2, hireCostDollars: 1_500, hireable: true },
   aviationSpecialist: { lineBuildings: ['jetFuelPlant'], matchedBuildings: ['jetFuelPlant'], leadFamilies: ['jetFuel'], support: null, supportValue: 0, hireChapter: 3, hireCostDollars: 3_000, hireable: true },
-  chemicalEngineer: { lineBuildings: [], matchedBuildings: [], leadFamilies: ['petrochemicals'], support: null, supportValue: 0, hireChapter: 4, hireCostDollars: 5_000, hireable: false },
-  polymerEngineer: { lineBuildings: [], matchedBuildings: [], leadFamilies: ['plasticPellets'], support: null, supportValue: 0, hireChapter: 4, hireCostDollars: 8_000, hireable: false },
+  chemicalEngineer: { lineBuildings: ['petrochemicalPlant'], matchedBuildings: ['petrochemicalPlant'], leadFamilies: ['petrochemicals'], support: null, supportValue: 0, hireChapter: 4, hireCostDollars: 5_000, hireable: true },
+  polymerEngineer: { lineBuildings: ['polymerPlant'], matchedBuildings: ['polymerPlant'], leadFamilies: ['plasticPellets'], support: null, supportValue: 0, hireChapter: 4, hireCostDollars: 8_000, hireable: true },
   chemist: { lineBuildings: [], matchedBuildings: [], leadFamilies: ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets'], support: 'rp', supportValue: 0.1, hireChapter: 1, hireCostDollars: 1_500, hireable: true },
   mechanic: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'storageFlat', supportValue: 25, hireChapter: 1, hireCostDollars: 800, hireable: true },
   salesAgent: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'trade', supportValue: 0.04, hireChapter: 3, hireCostDollars: 1_000, hireable: true },

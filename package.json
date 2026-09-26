@@ -25,7 +25,9 @@
     "check:v3-lube": "node --import tsx scripts/lube-power-check.ts",
     "check:v3-modules-jet": "node --import tsx scripts/modules-jet-check.ts",
     "check:v3-roles": "node --import tsx scripts/workforce-roles-check.ts",
-    "check:v3-clients": "node --import tsx scripts/client-ladder-check.ts"
+    "check:v3-clients": "node --import tsx scripts/client-ladder-check.ts",
+    "check:v3-petro-polymer": "node --import tsx scripts/petro-polymer-check.ts",
+    "check:v3-materials": "node --import tsx scripts/materials-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",

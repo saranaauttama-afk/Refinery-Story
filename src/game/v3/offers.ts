@@ -1,9 +1,9 @@
 import { V3_BUILDINGS, V3_MODULE_CHAPTER, V3_PLANT_BY_FAMILY, V3_TICKS_PER_CYCLE } from './data'
-import { V3_JOB_TEMPLATES, getV3AcceptBlocker, type V3JobBlocker, type V3RushTerms } from './jobs'
+import { V3_JOB_TEMPLATES, getV3AcceptBlocker, resolveV3JobTemplate, type V3JobBlocker, type V3RushTerms } from './jobs'
 import { getV3Modifiers } from './modifiers'
 import { getV3StockAllocations } from './productInventory'
 import { evaluateV3Production } from './production'
-import type { V3GameState } from './types'
+import type { V3GameState, V3ProductFamily } from './types'
 
 export type V3OfferFeasibility = 'ready' | 'planned' | 'unavailable'
 export type V3OfferReason =
@@ -15,6 +15,8 @@ export type V3OfferReason =
 
 export type V3OfferView = {
   templateId: string
+  family: V3ProductFamily
+  minimumQuality: number
   acceptBlocker: V3JobBlocker | null
   feasibility: V3OfferFeasibility
   reasons: V3OfferReason[]
@@ -64,8 +66,8 @@ export function getV3RushTerms(state: V3GameState, templateId: string): V3RushTe
   return { quantity, deadlineTicks: deadlineSeconds * 5 }
 }
 
-export function getV3OfferView(state: V3GameState, templateId: string): V3OfferView {
-  const template = V3_JOB_TEMPLATES[templateId]
+export function getV3OfferView(state: V3GameState, templateId: string, branch: V3ProductFamily | null = null): V3OfferView {
+  const template = resolveV3JobTemplate(templateId, branch ?? V3_JOB_TEMPLATES[templateId].branches?.[0].family ?? null)!
   const reasons: V3OfferReason[] = []
   const plant = V3_PLANT_BY_FAMILY[template.family]
   const chapter = state.campaignProgress.chapter
@@ -88,6 +90,8 @@ export function getV3OfferView(state: V3GameState, templateId: string): V3OfferV
   const unitPriceCents = Math.round(template.unitPriceCents * (1 + tradeRate))
   return {
     templateId,
+    family: template.family,
+    minimumQuality: template.minimumQuality,
     acceptBlocker: getV3AcceptBlocker(state, templateId) ?? (template.kind === 'rush' && !rush ? 'rush_unavailable' : null),
     feasibility,
     reasons,
