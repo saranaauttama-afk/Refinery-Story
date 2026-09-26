@@ -1,5 +1,12 @@
 # Gameplay V3 — Implementation contracts and release checklist
 
+> **V3-15.5 supersession (2026-09-26):** the fixed 3×3 → 4×4 → 5×5 → 6×6 grid,
+> "lots"/slot counts and `expand_grid` are **superseded by the expandable refinery
+> yard** (see *Expandable yard* below). Any grid, lot or slot figure elsewhere in
+> this document is historical. V3 is fresh-save only: earlier preview saves are
+> rejected, not migrated.
+
+
 2026-09-25 · **R0 COMPLETE; R1 FOUNDATION THROUGH V3-09 IN CODE**. The integrity,
 atomic-allocation, truthful power/storage upgrades, fresh V3 state boundary,
 variant inventory, capacity, protected stock, cost basis, ledger, and per-cell
@@ -342,6 +349,17 @@ award targets and capped one-time award RP. The old Legend system is not importe
 Acceptance:3of5/2families/advanced condition exact; no need all buildings/research;
 old uncertain-basis sales and gifts cannot fake clear profit; no double clear/award
 payout; report restorable from save. No NewGame+ button without actual reset path.
+
+### V3-15.5 · Expandable Yard Foundation (inserted before V3-16)
+
+Status: **COMPLETE IN CODE** — engine+checks `ee38f2b`, yard view `afb1fe8`.
+Check: `check:v3-yard` plus every prior V3/legacy check (all migrated to yard
+coordinates). Scope: 100×100 world, land parcels, footprints by type×level, shared
+placement validator, `unlock_land_parcel`, `move_building`, building caps,
+upgrade-growth preview, demolish guards, derived occupancy, road layer data,
+Skia yard view with pan/zoom, build/move/upgrade/land previews and real reasons.
+**V3-16 may start only after V3-15.5 passes on device** (player check of the
+yard view on the APK built from this milestone).
 
 ### V3-16 · Layout feedback and controlled events
 
