@@ -108,13 +108,17 @@ assert.equal(routeB.campaignProgress.chapter, 3, 'distinct non-Performance C3 ro
 let repeat = routeA
 const rp = repeat.world.researchPoints
 const reputation = repeat.world.reputation
-repeat = stock(repeat, q75.id, 80)
+const repeatSize = V3_JOB_TEMPLATES['local:repeat'].quantity
 repeat = act(repeat, { type: 'accept_job', templateId: 'local:repeat' })
 const repeatAccepted = repeat.world.tickCount
 const xpBefore = repeat.world.employees.map((employee) => employee.xp)
 const cashBefore = repeat.world.moneyCents
-repeat = act(repeat, { type: 'dispatch_job', quantity: 80, blueprintId: q75.id })
-assert.equal(repeat.world.moneyCents - cashBefore, 80 * 2_160, 'Regular quote, no bonus')
+// Staged delivery (tank smaller than the order): payment is per unit, no bonus.
+while (repeat.acceptedJob) {
+  const batch = Math.min(40, repeat.acceptedJob.quantity - repeat.acceptedJob.deliveredQuantity)
+  repeat = act(stock(repeat, q75.id, batch), { type: 'dispatch_job', quantity: batch, blueprintId: q75.id })
+}
+assert.ok(Math.abs(repeat.world.moneyCents - cashBefore - repeatSize * 2_160) < 1, 'Regular quote, no bonus (staged cents)')
 assert.equal(repeat.world.researchPoints, rp)
 assert.equal(repeat.world.reputation, reputation)
 assert.deepEqual(repeat.world.employees.map((employee) => employee.xp), xpBefore)

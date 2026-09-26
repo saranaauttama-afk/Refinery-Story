@@ -23,13 +23,28 @@ export const V3_EXPO_PARTICIPATION_REPUTATION = 1
 
 export type V3ExpoBlocker = 'not_expo_month' | 'fame_locked' | 'already_entered' | 'invalid_recipe' | 'insufficient_samples'
 
+// V3-18 calibration (legal bot): rival entries sit at ~99–100 from the first
+// year. The best possible recipe (Q80 + fame Lv6 + full portfolio = 98) is not
+// enough on its own: showmanship grows with experience (+1 per 5 earlier
+// entries, max +5), so a first win comes after years of attending
+// (bot: ~year 18 ≈ 3.5–4.5 simulated hours).
+export const V3_EXPO_RIVAL_CAP = 100
+export const V3_EXPO_PORTFOLIO_MAX = 8
+export const V3_EXPO_ENTRIES_PER_EXPERIENCE = 5
+export const V3_EXPO_EXPERIENCE_MAX = 5
+
 export function getV3RivalExpoScore(rivalIndex: number, year: number): number {
-  return Math.min(88, 44 + 4 * year + rivalIndex * 2 + ((year * 7 + rivalIndex * 3) % 5))
+  return Math.min(V3_EXPO_RIVAL_CAP, Math.round(92 + 0.8 * year + rivalIndex * 1.5 + ((year * 7 + rivalIndex * 3) % 4)))
 }
 
-/** Entry score: recipe quality plus a small fame showmanship bonus. */
+export function getV3ExpoExperience(state: V3GameState): number {
+  return Math.min(V3_EXPO_EXPERIENCE_MAX, Math.floor(state.expoResults.length / V3_EXPO_ENTRIES_PER_EXPERIENCE))
+}
+
+/** Entry score: recipe Q + fame (2 per level above 1) + portfolio (1 per developed recipe, max 8) + experience. */
 export function getV3ExpoScore(state: V3GameState, quality: number): number {
-  return quality + (getV3Fame(state).level - 1) * 2
+  const portfolio = Object.values(state.productBlueprints).filter((blueprint) => blueprint.provenance === 'developed').length
+  return quality + (getV3Fame(state).level - 1) * 2 + Math.min(V3_EXPO_PORTFOLIO_MAX, portfolio) + getV3ExpoExperience(state)
 }
 
 export function validateV3ExpoEntry(state: V3GameState, blueprintId: string): { blocker: V3ExpoBlocker; params?: Record<string, number> } | null {

@@ -37,17 +37,37 @@ assertBlocked(gate.state, { type: 'enter_expo', blueprintId: V3_DEFAULT_BLUEPRIN
 const noStock = { ...gate.state, variantInventory: {} }
 assertBlocked(noStock, { type: 'enter_expo', blueprintId: gate.id }, 'v3.expo.insufficient_samples')
 
-// ---- A strong recipe wins year 1; prize is a grant, samples are debited ----
-const before = gate.state
-const won = act(gate.state, { type: 'enter_expo', blueprintId: gate.id })
-const entry = won.expoResults[0]
+// ---- A flagship (Q80, fame Lv6) wins year 1; prize is a grant, samples are debited ----
+// V3-18 calibration: rivals open at ~88–89, so ordinary recipes cannot win.
+assert.ok(act(gate.state, { type: 'enter_expo', blueprintId: gate.id }).expoResults[0].rank > 1, 'Q70 at fame Lv2 loses')
+const rookie = fixture(V3_EXPO_MONTH, 150, 80)
+assert.ok(act(rookie.state, { type: 'enter_expo', blueprintId: rookie.id }).expoResults[0].rank > 1, 'a first-time Q80 entry cannot win (calibrated field ~99–100)')
+// Experience: 15 earlier entries (+3) lets the flagship beat the field.
+const veteranBase = fixture(V3_EXPO_MONTH, 150, 80, 16)
+const flagship = {
+  id: veteranBase.id,
+  state: {
+    ...veteranBase.state,
+    // Full portfolio (8 developed recipes) as a labelled fixture.
+    productBlueprints: {
+      ...veteranBase.state.productBlueprints,
+      ...Object.fromEntries(Array.from({ length: 7 }, (_, index) => {
+        const id = `blueprint:fixture:portfolio:${index}`
+        return [id, { ...veteranBase.state.productBlueprints[veteranBase.id], id, signature: id, quality: 60 }]
+      })),
+    },
+    expoResults: Array.from({ length: 15 }, (_, index) => ({ year: index + 1, blueprintId: veteranBase.id, family: 'gasoline' as const, quality: 80, score: 90, rank: 5, rivalScores: [99, 99, 99, 99], cashCents: 0, reputation: 1 })) },
+}
+const before = flagship.state
+const won = act(flagship.state, { type: 'enter_expo', blueprintId: flagship.id })
+const entry = won.expoResults.at(-1)!
 assert.equal(entry.rank, 1)
-assert.equal(entry.score, getV3ExpoScore(before, 70))
+assert.equal(entry.score, getV3ExpoScore(before, 80))
 assert.equal(won.world.moneyCents - before.world.moneyCents, V3_EXPO_PRIZES[0].cashCents)
 assert.equal(won.world.reputation - before.world.reputation, V3_EXPO_PRIZES[0].reputation)
-assert.equal(won.variantInventory[gate.id].quantity, 10, '10 sample units consumed')
+assert.equal(won.variantInventory[flagship.id].quantity, 10, '10 sample units consumed')
 assert.ok(getV3RollingOperatingProfit({ ...won, world: { ...won.world, tickCount: 2_000 } }).cents <= 0, 'prize never counts as operating profit')
-assertBlocked(won, { type: 'enter_expo', blueprintId: gate.id }, 'v3.expo.already_entered')
+assertBlocked(won, { type: 'enter_expo', blueprintId: flagship.id }, 'v3.expo.already_entered')
 
 // ---- A weak recipe late in the game ranks low but still earns participation fame ----
 const late = fixture(V3_EXPO_MONTH, 20, 45, 6)
@@ -58,11 +78,11 @@ assert.equal(lost.world.reputation - late.state.world.reputation, 1)
 
 // ---- Next year's expo is a fresh entry; history round-trips ----
 let next = { ...won, world: { ...won.world, tickCount: won.world.tickCount + 12 * 300 } }
-next = act(next, { type: 'enter_expo', blueprintId: gate.id })
-assert.deepEqual(next.expoResults.map((result) => result.year), [1, 2])
+next = act(next, { type: 'enter_expo', blueprintId: flagship.id })
+assert.deepEqual(next.expoResults.slice(-2).map((result) => result.year), [16, 17])
 assert.equal(parseV3GameState(JSON.parse(JSON.stringify(next))).status, 'loaded')
 const tampered = JSON.parse(JSON.stringify(next))
-tampered.expoResults[1].year = 1
+tampered.expoResults[16].year = 16
 assert.equal(parseV3GameState(tampered).status, 'invalid', 'two entries in one year are rejected')
 
 console.log('PASS: V3-21d expo — month/fame/recipe/sample gates, deterministic judging, grant prize, once per year, history')

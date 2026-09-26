@@ -33,7 +33,7 @@
     "check:v3-yard": "node --import tsx scripts/yard-check.ts",
     "check:v3-layout-events": "node --import tsx scripts/layout-events-check.ts",
     "check:v3-c1-softlock": "node --import tsx scripts/c1-softlock-check.ts",
-    "check:v3-legal-run": "node --import tsx scripts/v3-legal-full-run.ts",
+    "check:v3-legal-run": "V3_RUN_DECISION_TICKS=100 node --import tsx scripts/v3-legal-full-run.ts",
     "check:v3-persistence": "node --import tsx scripts/persistence-cutover-check.ts",
     "check:v3-fame": "node --import tsx scripts/fame-check.ts",
     "check:v3-market": "node --import tsx scripts/market-check.ts",
