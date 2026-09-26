@@ -37,8 +37,9 @@
   in 38.2 simulated minutes (`check:v3-legal-run`) — too fast, feeds V3-18.
 - R3 gate: **passed** (player, APK #78).
 - V3-17 (production cutover, real-time loop, single writer, reset): **complete in code**.
-- **Current task: V3-18** — legal full-loop simulation and economy calibration
-  (baseline: the legal bot clears in 38.2 simulated minutes — far too fast).
+- V3-20 (Kairosoft-style main screen, isometric yard with existing art): **complete in code**.
+- **Current task: V3-20 device check**, then V3-21 content selection, V3-18
+  calibration (target 5–8 h; legal bot baseline 38.2 min), V3-19 acceptance.
 
 ## Decisions recorded
 

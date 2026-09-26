@@ -148,3 +148,64 @@ export function deriveV3RoadNetwork(state: V3GameState): V3RoadNode[] {
   }
   return [...nodes.values()].sort((a, b) => a.y - b.y || a.x - b.x)
 }
+
+// ---- Isometric projection (Kairosoft-style diamond tiles, art-independent) ----
+export const V3_ISO = { tw: 64, th: 32 } as const
+
+export function v3IsoPoint(x: number, y: number): { sx: number; sy: number } {
+  return { sx: (x - y) * V3_ISO.tw / 2, sy: (x + y) * V3_ISO.th / 2 }
+}
+
+/** Inverse projection: screen/world pixel → tile containing it. */
+export function v3IsoToTile(sx: number, sy: number): { x: number; y: number } {
+  const a = sx / (V3_ISO.tw / 2)
+  const b = sy / (V3_ISO.th / 2)
+  return { x: Math.floor((a + b) / 2), y: Math.floor((b - a) / 2) }
+}
+
+/** Diamond corners of a tile rectangle (top, right, bottom, left). */
+export function v3IsoRect(rect: V3Rect): Array<{ sx: number; sy: number }> {
+  return [
+    v3IsoPoint(rect.x, rect.y),
+    v3IsoPoint(rect.x + rect.w, rect.y),
+    v3IsoPoint(rect.x + rect.w, rect.y + rect.h),
+    v3IsoPoint(rect.x, rect.y + rect.h),
+  ]
+}
+
+/** Pixel bounds of drawn land after projection (camera limits). */
+export function getV3IsoBounds(state: V3GameState): { minX: number; minY: number; maxX: number; maxY: number } {
+  const corners = getV3ParcelViews(state).flatMap((parcel) => v3IsoRect(parcel))
+  return {
+    minX: Math.min(...corners.map((corner) => corner.sx)),
+    minY: Math.min(...corners.map((corner) => corner.sy)),
+    maxX: Math.max(...corners.map((corner) => corner.sx)),
+    maxY: Math.max(...corners.map((corner) => corner.sy)),
+  }
+}
+
+/**
+ * Sprite placement for a building: square art whose base diamond sits on the
+ * footprint. Returned in draw order (back to front) so overlaps look right.
+ */
+export function getV3SpritePlacements(state: V3GameState): Array<V3BuildingView & { px: number; py: number; size: number; depth: number }> {
+  return getV3BuildingViews(state).map((building) => {
+    const [top, right, bottom, left] = v3IsoRect(building)
+    const width = right.sx - left.sx
+    const size = width * 1.3
+    const centerX = (left.sx + right.sx) / 2
+    void top
+    return { ...building, px: centerX - size / 2, py: bottom.sy - size * 0.92, size, depth: building.x + building.w + building.y + building.h }
+  }).sort((a, b) => a.depth - b.depth || a.id.localeCompare(b.id))
+}
+
+// ---- In-game calendar: 1 month = 60 s simulated; 1 year = 12 months = one award period ----
+export const V3_TICKS_PER_MONTH = 300
+export function getV3Calendar(tickCount: number): { year: number; month: number; week: number } {
+  const months = Math.floor(tickCount / V3_TICKS_PER_MONTH)
+  return {
+    year: Math.floor(months / 12) + 1,
+    month: (months % 12) + 1,
+    week: Math.floor((tickCount % V3_TICKS_PER_MONTH) / (V3_TICKS_PER_MONTH / 4)) + 1,
+  }
+}

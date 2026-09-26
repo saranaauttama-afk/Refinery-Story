@@ -26,7 +26,11 @@ import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
 import { findV3PlacementSpot, getV3BuildingType, listV3Buildings } from '../src/game/v3/yard'
 import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
-import { V3YardPanel } from '../src/components/v3/V3YardPanel'
+import { V3YardPanel, useV3YardController } from '../src/components/v3/V3YardPanel'
+import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
+import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
+import { getV3Calendar } from '../src/game/v3/yardView'
+import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
 import { v3JobLabel } from '../src/components/v3/v3Labels'
 import { useLang } from '../src/hooks/SettingsContext'
@@ -144,6 +148,10 @@ function guidanceText(step: V3GuidanceStep, translate: (value: BilingualTextValu
   return translate(copy[step])
 }
 
+type V3Tab = 'build' | 'staff' | 'products' | 'clients' | 'reports'
+type TimedFloater = Omit<V3Floater, 'age'> & { born: number }
+const FLOATER_MS = 1_600
+
 export default function V3GameScreen() {
   const router = useRouter()
   const { t } = useLang()
@@ -151,6 +159,16 @@ export default function V3GameScreen() {
   const [state, setState] = useState<V3GameState | null>(null)
   const [lastEvent, setLastEvent] = useState<V3ActionEvent | null>(null)
   const [pauseState, setPauseState] = useState(V3_INITIAL_PAUSE_STATE)
+  const [tab, setTab] = useState<V3Tab | null>(null)
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 })
+  const [timedFloaters, setTimedFloaters] = useState<TimedFloater[]>([])
+  const outputRef = useRef<Record<string, number>>({})
+  const floaterSeq = useRef(0)
+  const pushFloater = (floater: Omit<TimedFloater, 'id' | 'born'>) => {
+    floaterSeq.current += 1
+    const entry = { ...floater, id: `f${floaterSeq.current}`, born: Date.now() }
+    setTimedFloaters((current) => [...current.filter((item) => Date.now() - item.born < FLOATER_MS), entry].slice(-24))
+  }
 
   useEffect(() => {
     loadV3GameState().then(async (result) => {
@@ -161,6 +179,8 @@ export default function V3GameScreen() {
       }
     })
   }, [])
+
+  const yard = useV3YardController(state ?? createInitialV3GameState())
 
   // Latest state for the real-time loop and autosave (the only V3 writer).
   const stateRef = useRef<V3GameState | null>(null)
@@ -192,7 +212,20 @@ export default function V3GameScreen() {
       last = now
       let next = stateRef.current
       if (!next || step.ticks === 0) return
-      for (let remaining = step.ticks; remaining > 0; remaining -= 25) next = runV3ProductionTick(next, Math.min(25, remaining)).state
+      const cycleBefore = Math.floor(next.world.tickCount / 25)
+      for (let remaining = step.ticks; remaining > 0; remaining -= 25) {
+        const result = runV3ProductionTick(next, Math.min(25, remaining))
+        for (const line of result.lines) outputRef.current[line.buildingId] = (outputRef.current[line.buildingId] ?? 0) + line.outputQuantity
+        next = result.state
+      }
+      // Kairosoft-style "+N" over each producing line once per 5 s cycle.
+      if (Math.floor(next.world.tickCount / 25) > cycleBefore) {
+        for (const [buildingId, quantity] of Object.entries(outputRef.current)) {
+          const building = next.world.buildingsById[buildingId]
+          if (building && quantity >= 0.5) pushFloater({ x: building.x, y: building.y, text: `+${quantity.toFixed(0)}`, color: '#FFFFFF' })
+        }
+        outputRef.current = {}
+      }
       stateRef.current = next
       dirtyRef.current = true
       setState(next)
@@ -219,6 +252,11 @@ export default function V3GameScreen() {
     const result = reduceV3Action(current, action)
     setLastEvent(result.events[0] ?? null)
     if (result.changed) {
+      const gained = result.state.world.moneyCents - current.world.moneyCents
+      if (gained >= 100) {
+        const anchor = Object.values(result.state.world.buildingsById).find((building) => building.type === 'gasolineTank') ?? Object.values(result.state.world.buildingsById)[0]
+        if (anchor) pushFloater({ x: anchor.x, y: anchor.y, text: `+$${Math.floor(gained / 100).toLocaleString()}`, color: '#FFD447' })
+      }
       stateRef.current = result.state
       setState(result.state)
       dirtyRef.current = false
@@ -275,7 +313,7 @@ export default function V3GameScreen() {
   if (!state) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}><Text style={styles.title}>Gameplay V3</Text></View>
+        <View style={styles.header}><Text style={styles.title}>Refinery Story</Text></View>
         <View style={styles.errorCard}>
           <Text style={styles.errorTitle}>{t({ en: 'V3 save cannot be opened', th: 'เปิดเซฟ V3 ไม่ได้' })}</Text>
           <Text style={styles.body}>{loadResult.reason}</Text>
@@ -315,83 +353,95 @@ export default function V3GameScreen() {
   const recoveryOffer = getV3RecoveryOffer(state)
   const effectiveSpeed = getV3EffectiveSpeed(pauseState)
 
+  const now = Date.now()
+  const floaters: V3Floater[] = timedFloaters
+    .filter((floater) => now - floater.born < FLOATER_MS)
+    .map((floater) => ({ ...floater, age: (now - floater.born) / FLOATER_MS }))
+  const alerts: Record<string, string> = {}
+  for (const line of evaluateV3Production(state, 25).lines) {
+    if (line.status === 'invalid' || line.status === 'paused' || line.limitedBy !== 'none') alerts[line.buildingId] = line.limitedBy !== 'none' ? line.limitedBy : line.status
+  }
+  const calendar = getV3Calendar(state.world.tickCount)
+  const money = (cents: number) => `$${Math.floor(cents / 100).toLocaleString()}`
+  const tabs: Array<{ key: V3Tab; label: BilingualTextValue; icon: string }> = [
+    { key: 'build', label: { en: 'Build', th: 'สร้าง' }, icon: '🏗️' },
+    { key: 'staff', label: { en: 'Staff', th: 'พนักงาน' }, icon: '👷' },
+    { key: 'products', label: { en: 'Products', th: 'สินค้า' }, icon: '🧪' },
+    { key: 'clients', label: { en: 'Clients', th: 'ลูกค้า' }, icon: '🤝' },
+    { key: 'reports', label: { en: 'Reports', th: 'รายงาน' }, icon: '📊' },
+  ]
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.kicker}>NEW RULESET · DEVELOPMENT</Text>
-          <Text style={styles.title}>Gameplay V3 Foundation</Text>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={styles.hud}>
+        <View style={styles.hudRow}>
+          <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
+          <Text style={styles.hudItem}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} เดือน ${calendar.month} สัปดาห์ ${calendar.week}` })}</Text>
+          <Text style={styles.hudItem}>🔬 {Math.floor(state.world.researchPoints)}</Text>
+          <Text style={styles.hudItem}>C{state.campaignProgress.chapter}</Text>
+          <Pressable onPress={() => router.push('/settings')} hitSlop={10}><Text style={styles.hudItem}>⚙️</Text></Pressable>
         </View>
-        <Pressable onPress={() => router.push('/settings')}><Text style={styles.back}>{t({ en: 'Settings', th: 'ตั้งค่า' })}</Text></Pressable>
-      </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>{t({ en: 'Fresh V3 game', th: 'เกม V3 เริ่มใหม่ทั้งหมด' })}</Text>
-          <Text style={styles.body}>{t({ en: 'This save does not migrate or depend on the old game. Production runs only through the new per-cell V3 rules.', th: 'เซฟนี้ไม่ย้ายหรือพึ่งข้อมูลเกมเดิม การผลิตทำงานผ่านกฎ V3 แบบรายช่องเท่านั้น' })}</Text>
-        </View>
-
-        <View style={styles.stats}>
-          <View style={styles.stat}><Text style={styles.statLabel}>Cash</Text><Text style={styles.statValue}>${(state.world.moneyCents / 100).toLocaleString()}</Text></View>
-          <View style={styles.stat}><Text style={styles.statLabel}>Crude</Text><Text style={styles.statValue}>{state.world.crudeOil}/{crudeCapacity}</Text></View>
-          <View style={styles.stat}><Text style={styles.statLabel}>Gas</Text><Text style={styles.statValue}>{gasoline.toFixed(1)}/{gasolineCapacity}</Text></View>
-          <View style={styles.stat}><Text style={styles.statLabel}>Chapter</Text><Text style={styles.statValue}>C{state.campaignProgress.chapter}</Text></View>
-        </View>
-
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>{t({ en: 'Next objective', th: 'เป้าหมายถัดไป' })}</Text>
-          <Text style={styles.body}>{guidanceText(guidance, t)}</Text>
-          <Text style={styles.row}>{t({ en: 'Simulation', th: 'การจำลอง' })}: {effectiveSpeed === 0 ? t({ en: 'Paused by screen/modal', th: 'พักโดยหน้าจอ/หน้าต่างยืนยัน' }) : `${effectiveSpeed}×`}</Text>
+        <View style={styles.hudRow}>
+          <Text style={styles.hudSmall}>🛢️ {state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} · ⛽ {gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} · ⚡ {state.world.electricity.toFixed(0)}</Text>
           <View style={styles.speedRow}>
             {([0, 1, 2, 3] as const).map((value) => (
               <Pressable
                 key={value}
                 accessibilityState={{ selected: pauseState.selectedSpeed === value }}
-                style={[styles.secondary, styles.speedButton, pauseState.selectedSpeed === value && styles.speedActive]}
+                style={[styles.speedChip, pauseState.selectedSpeed === value && styles.speedActive]}
                 onPress={() => setPauseState((current) => setV3SelectedSpeed(current, value))}
               >
-                <Text style={styles.secondaryText}>{value === 0 ? t({ en: 'Pause', th: 'หยุด' }) : `${value}×`}</Text>
+                <Text style={styles.speedText}>{value === 0 ? '⏸' : `${value}×`}</Text>
               </Pressable>
             ))}
           </View>
+        </View>
+      </View>
+
+      <View style={styles.mapArea} onLayout={(event) => setMapSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
+        {mapSize.width > 0 && (
+          <V3YardView
+            state={state}
+            width={mapSize.width}
+            height={mapSize.height}
+            selectedId={yard.mapSelectedId}
+            highlightParcelId={yard.parcelId}
+            placement={yard.placement}
+            upgradeGrowth={yard.upgradeGrowth}
+            floaters={floaters}
+            alerts={alerts}
+            onTapTile={yard.onTapTile}
+          />
+        )}
+        <View style={styles.goalBanner} pointerEvents="box-none">
+          <Text style={styles.goalTitle}>{t({ en: 'Goal', th: 'เป้าหมาย' })}</Text>
+          <Text style={styles.goalText}>{guidanceText(guidance, t)}</Text>
           {guidance === 'build_laboratory' && labSpot && (
             <Pressable style={styles.primary} onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, ...labSpot, building: 'laboratory' })}>
               <Text style={styles.primaryText}>{t({ en: 'Build Laboratory Lv1 · $400', th: 'สร้าง Laboratory Lv1 · $400' })}</Text>
             </Pressable>
           )}
+          {effectiveSpeed === 0 && pauseState.selectedSpeed !== 0 && <Text style={styles.goalText}>{t({ en: 'Paused while a dialog is open', th: 'หยุดชั่วคราวระหว่างเปิดหน้าต่าง' })}</Text>}
+          {lastEvent && lastEvent.tone !== 'success' && <Text style={styles.goalWarning}>{eventText(lastEvent, t)}</Text>}
         </View>
+        <View style={styles.overlayBottom} pointerEvents="box-none">
+          <ScrollView style={styles.overlayScroll} contentContainerStyle={styles.overlayContent} keyboardShouldPersistTaps="handled">
+            <V3YardPanel section="overlay" state={state} yard={yard} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
+          </ScrollView>
+        </View>
+      </View>
 
-        {(recoveryOffer.tollingAvailable || recoveryOffer.missingBuildings.length > 0 || state.recoveryState?.status === 'running') && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t({ en: 'Safe recovery', th: 'กู้สถานการณ์' })}</Text>
-            {state.recoveryState?.status === 'running' ? (
-              <Text style={styles.row}>{t({ en: 'Customer tolling', th: 'งานกลั่นวัตถุดิบลูกค้า' })}: {(state.recoveryState.remainingTicks / 5).toFixed(0)}s · {t({ en: 'operating debits paused', th: 'พักรายจ่ายดำเนินงาน' })}</Text>
-            ) : recoveryOffer.tollingAvailable ? (
-              <Pressable style={styles.primary} onPress={() => apply({ type: 'start_recovery', sequence: state.nextActionSequence })}>
-                <Text style={styles.primaryText}>{t({ en: `Run 20s tolling · restore up to $${(recoveryOffer.cashDeficitCents / 100).toFixed(0)}`, th: `รับงานช่วยกลั่น 20 วินาที · เติมส่วนขาดสูงสุด $${(recoveryOffer.cashDeficitCents / 100).toFixed(0)}` })}</Text>
-              </Pressable>
-            ) : null}
-            {recoveryOffer.missingBuildings.length > 0 && (
-              <>
-                <Text style={styles.row}>{t({ en: 'Missing starter route', th: 'เส้นเริ่มต้นที่ขาด' })}: {recoveryOffer.missingBuildings.join(', ')}</Text>
-                {recoveryOffer.emptySlotsNeeded > 0 ? (
-                  <>
-                    <Text style={styles.warning}>{t({ en: 'Not enough free land for the loaners. Nothing is removed automatically.', th: 'ที่ดินว่างไม่พอสำหรับอาคารยืม ระบบจะไม่รื้อให้อัตโนมัติ' })}</Text>
-                    {listV3Buildings(state).map((building) => building ? (
-                      <Pressable key={`clear-${building.id}`} style={styles.secondary} onPress={() => confirmDemolish(building.id)}>
-                        <Text style={styles.secondaryText}>{t({ en: `Review removal · ${building.type} @(${building.x},${building.y})`, th: `ตรวจสอบการรื้อ · ${building.type} @(${building.x},${building.y})` })}</Text>
-                      </Pressable>
-                    ) : null)}
-                  </>
-                ) : (
-                  <Pressable style={styles.secondary} onPress={() => apply({ type: 'restore_starter_loaners', sequence: state.nextActionSequence })}>
-                    <Text style={styles.secondaryText}>{t({ en: 'Restore missing zero-refund loaners', th: 'วางตึกยืมที่ขาด (รื้อแล้วไม่ได้เงิน)' })}</Text>
-                  </Pressable>
-                )}
-              </>
-            )}
+      {tab && (
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{t(tabs.find((entry) => entry.key === tab)!.label)}</Text>
+            <Pressable onPress={() => setTab(null)} hitSlop={12}><Text style={styles.sheetClose}>✕</Text></Pressable>
           </View>
-        )}
-
+          <ScrollView contentContainerStyle={styles.content}>
+            {tab === 'build' && <V3YardPanel section="sheet" state={state} yard={yard} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} onClose={() => setTab(null)} />}
+            {tab === 'staff' && <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />}
+            {tab === 'products' && (
+              <>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{activeBlueprint
             ? `${t({ en: 'Gasoline line', th: 'ไลน์ Gasoline' })} · ${activeBlueprint.name} Q${activeBlueprint.quality}`
@@ -408,9 +458,44 @@ export default function V3GameScreen() {
             </Pressable>
           )}
         </View>
-
-        <V3MidgamePanels state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
-
+                <V3MidgamePanels state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{t({ en: 'Gasoline development', th: 'พัฒนาสูตร Gasoline' })}</Text>
+          <Text style={styles.row}>{t({ en: 'Certified recipes', th: 'สูตรที่รับรองแล้ว' })}: {gasolineBlueprints.map((blueprint) => `${blueprint.name} Q${blueprint.quality}`).join(' · ')}</Text>
+          {distillationBuildingId && gasolineBlueprints.map((blueprint) => (
+            <Pressable key={blueprint.id} style={styles.secondary} onPress={() => apply({
+              type: 'set_program', sequence: state.nextActionSequence, buildingId: distillationBuildingId!, blueprintId: blueprint.id,
+            })}>
+              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId!]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
+            </Pressable>
+          ))}
+          <Text style={styles.row}>{t({ en: 'Prototype choices', th: 'สูตรต้นแบบ' })}: Volume Q35 · Standard Q40 · Precision Q55</Text>
+          {state.developmentProject ? (
+            <>
+              <Text style={styles.row}>{state.developmentProject.profile} Q{state.developmentProject.quality} · {(state.developmentProject.remainingTicks / 5).toFixed(0)}s</Text>
+              <Pressable style={styles.secondary} onPress={() => apply({ type: 'cancel_development', sequence: state.nextActionSequence })}>
+                <Text style={styles.secondaryText}>{t({ en: 'Cancel project (spent inputs stay spent)', th: 'ยกเลิกโครงการ (ไม่คืนของที่ใช้แล้ว)' })}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable style={styles.secondary} onPress={() => apply({
+                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: null, labBuildingId: labBuildingId ?? '',
+              })}>
+                <Text style={styles.secondaryText}>{t({ en: 'Develop Volume Q35 · 10 Gas + $50', th: 'พัฒนา Volume Q35 · Gas 10 + $50' })}</Text>
+              </Pressable>
+              <Pressable style={styles.secondary} onPress={() => apply({
+                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: starterOperator.id, labBuildingId: labBuildingId ?? '',
+              })}>
+                <Text style={styles.secondaryText}>{t({ en: 'Develop Precision Q55 with Niran', th: 'พัฒนา Precision Q55 โดย Niran' })}</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+              </>
+            )}
+            {tab === 'clients' && (
+              <>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Customers & shipments', th: 'ลูกค้าและการจัดส่ง' })}</Text>
           {activeJob ? (
@@ -459,84 +544,44 @@ export default function V3GameScreen() {
             </>
           )}
         </View>
-
-        <V3YardPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
-
-        <V3InboxPanel state={state} apply={(action) => { void apply(action) }} t={t} />
-
-        <V3CampaignPanel state={state} t={t} />
-
-        <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Gasoline development', th: 'พัฒนาสูตร Gasoline' })}</Text>
-          <Text style={styles.row}>{t({ en: 'Certified recipes', th: 'สูตรที่รับรองแล้ว' })}: {gasolineBlueprints.map((blueprint) => `${blueprint.name} Q${blueprint.quality}`).join(' · ')}</Text>
-          {distillationBuildingId && gasolineBlueprints.map((blueprint) => (
-            <Pressable key={blueprint.id} style={styles.secondary} onPress={() => apply({
-              type: 'set_program', sequence: state.nextActionSequence, buildingId: distillationBuildingId!, blueprintId: blueprint.id,
-            })}>
-              <Text style={styles.secondaryText}>{state.plantPrograms[distillationBuildingId!]?.blueprintId === blueprint.id ? '✓ ' : ''}{t({ en: `Use ${blueprint.name} Q${blueprint.quality}`, th: `ใช้ ${blueprint.name} Q${blueprint.quality}` })}</Text>
-            </Pressable>
-          ))}
-          <Text style={styles.row}>{t({ en: 'Prototype choices', th: 'สูตรต้นแบบ' })}: Volume Q35 · Standard Q40 · Precision Q55</Text>
-          {state.developmentProject ? (
-            <>
-              <Text style={styles.row}>{state.developmentProject.profile} Q{state.developmentProject.quality} · {(state.developmentProject.remainingTicks / 5).toFixed(0)}s</Text>
-              <Pressable style={styles.secondary} onPress={() => apply({ type: 'cancel_development', sequence: state.nextActionSequence })}>
-                <Text style={styles.secondaryText}>{t({ en: 'Cancel project (spent inputs stay spent)', th: 'ยกเลิกโครงการ (ไม่คืนของที่ใช้แล้ว)' })}</Text>
+                <V3OffersPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
+              </>
+            )}
+            {tab === 'reports' && (
+              <>
+        {(recoveryOffer.tollingAvailable || recoveryOffer.missingBuildings.length > 0 || state.recoveryState?.status === 'running') && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t({ en: 'Safe recovery', th: 'กู้สถานการณ์' })}</Text>
+            {state.recoveryState?.status === 'running' ? (
+              <Text style={styles.row}>{t({ en: 'Customer tolling', th: 'งานกลั่นวัตถุดิบลูกค้า' })}: {(state.recoveryState.remainingTicks / 5).toFixed(0)}s · {t({ en: 'operating debits paused', th: 'พักรายจ่ายดำเนินงาน' })}</Text>
+            ) : recoveryOffer.tollingAvailable ? (
+              <Pressable style={styles.primary} onPress={() => apply({ type: 'start_recovery', sequence: state.nextActionSequence })}>
+                <Text style={styles.primaryText}>{t({ en: `Run 20s tolling · restore up to $${(recoveryOffer.cashDeficitCents / 100).toFixed(0)}`, th: `รับงานช่วยกลั่น 20 วินาที · เติมส่วนขาดสูงสุด $${(recoveryOffer.cashDeficitCents / 100).toFixed(0)}` })}</Text>
               </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable style={styles.secondary} onPress={() => apply({
-                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: null, labBuildingId: labBuildingId ?? '',
-              })}>
-                <Text style={styles.secondaryText}>{t({ en: 'Develop Volume Q35 · 10 Gas + $50', th: 'พัฒนา Volume Q35 · Gas 10 + $50' })}</Text>
-              </Pressable>
-              <Pressable style={styles.secondary} onPress={() => apply({
-                type: 'start_development', sequence: state.nextActionSequence, family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: starterOperator.id, labBuildingId: labBuildingId ?? '',
-              })}>
-                <Text style={styles.secondaryText}>{t({ en: 'Develop Precision Q55 with Niran', th: 'พัฒนา Precision Q55 โดย Niran' })}</Text>
-              </Pressable>
-            </>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Foundation status', th: 'สถานะระบบพื้นฐาน' })}</Text>
-          <Text style={styles.row}>✓ Ruleset 3 save and deterministic IDs</Text>
-          <Text style={styles.row}>✓ Five Standard Q40 blueprints</Text>
-          <Text style={styles.row}>✓ Starter trio and named Operator</Text>
-          <Text style={styles.row}>✓ Blueprint, inventory, duty, job, ledger and campaign schema</Text>
-          <Text style={styles.row}>✓ Shared build / upgrade / trade validation boundary</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Action boundary smoke test', th: 'ทดสอบคำสั่งกลาง' })}</Text>
-          <Text style={styles.body}>{eventText(lastEvent, t)}</Text>
-          <Pressable
-            style={styles.primary}
-            disabled={!tankSpot}
-            onPress={() => tankSpot && apply({ type: 'build', sequence: state.nextActionSequence, ...tankSpot, building: 'gasolineTank' })}
-          >
-            <Text style={styles.primaryText}>Build {t(BUILDINGS.gasolineTank.name)} · $150</Text>
-          </Pressable>
-          {distillationBuildingId && (
-            <Pressable
-              style={styles.secondary}
-              onPress={() => apply({ type: 'upgrade', sequence: state.nextActionSequence, buildingId: distillationBuildingId })}
-            >
-              <Text style={styles.secondaryText}>{t({ en: 'Try Distillation upgrade', th: 'ลองอัปเกรด Distillation' })}</Text>
-            </Pressable>
-          )}
-          <Pressable
-            style={styles.secondary}
-            onPress={() => apply({ type: 'trade', sequence: state.nextActionSequence, direction: 'buy', product: 'crude', quantity: 5 })}
-          >
-            <Text style={styles.secondaryText}>{t({ en: 'Buy 5 crude · $50', th: 'ซื้อ crude 5 หน่วย · $50' })}</Text>
-          </Pressable>
-        </View>
-
+            ) : null}
+            {recoveryOffer.missingBuildings.length > 0 && (
+              <>
+                <Text style={styles.row}>{t({ en: 'Missing starter route', th: 'เส้นเริ่มต้นที่ขาด' })}: {recoveryOffer.missingBuildings.join(', ')}</Text>
+                {recoveryOffer.emptySlotsNeeded > 0 ? (
+                  <>
+                    <Text style={styles.warning}>{t({ en: 'Not enough free land for the loaners. Nothing is removed automatically.', th: 'ที่ดินว่างไม่พอสำหรับอาคารยืม ระบบจะไม่รื้อให้อัตโนมัติ' })}</Text>
+                    {listV3Buildings(state).map((building) => building ? (
+                      <Pressable key={`clear-${building.id}`} style={styles.secondary} onPress={() => confirmDemolish(building.id)}>
+                        <Text style={styles.secondaryText}>{t({ en: `Review removal · ${building.type} @(${building.x},${building.y})`, th: `ตรวจสอบการรื้อ · ${building.type} @(${building.x},${building.y})` })}</Text>
+                      </Pressable>
+                    ) : null)}
+                  </>
+                ) : (
+                  <Pressable style={styles.secondary} onPress={() => apply({ type: 'restore_starter_loaners', sequence: state.nextActionSequence })}>
+                    <Text style={styles.secondaryText}>{t({ en: 'Restore missing zero-refund loaners', th: 'วางตึกยืมที่ขาด (รื้อแล้วไม่ได้เงิน)' })}</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </View>
+        )}
+                <V3CampaignPanel state={state} t={t} />
+                <V3InboxPanel state={state} apply={(action) => { void apply(action) }} t={t} />
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Financial ledger', th: 'บัญชีการเงิน' })}</Text>
           <Text style={styles.row}>{t({ en: 'Buildings', th: 'อาคาร' })}: {buildings}</Text>
@@ -558,12 +603,51 @@ export default function V3GameScreen() {
         >
           <Text style={styles.resetText}>{t({ en: 'Reset V3 development save', th: 'รีเซ็ตเซฟพัฒนา V3' })}</Text>
         </Pressable>
-      </ScrollView>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      )}
+
+      <View style={styles.tabBar}>
+        {tabs.map((entry) => (
+          <Pressable key={entry.key} style={[styles.tabButton, tab === entry.key && styles.tabActive]} onPress={() => setTab(tab === entry.key ? null : entry.key)}>
+            <Text style={styles.tabIcon}>{entry.icon}</Text>
+            <Text style={styles.tabLabel}>{t(entry.label)}</Text>
+            {entry.key === 'reports' && state.inbox.items.length > 0 && <View style={styles.badge} />}
+          </Pressable>
+        ))}
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  hud: { backgroundColor: '#10222F', paddingHorizontal: 12, paddingVertical: 6, gap: 4, borderBottomWidth: 2, borderBottomColor: '#274B63' },
+  hudRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  hudMoney: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 20 },
+  hudItem: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
+  hudSmall: { color: '#A9C1CF', fontSize: 12, flexShrink: 1 },
+  speedChip: { minWidth: 38, minHeight: 32, borderRadius: 6, borderWidth: 1, borderColor: '#3F6680', alignItems: 'center', justifyContent: 'center', backgroundColor: '#163A52' },
+  speedText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12 },
+  mapArea: { flex: 1 },
+  goalBanner: { position: 'absolute', top: 8, left: 8, right: 8, backgroundColor: 'rgba(13,43,64,0.88)', borderRadius: 10, borderWidth: 1, borderColor: '#6ACDB4', padding: 8, gap: 4 },
+  goalTitle: { color: '#A9F3D9', fontFamily: fonts.heading, fontSize: 12 },
+  goalText: { color: '#E8F0F4', fontSize: 13, lineHeight: 18 },
+  goalWarning: { color: '#FFAD8A', fontSize: 12 },
+  overlayBottom: { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: '55%' },
+  overlayScroll: { flexGrow: 0 },
+  overlayContent: { gap: 8 },
+  sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '62%', backgroundColor: '#0B1D29', borderTopLeftRadius: 16, borderTopRightRadius: 16, borderTopWidth: 2, borderColor: '#274B63' },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10 },
+  sheetTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 18 },
+  sheetClose: { color: '#D5E2E9', fontSize: 20 },
+  tabBar: { flexDirection: 'row', backgroundColor: '#10222F', borderTopWidth: 2, borderTopColor: '#274B63', height: 64 },
+  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  tabActive: { backgroundColor: '#1D4460' },
+  tabIcon: { fontSize: 20 },
+  tabLabel: { color: '#E8F0F4', fontSize: 11, fontFamily: fonts.heading },
+  badge: { position: 'absolute', top: 8, right: '28%', width: 9, height: 9, borderRadius: 5, backgroundColor: '#FF6B5B' },
   speedRow: { flexDirection: 'row', gap: 6 },
   speedButton: { flex: 1 },
   speedActive: { borderColor: '#6ACDB4', backgroundColor: '#2E6C63' },
