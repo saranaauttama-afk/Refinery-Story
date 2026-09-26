@@ -13,6 +13,16 @@ import {
   getV3UnlockedArea,
   validateV3Placement,
 } from '../src/game/v3/yard'
+import {
+  V3_TILE_PX,
+  deriveV3RoadNetwork,
+  getV3BuildingViews,
+  getV3ParcelViews,
+  getV3PlacementPreview,
+  getV3UpgradePreview,
+  getV3VisibleTileRange,
+  getV3YardBounds,
+} from '../src/game/v3/yardView'
 import { act, assertBlocked, attempt, buildAnywhere } from './v3-check-helpers'
 
 const DISTILL = V3_STARTER_BUILDINGS.distillationUnit.id
@@ -172,6 +182,30 @@ assert.equal(parseV3GameState(skippedRing).status, 'invalid', 'parcel without it
 const reset = createInitialV3GameState()
 assert.deepEqual(reset.world.unlockedParcelIds, ['core'])
 assert.equal(Object.keys(reset.world.buildingsById).length, 3)
+// ---- Renderer model: only owned + adjacent parcels, culling, previews, roads ----
+const fresh = createInitialV3GameState()
+const views = getV3ParcelViews(fresh)
+assert.deepEqual(views.map((view) => view.id).sort(), ['core', 'ring1:east', 'ring1:north', 'ring1:south', 'ring1:west'])
+assert.ok(views.filter((view) => view.id !== 'core').every((view) => view.state === 'locked'), 'C0: ring1 shown as locked with a reason')
+assert.deepEqual(getV3YardBounds(fresh), { x: 43, y: 43, w: 14, h: 14 }, 'camera bounds cover drawn land, not 100×100')
+const visible = getV3VisibleTileRange({ width: 240, height: 240 }, { tx: -43 * V3_TILE_PX, ty: -43 * V3_TILE_PX, scale: 1 })
+assert.deepEqual([visible.x, visible.y, visible.w, visible.h], [43, 43, 11, 11])
+const preview = getV3PlacementPreview(fresh, 'powerPlant', 1, 54, 54)
+assert.equal(preview.status, 'locked_land')
+assert.equal(preview.cells.length, 4)
+assert.equal(getV3PlacementPreview(fresh, 'powerPlant', 1, 45, 45).status, 'valid')
+const distillPreview = getV3UpgradePreview(fresh, DISTILL)!
+assert.equal(distillPreview.growth.length, 3, 'Lv1 1×1 → Lv2 2×2 adds three tiles')
+assert.equal(distillPreview.status, 'valid')
+const crowded = act(at(2), { type: 'build', x: 49, y: 48, building: 'crudeTank' })
+assert.equal(getV3UpgradePreview(crowded, DISTILL)!.status, 'overlap', 'preview shows the blocker before paying')
+const roads = deriveV3RoadNetwork(fresh)
+assert.equal(roads.length, 40, 'core outline has 40 grid nodes')
+assert.equal(roads.filter((node) => node.kind === 'corner').length, 4)
+assert.ok(roads.every((node) => node.kind === 'corner' || node.kind === 'straight'))
+const joined = act(at(2), { type: 'unlock_land_parcel', parcelId: 'ring1:north' })
+assert.ok(deriveV3RoadNetwork(joined).some((node) => node.kind === 'tee'), 'parcel seams create junctions')
+assert.deepEqual(getV3BuildingViews(fresh).map((view) => [view.type, view.w, view.h]).sort(), [['crudeTank', 1, 1], ['distillationUnit', 1, 1], ['gasolineTank', 1, 1]])
 void attempt
 
-console.log('PASS: V3-15.5 yard: footprints, parcels 10→28, multi-cell placement, overlap/bounds/locked land, atomic upgrade growth, move, demolish guards, caps, occupancy, reload/reset')
+console.log('PASS: V3-15.5 yard: footprints, parcels 10→28, multi-cell placement, overlap/bounds/locked land, atomic upgrade growth, move, demolish guards, caps, occupancy, reload/reset, renderer model (culling, previews, roads)')

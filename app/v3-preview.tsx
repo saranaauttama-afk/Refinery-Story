@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BUILDINGS } from '../src/game/data/buildings'
-import { reduceV3Action } from '../src/game/v3/actions'
+import { reduceV3Action, validateV3Demolish } from '../src/game/v3/actions'
 import { getV3GuidanceStep, type V3GuidanceStep } from '../src/game/v3/campaign'
 import { V3_BUILDINGS } from '../src/game/v3/data'
 import { V3_INITIAL_PAUSE_STATE, acquireV3Pause, getV3EffectiveSpeed, releaseV3Pause, setV3Backgrounded } from '../src/game/v3/pause'
@@ -24,6 +24,7 @@ import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
 import { findV3PlacementSpot, getV3BuildingType, listV3Buildings } from '../src/game/v3/yard'
 import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
+import { V3YardPanel } from '../src/components/v3/V3YardPanel'
 import { useLang } from '../src/hooks/SettingsContext'
 import { colors, fonts, spacing } from '../src/theme'
 
@@ -192,6 +193,11 @@ export default function V3PreviewScreen() {
     if (!state) return
     const building = getV3BuildingType(state, buildingId)
     if (!building) return
+    const blocked = validateV3Demolish(state, buildingId, building)
+    if (blocked) {
+      Alert.alert(t({ en: 'Cannot remove', th: 'รื้อไม่ได้' }), eventText(blocked, t))
+      return
+    }
     const loaner = isV3LoanerBuilding(state, buildingId)
     const refundCents = loaner ? 0 : Math.round(V3_BUILDINGS[building].buildCostDollars * 50)
     setPauseState((current) => acquireV3Pause(current, 'demolish-confirm'))
@@ -199,8 +205,8 @@ export default function V3PreviewScreen() {
     Alert.alert(
       t({ en: `Remove ${building}?`, th: `รื้อ ${building}?` }),
       t({
-        en: `Refund $${(refundCents / 100).toFixed(0)}. Assigned staff move to Reserve. Tanks must be emptied below remaining capacity.`,
-        th: `คืนเงิน $${(refundCents / 100).toFixed(0)} พนักงานจะย้ายไปทีมสำรอง และต้องลดสต็อกให้ไม่เกินความจุที่เหลือก่อน`,
+        en: `Refund $${(refundCents / 100).toFixed(0)}. Assigned staff move to Reserve; this line's program is removed. Stock is kept (capacity was checked).`,
+        th: `คืนเงิน $${(refundCents / 100).toFixed(0)} พนักงานประจำจะย้ายไปทีมสำรอง สูตรของไลน์นี้จะถูกลบ สต็อกยังอยู่ครบ (ตรวจความจุแล้ว)`,
       }),
       [
         { text: t({ en: 'Cancel', th: 'ยกเลิก' }), style: 'cancel', onPress: release },
@@ -395,6 +401,8 @@ export default function V3PreviewScreen() {
             </>
           )}
         </View>
+
+        <V3YardPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
 
         <V3CampaignPanel state={state} t={t} />
 

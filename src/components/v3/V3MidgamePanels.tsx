@@ -4,9 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, BuildingType } from '../../game/types'
 import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../game/v3/actions'
-import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_LAND_PARCELS, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
+import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
-import { findV3PlacementSpot, getV3BuildingLevel, getV3Footprint, getV3UnlockedArea, listV3Buildings } from '../../game/v3/yard'
+import { getV3BuildingLevel, listV3Buildings } from '../../game/v3/yard'
 import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
@@ -233,42 +233,6 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
                 />
               ))}
             </View>
-          )
-        })}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t({ en: 'Build & land', th: 'สร้างและที่ดิน' })}</Text>
-        <Text style={styles.row}>{t({ en: 'Unlocked land', th: 'ที่ดินที่ปลดแล้ว' })}: {getV3UnlockedArea(state)} {t({ en: 'tiles', th: 'ช่อง' })} · {buildings.length} {t({ en: 'buildings', th: 'อาคาร' })}</Text>
-        {V3_LAND_PARCELS.filter((parcel) => !state.world.unlockedParcelIds.includes(parcel.id)).slice(0, 4).map((parcel) => (
-          <Gate
-            key={parcel.id}
-            label={t({ en: `Unlock land ${parcel.id} (${parcel.w}×${parcel.h}) · $${parcel.costDollars.toLocaleString()} · C${parcel.chapter}`, th: `ปลดที่ดิน ${parcel.id} (${parcel.w}×${parcel.h}) · $${parcel.costDollars.toLocaleString()} · C${parcel.chapter}` })}
-            action={{ type: 'unlock_land_parcel', parcelId: parcel.id }}
-          />
-        ))}
-        {buildable.map((building: BuildingType) => {
-          const spot = findV3PlacementSpot(state, building) ?? { x: -1, y: -1 }
-          const footprint = getV3Footprint(building, 1)
-          return (
-            <Gate
-              key={building}
-              label={`${t(BUILDINGS[building].name)} ${footprint ? `${footprint.w}×${footprint.h}` : ''} · $${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}${spot.x >= 0 ? ` @(${spot.x},${spot.y})` : ''}`}
-              action={{ type: 'build', building, ...spot }}
-            />
-          )
-        })}
-        {buildings.filter((building) => V3_BUILDINGS[building.type].upgradeCostDollars).map((building) => {
-          const next = getV3Footprint(building.type, building.level + 1)
-          return (
-            <Gate
-              key={`upgrade-${building.id}`}
-              label={t({
-                en: `Upgrade ${BUILDINGS[building.type].name.en} @(${building.x},${building.y}) Lv${building.level}→${building.level + 1}${next ? ` · needs ${next.w}×${next.h}` : ''}`,
-                th: `อัปเกรด ${BUILDINGS[building.type].name.th} @(${building.x},${building.y}) Lv${building.level}→${building.level + 1}${next ? ` · ใช้พื้นที่ ${next.w}×${next.h}` : ''}`,
-              })}
-              action={{ type: 'upgrade', buildingId: building.id }}
-            />
           )
         })}
       </View>
