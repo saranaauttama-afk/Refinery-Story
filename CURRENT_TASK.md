@@ -28,7 +28,9 @@
 - V3-14 (Petro, Polymer, Waste Treatment, asphalt, Materials OR-branch, rank2,
   5×5) plus V3-14d maintenance/upkeep: **complete in code** on `claude/gameplay-v3`;
   V3-14a–c merged at `2ec7db7`, APK run **#73** succeeded.
-- **Current task: V3-15** — campaign end, reports and freeplay.
+- V3-15 (showcase, clear, report, awards, 6×6): **complete in code**.
+- **Current task: V3-16** — layout feedback and controlled events. R3 human gate
+  follows V3-16.
 
 ## Decisions recorded
 
