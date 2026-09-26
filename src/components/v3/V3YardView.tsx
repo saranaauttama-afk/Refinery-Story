@@ -1,30 +1,38 @@
 import { memo, useMemo } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
-import { Canvas, Group, Line, Rect, vec } from '@shopify/react-native-skia'
+import { Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native'
+import {
+  Canvas,
+  Group,
+  Image as SkiaImage,
+  Path,
+  Skia,
+  Text as SkiaText,
+  matchFont,
+  useImage,
+  type DataSourceParam,
+} from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { runOnJS, useDerivedValue, useSharedValue } from 'react-native-reanimated'
 
-import { BUILDING_COLORS } from '../../buildingColors'
 import { clampCameraValue } from '../../factoryCamera'
 import type { V3GameState } from '../../game/v3/types'
 import {
-  V3_TILE_PX,
+  V3_ISO,
   deriveV3RoadNetwork,
-  getV3BuildingViews,
+  getV3IsoBounds,
   getV3ParcelViews,
-  getV3YardBounds,
+  getV3SpritePlacements,
+  v3IsoPoint,
+  v3IsoRect,
   type V3PlacementPreview,
 } from '../../game/v3/yardView'
+import { getV3BuildingArt } from './v3Art'
 
-const MIN_SCALE = 0.5
-const MAX_SCALE = 2.6
-const PREVIEW_COLOR: Record<string, string> = {
-  valid: 'rgba(106,205,180,0.55)',
-  overlap: 'rgba(255,99,99,0.55)',
-  locked_land: 'rgba(255,173,138,0.55)',
-  out_of_bounds: 'rgba(255,99,99,0.55)',
-  no_footprint: 'rgba(255,99,99,0.55)',
-}
+const MIN_SCALE = 0.35
+const MAX_SCALE = 2.2
+const PIXEL = { filter: 0, mipmap: 0 } as const // nearest-neighbour for pixel art
+
+export type V3Floater = { id: string; x: number; y: number; text: string; color: string; age: number }
 
 type Props = {
   state: V3GameState
@@ -32,31 +40,59 @@ type Props = {
   height: number
   selectedId: string | null
   highlightParcelId: string | null
-  /** Footprint preview for build/move mode. */
   placement: V3PlacementPreview | null
-  /** Extra cells an upgrade needs, coloured by whether they are free. */
   upgradeGrowth: { cells: Array<{ x: number; y: number }>; ok: boolean } | null
+  floaters: V3Floater[]
+  /** Building IDs that need attention (idle/blocked line…). */
+  alerts: Record<string, string>
   onTapTile: (x: number, y: number) => void
 }
 
-/**
- * Draws only owned land plus the adjacent purchasable ring pieces (never the
- * full 100×100 world). Buildings are footprint rectangles from the shared
- * yard model; art can replace these later using the same anchor/footprint.
- */
-function V3YardView({ state, width, height, selectedId, highlightParcelId, placement, upgradeGrowth, onTapTile }: Props) {
-  const bounds = useMemo(() => getV3YardBounds(state), [state])
-  const parcels = useMemo(() => getV3ParcelViews(state), [state])
-  const buildings = useMemo(() => getV3BuildingViews(state), [state])
-  const roads = useMemo(() => deriveV3RoadNetwork(state), [state])
+const PREVIEW_FILL: Record<string, string> = {
+  valid: 'rgba(106,205,180,0.6)',
+  locked_land: 'rgba(255,173,138,0.6)',
+}
 
-  const origin = { x: bounds.x * V3_TILE_PX, y: bounds.y * V3_TILE_PX }
-  const worldW = bounds.w * V3_TILE_PX
-  const worldH = bounds.h * V3_TILE_PX
-  const fit = Math.min(width / worldW, height / worldH, 1.4)
-  const initialScale = clampCameraValue(fit, MIN_SCALE, MAX_SCALE)
-  const initialX = (width - worldW * initialScale) / 2 - origin.x * initialScale
-  const initialY = (height - worldH * initialScale) / 2 - origin.y * initialScale
+function diamond(points: Array<{ sx: number; sy: number }>) {
+  const path = Skia.Path.Make()
+  path.moveTo(points[0].sx, points[0].sy)
+  for (const point of points.slice(1)) path.lineTo(point.sx, point.sy)
+  path.close()
+  return path
+}
+
+function line(a: { sx: number; sy: number }, b: { sx: number; sy: number }) {
+  const path = Skia.Path.Make()
+  path.moveTo(a.sx, a.sy)
+  path.lineTo(b.sx, b.sy)
+  return path
+}
+
+const Sprite = memo(function Sprite({ source, x, y, size }: { source: ImageSourcePropType; x: number; y: number; size: number }) {
+  const image = useImage(source as DataSourceParam)
+  if (!image) return null
+  return <SkiaImage image={image} x={x} y={y} width={size} height={size} fit="contain" sampling={PIXEL} />
+})
+
+/**
+ * Full-screen isometric refinery. Draws only owned land plus adjacent ring
+ * parcels; buildings use the existing pixel art placed on their real footprint.
+ */
+function V3YardView({ state, width, height, selectedId, highlightParcelId, placement, upgradeGrowth, floaters, alerts, onTapTile }: Props) {
+  const landKey = `${state.world.unlockedParcelIds.join(',')}|${state.campaignProgress.chapter}`
+  const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
+  const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
+  const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
+  const bounds = useMemo(() => getV3IsoBounds(state), [landKey])
+  const font = useMemo(() => (Platform.OS === 'web'
+    ? null
+    : matchFont({ fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' }), fontSize: 16, fontWeight: 'bold' })), [])
+
+  const worldW = bounds.maxX - bounds.minX
+  const worldH = bounds.maxY - bounds.minY
+  const initialScale = clampCameraValue(Math.min(width / worldW, height / worldH) * 1.3, MIN_SCALE, MAX_SCALE)
+  const initialX = width / 2 - (bounds.minX + worldW / 2) * initialScale
+  const initialY = height / 2 - (bounds.minY + worldH / 2) * initialScale
 
   const tx = useSharedValue(initialX)
   const ty = useSharedValue(initialY)
@@ -64,44 +100,25 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const savedX = useSharedValue(initialX)
   const savedY = useSharedValue(initialY)
   const savedScale = useSharedValue(initialScale)
-
   const transform = useDerivedValue(() => [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }])
 
   const clampX = (value: number, s: number) => {
     'worklet'
-    // Keep at least a quarter of the drawn land on screen.
-    const min = width * 0.25 - (origin.x + worldW) * s
-    const max = width * 0.75 - origin.x * s
-    return clampCameraValue(value, min, max)
+    return clampCameraValue(value, width * 0.3 - bounds.maxX * s, width * 0.7 - bounds.minX * s)
   }
   const clampY = (value: number, s: number) => {
     'worklet'
-    const min = height * 0.25 - (origin.y + worldH) * s
-    const max = height * 0.75 - origin.y * s
-    return clampCameraValue(value, min, max)
+    return clampCameraValue(value, height * 0.3 - bounds.maxY * s, height * 0.7 - bounds.minY * s)
   }
-
-  const pan = Gesture.Pan()
-    .maxPointers(1)
-    .activeOffsetX([-12, 12])
-    .activeOffsetY([-12, 12])
-    .onStart(() => {
-      'worklet'
-      savedX.value = tx.value
-      savedY.value = ty.value
-    })
+  const pan = Gesture.Pan().maxPointers(1).activeOffsetX([-10, 10]).activeOffsetY([-10, 10])
+    .onStart(() => { 'worklet'; savedX.value = tx.value; savedY.value = ty.value })
     .onUpdate((event) => {
       'worklet'
       tx.value = clampX(savedX.value + event.translationX, scale.value)
       ty.value = clampY(savedY.value + event.translationY, scale.value)
     })
   const pinch = Gesture.Pinch()
-    .onStart(() => {
-      'worklet'
-      savedScale.value = scale.value
-      savedX.value = tx.value
-      savedY.value = ty.value
-    })
+    .onStart(() => { 'worklet'; savedScale.value = scale.value; savedX.value = tx.value; savedY.value = ty.value })
     .onUpdate((event) => {
       'worklet'
       const next = clampCameraValue(savedScale.value * event.scale, MIN_SCALE, MAX_SCALE)
@@ -110,25 +127,20 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
       ty.value = clampY(event.focalY - (event.focalY - savedY.value) * ratio, next)
       scale.value = next
     })
-  const tap = Gesture.Tap()
-    .maxDistance(12)
-    .onEnd((event) => {
-      'worklet'
-      const worldX = (event.x - tx.value) / scale.value / V3_TILE_PX
-      const worldY = (event.y - ty.value) / scale.value / V3_TILE_PX
-      runOnJS(onTapTile)(Math.floor(worldX), Math.floor(worldY))
-    })
+  const halfW = V3_ISO.tw / 2
+  const halfH = V3_ISO.th / 2
+  const tap = Gesture.Tap().maxDistance(12).onEnd((event) => {
+    'worklet'
+    const a = (event.x - tx.value) / scale.value / halfW
+    const b = (event.y - ty.value) / scale.value / halfH
+    runOnJS(onTapTile)(Math.floor((a + b) / 2), Math.floor((b - a) / 2))
+  })
   const gesture = Gesture.Exclusive(Gesture.Simultaneous(pan, pinch), tap)
 
   if (Platform.OS === 'web') {
-    return (
-      <View style={[styles.viewport, { width, height }]}>
-        <Text style={styles.webNote}>Yard map runs in the Android/iOS build.</Text>
-      </View>
-    )
+    return <View style={[styles.viewport, { width, height }]}><Text style={styles.webNote}>The refinery map runs in the Android/iOS build.</Text></View>
   }
 
-  const T = V3_TILE_PX
   return (
     <View style={[styles.viewport, { width, height }]}>
       <GestureDetector gesture={gesture}>
@@ -136,47 +148,61 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
           <Group transform={transform}>
             {parcels.map((parcel) => (
               <Group key={parcel.id}>
-                <Rect
-                  x={parcel.x * T}
-                  y={parcel.y * T}
-                  width={parcel.w * T}
-                  height={parcel.h * T}
-                  color={parcel.state === 'owned' ? '#3C4A3A' : parcel.state === 'available' ? 'rgba(90,110,90,0.35)' : 'rgba(40,45,50,0.6)'}
+                <Path
+                  path={diamond(v3IsoRect(parcel))}
+                  color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
                 />
-                {parcel.id === highlightParcelId && (
-                  <Rect x={parcel.x * T} y={parcel.y * T} width={parcel.w * T} height={parcel.h * T} color="#FFD447" style="stroke" strokeWidth={3} />
-                )}
                 {parcel.state === 'owned' && Array.from({ length: parcel.w + 1 }, (_, index) => (
-                  <Line key={`v${index}`} p1={vec((parcel.x + index) * T, parcel.y * T)} p2={vec((parcel.x + index) * T, (parcel.y + parcel.h) * T)} color="rgba(255,255,255,0.08)" strokeWidth={1} />
+                  <Path key={`c${index}`} path={line(v3IsoPoint(parcel.x + index, parcel.y), v3IsoPoint(parcel.x + index, parcel.y + parcel.h))} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
                 ))}
                 {parcel.state === 'owned' && Array.from({ length: parcel.h + 1 }, (_, index) => (
-                  <Line key={`h${index}`} p1={vec(parcel.x * T, (parcel.y + index) * T)} p2={vec((parcel.x + parcel.w) * T, (parcel.y + index) * T)} color="rgba(255,255,255,0.08)" strokeWidth={1} />
+                  <Path key={`r${index}`} path={line(v3IsoPoint(parcel.x, parcel.y + index), v3IsoPoint(parcel.x + parcel.w, parcel.y + index))} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
                 ))}
+                {parcel.id === highlightParcelId && (
+                  <Path path={diamond(v3IsoRect(parcel))} color="#FFD447" style="stroke" strokeWidth={4} />
+                )}
               </Group>
             ))}
             {roads.map((node) => (
               <Group key={`road-${node.x}-${node.y}`}>
-                {node.links.e && <Line p1={vec(node.x * T, node.y * T)} p2={vec((node.x + 1) * T, node.y * T)} color="#8E8A80" strokeWidth={4} />}
-                {node.links.s && <Line p1={vec(node.x * T, node.y * T)} p2={vec(node.x * T, (node.y + 1) * T)} color="#8E8A80" strokeWidth={4} />}
-              </Group>
-            ))}
-            {buildings.map((building) => (
-              <Group key={building.id}>
-                <Rect x={building.x * T + 2} y={building.y * T + 2} width={building.w * T - 4} height={building.h * T - 4} color={BUILDING_COLORS[building.type] ?? '#888'} />
-                {Array.from({ length: building.level }, (_, index) => (
-                  <Rect key={index} x={building.x * T + 5 + index * 6} y={building.y * T + 5} width={4} height={4} color="#FFD447" />
-                ))}
-                {building.id === selectedId && (
-                  <Rect x={building.x * T + 1} y={building.y * T + 1} width={building.w * T - 2} height={building.h * T - 2} color="#FFFFFF" style="stroke" strokeWidth={3} />
-                )}
+                {node.links.e && <Path path={line(v3IsoPoint(node.x, node.y), v3IsoPoint(node.x + 1, node.y))} color="#9A9386" style="stroke" strokeWidth={6} />}
+                {node.links.s && <Path path={line(v3IsoPoint(node.x, node.y), v3IsoPoint(node.x, node.y + 1))} color="#9A9386" style="stroke" strokeWidth={6} />}
               </Group>
             ))}
             {upgradeGrowth?.cells.map((cell) => (
-              <Rect key={`g${cell.x},${cell.y}`} x={cell.x * T + 1} y={cell.y * T + 1} width={T - 2} height={T - 2} color={upgradeGrowth.ok ? 'rgba(106,205,180,0.55)' : 'rgba(255,99,99,0.55)'} />
+              <Path key={`g${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={upgradeGrowth.ok ? 'rgba(106,205,180,0.6)' : 'rgba(255,99,99,0.6)'} />
             ))}
+            {sprites.map((sprite) => {
+              const art = getV3BuildingArt(sprite.type, sprite.level)
+              return (
+                <Group key={sprite.id}>
+                  {sprite.id === selectedId && <Path path={diamond(v3IsoRect(sprite))} color="rgba(255,255,255,0.45)" />}
+                  {art
+                    ? <Sprite source={art} x={sprite.px} y={sprite.py} size={sprite.size} />
+                    : <Path path={diamond(v3IsoRect(sprite))} color="#888" />}
+                  {alerts[sprite.id] && font && (
+                    <SkiaText x={sprite.px + sprite.size / 2 - 4} y={sprite.py + 10} text="!" font={font} color="#FFD447" />
+                  )}
+                </Group>
+              )
+            })}
             {placement?.cells.map((cell) => (
-              <Rect key={`p${cell.x},${cell.y}`} x={cell.x * T + 1} y={cell.y * T + 1} width={T - 2} height={T - 2} color={PREVIEW_COLOR[placement.status] ?? PREVIEW_COLOR.overlap} />
+              <Path key={`p${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={PREVIEW_FILL[placement.status] ?? 'rgba(255,99,99,0.6)'} />
             ))}
+            {font && floaters.map((floater) => {
+              const point = v3IsoPoint(floater.x + 0.5, floater.y + 0.5)
+              return (
+                <SkiaText
+                  key={floater.id}
+                  x={point.sx - 18}
+                  y={point.sy - 44 - floater.age * 36}
+                  text={floater.text}
+                  font={font}
+                  color={floater.color}
+                  opacity={Math.max(0, 1 - floater.age)}
+                />
+              )
+            })}
           </Group>
         </Canvas>
       </GestureDetector>
@@ -187,6 +213,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 export default memo(V3YardView)
 
 const styles = StyleSheet.create({
-  viewport: { overflow: 'hidden', backgroundColor: '#1A2126', borderRadius: 10 },
+  viewport: { overflow: 'hidden', backgroundColor: '#4A6B3F' },
   webNote: { color: '#D5E2E9', padding: 16 },
 })

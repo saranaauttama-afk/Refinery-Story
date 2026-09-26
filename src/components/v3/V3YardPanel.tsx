@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, BuildingType } from '../../game/types'
@@ -10,7 +10,6 @@ import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
 import { getV3Building, getV3BuildingAt, getV3BuildingLimit, countV3Buildings, getV3Footprint, getV3UnlockedArea } from '../../game/v3/yard'
 import { getV3ParcelViews, getV3PlacementPreview, getV3UpgradePreview } from '../../game/v3/yardView'
 import { fonts } from '../../theme'
-import V3YardView from './V3YardView'
 import { v3ParcelLabel } from './v3Labels'
 import { getV3AdjacencyPreview, getV3LineAdjacency } from '../../game/v3/adjacency'
 
@@ -23,29 +22,13 @@ type Mode =
   | { kind: 'build'; building: BuildingType; anchor: { x: number; y: number } | null }
   | { kind: 'move'; buildingId: string; anchor: { x: number; y: number } | null }
 
-type Props = {
-  state: V3GameState
-  apply: (action: V3Action) => void
-  t: Translate
-  describe: (event: V3ActionEvent | null) => string
-  /** Opens the pause-owning confirmation owned by the screen. */
-  onRequestDemolish: (buildingId: string) => void
-}
+export type V3YardController = ReturnType<typeof useV3YardController>
 
-export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Props) {
-  const { width } = useWindowDimensions()
-  const viewWidth = Math.min(width - 24, 720)
+/** Map interaction state shared by the full-screen map and the sheets. */
+export function useV3YardController(state: V3GameState) {
   const [mode, setMode] = useState<Mode>({ kind: 'inspect' })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [parcelId, setParcelId] = useState<string | null>(null)
-  const selected = getV3Building(state, selectedId)
-
-  const check = (action: ActionInput): V3ActionEvent | null => {
-    const result = reduceV3Action(state, { ...action, sequence: state.nextActionSequence } as V3Action)
-    return result.events[0]?.tone === 'success' ? null : result.events[0] ?? null
-  }
-  const run = (action: ActionInput) => apply({ ...action, sequence: state.nextActionSequence } as V3Action)
-
   const placement = useMemo(() => {
     if (mode.kind === 'build' && mode.anchor) return getV3PlacementPreview(state, mode.building, 1, mode.anchor.x, mode.anchor.y)
     if (mode.kind === 'move' && mode.anchor) {
@@ -54,13 +37,42 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
     }
     return null
   }, [mode, state])
+  const selected = getV3Building(state, selectedId)
   const upgrade = selected && mode.kind === 'inspect' ? getV3UpgradePreview(state, selected.id) : null
-
   const onTapTile = (x: number, y: number) => {
-    if (mode.kind === 'build') return setMode({ ...mode, anchor: { x, y } })
-    if (mode.kind === 'move') return setMode({ ...mode, anchor: { x, y } })
+    if (mode.kind === 'build' || mode.kind === 'move') return setMode({ ...mode, anchor: { x, y } })
     setSelectedId(getV3BuildingAt(state, x, y)?.id ?? null)
   }
+  return {
+    mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, placement, upgrade, onTapTile,
+    mapSelectedId: mode.kind === 'inspect' ? selectedId : mode.kind === 'move' ? mode.buildingId : null,
+    upgradeGrowth: upgrade && upgrade.status !== 'max' ? { cells: upgrade.growth, ok: upgrade.status === 'valid' } : null,
+  }
+}
+
+type Props = {
+  state: V3GameState
+  yard: V3YardController
+  apply: (action: V3Action) => void
+  t: Translate
+  describe: (event: V3ActionEvent | null) => string
+  /** Opens the pause-owning confirmation owned by the screen. */
+  onRequestDemolish: (buildingId: string) => void
+  onClose?: () => void
+  /** 'overlay' = build/move bar + selected-building card; 'sheet' = build palette and land. */
+  section: 'overlay' | 'sheet'
+}
+
+/** Selected-building card, the build/move confirmation bar, and the build/land sheet. */
+export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish, onClose, section }: Props) {
+  const { mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, upgrade } = yard
+  const selected = getV3Building(state, selectedId)
+
+  const check = (action: ActionInput): V3ActionEvent | null => {
+    const result = reduceV3Action(state, { ...action, sequence: state.nextActionSequence } as V3Action)
+    return result.events[0]?.tone === 'success' ? null : result.events[0] ?? null
+  }
+  const run = (action: ActionInput) => apply({ ...action, sequence: state.nextActionSequence } as V3Action)
 
   const Gate = ({ label, action, onDone }: { label: string; action: ActionInput; onDone?: () => void }) => {
     const blocked = check(action)
@@ -90,7 +102,10 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
     const generator = selected.type === 'powerPlant' ? V3_GENERATOR_BY_LEVEL[selected.level] : null
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t(BUILDINGS[selected.type].name)} Lv{selected.level} @({selected.x},{selected.y})</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.cardTitle}>{t(BUILDINGS[selected.type].name)} Lv{selected.level}</Text>
+          <Pressable onPress={() => setSelectedId(null)} hitSlop={12}><Text style={styles.close}>✕</Text></Pressable>
+        </View>
         <Text style={styles.row}>{t({ en: 'Footprint', th: 'พื้นที่' })}: {footprint.w}×{footprint.h}{upgrade && upgrade.status !== 'max' ? ` → +${upgrade.growth.length} ${t({ en: 'tiles for next level', th: 'ช่องสำหรับเลเวลถัดไป' })}` : ''}</Text>
         {line && <Text style={styles.row}>{t({ en: 'Power demand', th: 'ใช้ไฟ' })}: {line.potentialEnergyPerMinute.toFixed(1)}/min · {t({ en: 'output', th: 'ผลผลิต' })} {line.actualOutputPerMinute.toFixed(1)}/{line.potentialOutputPerMinute.toFixed(1)} min · {line.limitedBy}</Text>}
         {isV3ProcessBuilding(selected.type) && (() => {
@@ -109,7 +124,7 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
         )}
         <View style={styles.row2}>
           <Gate label={t({ en: 'Upgrade', th: 'อัปเกรด' })} action={{ type: 'upgrade', buildingId: selected.id }} />
-          <Pressable style={styles.button} onPress={() => setMode({ kind: 'move', buildingId: selected.id, anchor: null })}>
+          <Pressable style={styles.button} onPress={() => { setMode({ kind: 'move', buildingId: selected.id, anchor: null }); onClose?.() }}>
             <Text style={styles.buttonText}>{t({ en: 'Move', th: 'ย้าย' })}</Text>
           </Pressable>
           <Pressable style={[styles.button, styles.danger]} onPress={() => onRequestDemolish(selected.id)}>
@@ -157,23 +172,9 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
 
   return (
     <>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t({ en: 'Refinery yard', th: 'ลานโรงกลั่น' })} · {getV3UnlockedArea(state)} {t({ en: 'tiles', th: 'ช่อง' })}</Text>
-        <V3YardView
-          state={state}
-          width={viewWidth}
-          height={Math.round(viewWidth * 0.8)}
-          selectedId={mode.kind === 'inspect' ? selectedId : mode.kind === 'move' ? mode.buildingId : null}
-          highlightParcelId={parcelId}
-          placement={placement}
-          upgradeGrowth={upgrade && upgrade.status !== 'max' ? { cells: upgrade.growth, ok: upgrade.status === 'valid' } : null}
-          onTapTile={onTapTile}
-        />
-        <Text style={styles.muted}>{t({ en: 'Drag to pan, pinch to zoom, tap a building to inspect.', th: 'ลากเพื่อเลื่อน จีบนิ้วเพื่อซูม แตะอาคารเพื่อดูข้อมูล' })}</Text>
-      </View>
-      {modeBar}
-      {mode.kind === 'inspect' && info}
-      {mode.kind === 'inspect' && (
+      {section === 'overlay' && modeBar}
+      {section === 'overlay' && mode.kind === 'inspect' && info}
+      {section === 'sheet' && mode.kind === 'inspect' && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Build', th: 'สร้าง' })}</Text>
           <View style={styles.row2}>
@@ -182,7 +183,7 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
               const limit = getV3BuildingLimit(state, building)
               const count = countV3Buildings(state, building)
               return (
-                <Pressable key={building} style={styles.chip} onPress={() => { setSelectedId(null); setMode({ kind: 'build', building, anchor: null }) }}>
+                <Pressable key={building} style={styles.chip} onPress={() => { setSelectedId(null); setMode({ kind: 'build', building, anchor: null }); onClose?.() }}>
                   <Text style={styles.buttonText}>{t(BUILDINGS[building].name)}</Text>
                   <Text style={styles.muted}>{footprint ? `${footprint.w}×${footprint.h}` : ''} · ${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}{limit !== null ? ` · ${count}/${limit}` : ''}</Text>
                 </Pressable>
@@ -191,7 +192,7 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
           </View>
         </View>
       )}
-      {mode.kind === 'inspect' && parcels.length > 0 && (
+      {section === 'sheet' && mode.kind === 'inspect' && parcels.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Land', th: 'ที่ดิน' })}</Text>
           {parcels.map((parcel) => (
@@ -211,6 +212,8 @@ export function V3YardPanel({ state, apply, t, describe, onRequestDemolish }: Pr
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  close: { color: '#D5E2E9', fontSize: 18, paddingHorizontal: 4 },
   card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 8 },
   cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
   row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },

@@ -22,6 +22,10 @@ import {
   getV3UpgradePreview,
   getV3VisibleTileRange,
   getV3YardBounds,
+  getV3Calendar,
+  getV3SpritePlacements,
+  v3IsoPoint,
+  v3IsoToTile,
 } from '../src/game/v3/yardView'
 import { act, assertBlocked, attempt, buildAnywhere } from './v3-check-helpers'
 
@@ -206,6 +210,16 @@ assert.ok(roads.every((node) => node.kind === 'corner' || node.kind === 'straigh
 const joined = act(at(2), { type: 'unlock_land_parcel', parcelId: 'ring1:north' })
 assert.ok(deriveV3RoadNetwork(joined).some((node) => node.kind === 'tee'), 'parcel seams create junctions')
 assert.deepEqual(getV3BuildingViews(fresh).map((view) => [view.type, view.w, view.h]).sort(), [['crudeTank', 1, 1], ['distillationUnit', 1, 1], ['gasolineTank', 1, 1]])
+// ---- V3-20 isometric projection, sprite order and calendar ----
+for (const [x, y] of [[45, 45], [50, 49], [0, 0], [99, 3]]) {
+  const point = v3IsoPoint(x + 0.5, y + 0.5)
+  assert.deepEqual(v3IsoToTile(point.sx, point.sy), { x, y }, 'tap on a tile centre maps back to that tile')
+}
+const placements = getV3SpritePlacements(crowded)
+for (let index = 1; index < placements.length; index++) assert.ok(placements[index - 1].depth <= placements[index].depth, 'sprites drawn back to front')
+assert.deepEqual(getV3Calendar(0), { year: 1, month: 1, week: 1 })
+assert.deepEqual(getV3Calendar(299), { year: 1, month: 1, week: 4 })
+assert.deepEqual(getV3Calendar(3_600), { year: 2, month: 1, week: 1 }, 'one in-game year = one award period')
 void attempt
 
-console.log('PASS: V3-15.5 yard: footprints, parcels 10→28, multi-cell placement, overlap/bounds/locked land, atomic upgrade growth, move, demolish guards, caps, occupancy, reload/reset, renderer model (culling, previews, roads)')
+console.log('PASS: V3-15.5 yard: footprints, parcels 10→28, multi-cell placement, overlap/bounds/locked land, atomic upgrade growth, move, demolish guards, caps, occupancy, reload/reset, renderer model (culling, previews, roads, iso projection, calendar)')
