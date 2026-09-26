@@ -48,7 +48,7 @@ function tryAct(action: Input): boolean {
 const minutes = () => (state.world.tickCount / 300).toFixed(1)
 const note = (text: string) => log.push(`[${minutes()}m C${state.campaignProgress.chapter} $${(state.world.moneyCents / 100).toFixed(0)}] ${text}`)
 const cash = () => state.world.moneyCents
-const reserve = () => 30_000 + state.world.employees.length * 5_000
+const reserve = () => 60_000 + state.world.employees.length * 15_000 + (state.campaignProgress.chapter >= 2 ? 50_000 : 0)
 
 function build(type: BuildingType): string | null {
   if (V3_BUILDINGS[type].buildChapter > state.campaignProgress.chapter) return null
@@ -106,7 +106,8 @@ const bestQuality = (family: V3ProductFamily) => Math.max(0, ...Object.values(st
 function nextMilestone() {
   const done = new Set(state.jobReceipts.receipts.filter((receipt) => receipt.status === 'completed').map((receipt) => receipt.templateId))
   return Object.values(V3_JOB_TEMPLATES)
-    .filter((template) => (template.kind === 'milestone' || template.kind === 'showcase' || template.kind === 'tutorial') && !done.has(template.id))
+    .filter((template) => ((template.kind === 'milestone' || template.kind === 'showcase' || template.kind === 'tutorial') && !done.has(template.id)) ||
+      (template.id === 'local:starter-repeat' && state.campaignProgress.chapter === 1))
     .filter((template) => template.minimumChapter <= state.campaignProgress.chapter && (!template.requires || done.has(template.requires)))
     .filter((template) => template.kind !== 'showcase' || !state.campaignProgress.showcaseReceiptId)
     .sort((a, b) => a.minimumChapter - b.minimumChapter || a.minimumQuality - b.minimumQuality || a.id.localeCompare(b.id))
@@ -114,6 +115,11 @@ function nextMilestone() {
 
 function manageJobs() {
   const job = state.acceptedJob
+  // Cash crisis: a human would cancel a job that locks up sellable stock (paid shipments stay paid).
+  if (job && cash() < 5_000 && state.world.crudeOil < 1 && getV3SellableQuantity(state, job.family) < 1) {
+    if (tryAct({ type: 'cancel_job' })) note(`cancelled ${job.templateId} to raise cash`)
+    return
+  }
   if (job) {
     const eligible = getV3StockAllocations(state, job.family).reduce((sum, allocation) => sum + allocation.jobReserved, 0)
     const quantity = Math.min(Math.floor(eligible + 1e-8), job.quantity - job.deliveredQuantity)
@@ -126,10 +132,6 @@ function manageJobs() {
       const family = branch?.family ?? template.family
       const quality = branch?.minimumQuality ?? template.minimumQuality
       if (bestQuality(family) < quality) continue
-      // Avoid the C1 trap found by this run: ship C1 trials with a DEVELOPED recipe so the
-      // C2 predicate ("40 units of your developed Gasoline via jobs") stays reachable.
-      if (state.campaignProgress.chapter === 1 && template.kind === 'milestone' && process.env.V3_RUN_NAIVE !== '1' &&
-        !Object.values(state.productBlueprints).some((blueprint) => blueprint.family === family && blueprint.provenance === 'developed')) continue
       const plant = V3_PLAN_ROUTE[family]
       if (!plant || countV3Buildings(state, plant) === 0) continue
       const view = getV3OfferView(state, template.id, branch?.family ?? null)
@@ -162,6 +164,7 @@ function manageDevelopment() {
   const labId = lab()
   if (!labId || state.developmentProject) return
   for (const [family, quality] of Object.entries(neededQuality()) as Array<[V3ProductFamily, number]>) {
+    // C2 needs 40 units of one DEVELOPED Gasoline recipe, so at C1 only developed ones count.
     const developedOnly = state.campaignProgress.chapter === 1
     const have = Math.max(0, ...Object.values(state.productBlueprints)
       .filter((blueprint) => blueprint.family === family && (!developedOnly || blueprint.provenance === 'developed'))

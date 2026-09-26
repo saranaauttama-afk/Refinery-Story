@@ -85,6 +85,16 @@ function buildCatalog(): Record<string, V3JobTemplate> {
         researchReward: 0, reputationReward: 0, milestone: false, requires: base.id,
       }
     }
+    // Owner decision (ก, 2026-09-26): a C1 Local starter repeat keeps the C2 rule
+    // ("ship 40 of your developed Gasoline via any job") always reachable, even
+    // when both one-time trials were completed with default or mixed stock.
+    if (ladder.clientId === 'local') {
+      const trial = catalog['local:trial']
+      catalog['local:starter-repeat'] = {
+        ...trial, id: 'local:starter-repeat', kind: 'repeat', completionBonusCents: 0,
+        researchReward: 0, reputationReward: 0, milestone: false, requires: trial.id, minimumChapter: 1,
+      }
+    }
     // Rush: optional after C3, only on a proven Regular route; quantity/deadline set at offer.
     const regular = catalog[`${ladder.clientId}:regular`]
     catalog[`${ladder.clientId}:rush`] = {

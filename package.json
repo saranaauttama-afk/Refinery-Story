@@ -32,7 +32,8 @@
     "check:v3-campaign-end": "node --import tsx scripts/campaign-end-check.ts",
     "check:v3-yard": "node --import tsx scripts/yard-check.ts",
     "check:v3-layout-events": "node --import tsx scripts/layout-events-check.ts",
-    "sim:v3-legal-run": "node --import tsx scripts/v3-legal-full-run.ts"
+    "check:v3-c1-softlock": "node --import tsx scripts/c1-softlock-check.ts",
+    "check:v3-legal-run": "node --import tsx scripts/v3-legal-full-run.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
