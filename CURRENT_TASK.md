@@ -26,14 +26,14 @@
 - V3-13: merged to release `507d1b6`, APK run **#72** succeeded; **R2 gate passed**
   (player decision after playing #72).
 - V3-14 (Petro, Polymer, Waste Treatment, asphalt, Materials OR-branch, rank2,
-  5×5): **complete in code** on `claude/gameplay-v3`.
+  5×5) plus V3-14d maintenance/upkeep: **complete in code** on `claude/gameplay-v3`;
+  V3-14a–c merged at `2ec7db7`, APK run **#73** succeeded.
 - **Current task: V3-15** — campaign end, reports and freeplay.
 
-## Open decision for the owner
+## Decisions recorded
 
-- V3 maintenance/upkeep (Systems S3 formula) is not assigned to any milestone.
-  Without it, Maintenance Workshop, Safety Officer and `saferOperations` stay locked.
-  Decide whether to add it before V3-18 calibration or drop those systems from V3.
+- 2026-09-26 owner: add V3 maintenance "at the right time" → implemented as V3-14d
+  before V3-15 (profitability gate depends on it). Tuning happens in V3-18.
 
 ## Rules for this work
 
