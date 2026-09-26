@@ -37,17 +37,20 @@ assertBlocked(gate.state, { type: 'enter_expo', blueprintId: V3_DEFAULT_BLUEPRIN
 const noStock = { ...gate.state, variantInventory: {} }
 assertBlocked(noStock, { type: 'enter_expo', blueprintId: gate.id }, 'v3.expo.insufficient_samples')
 
-// ---- A strong recipe wins year 1; prize is a grant, samples are debited ----
-const before = gate.state
-const won = act(gate.state, { type: 'enter_expo', blueprintId: gate.id })
+// ---- A flagship (Q80, fame Lv6) wins year 1; prize is a grant, samples are debited ----
+// V3-18 calibration: rivals open at ~88–89, so ordinary recipes cannot win.
+assert.ok(act(gate.state, { type: 'enter_expo', blueprintId: gate.id }).expoResults[0].rank > 1, 'Q70 at fame Lv2 loses')
+const flagship = fixture(V3_EXPO_MONTH, 150, 80)
+const before = flagship.state
+const won = act(flagship.state, { type: 'enter_expo', blueprintId: flagship.id })
 const entry = won.expoResults[0]
 assert.equal(entry.rank, 1)
-assert.equal(entry.score, getV3ExpoScore(before, 70))
+assert.equal(entry.score, getV3ExpoScore(before, 80))
 assert.equal(won.world.moneyCents - before.world.moneyCents, V3_EXPO_PRIZES[0].cashCents)
 assert.equal(won.world.reputation - before.world.reputation, V3_EXPO_PRIZES[0].reputation)
-assert.equal(won.variantInventory[gate.id].quantity, 10, '10 sample units consumed')
+assert.equal(won.variantInventory[flagship.id].quantity, 10, '10 sample units consumed')
 assert.ok(getV3RollingOperatingProfit({ ...won, world: { ...won.world, tickCount: 2_000 } }).cents <= 0, 'prize never counts as operating profit')
-assertBlocked(won, { type: 'enter_expo', blueprintId: gate.id }, 'v3.expo.already_entered')
+assertBlocked(won, { type: 'enter_expo', blueprintId: flagship.id }, 'v3.expo.already_entered')
 
 // ---- A weak recipe late in the game ranks low but still earns participation fame ----
 const late = fixture(V3_EXPO_MONTH, 20, 45, 6)
@@ -58,7 +61,7 @@ assert.equal(lost.world.reputation - late.state.world.reputation, 1)
 
 // ---- Next year's expo is a fresh entry; history round-trips ----
 let next = { ...won, world: { ...won.world, tickCount: won.world.tickCount + 12 * 300 } }
-next = act(next, { type: 'enter_expo', blueprintId: gate.id })
+next = act(next, { type: 'enter_expo', blueprintId: flagship.id })
 assert.deepEqual(next.expoResults.map((result) => result.year), [1, 2])
 assert.equal(parseV3GameState(JSON.parse(JSON.stringify(next))).status, 'loaded')
 const tampered = JSON.parse(JSON.stringify(next))

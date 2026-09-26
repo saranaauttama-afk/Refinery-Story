@@ -10,6 +10,7 @@ import { findV3PlacementSpot } from '../src/game/v3/yard'
 import type { BuildingType } from '../src/game/types'
 import type { V3GameState } from '../src/game/v3/types'
 import { act, assertBlocked, attempt, buildAnywhere, close, SLOT, slotId } from './v3-check-helpers'
+import { V3_STAGE_QUANTITY_SCALE } from '../src/game/v3/jobs'
 
 const PETRO = V3_DEFAULT_BLUEPRINT_ID.petrochemicals
 const PELLET = V3_DEFAULT_BLUEPRINT_ID.plasticPellets
@@ -22,8 +23,8 @@ assert.equal(milestones.length, 15)
 assert.equal(new Set(milestones.map((template) => template.clientId)).size, 5)
 const partner = V3_JOB_TEMPLATES['materials:partner']
 assert.deepEqual(partner.branches!.map((branch) => [branch.family, branch.minimumQuality, branch.quantity, branch.unitPriceCents]), [
-  ['petrochemicals', 65, 160, 11_050],
-  ['plasticPellets', 75, 100, 22_800],
+  ['petrochemicals', 65, 160 * V3_STAGE_QUANTITY_SCALE[2], 11_050],
+  ['plasticPellets', 75, 100 * V3_STAGE_QUANTITY_SCALE[2], 22_800],
 ])
 
 /** Labelled constructed fixture at C4 with a 5×5 yard (legal C4 proven in check:v3-clients). */
@@ -69,9 +70,10 @@ let pellets = act({ ...wrong, productBlueprints: { ...wrong.productBlueprints, '
 assert.equal(pellets.acceptedJob!.minimumQuality, 65)
 assert.equal(pellets.acceptedJob!.lockedUnitPriceCents, 20_400)
 assertBlocked(pellets, { type: 'dispatch_job', quantity: 10, blueprintId: PELLET }, 'v3.job.insufficient_qualified_stock')
-for (let shipped = 0; shipped < 50; shipped += 25) {
-  pellets = addV3VariantInventory(pellets, 'blueprint:fixture:pellet:65', 25, 2_500).state
-  pellets = act(pellets, { type: 'dispatch_job', quantity: 25, blueprintId: 'blueprint:fixture:pellet:65' })
+while (pellets.acceptedJob) {
+  const batch = Math.min(25, pellets.acceptedJob.quantity - pellets.acceptedJob.deliveredQuantity)
+  pellets = addV3VariantInventory(pellets, 'blueprint:fixture:pellet:65', batch, batch * 100).state
+  pellets = act(pellets, { type: 'dispatch_job', quantity: batch, blueprintId: 'blueprint:fixture:pellet:65' })
 }
 assert.equal(pellets.clientProgress.materials.lastCompletedMilestoneId, 'materials:regular')
 assertBlocked({ ...pellets, campaignProgress: { ...pellets.campaignProgress, chapter: 4 } }, { type: 'set_auto_repeat', templateId: 'materials:repeat' }, 'v3.job.auto_repeat_invalid')

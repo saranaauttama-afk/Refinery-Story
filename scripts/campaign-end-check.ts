@@ -9,12 +9,13 @@ import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState } from '../src/game/v
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3JobReceipt, V3ProductBlueprint, V3ProductFamily } from '../src/game/v3/types'
 import { act, assertBlocked, slotId } from './v3-check-helpers'
+import { V3_SHOWCASE_QUANTITY_SCALE } from '../src/game/v3/jobs'
 
 // ---- Showcase catalog (Master §11) ----
 const showcases = Object.values(V3_JOB_TEMPLATES).filter((template) => template.kind === 'showcase')
-assert.deepEqual(showcases.map((template) => [template.family, template.quantity]), [
+assert.deepEqual(showcases.map((template) => [template.family, template.quantity]), ([
   ['gasoline', 150], ['lubricants', 120], ['jetFuel', 100], ['petrochemicals', 100], ['plasticPellets', 80],
-])
+] as const).map(([family, base]) => [family, base * V3_SHOWCASE_QUANTITY_SCALE]))
 assert.ok(showcases.every((template) => template.minimumQuality === 65 && template.researchReward === 15 && template.minimumChapter === 4))
 
 /** Labelled constructed fixtures: C4, cash, and a certified blueprint inserted directly. */
