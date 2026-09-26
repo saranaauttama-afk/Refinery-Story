@@ -57,7 +57,7 @@ close(getV3LocalCrewRate(crew, 1), 0.23, 'matched Lv5 = min(0.25, 0.15+0.08)')
 // ---- Deterministic vacancy hiring, chapter unlocks, cap, atomic failure ----
 let hiring = createInitialV3GameState()
 hiring = assertBlocked(hiring, { type: 'hire_employee', role: 'mechanic' }, 'v3.hire.locked')
-hiring = assertBlocked(hiring, { type: 'hire_employee', role: 'safetyOfficer' }, 'v3.hire.unsupported')
+hiring = assertBlocked(hiring, { type: 'hire_employee', role: 'safetyOfficer' }, 'v3.hire.locked')
 hiring = act(hiring, { type: 'hire_employee', role: 'operator' })
 const hired = hiring.world.employees.at(-1)!
 assert.equal(hired.type, 'operator')

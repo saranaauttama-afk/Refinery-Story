@@ -76,6 +76,8 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.job.rush_unavailable': return translate({ en: 'No qualifying running line to size a Rush.', th: 'ยังไม่มีไลน์ที่ผลิตคุณภาพถึงสำหรับงานด่วน' })
     case 'v3.job.auto_repeat_locked': return translate({ en: `Auto-repeat opens in C${p?.chapter}.`, th: `ทำซ้ำอัตโนมัติเปิดในบท C${p?.chapter}` })
     case 'v3.job.auto_repeat_invalid': return translate({ en: 'Only a proven repeat job can auto-repeat.', th: 'ทำซ้ำอัตโนมัติได้เฉพาะงานซ้ำที่เคยทำสำเร็จแล้ว' })
+    case 'v3.maintenance.not_in_emergency': return translate({ en: 'The factory is operating normally.', th: 'โรงงานทำงานปกติอยู่แล้ว' })
+    case 'v3.maintenance.unaffordable': return translate({ en: `Needs $${Number(p?.costCents ?? 0) / 100} (one minute of maintenance).`, th: `ต้องมี $${Number(p?.costCents ?? 0) / 100} (ค่าบำรุง 1 นาที)` })
     case 'v3.specialization.locked': return translate({ en: `Specialization opens in C${p?.chapter}.`, th: `เลือกแนวทางได้ในบท C${p?.chapter}` })
     case 'v3.specialization.chosen': return translate({ en: 'Specialization is already chosen.', th: 'เลือกแนวทางไปแล้ว' })
     case 'v3.duty.ineligible': return translate({ en: 'This role cannot take that duty.', th: 'ตำแหน่งนี้รับหน้าที่นั้นไม่ได้' })

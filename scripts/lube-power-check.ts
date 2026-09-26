@@ -25,7 +25,6 @@ const POWER = 6
 // ---- Legal route: C2 via Gasoline, then earn the Lube investment at spot ----
 let state = legalChapterTwo()
 const niranId = state.world.employees[0].id
-state = assertBlocked(state, { type: 'build', cellIndex: LUBE_A, building: 'maintenanceWorkshop' }, 'v3.build.unsupported')
 state = assertBlocked(state, { type: 'build', cellIndex: LUBE_A, building: 'jetFuelPlant' }, 'v3.build.locked')
 state = assertBlocked(state, { type: 'expand_grid' }, 'v3.expand.insufficient_cash')
 const earned = earnGasolineCash(state, 2_300_000)

@@ -304,9 +304,12 @@ wrong branch cannot ship; family cap is shared by Q variants; Q75 without a
 specialist at C4 via rank2 (Lab3 + advancedProcessing); 5×5 at C4 ($25,000) and a
 17-building full chain fit the 25-lot budget; every V3 stock write goes through
 productInventory.ts (asserted). All tests at C4 use **constructed fixtures**.
-Deferred with reason: V3 maintenance/upkeep is not implemented, so Maintenance
-Workshop, Safety Officer and `saferOperations` stay locked with a visible reason
-(needs a decision — see CURRENT_TASK); Materials has no Rush (branch is per job);
+Maintenance (owner decision 2026-09-26: "add it at the right time"): added as
+**V3-14d** before V3-15, because V3-15's operating-profit gate needs it — engine
+`a75be94`, UI `4a1add2`, check `check:v3-maintenance`. S3 formula, starter waiver
+to C2, capped upkeep cuts (workshop/research/Safety Officer/skills ≤25%), and
+Emergency operation without debt. Workshop local adjacency 10% waits for V3-16.
+Materials has no Rush (branch is per job);
 waste disposal is shown per tick but not yet a persisted lifetime statistic.
 
 Dependencies:13 pass. Split14a Petro,14b Polymer/reservations,14c Materials/Lab3.

@@ -187,7 +187,7 @@ export const V3_MODULE_MIN_PLANT_LEVEL = 2
 export const V3_MODULE_CHAPTER = 2
 
 // Systems S4 research candidates. `effect` is the only V3 consequence; IDs
-// without a V3 effect (saferOperations needs maintenance, not yet in V3)
+// without a V3 effect
 // are intentionally absent so they cannot be bought as a no-op.
 export type V3ResearchEffect =
   | { kind: 'knowledgeRank'; rank: 1 | 2 }
@@ -196,6 +196,7 @@ export type V3ResearchEffect =
   | { kind: 'storagePercent'; value: number }
   | { kind: 'trade'; value: number }
   | { kind: 'jobRp'; value: number }
+  | { kind: 'upkeep'; value: number }
 
 type V3ResearchRule = {
   rp: number
@@ -209,6 +210,7 @@ export const V3_RESEARCH = {
   betterPumps: { rp: 10, chapter: 1, labLevel: 0, prerequisite: null, effect: { kind: 'globalRate', value: 0.05 } },
   biggerTanks: { rp: 15, chapter: 1, labLevel: 0, prerequisite: null, effect: { kind: 'coreStorage', value: 20 } },
   premiumFuel: { rp: 20, chapter: 2, labLevel: 2, prerequisite: null, effect: { kind: 'knowledgeRank', rank: 1 } },
+  saferOperations: { rp: 20, chapter: 2, labLevel: 0, prerequisite: null, effect: { kind: 'upkeep', value: 0.1 } },
   advancedDistillation: { rp: 40, chapter: 2, labLevel: 0, prerequisite: 'betterPumps', effect: { kind: 'globalRate', value: 0.1 } },
   industrialStorage: { rp: 40, chapter: 2, labLevel: 0, prerequisite: 'biggerTanks', effect: { kind: 'storagePercent', value: 0.15 } },
   premiumContracts: { rp: 40, chapter: 3, labLevel: 0, prerequisite: 'premiumFuel', effect: { kind: 'trade', value: 0.05 } },
@@ -219,7 +221,7 @@ export const V3_RESEARCH = {
 export type V3SupportedResearch = keyof typeof V3_RESEARCH
 
 // ---- Workforce (Master §6, Systems S4) ----
-export type V3SupportEffect = 'storageFlat' | 'storagePercent' | 'trade' | 'rp' | null
+export type V3SupportEffect = 'storageFlat' | 'storagePercent' | 'trade' | 'rp' | 'upkeep' | null
 
 export type V3RoleRule = {
   lineBuildings: readonly V3ProcessBuilding[]
@@ -243,8 +245,7 @@ export const V3_ROLES: Record<WorkerType, V3RoleRule> = {
   mechanic: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'storageFlat', supportValue: 25, hireChapter: 1, hireCostDollars: 800, hireable: true },
   salesAgent: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'trade', supportValue: 0.04, hireChapter: 3, hireCostDollars: 1_000, hireable: true },
   logisticsCoordinator: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'storagePercent', supportValue: 0.1, hireChapter: 2, hireCostDollars: 2_000, hireable: true },
-  // Safety/upkeep channels need V3 maintenance, which is not implemented yet.
-  safetyOfficer: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: null, supportValue: 0, hireChapter: 2, hireCostDollars: 1_200, hireable: false },
+  safetyOfficer: { lineBuildings: [], matchedBuildings: [], leadFamilies: [], support: 'upkeep', supportValue: 0.05, hireChapter: 2, hireCostDollars: 1_200, hireable: true },
 }
 
 export const V3_CAPS = {
@@ -253,6 +254,8 @@ export const V3_CAPS = {
   storagePercent: 0.5,
   trade: 0.15,
   rp: 0.5,
+  /** All upkeep reductions combined (workshop, research, support, local skills). */
+  upkeep: 0.25,
   /** Mechanics' flat storage counts at most three staff-equivalents. */
   mechanicEffectiveStaff: 3,
   /** Chemists' RP bonus counts at most three staff-equivalents. */
@@ -280,3 +283,15 @@ export const V3_SPECIALIZATION = {
   industrial: { rate: 1.1, energy: 1.2, waste: 1 },
 } as const
 export const V3_SPECIALIZATION_CHAPTER = 3
+
+// ---- Maintenance (Systems S3) ----
+/** Per 5s cycle: 0.002 × base build cost / 12, scaled by level. */
+export const V3_MAINTENANCE = {
+  rateOfBuildCostPerCycle: 0.002 / 12,
+  processingLevelRate: [0, 1, 1.4, 1.9],
+  supportLevelRate: [0, 1, 1.25, 1.5],
+  pausedRate: 0.5,
+  /** Starter Distillation and core tanks are free until this chapter. */
+  starterFreeUntilChapter: 2,
+  workshopCutByLevel: [0, 0.05, 0.08, 0.1],
+} as const
