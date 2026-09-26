@@ -9,14 +9,15 @@ import { V3_TICKS_PER_MONTH } from './yardView'
  */
 export type V3Rival = { id: string; name: { en: string; th: string }; base: number; growth: number; color: string }
 
-// V3-18 calibration: linear growth per in-game month. With the legal bot's
-// score (~45/month late game) the player passes Titan after ~4.5–5 simulated
-// hours; the lower rivals give #3/#2 rewards along the way.
+// V3-18 calibration (legal bot trajectory: ~3,400 points at 60 min then
+// ~27/min with reinvestment). Rivals are linear per in-game month; the bot
+// passes Harbor ~25 min, Delta ~60, Summit ~80 and Titan ~280 simulated
+// minutes (human play: roughly 5–8 hours for #1).
 export const V3_RIVALS: readonly V3Rival[] = [
-  { id: 'harbor', name: { en: 'Harbor Oil Co.', th: 'ฮาร์เบอร์ออยล์' }, base: 400, growth: 10, color: '#6FA8DC' },
-  { id: 'delta', name: { en: 'Delta Petro', th: 'เดลต้าปิโตร' }, base: 700, growth: 18, color: '#E69138' },
-  { id: 'summit', name: { en: 'Summit Refining', th: 'ซัมมิทรีไฟน์นิ่ง' }, base: 1_000, growth: 28, color: '#93C47D' },
-  { id: 'titan', name: { en: 'Titan Energy', th: 'ไททันเอนเนอร์ยี' }, base: 1_500, growth: 40, color: '#CC4125' },
+  { id: 'harbor', name: { en: 'Harbor Oil Co.', th: 'ฮาร์เบอร์ออยล์' }, base: 900, growth: 6, color: '#6FA8DC' },
+  { id: 'delta', name: { en: 'Delta Petro', th: 'เดลต้าปิโตร' }, base: 1_800, growth: 9, color: '#E69138' },
+  { id: 'summit', name: { en: 'Summit Refining', th: 'ซัมมิทรีไฟน์นิ่ง' }, base: 3_000, growth: 12, color: '#93C47D' },
+  { id: 'titan', name: { en: 'Titan Energy', th: 'ไททันเอนเนอร์ยี' }, base: 5_200, growth: 15, color: '#CC4125' },
 ]
 
 export function getV3RivalScore(rival: V3Rival, tickCount: number): number {
@@ -24,12 +25,17 @@ export function getV3RivalScore(rival: V3Rival, tickCount: number): number {
   return Math.round(rival.base + rival.growth * months)
 }
 
-/** Player industry score: fame, recognized business and certified recipes. */
-export function getV3IndustryScore(state: V3GameState): { total: number; fame: number; business: number; recipes: number } {
+/**
+ * Player industry score: fame, business (lifetime receipts, 1 point per $1,000),
+ * factory (invested capital: land, buildings, upgrades, people; 1 point per
+ * $2,000) and certified recipes. Growing the factory moves the ranking.
+ */
+export function getV3IndustryScore(state: V3GameState): { total: number; fame: number; business: number; factory: number; recipes: number } {
   const fame = state.world.reputation * 10
   const business = Math.max(0, Math.round(state.operatingLedger.lifetimeReceiptsCents / 100_000))
+  const factory = Math.max(0, Math.round(state.operatingLedger.capexCents / 200_000))
   const recipes = Object.values(state.productBlueprints).filter((blueprint) => blueprint.provenance === 'developed').length * 20
-  return { total: fame + business + recipes, fame, business, recipes }
+  return { total: fame + business + factory + recipes, fame, business, factory, recipes }
 }
 
 export type V3RankingEntry = { id: string; name: { en: string; th: string }; score: number; player: boolean }

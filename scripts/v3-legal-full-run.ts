@@ -264,7 +264,7 @@ function manageExpo() {
 }
 
 function manageResearch() {
-  const order: ResearchKey[] = ['premiumFuel', 'betterPumps', 'biggerTanks', 'advancedProcessing', 'advancedDistillation', 'industrialStorage', 'premiumContracts', 'contractAnalytics', 'storageOptimization']
+  const order: ResearchKey[] = ['premiumFuel', 'advancedProcessing', 'betterPumps', 'biggerTanks', 'advancedDistillation', 'industrialStorage', 'premiumContracts', 'contractAnalytics', 'storageOptimization']
   for (const id of order) if (!validateV3Research(state, id) && tryAct({ type: 'buy_research', researchId: id })) note(`research ${id}`)
 }
 
@@ -318,6 +318,33 @@ function manageInvestment() {
 }
 
 const trajectory: string[] = []
+/**
+ * Reinvestment a growing refinery would make with surplus cash: more product
+ * lines per family (up to 3), Lv3 upgrades, tanks for full families, support
+ * buildings, and land when the yard is full. Spends only above a safety buffer.
+ */
+function manageExpansion() {
+  const buffer = 200_000 + reserve()
+  if (cash() < buffer) return
+  const chapter = state.campaignProgress.chapter
+  const plants: BuildingType[] = ['lubricantPlant', 'jetFuelPlant', 'petrochemicalPlant', 'polymerPlant']
+  const tanks: Partial<Record<BuildingType, BuildingType>> = { lubricantPlant: 'lubricantTank', jetFuelPlant: 'jetFuelTank', petrochemicalPlant: 'petrochemicalTank', polymerPlant: 'pelletSilo' }
+  for (const type of ['distillationUnit', 'crudeTank', 'gasolineTank', ...plants] as BuildingType[]) {
+    if (cash() < buffer) return
+    for (let level = 2; level <= 3; level++) while (upgrade(type, level) && cash() > buffer) { /* upgrade all of this type */ }
+  }
+  if (chapter >= 2 && countV3Buildings(state, 'maintenanceWorkshop') === 0) build('maintenanceWorkshop')
+  if (chapter >= 3 && countV3Buildings(state, 'salesOffice') === 0) build('salesOffice')
+  for (const plant of plants) {
+    if (cash() < buffer || V3_BUILDINGS[plant].buildChapter > chapter) continue
+    if (countV3Buildings(state, plant) < 3) build(plant)
+    const tank = tanks[plant]!
+    if (countV3Buildings(state, tank) < countV3Buildings(state, plant)) build(tank)
+  }
+  if (countV3Buildings(state, 'crudeTank') < 1 + countV3Buildings(state, 'distillationUnit')) build('crudeTank')
+  if (countV3Buildings(state, 'gasolineTank') < countV3Buildings(state, 'distillationUnit')) build('gasolineTank')
+}
+
 const reached: Record<number, string> = {}
 const outcome = { cleared: false, stalledReason: '' }
 let lastProgressTick = 0
@@ -332,6 +359,7 @@ while (state.world.tickCount < MAX_TICKS) {
   manageResearch()
   manageExpo()
   manageInvestment()
+  manageExpansion()
   manageTrade()
   for (let index = 0; index < DECISION_TICKS; index += 25) state = runV3ProductionTick(state, 25).state
   if (state.world.tickCount % 3_000 < DECISION_TICKS) {
@@ -340,10 +368,10 @@ while (state.world.tickCount < MAX_TICKS) {
   }
   const chapter = state.campaignProgress.chapter
   if (!reached[chapter]) { reached[chapter] = minutes(); note(`reached chapter ${chapter}`) }
-  const signature = `${chapter}|${state.jobReceipts.receipts.length}|${Object.keys(state.productBlueprints).length}|${Object.keys(state.world.buildingsById).length}`
+  const signature = `${chapter}|${state.jobReceipts.receipts.length}|${Object.keys(state.productBlueprints).length}|${Object.keys(state.world.buildingsById).length}|rank${getV3PlayerRank(state)}|expo${state.expoResults.filter((entry) => entry.rank === 1).length}|${Math.floor(getV3IndustryScore(state).total / 500)}`
   if (signature !== lastSignature) { lastSignature = signature; lastProgressTick = state.world.tickCount }
-  if (chapter >= 5) { outcome.cleared = true; break }
-  if (state.world.tickCount - lastProgressTick > 36_000) { outcome.stalledReason = 'no progress for 2 simulated hours'; break }
+  if (chapter >= 5) { outcome.cleared = true; if (process.env.V3_RUN_TRAJECTORY !== '1') break }
+  if (process.env.V3_RUN_TRAJECTORY !== '1' && state.world.tickCount - lastProgressTick > 36_000) { outcome.stalledReason = 'no progress for 2 simulated hours'; break }
 }
 if (!outcome.cleared && !outcome.stalledReason) outcome.stalledReason = `tick cap ${MAX_TICKS}`
 

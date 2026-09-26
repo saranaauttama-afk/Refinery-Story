@@ -47,12 +47,12 @@ type LadderRow = { clientId: string; family: V3ProductFamily; rows: Array<[numbe
 
 // Master §7 client table (Materials arrives with V3-14).
 /**
- * V3-18 pacing: later stages order more units (Trial ×1, Regular ×3, Partner ×5;
- * Showcase ×3) so mid/late chapters take real production time. Master table
+ * V3-18 pacing: later stages order more units (Trial ×1, Regular ×6, Partner ×10;
+ * Showcase ×5) so mid/late chapters take real production time. Master table
  * quantities are the ×1 base. Calibrated with the legal full-run bot.
  */
-export const V3_STAGE_QUANTITY_SCALE = [1, 3, 5] as const
-export const V3_SHOWCASE_QUANTITY_SCALE = 3
+export const V3_STAGE_QUANTITY_SCALE = [1, 6, 10] as const
+export const V3_SHOWCASE_QUANTITY_SCALE = 5
 
 const LADDERS: LadderRow[] = [
   { clientId: 'local', family: 'gasoline', rows: [[35, 40], [40, 80], [55, 150]], chapters: [1, 2, 3] },
