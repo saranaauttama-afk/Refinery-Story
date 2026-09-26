@@ -25,6 +25,8 @@ import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
 import { findV3PlacementSpot, getV3BuildingType, listV3Buildings } from '../src/game/v3/yard'
 import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
 import { V3YardPanel } from '../src/components/v3/V3YardPanel'
+import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
+import { v3JobLabel } from '../src/components/v3/v3Labels'
 import { useLang } from '../src/hooks/SettingsContext'
 import { colors, fonts, spacing } from '../src/theme'
 
@@ -61,6 +63,8 @@ function eventText(message: V3ActionEvent | null, translate: (value: BilingualTe
     case 'v3.place.no_footprint': return translate({ en: 'This building has no yard footprint.', th: 'อาคารนี้ไม่มีขนาดพื้นที่' })
     case 'v3.place.building_limit': return translate({ en: `Limit reached for this building (${p?.limit}) in this chapter.`, th: `อาคารนี้สร้างได้ครบ ${p?.limit} หลังแล้วในบทนี้` })
     case 'v3.building.missing': return translate({ en: 'That building no longer exists.', th: 'ไม่มีอาคารนี้แล้ว' })
+    case 'v3.inbox.missing': return translate({ en: 'That message is gone.', th: 'ไม่พบข้อความนี้แล้ว' })
+    case 'v3.inbox.resolved': return translate({ en: 'Already answered.', th: 'ตอบไปแล้ว' })
     case 'v3.land.unknown': return translate({ en: 'Unknown land parcel.', th: 'ไม่พบแปลงที่ดินนี้' })
     case 'v3.land.owned': return translate({ en: 'This land is already yours.', th: 'ที่ดินนี้ปลดแล้ว' })
     case 'v3.land.locked': return translate({ en: `This land opens in C${p?.chapter}.`, th: `ที่ดินแปลงนี้เปิดในบท C${p?.chapter}` })
@@ -357,7 +361,7 @@ export default function V3PreviewScreen() {
           <Text style={styles.cardTitle}>{t({ en: 'Customers & shipments', th: 'ลูกค้าและการจัดส่ง' })}</Text>
           {activeJob ? (
             <>
-              <Text style={styles.row}>{activeJob.templateId} · Q{activeJob.minimumQuality}+ · {activeJob.deliveredQuantity}/{activeJob.quantity}</Text>
+              <Text style={styles.row}>{t(v3JobLabel(activeJob.templateId))} · Q{activeJob.minimumQuality}+ · {activeJob.deliveredQuantity}/{activeJob.quantity}</Text>
               {activeJob.deadlineTick !== null && (
                 <Text style={styles.row}>{t({
                   en: `Rush deadline in ${Math.max(0, Math.ceil((activeJob.deadlineTick - state.world.tickCount) / 5))}s simulated · bonus lost on expiry, shipped units stay paid`,
@@ -403,6 +407,8 @@ export default function V3PreviewScreen() {
         </View>
 
         <V3YardPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
+
+        <V3InboxPanel state={state} apply={(action) => { void apply(action) }} t={t} />
 
         <V3CampaignPanel state={state} t={t} />
 

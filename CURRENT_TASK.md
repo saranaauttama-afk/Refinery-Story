@@ -31,8 +31,11 @@
 - V3-15 (showcase, clear, report, awards, 6×6): **complete in code**.
 - **Direction change:** fixed-grid expansion is superseded by the expandable yard.
 - V3-15.5 (expandable yard foundation): **complete in code** (`ee38f2b`, `afb1fe8`).
-- **Current task: V3-15.5 device check** — play the yard on the new APK. V3-16,
-  V3-17, V3-18 and V3-19 must not start before V3-15.5 passes.
+- V3-15.5 device check: **passed** (player, APK #76).
+- V3-16 (adjacency, optional inbox, readable names/targets): **complete in code**.
+- **Current task: R3 human gate** — play the V3-16 APK. Open evidence item: a
+  labelled legal full run to the ending (clear) is still missing; decide whether
+  to require it before V3-17 or produce it in V3-18.
 
 ## Decisions recorded
 

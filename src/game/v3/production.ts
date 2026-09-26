@@ -21,7 +21,9 @@ import { getV3Modifiers } from './modifiers'
 import { settleV3Maintenance } from './maintenance'
 import { V3_DEFAULT_BLUEPRINT_ID } from './state'
 import { addV3JobContribution, advanceV3JobClock, runV3AutoDispatch } from './jobs'
+import { recordV3AdjacencyDiscoveries, getV3AdjacencyRate } from './adjacency'
 import { advanceV3Awards } from './awards'
+import { advanceV3Inbox } from './inbox'
 import { evaluateV3CampaignProgress } from './campaign'
 import { addV3CommodityInventory, addV3VariantInventory, consumeV3ProtectedInventory, getV3ConsumableQuantity, getV3ProductCapacity, getV3ProductQuantity } from './productInventory'
 import { advanceV3Recovery, isV3LoanerBuilding } from './recovery'
@@ -138,9 +140,11 @@ function lineRequest(
   const specialization = state.world.specialization && !baseline ? V3_SPECIALIZATION[state.world.specialization] : null
   const specializationRate = !noBonus ? specialization?.rate ?? 1 : 1
   const cappedGlobal = !noBonus ? globalRate : 0
+  // Local layout bonus (matching tank touching the line); loaners/emergency get none.
+  const adjacencyRate = !noBonus ? getV3AdjacencyRate(state, program.buildingId) : 1
   const requestedWork = status === 'ready'
     ? deltaTicks / V3_TICKS_PER_CYCLE * (V3_LEVEL_RATE[level] ?? 0) * profile.work * module.work *
-      (1 + crewRate) * (1 + cappedGlobal) * specializationRate * boostRate * loanerRate
+      (1 + crewRate) * (1 + cappedGlobal) * specializationRate * adjacencyRate * boostRate * loanerRate
     : 0
   const perMinute = 300 / Math.max(deltaTicks, 1)
   const energyPerWork = unit.energyPerWork * profile.energy * module.energy * (specialization?.energy ?? 1)
@@ -425,5 +429,5 @@ export function runV3ProductionTick(state: V3GameState, deltaTicks = 1, boostRat
     },
     plantPrograms: programs,
   }, Object.fromEntries(lines.map((line) => [line.buildingId, line.actualWork])))
-  return { lines, power, state: evaluateV3CampaignProgress(advanceV3Awards(advanceV3Recovery(advanceV3JobClock(runV3AutoDispatch(producedState)), deltaTicks))) }
+  return { lines, power, state: advanceV3Inbox(recordV3AdjacencyDiscoveries(evaluateV3CampaignProgress(advanceV3Awards(advanceV3Recovery(advanceV3JobClock(runV3AutoDispatch(producedState)), deltaTicks))))) }
 }

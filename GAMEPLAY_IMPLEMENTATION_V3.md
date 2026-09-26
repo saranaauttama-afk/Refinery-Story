@@ -358,10 +358,21 @@ coordinates). Scope: 100×100 world, land parcels, footprints by type×level, sh
 placement validator, `unlock_land_parcel`, `move_building`, building caps,
 upgrade-growth preview, demolish guards, derived occupancy, road layer data,
 Skia yard view with pan/zoom, build/move/upgrade/land previews and real reasons.
-**V3-16 may start only after V3-15.5 passes on device** (player check of the
-yard view on the APK built from this milestone).
+**Device check: PASSED** — player decision after APK run #76 ("ผ่าน"; yard has a
+good sense of goal). Player note: some targets were hard to read → V3-16 replaced
+internal IDs with names and rewrote period targets as plain checklist lines.
 
 ### V3-16 · Layout feedback and controlled events
+
+Status: **COMPLETE IN CODE** — engine `69b5e03`, UI `77d6f0f`. Check:
+`check:v3-layout-events` plus all prior checks. Evidence: tank/workshop adjacency
+per target, once per kind, 4-direction tiles, preview before placing, capped
+upkeep; move/demolish loops earn nothing; inbox unique/spaced/suppressed, one
+pending decision, RP-only, not read by campaign logic; reload keeps an accepted
+job and running development intact. **R3 gate pending:** needs the player's
+device run AND a labelled legal full run to the ending — that legal run is not
+simulated yet (clear is fixture-proven only).
+
 
 Dependencies:15. Implement only Master's local tank/workshop adjacency; preserve
 discovery history, replace old global power combo. Add minimal optional inbox

@@ -8,7 +8,7 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 12 as const
+export const V3_PREVIEW_SCHEMA_REVISION = 13 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,
@@ -173,6 +173,26 @@ export type V3OperatingLedger = {
   lifetimeRecognizedProfitCents: number
 }
 
+export type V3InboxKind = 'customer_thanks' | 'staff_accomplishment' | 'experiment_opportunity'
+
+export type V3InboxItem = {
+  /** Unique per source fact (e.g. thanks:local:regular); never re-issued. */
+  id: string
+  kind: V3InboxKind
+  createdAtTick: number
+  /** One-time optional RP; never money or stock, never required for the campaign. */
+  rewardRp: number
+  /** Only experiment opportunities are decisions; others are read/dismiss notes. */
+  decision: boolean
+  status: 'pending' | 'claimed' | 'dismissed'
+  params: Record<string, string | number>
+}
+
+export type V3InboxState = {
+  items: V3InboxItem[]
+  lastIssuedTick: number | null
+}
+
 export type V3AwardGrade = 'S' | 'A' | 'B' | '-'
 
 export type V3AwardPeriod = {
@@ -261,6 +281,9 @@ export type V3GameState = {
   maintenanceEmergency: { sinceTick: number; buildingId: string | null } | null
   awards: V3AwardState
   campaignReport: V3CampaignReport | null
+  /** Adjacency kinds formed at least once (history only; never rewarded). */
+  discoveredAdjacencies: string[]
+  inbox: V3InboxState
   clientProgress: Record<string, V3ClientProgress>
   acceptedJob: V3AcceptedJob | null
   jobReceipts: V3JobReceipts
@@ -286,6 +309,8 @@ export type V3ActionMessageId =
   | 'v3.place.no_footprint'
   | 'v3.place.building_limit'
   | 'v3.building.missing'
+  | 'v3.inbox.missing'
+  | 'v3.inbox.resolved'
   | 'v3.land.unknown'
   | 'v3.land.owned'
   | 'v3.land.locked'
@@ -558,13 +583,20 @@ export type V3ConvertAsphaltAction = {
   quantity: number
 }
 
+export type V3ResolveInboxAction = {
+  type: 'resolve_inbox'
+  sequence: number
+  itemId: string
+  choice: 'claim' | 'dismiss'
+}
+
 export type V3SetAutoRepeatAction = {
   type: 'set_auto_repeat'
   sequence: number
   templateId: string | null
 }
 
-export type V3Action = V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

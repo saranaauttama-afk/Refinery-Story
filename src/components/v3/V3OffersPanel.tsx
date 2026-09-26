@@ -6,6 +6,7 @@ import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES } from '../../game/v3/jobs'
 import { getV3OfferView, type V3OfferReason } from '../../game/v3/offers'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
 import { fonts } from '../../theme'
+import { v3JobLabel } from './v3Labels'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -58,7 +59,7 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
         const blocked = check(accept)
         return (
           <View key={`${template.id}:${branch ?? ''}`} style={styles.offer}>
-            <Text style={styles.offerTitle}>{template.id}{branch ? ` · ${branch === 'petrochemicals' ? 'Petro' : 'Pellets'}` : ''} · {t(KIND[template.kind])}</Text>
+            <Text style={styles.offerTitle}>{t(v3JobLabel(template.id))}{branch ? ` · ${branch === 'petrochemicals' ? 'Petro' : 'Pellets'}` : ''} · {t(KIND[template.kind])}</Text>
             {branch && <Text style={styles.muted}>{t({ en: 'Materials: pick ONE product for this job; the other cannot be shipped to it.', th: 'Materials: เลือกสินค้าเพียงชนิดเดียวต่องาน ส่งอีกชนิดเข้างานนี้ไม่ได้' })}</Text>}
             <Text style={styles.row}>
               Q{view.minimumQuality}+ · {view.quantity} {t({ en: 'units', th: 'หน่วย' })} · ${(view.unitPriceCents / 100).toFixed(2)}/{t({ en: 'unit', th: 'หน่วย' })}
