@@ -1,3 +1,4 @@
+import { V3_ADJACENCY_WORKSHOP_CUT, getV3LineAdjacency } from './adjacency'
 import { getV3BuildingType, getV3BuildingLevel, listV3Buildings } from './yard'
 import type { BuildingType } from '../types'
 import { V3_BUILDINGS, V3_CAPS, V3_MAINTENANCE, V3_TICKS_PER_CYCLE, isV3ProcessBuilding } from './data'
@@ -63,7 +64,9 @@ export function evaluateV3Maintenance(state: V3GameState, deltaTicks = V3_TICKS_
     const localCut = lineEmployee && !state.unpaidEmployeeIds.includes(lineEmployee.id)
       ? (lineEmployee.skills ?? []).filter((skill) => skill.channel === 'upkeep').reduce((sum, skill) => sum + skill.value, 0)
       : 0
-    const cut = Math.min(V3_CAPS.upkeep, globalCut + localCut)
+    // A workshop touching this line adds a local 10% cut; all cuts share the 25% cap.
+    const adjacencyCut = isV3ProcessBuilding(building) && getV3LineAdjacency(state, buildingId).workshop ? V3_ADJACENCY_WORKSHOP_CUT : 0
+    const cut = Math.min(V3_CAPS.upkeep, globalCut + localCut + adjacencyCut)
     let waivedReason: V3MaintenanceLine['waivedReason'] = null
     if (state.recoveryState?.status === 'running') waivedReason = 'recovery'
     else if (CORE.has(building) && state.campaignProgress.chapter < V3_MAINTENANCE.starterFreeUntilChapter) waivedReason = 'starter'

@@ -136,6 +136,20 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   ) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 awards or campaign report.' }
   }
+  const inbox = value.inbox
+  if (
+    !Array.isArray(value.discoveredAdjacencies) || !value.discoveredAdjacencies.every((entry) => typeof entry === 'string') ||
+    !isRecord(inbox) || !(inbox.lastIssuedTick === null || Number.isInteger(inbox.lastIssuedTick)) ||
+    !Array.isArray(inbox.items) ||
+    new Set((inbox.items as Array<Record<string, unknown>>).map((item) => item?.id)).size !== inbox.items.length ||
+    !inbox.items.every((item) => isRecord(item) && typeof item.id === 'string' &&
+      ['customer_thanks', 'staff_accomplishment', 'experiment_opportunity'].includes(item.kind as string) &&
+      Number.isInteger(item.createdAtTick) && isFiniteNonnegative(item.rewardRp) && (item.rewardRp as number) <= 5 &&
+      typeof item.decision === 'boolean' && ['pending', 'claimed', 'dismissed'].includes(item.status as string) && isRecord(item.params)) ||
+    (inbox.items as Array<Record<string, unknown>>).filter((item) => item.decision && item.status === 'pending').length > 1
+  ) {
+    return { status: 'invalid', state: null, reason: 'Invalid V3 inbox or adjacency history.' }
+  }
   const employees = world.employees as Array<Record<string, unknown>>
   const employeeIds = new Set(employees.map((employee) => employee.id as string))
   const employeeTypes = new Map(employees.map((employee) => [employee.id as string, employee.type]))

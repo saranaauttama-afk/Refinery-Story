@@ -33,6 +33,8 @@ import { getV3Modifiers } from './modifiers'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
+import { recordV3AdjacencyDiscoveries } from './adjacency'
+import { resolveV3InboxItem } from './inbox'
 import { getV3EmergencyExitCents } from './maintenance'
 import { evaluateV3CampaignProgress } from './campaign'
 import {
@@ -267,7 +269,7 @@ function consumedResult(
   resultEvent: V3ActionEvent,
 ): V3ActionResult {
   // Chapter predicates are re-evaluated after every accepted transaction (never decrease).
-  const evaluated = resultEvent.tone === 'success' ? evaluateV3CampaignProgress(next) : next
+  const evaluated = resultEvent.tone === 'success' ? recordV3AdjacencyDiscoveries(evaluateV3CampaignProgress(next)) : next
   return {
     state: { ...evaluated, nextActionSequence: state.nextActionSequence + 1 },
     changed: true,
@@ -562,6 +564,12 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       return consumedResult(state, action, state, event('blocked', 'v3.maintenance.unaffordable', { costCents: Math.ceil(exitCents) }))
     }
     return consumedResult(state, action, { ...state, maintenanceEmergency: null }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'resolve_inbox') {
+    const resolved = resolveV3InboxItem(state, action.itemId, action.choice)
+    if (resolved.blocker) return consumedResult(state, action, state, event('blocked', `v3.inbox.${resolved.blocker}`))
+    return consumedResult(state, action, resolved.state, event('success', 'v3.action.ok'))
   }
 
   if (action.type === 'convert_asphalt') {

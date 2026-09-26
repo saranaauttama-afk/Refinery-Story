@@ -30,7 +30,8 @@
     "check:v3-materials": "node --import tsx scripts/materials-check.ts",
     "check:v3-maintenance": "node --import tsx scripts/maintenance-check.ts",
     "check:v3-campaign-end": "node --import tsx scripts/campaign-end-check.ts",
-    "check:v3-yard": "node --import tsx scripts/yard-check.ts"
+    "check:v3-yard": "node --import tsx scripts/yard-check.ts",
+    "check:v3-layout-events": "node --import tsx scripts/layout-events-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
