@@ -10,10 +10,10 @@ import type { V3GameState, V3ProductBlueprint, V3ProductFamily } from '../src/ga
 import { act, assertBlocked, attempt, legalChapterTwo } from './v3-check-helpers'
 
 // ---- Catalog: 12 milestones for 4 clients, S6 economics, no Materials yet ----
-const milestones = Object.values(V3_JOB_TEMPLATES).filter((template) => template.kind === 'milestone')
+// V3-13 scope: the four fuel clients (Materials joined in V3-14, see check:v3-materials).
+const milestones = Object.values(V3_JOB_TEMPLATES).filter((template) => template.kind === 'milestone' && template.clientId !== 'materials')
 assert.equal(milestones.length, 12)
 assert.deepEqual([...new Set(milestones.map((template) => template.clientId))].sort(), ['airline', 'fleet', 'local', 'performance'])
-assert.ok(!Object.keys(V3_JOB_TEMPLATES).some((id) => id.startsWith('materials')), 'Materials waits for V3-14')
 for (const template of milestones) {
   const stage = template.id.split(':')[1]
   assert.equal(template.researchReward, { trial: 5, regular: 10, partner: 15 }[stage])

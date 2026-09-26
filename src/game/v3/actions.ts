@@ -501,7 +501,7 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
   }
 
   if (action.type === 'accept_job') {
-    const accepted = acceptV3Job(state, action.templateId, action.sequence, getV3RushTerms(state, action.templateId))
+    const accepted = acceptV3Job(state, action.templateId, action.sequence, getV3RushTerms(state, action.templateId), action.branch ?? null)
     if (accepted.blocker) {
       return consumedResult(state, action, state, event('blocked', `v3.job.${accepted.blocker}` as V3ActionEvent['messageId']))
     }
@@ -536,7 +536,8 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       }
       const template = V3_JOB_TEMPLATES[action.templateId]
       const proven = template?.requires && state.jobReceipts.receipts.some((receipt) => receipt.templateId === template.requires && receipt.status === 'completed')
-      if (!template || template.kind !== 'repeat' || !proven) {
+      // Branched (Materials) repeats need a per-job product choice, so they are manual only.
+      if (!template || template.kind !== 'repeat' || !proven || template.branches) {
         return consumedResult(state, action, state, event('blocked', 'v3.job.auto_repeat_invalid'))
       }
     }

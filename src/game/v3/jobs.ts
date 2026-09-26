@@ -22,6 +22,16 @@ export type V3JobTemplate = {
   milestone: boolean
   /** Template that must be completed first (ladder order / proven route). */
   requires: string | null
+  /** Materials OR-branch: the player picks one product per job at acceptance. */
+  branches: V3JobBranch[] | null
+}
+
+export type V3JobBranch = {
+  family: V3ProductFamily
+  minimumQuality: number
+  quantity: number
+  unitPriceCents: number
+  completionBonusCents: number
 }
 
 /** Systems S6 quote multiplier by required quality. */
@@ -51,7 +61,7 @@ function buildCatalog(): Record<string, V3JobTemplate> {
     'tutorial:gasoline': {
       id: 'tutorial:gasoline', clientId: 'tutorial', kind: 'tutorial', family: 'gasoline', minimumQuality: 0,
       quantity: 20, unitPriceCents: 1_800, completionBonusCents: 20_000,
-      researchReward: 10, reputationReward: 0, minimumChapter: 0, milestone: true, requires: null,
+      researchReward: 10, reputationReward: 0, minimumChapter: 0, milestone: true, requires: null, branches: null,
     },
   }
   for (const ladder of LADDERS) {
@@ -64,6 +74,7 @@ function buildCatalog(): Record<string, V3JobTemplate> {
         researchReward: STAGE_RP[stage], reputationReward: STAGE_REPUTATION[stage],
         minimumChapter: ladder.chapters[stage], milestone: true,
         requires: stage === 0 ? null : `${ladder.clientId}:${STAGES[stage - 1]}`,
+        branches: null,
       }
     })
     // Repeats: same criteria as the milestone, income only (no bonus/RP/reputation).
@@ -81,14 +92,46 @@ function buildCatalog(): Record<string, V3JobTemplate> {
       researchReward: 0, reputationReward: 0, minimumChapter: 3, milestone: false, requires: regular.id,
     }
   }
+  // Materials (C4): Petro OR Pellets per job (Master §7); one product per job.
+  const materials: Array<[[number, number], [number, number]]> = [[[40, 40], [50, 25]], [[55, 80], [65, 50]], [[65, 160], [75, 100]]]
+  materials.forEach(([[petroQ, petroQty], [pelletQ, pelletQty]], stage) => {
+    const branch = (family: V3ProductFamily, quality: number, quantity: number): V3JobBranch => {
+      const unitPriceCents = Math.round(V3_SPOT_PRICE_CENTS[family] * getV3QuoteMultiplier(quality))
+      return { family, minimumQuality: quality, quantity, unitPriceCents, completionBonusCents: Math.round(quantity * unitPriceCents * 0.1) }
+    }
+    const branches = [branch('petrochemicals', petroQ, petroQty), branch('plasticPellets', pelletQ, pelletQty)]
+    const id = `materials:${STAGES[stage]}`
+    catalog[id] = {
+      id, clientId: 'materials', kind: 'milestone', ...branches[0],
+      researchReward: STAGE_RP[stage], reputationReward: STAGE_REPUTATION[stage], minimumChapter: 4,
+      milestone: true, requires: stage === 0 ? null : `materials:${STAGES[stage - 1]}`, branches,
+    }
+  })
+  for (const [stage, suffix] of [[1, 'repeat'], [2, 'partner-repeat']] as const) {
+    const base = catalog[`materials:${STAGES[stage]}`]
+    catalog[`materials:${suffix}`] = {
+      ...base, id: `materials:${suffix}`, kind: 'repeat', completionBonusCents: 0, researchReward: 0,
+      reputationReward: 0, milestone: false, requires: base.id,
+      branches: base.branches!.map((entry) => ({ ...entry, completionBonusCents: 0 })),
+    }
+  }
   return catalog
+}
+
+/** Template terms for a chosen branch; null when the branch is missing or invalid. */
+export function resolveV3JobTemplate(templateId: string, branch?: V3ProductFamily | null): V3JobTemplate | null {
+  const template = V3_JOB_TEMPLATES[templateId]
+  if (!template) return null
+  if (!template.branches) return branch && branch !== template.family ? null : template
+  const chosen = template.branches.find((entry) => entry.family === branch)
+  return chosen ? { ...template, ...chosen } : null
 }
 
 export const V3_JOB_TEMPLATES: Record<string, V3JobTemplate> = buildCatalog()
 export const V3_REPEAT_COOLDOWN_TICKS = 600
 export const V3_AUTO_REPEAT_CHAPTER = 3
 
-export type V3JobBlocker = 'template_missing' | 'slot_occupied' | 'locked' | 'cooldown' | 'no_active_job' | 'invalid_quantity' | 'insufficient_qualified_stock' | 'requires_previous' | 'rush_unavailable'
+export type V3JobBlocker = 'template_missing' | 'slot_occupied' | 'locked' | 'cooldown' | 'no_active_job' | 'invalid_quantity' | 'insufficient_qualified_stock' | 'requires_previous' | 'rush_unavailable' | 'invalid_branch'
 
 export type V3RushTerms = { quantity: number; deadlineTicks: number }
 
@@ -109,10 +152,17 @@ export function getV3AcceptBlocker(state: V3GameState, templateId: string): V3Jo
 }
 export type V3JobResult = { state: V3GameState; blocker: V3JobBlocker | null; quantity: number; paidCents: number }
 
-export function acceptV3Job(state: V3GameState, templateId: string, sequence: number | string, rush: V3RushTerms | null = null): V3JobResult {
+export function acceptV3Job(
+  state: V3GameState,
+  templateId: string,
+  sequence: number | string,
+  rush: V3RushTerms | null = null,
+  branch: V3ProductFamily | null = null,
+): V3JobResult {
   const blocker = getV3AcceptBlocker(state, templateId)
   if (blocker) return { state, blocker, quantity: 0, paidCents: 0 }
-  const template = V3_JOB_TEMPLATES[templateId]
+  const template = resolveV3JobTemplate(templateId, branch)
+  if (!template) return { state, blocker: 'invalid_branch', quantity: 0, paidCents: 0 }
   if (template.kind === 'rush' && (!rush || rush.quantity < 1 || rush.deadlineTicks < 900)) {
     return { state, blocker: 'rush_unavailable', quantity: 0, paidCents: 0 }
   }

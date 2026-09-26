@@ -263,6 +263,7 @@ export type V3ActionMessageId =
   | 'v3.train.insufficient_cash'
   | 'v3.train.insufficient_rp'
   | 'v3.job.requires_previous'
+  | 'v3.job.invalid_branch'
   | 'v3.job.rush_unavailable'
   | 'v3.job.auto_repeat_locked'
   | 'v3.job.auto_repeat_invalid'
@@ -400,6 +401,8 @@ export type V3AcceptJobAction = {
   type: 'accept_job'
   sequence: number
   templateId: string
+  /** Required for Materials: which product this job will use until it ends. */
+  branch?: V3ProductFamily
 }
 
 export type V3DispatchJobAction = {
