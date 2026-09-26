@@ -29,6 +29,7 @@ import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
 import { V3YardPanel, useV3YardController } from '../src/components/v3/V3YardPanel'
 import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
 import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
+import { V3SupplyPanel } from '../src/components/v3/V3SupplyPanel'
 import { getV3Calendar } from '../src/game/v3/yardView'
 import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
@@ -366,7 +367,7 @@ export default function V3GameScreen() {
   const tabs: Array<{ key: V3Tab; label: BilingualTextValue; icon: string }> = [
     { key: 'build', label: { en: 'Build', th: 'สร้าง' }, icon: '🏗️' },
     { key: 'staff', label: { en: 'Staff', th: 'พนักงาน' }, icon: '👷' },
-    { key: 'products', label: { en: 'Products', th: 'สินค้า' }, icon: '🧪' },
+    { key: 'products', label: { en: 'Supply', th: 'วัตถุดิบ/สินค้า' }, icon: '🛢️' },
     { key: 'clients', label: { en: 'Clients', th: 'ลูกค้า' }, icon: '🤝' },
     { key: 'reports', label: { en: 'Reports', th: 'รายงาน' }, icon: '📊' },
   ]
@@ -382,7 +383,7 @@ export default function V3GameScreen() {
           <Pressable onPress={() => router.push('/settings')} hitSlop={10}><Text style={styles.hudItem}>⚙️</Text></Pressable>
         </View>
         <View style={styles.hudRow}>
-          <Text style={styles.hudSmall}>🛢️ {state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} · ⛽ {gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} · ⚡ {state.world.electricity.toFixed(0)}</Text>
+          <Pressable onPress={() => setTab('products')} hitSlop={8} style={styles.hudPress}><Text style={styles.hudSmall}>🛢️ {state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} · ⛽ {gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} · ⚡ {state.world.electricity.toFixed(0)} ＋</Text></Pressable>
           <View style={styles.speedRow}>
             {([0, 1, 2, 3] as const).map((value) => (
               <Pressable
@@ -442,6 +443,7 @@ export default function V3GameScreen() {
             {tab === 'staff' && <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />}
             {tab === 'products' && (
               <>
+                <V3SupplyPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{activeBlueprint
             ? `${t({ en: 'Gasoline line', th: 'ไลน์ Gasoline' })} · ${activeBlueprint.name} Q${activeBlueprint.quality}`
@@ -627,6 +629,7 @@ const styles = StyleSheet.create({
   hudRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   hudMoney: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 20 },
   hudItem: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
+  hudPress: { flexShrink: 1 },
   hudSmall: { color: '#A9C1CF', fontSize: 12, flexShrink: 1 },
   speedChip: { minWidth: 38, minHeight: 32, borderRadius: 6, borderWidth: 1, borderColor: '#3F6680', alignItems: 'center', justifyContent: 'center', backgroundColor: '#163A52' },
   speedText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12 },

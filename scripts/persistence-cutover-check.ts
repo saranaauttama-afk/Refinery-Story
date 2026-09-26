@@ -131,6 +131,8 @@ async function main() {
   const writers = [...visited].filter((file) => /AsyncStorage\.setItem|\.setItem\(/.test(readFileSync(file, 'utf8')))
   const gameWriters = writers.filter((file) => /game/i.test(file))
   assert.deepEqual(gameWriters.map((file) => file.replace(`${root}/`, '')), ['src/game/v3/storage.ts'], 'the V3 storage module is the only game save writer')
+  // Regression (V3-20): the shipped UI must always offer a way to buy crude.
+  assert.ok([...visited].some((file) => /direction: 'buy', product: 'crude'/.test(readFileSync(file, 'utf8'))), 'a crude purchase action is reachable from the app')
   void clock
 
   console.log(`PASS: V3-17 persistence cutover — exact fresh/reload/reset, corrupt/newer/older never overwritten, loaner provenance, real-time clock, single writer (${visited.size} modules scanned)`)
