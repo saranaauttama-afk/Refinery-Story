@@ -134,6 +134,7 @@ export function createInitialV3GameState(): V3GameState {
     campaignReport: null,
     discoveredAdjacencies: [],
     inbox: { items: [], lastIssuedTick: null },
+    expoResults: [],
     employeeRecords: { [operator.id]: { workTicks: 0, blueprintIds: [], milestoneIds: [] } },
     clientProgress: {},
     acceptedJob: null,

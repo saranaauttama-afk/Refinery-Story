@@ -31,6 +31,7 @@ import {
 import { getV3Modifiers } from './modifiers'
 import { getV3CrudeUnitPriceCents } from './fame'
 import { getV3MarketMultiplier } from './market'
+import { enterV3Expo, validateV3ExpoEntry } from './expo'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
@@ -291,6 +292,13 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
         received: action.sequence,
       })],
     }
+  }
+
+  if (action.type === 'enter_expo') {
+    const invalid = validateV3ExpoEntry(state, action.blueprintId)
+    if (invalid) return consumedResult(state, action, state, event('blocked', `v3.expo.${invalid.blocker}` as V3ActionEvent['messageId'], invalid.params))
+    const entered = enterV3Expo(state, action.blueprintId)
+    return consumedResult(state, action, entered.state, event('success', 'v3.action.ok', { rank: entered.entry.rank }))
   }
 
   if (action.type === 'build') {

@@ -136,6 +136,15 @@ export function parseV3GameState(input: unknown): V3LoadResult {
   ) {
     return { status: 'invalid', state: null, reason: 'Invalid V3 awards or campaign report.' }
   }
+  if (
+    !Array.isArray(value.expoResults) ||
+    !value.expoResults.every((entry) => isRecord(entry) && Number.isInteger(entry.year) && typeof entry.blueprintId === 'string' &&
+      PRODUCT_FAMILIES.has(entry.family as string) && isFiniteNonnegative(entry.quality) && isFiniteNonnegative(entry.score) &&
+      Number.isInteger(entry.rank) && Array.isArray(entry.rivalScores) && isFiniteNonnegative(entry.cashCents) && isFiniteNonnegative(entry.reputation)) ||
+    new Set((value.expoResults as Array<Record<string, unknown>>).map((entry) => entry.year)).size !== value.expoResults.length
+  ) {
+    return { status: 'invalid', state: null, reason: 'Invalid V3 expo history.' }
+  }
   const inbox = value.inbox
   if (
     !Array.isArray(value.discoveredAdjacencies) || !value.discoveredAdjacencies.every((entry) => typeof entry === 'string') ||
