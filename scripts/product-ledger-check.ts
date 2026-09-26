@@ -14,6 +14,7 @@ import {
 import { createInitialV3GameState } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3ProductBlueprint } from '../src/game/v3/types'
+import { getV3MarketMultiplier } from '../src/game/v3/market'
 
 const q35: V3ProductBlueprint = {
   id: 'blueprint:gasoline:volume:1',
@@ -123,9 +124,11 @@ const sale = reduceV3Action(state, {
   source: 'manual',
 })
 assert.equal(sale.events[0].messageId, 'v3.action.ok')
-assert.equal(sale.state.world.moneyCents, state.world.moneyCents + 7_200)
+// V3-21b: spot price × seasonal market multiplier for the current month.
+const saleCents = Math.round(4 * 1_800 * getV3MarketMultiplier(state, 'gasoline'))
+assert.equal(sale.state.world.moneyCents, state.world.moneyCents + saleCents)
 assert.equal(sale.state.variantInventory[q55.id].quantity, 6)
-assert.equal(sale.state.operatingLedger.lifetimeReceiptsCents, 7_200)
+assert.equal(sale.state.operatingLedger.lifetimeReceiptsCents, saleCents)
 assert.equal(sale.state.operatingLedger.lifetimeCogsCents, 1_200)
 assert.equal(sale.state.operatingLedger.capexCents, 0, 'operating trade must not be recorded as capex')
 

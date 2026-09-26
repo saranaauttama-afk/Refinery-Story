@@ -35,7 +35,8 @@
     "check:v3-c1-softlock": "node --import tsx scripts/c1-softlock-check.ts",
     "check:v3-legal-run": "node --import tsx scripts/v3-legal-full-run.ts",
     "check:v3-persistence": "node --import tsx scripts/persistence-cutover-check.ts",
-    "check:v3-fame": "node --import tsx scripts/fame-check.ts"
+    "check:v3-fame": "node --import tsx scripts/fame-check.ts",
+    "check:v3-market": "node --import tsx scripts/market-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",

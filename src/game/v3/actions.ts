@@ -30,6 +30,7 @@ import {
 } from './data'
 import { getV3Modifiers } from './modifiers'
 import { getV3CrudeUnitPriceCents } from './fame'
+import { getV3MarketMultiplier } from './market'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
@@ -775,7 +776,9 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       ? consumeV3Commodity(state, action.product, action.quantity)
       : consumeV3SellableInventory(state, action.product, action.quantity, action)
     // Spot uses the base price plus the capped trade channel; no Q multiplier.
-    const receiptsCents = Math.round(consumed.quantity * V3_SPOT_PRICE_CENTS[action.product] * (1 + getV3Modifiers(state).trade.effective))
+    // Seasonal market applies to Q-graded families only; commodities sell at list.
+    const market = isV3Commodity(action.product) ? 1 : getV3MarketMultiplier(state, action.product)
+    const receiptsCents = Math.round(consumed.quantity * V3_SPOT_PRICE_CENTS[action.product] * market * (1 + getV3Modifiers(state).trade.effective))
     const sold = {
       ...consumed.state,
       world: {

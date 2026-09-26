@@ -31,6 +31,7 @@ import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
 import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
 import { V3SupplyPanel } from '../src/components/v3/V3SupplyPanel'
 import { V3FamePanel } from '../src/components/v3/V3FamePanel'
+import { V3MarketPanel } from '../src/components/v3/V3MarketPanel'
 import { getV3Fame } from '../src/game/v3/fame'
 import { getV3Calendar } from '../src/game/v3/yardView'
 import { evaluateV3Production } from '../src/game/v3/production'
@@ -445,6 +446,7 @@ export default function V3GameScreen() {
             {tab === 'staff' && <V3TeamPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />}
             {tab === 'products' && (
               <>
+                <V3MarketPanel state={state} t={t} />
                 <V3SupplyPanel state={state} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} />
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{activeBlueprint
