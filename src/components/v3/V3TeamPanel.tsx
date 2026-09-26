@@ -9,6 +9,7 @@ import type { V3Action, V3ActionEvent, V3EmployeeDuty, V3GameState } from '../..
 import { listV3Buildings } from '../../game/v3/yard'
 import { getV3LocalCrewRate, getV3StaffCap, getV3TrainingCost, getV3WageCents } from '../../game/v3/workforce'
 import { fonts } from '../../theme'
+import { V3_CAREER, getV3CareerRank, getV3RareCandidate } from '../../game/v3/careers'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -107,7 +108,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
               : t({ en: 'no active effect', th: 'ยังไม่มีผล' })
           return (
             <View key={employee.id} style={styles.person}>
-              <Text style={styles.personTitle}>{employee.name} · {t(ROLE_LABEL[employee.type])} Lv{employee.level}</Text>
+              <Text style={styles.personTitle}>{employee.isAce ? '★ ' : ''}{employee.name} · {getV3CareerRank(state, employee.id) > 0 ? `${t(V3_CAREER.titles[getV3CareerRank(state, employee.id)])} ` : ''}{t(ROLE_LABEL[employee.type])} Lv{employee.level}</Text>
               <Text style={styles.row}>XP {employee.xp.toFixed(0)}{threshold && employee.level < V3_STAFF_LEVELS.maxLevel ? `/${threshold}` : ' · MAX'} · ${(getV3WageCents(employee, duty ?? { kind: 'reserve' }, 300) / 100).toFixed(2)}/min</Text>
               <Text style={[styles.row, unpaid && styles.warning]}>{dutyText(duty, t)} · {unpaid ? t({ en: 'UNPAID — no effect', th: 'ค้างค่าจ้าง — ไม่มีผล' }) : contribution}</Text>
               <Text style={styles.muted}>{t(ROLE_DUTY[employee.type])}</Text>
@@ -129,6 +130,15 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
                 )}
                 <Gate label={t({ en: '→ Reserve', th: '→ สำรอง' })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'reserve' } }} />
                 <Gate label={t({ en: `Train · $${training.cents / 100} + ${training.rp} RP`, th: `ฝึก · $${training.cents / 100} + ${training.rp} RP` })} action={{ type: 'train_employee', employeeId: employee.id }} />
+                {getV3CareerRank(state, employee.id) < V3_CAREER.maxRank && (
+                  <Gate
+                    label={t({
+                      en: `Promote to ${V3_CAREER.titles[getV3CareerRank(state, employee.id) + 1].en} · $${V3_CAREER.promotionDollars[getV3CareerRank(state, employee.id)]} + ${V3_CAREER.promotionRp[getV3CareerRank(state, employee.id)]} RP (Lv→1, +5% crew / ×1.25 support)`,
+                      th: `เลื่อนเป็น${V3_CAREER.titles[getV3CareerRank(state, employee.id) + 1].th} · $${V3_CAREER.promotionDollars[getV3CareerRank(state, employee.id)]} + ${V3_CAREER.promotionRp[getV3CareerRank(state, employee.id)]} RP (เลเวลกลับเป็น 1, ไลน์ +5% / support ×1.25)`,
+                    })}
+                    action={{ type: 'promote_employee', employeeId: employee.id }}
+                  />
+                )}
               </View>
             </View>
           )
@@ -136,6 +146,17 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
       </View>
 
       <View style={styles.card}>
+        {(() => {
+          const candidate = getV3RareCandidate(state)
+          if (!candidate) return <Text style={styles.muted}>{t({ en: 'Rare ★ candidates visit each quarter once your fame reaches Lv3.', th: 'ผู้สมัครหายาก ★ จะมาทุกไตรมาสเมื่อชื่อเสียงถึง Lv3' })}</Text>
+          return (
+            <View style={styles.person}>
+              <Text style={styles.personTitle}>★ {candidate.employee.name} · {t(ROLE_LABEL[candidate.employee.type])} Lv{candidate.employee.level}</Text>
+              <Text style={styles.muted}>{(candidate.employee.skills ?? []).map((skill) => `${skill.channel} +${Math.round(skill.value * 100)}%`).join(' · ')} · {t({ en: 'leaves at the end of this quarter', th: 'จะไปเมื่อจบไตรมาสนี้' })}</Text>
+              <Gate label={t({ en: `Hire ★ · $${(candidate.costCents / 100).toLocaleString()}`, th: `จ้าง ★ · $${(candidate.costCents / 100).toLocaleString()}` })} action={{ type: 'hire_candidate', candidateId: candidate.id }} />
+            </View>
+          )
+        })()}
         <Text style={styles.cardTitle}>{t({ en: 'Hire (guaranteed ordinary candidate)', th: 'จ้างงาน (มีผู้สมัครพื้นฐานเสมอ)' })}</Text>
         <Text style={styles.muted}>{t({ en: 'Specialists speed matched lines; without them, modules + research still reach the required quality.', th: 'ผู้เชี่ยวชาญช่วยไลน์ที่ตรงสาย แต่ถ้าไม่มี ใช้โมดูล + งานวิจัยก็ยังได้คุณภาพที่ต้องการ' })}</Text>
         {(Object.keys(V3_ROLES) as WorkerType[]).map((role) => (

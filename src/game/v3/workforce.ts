@@ -71,7 +71,9 @@ export function getV3LocalCrewRate(state: V3GameState, buildingId: string): numb
   const skillRate = (employee.skills ?? [])
     .filter((skill) => skill.channel === 'output')
     .reduce((sum, skill) => sum + skill.value, 0)
-  return Math.min(V3_CAPS.localCrewRate, roleRate + skillRate)
+  // Career rank: +5% crew per rank and the local cap rises by the same amount.
+  const rank = state.employeeRecords[employee.id]?.careerRank ?? 0
+  return Math.min(V3_CAPS.localCrewRate + rank * 0.05, roleRate + skillRate + rank * 0.05)
 }
 
 export function getV3StaffCap(state: V3GameState): number {

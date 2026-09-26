@@ -92,6 +92,8 @@ export type V3EmployeeRecord = {
   workTicks: number
   blueprintIds: string[]
   milestoneIds: string[]
+  /** V3-21e career rank (0 = none, 1 = Senior, 2 = Chief). */
+  careerRank?: number
 }
 
 export type V3ClientProgress = {
@@ -356,6 +358,12 @@ export type V3ActionMessageId =
   | 'v3.train.max_level'
   | 'v3.train.insufficient_cash'
   | 'v3.train.insufficient_rp'
+  | 'v3.career.employee_missing'
+  | 'v3.career.max_rank'
+  | 'v3.career.level_required'
+  | 'v3.career.insufficient_cash'
+  | 'v3.career.insufficient_rp'
+  | 'v3.candidate.unavailable'
   | 'v3.expo.not_expo_month'
   | 'v3.expo.fame_locked'
   | 'v3.expo.already_entered'
@@ -609,6 +617,18 @@ export type V3ResolveInboxAction = {
   choice: 'claim' | 'dismiss'
 }
 
+export type V3PromoteEmployeeAction = {
+  type: 'promote_employee'
+  sequence: number
+  employeeId: string
+}
+
+export type V3HireCandidateAction = {
+  type: 'hire_candidate'
+  sequence: number
+  candidateId: string
+}
+
 export type V3EnterExpoAction = {
   type: 'enter_expo'
   sequence: number
@@ -621,7 +641,7 @@ export type V3SetAutoRepeatAction = {
   templateId: string | null
 }
 
-export type V3Action = V3EnterExpoAction | V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3Action = V3PromoteEmployeeAction | V3HireCandidateAction | V3EnterExpoAction | V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

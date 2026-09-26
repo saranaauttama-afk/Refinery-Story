@@ -32,6 +32,7 @@ import { getV3Modifiers } from './modifiers'
 import { getV3CrudeUnitPriceCents } from './fame'
 import { getV3MarketMultiplier } from './market'
 import { enterV3Expo, validateV3ExpoEntry } from './expo'
+import { getV3RareCandidate, promoteV3Employee, validateV3Promotion } from './careers'
 import { cancelV3Development, startV3Development } from './development'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES, acceptV3Job, cancelV3Job, dispatchV3Job } from './jobs'
 import { getV3RushTerms } from './offers'
@@ -292,6 +293,28 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
         received: action.sequence,
       })],
     }
+  }
+
+  if (action.type === 'promote_employee') {
+    const invalid = validateV3Promotion(state, action.employeeId)
+    if (invalid) return consumedResult(state, action, state, event('blocked', `v3.career.${invalid.blocker}` as V3ActionEvent['messageId'], invalid.params))
+    return consumedResult(state, action, promoteV3Employee(state, action.employeeId), event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'hire_candidate') {
+    const candidate = getV3RareCandidate(state)
+    if (!candidate || candidate.id !== action.candidateId) return consumedResult(state, action, state, event('blocked', 'v3.candidate.unavailable'))
+    if (state.world.employees.length >= getV3StaffCap(state)) return consumedResult(state, action, state, event('blocked', 'v3.hire.staff_cap', { cap: getV3StaffCap(state) }))
+    if (state.world.moneyCents < candidate.costCents) return consumedResult(state, action, state, event('blocked', 'v3.hire.insufficient_cash', { costCents: candidate.costCents }))
+    const hired = candidate.employee
+    return consumedResult(state, action, {
+      ...state,
+      world: { ...state.world, moneyCents: state.world.moneyCents - candidate.costCents, employees: [...state.world.employees, hired] },
+      employeeDuties: { ...state.employeeDuties, [hired.id]: { kind: 'reserve' } },
+      employeeRecords: { ...state.employeeRecords, [hired.id]: emptyV3EmployeeRecord() },
+      campaignProgress: { ...state.campaignProgress, claimedFlags: [...state.campaignProgress.claimedFlags, candidate.id] },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + candidate.costCents },
+    }, event('success', 'v3.action.ok', { costCents: candidate.costCents }))
   }
 
   if (action.type === 'enter_expo') {

@@ -357,6 +357,7 @@ export function parseV3GameState(input: unknown): V3LoadResult {
     Object.keys(value.employeeRecords).some((id) => !employeeIds.has(id)) ||
     !Object.values(value.employeeRecords).every((record) =>
       isRecord(record) && isFiniteNonnegative(record.workTicks) &&
+      (record.careerRank === undefined || [0, 1, 2].includes(record.careerRank as number)) &&
       Array.isArray(record.blueprintIds) && record.blueprintIds.every((id) => typeof id === 'string') &&
       Array.isArray(record.milestoneIds) && record.milestoneIds.every((id) => typeof id === 'string'))
   ) {

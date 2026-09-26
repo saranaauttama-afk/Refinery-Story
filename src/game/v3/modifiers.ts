@@ -70,7 +70,8 @@ export function getV3Modifiers(state: V3GameState): V3Modifiers {
     .sort((a, b) => a.id.localeCompare(b.id))
   for (const employee of supporters) {
     const role = V3_ROLES[employee.type]
-    const effectiveness = getV3LevelEffectiveness(employee)
+    // Career rank multiplies support effect (×1.25 per rank); caps still apply.
+    const effectiveness = getV3LevelEffectiveness(employee) * (1 + 0.25 * (state.employeeRecords[employee.id]?.careerRank ?? 0))
     if (role.support === 'storageFlat') {
       const counted = Math.max(0, Math.min(effectiveness, V3_CAPS.mechanicEffectiveStaff - mechanicStaff))
       mechanicStaff += counted

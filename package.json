@@ -38,7 +38,8 @@
     "check:v3-fame": "node --import tsx scripts/fame-check.ts",
     "check:v3-market": "node --import tsx scripts/market-check.ts",
     "check:v3-rivals": "node --import tsx scripts/rivals-check.ts",
-    "check:v3-expo": "node --import tsx scripts/expo-check.ts"
+    "check:v3-expo": "node --import tsx scripts/expo-check.ts",
+    "check:v3-careers": "node --import tsx scripts/careers-check.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
