@@ -3,20 +3,15 @@ import assert from 'node:assert/strict'
 import { reduceV3Action } from '../src/game/v3/actions'
 import { advanceV3Development } from '../src/game/v3/development'
 import { addV3VariantInventory, getV3ProductQuantity } from '../src/game/v3/productInventory'
-import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID } from '../src/game/v3/state'
+import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID, V3_STARTER_BUILDINGS } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3ProcessProfile } from '../src/game/v3/types'
+import { slotId } from './v3-check-helpers'
+import { placeFixture, slotId } from './v3-check-helpers'
 
 function developmentFixture(quantity = 30): V3GameState {
   let state = createInitialV3GameState()
-  state = {
-    ...state,
-    world: {
-      ...state.world,
-      grid: state.world.grid.map((cell, index) => index === 0 ? 'laboratory' : cell),
-    },
-    campaignProgress: { ...state.campaignProgress, chapter: 1 },
-  }
+  state = { ...placeFixture(state, 'laboratory', 0).state, campaignProgress: { ...state.campaignProgress, chapter: 1 } }
   return addV3VariantInventory(state, V3_DEFAULT_BLUEPRINT_ID.gasoline, quantity, quantity * 1_000).state
 }
 
@@ -29,7 +24,7 @@ function start(state: V3GameState, profile: V3ProcessProfile, leadEmployeeId: st
     module: 'none',
     knowledgeRank: 0,
     leadEmployeeId,
-    labBuildingId: 0,
+    labBuildingId: slotId(state, 0),
   })
 }
 
@@ -73,14 +68,14 @@ assert.equal(state.world.employees[0].xp, 0)
 state = advanceV3Development(state, 100)
 const precision = Object.values(state.productBlueprints).find((blueprint) => blueprint.profile === 'precision')!
 assert.equal(precision.quality, 55)
-assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: 4 })
+assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id })
 assert.equal(state.world.employees[0].xp, 20)
 
 result = reduceV3Action(state, {
-  type: 'set_program', sequence: state.nextActionSequence, buildingId: 4, blueprintId: precision.id,
+  type: 'set_program', sequence: state.nextActionSequence, buildingId: V3_STARTER_BUILDINGS.distillationUnit.id, blueprintId: precision.id,
 })
-assert.equal(result.state.plantPrograms[4].blueprintId, precision.id)
-assert.equal(result.state.plantPrograms[4].setupRemainingTicks, 25)
+assert.equal(result.state.plantPrograms[slotId(result.state, 4)].blueprintId, precision.id)
+assert.equal(result.state.plantPrograms[slotId(result.state, 4)].setupRemainingTicks, 25)
 result = reduceV3Action(result.state, {
   type: 'set_blueprint_presentation', sequence: result.state.nextActionSequence,
   blueprintId: precision.id, name: 'Premium 55', archived: true,
@@ -95,7 +90,7 @@ const afterStartGas = getV3ProductQuantity(result.state, 'gasoline')
 const afterStartMoney = result.state.world.moneyCents
 result = reduceV3Action(result.state, { type: 'cancel_development', sequence: result.state.nextActionSequence })
 assert.equal(result.state.developmentProject, null)
-assert.deepEqual(result.state.employeeDuties[niranId], { kind: 'line', buildingId: 4 })
+assert.deepEqual(result.state.employeeDuties[niranId], { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id })
 assert.equal(getV3ProductQuantity(result.state, 'gasoline'), afterStartGas)
 assert.equal(result.state.world.moneyCents, afterStartMoney)
 assert.equal(result.state.world.employees[0].xp, 0)

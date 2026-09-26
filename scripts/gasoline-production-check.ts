@@ -3,9 +3,10 @@ import assert from 'node:assert/strict'
 import { reduceV3Action } from '../src/game/v3/actions'
 import { addV3VariantInventory, getV3ProductQuantity } from '../src/game/v3/productInventory'
 import { evaluateV3GasolineProduction, runV3ProductionTick } from '../src/game/v3/production'
-import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID } from '../src/game/v3/state'
+import { createInitialV3GameState, V3_DEFAULT_BLUEPRINT_ID, V3_STARTER_BUILDINGS } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3ProductBlueprint } from '../src/game/v3/types'
+import { slotId } from './v3-check-helpers'
 
 const close = (actual: number, expected: number, message?: string) =>
   assert.ok(Math.abs(actual - expected) < 1e-8, `${message ?? 'value'}: ${actual} != ${expected}`)
@@ -59,7 +60,7 @@ state = {
   },
 }
 preview = evaluateV3GasolineProduction(state, 25)
-close(preview.find((line) => line.buildingId === 4)!.potentialOutputPerMinute, 60)
+close(preview.find((line) => line.buildingId === V3_STARTER_BUILDINGS.distillationUnit.id)!.potentialOutputPerMinute, 60)
 close(preview.find((line) => line.buildingId === 0)!.potentialOutputPerMinute, 48)
 result = runV3ProductionTick(state, 25)
 close(result.state.variantInventory[V3_DEFAULT_BLUEPRINT_ID.gasoline].quantity, 5)
@@ -71,8 +72,8 @@ const scarce = {
   world: { ...state.world, crudeOil: 6 },
   materialCostBasis: { ...state.materialCostBasis, crudeCents: 6_000 },
   plantPrograms: {
-    0: { ...state.plantPrograms[0], blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline },
-    4: state.plantPrograms[4],
+    0: { ...state.plantPrograms[slotId(state, 0)], blueprintId: V3_DEFAULT_BLUEPRINT_ID.gasoline },
+    4: state.plantPrograms[slotId(state, 4)],
   },
 }
 preview = evaluateV3GasolineProduction(scarce, 25)
@@ -106,19 +107,19 @@ const setup = {
 }
 result = runV3ProductionTick(setup, 10)
 assert.equal(result.lines[0].status, 'setup')
-assert.equal(result.state.plantPrograms[4].setupRemainingTicks, 15)
+assert.equal(result.state.plantPrograms[slotId(result.state, 4)].setupRemainingTicks, 15)
 assert.equal(getV3ProductQuantity(result.state, 'gasoline'), 0)
 
 let changed = reduceV3Action(state, {
-  type: 'set_program', sequence: state.nextActionSequence, buildingId: 4, blueprintId: precision.id,
+  type: 'set_program', sequence: state.nextActionSequence, buildingId: V3_STARTER_BUILDINGS.distillationUnit.id, blueprintId: precision.id,
 })
 assert.equal(changed.events[0].messageId, 'v3.action.ok')
-assert.equal(changed.state.plantPrograms[4].blueprintId, precision.id)
-assert.equal(changed.state.plantPrograms[4].setupRemainingTicks, 25)
+assert.equal(changed.state.plantPrograms[slotId(changed.state, 4)].blueprintId, precision.id)
+assert.equal(changed.state.plantPrograms[slotId(changed.state, 4)].setupRemainingTicks, 25)
 changed = reduceV3Action(changed.state, {
-  type: 'set_pause', sequence: changed.state.nextActionSequence, buildingId: 4, paused: true,
+  type: 'set_pause', sequence: changed.state.nextActionSequence, buildingId: V3_STARTER_BUILDINGS.distillationUnit.id, paused: true,
 })
-assert.equal(changed.state.plantPrograms[4].paused, true)
+assert.equal(changed.state.plantPrograms[slotId(changed.state, 4)].paused, true)
 
 const buildState = {
   ...createInitialV3GameState(),
@@ -127,6 +128,6 @@ const buildState = {
 const built = reduceV3Action(buildState, {
   type: 'build', sequence: buildState.nextActionSequence, buildingId: 0, building: 'distillationUnit',
 })
-assert.equal(built.state.plantPrograms[0].blueprintId, V3_DEFAULT_BLUEPRINT_ID.gasoline)
+assert.equal(built.state.plantPrograms[slotId(built.state, 0)].blueprintId, V3_DEFAULT_BLUEPRINT_ID.gasoline)
 
 console.log('PASS: V3-05 per-cell Gasoline rates, atomic resources, variant lots, costing, setup, and reload')

@@ -4,12 +4,12 @@ import { V3_ROLES, type V3ProcessBuilding } from '../src/game/v3/data'
 import { getV3Modifiers } from '../src/game/v3/modifiers'
 import { getV3CrudeCapacity, getV3PhysicalCrudeCapacity, addV3VariantInventory } from '../src/game/v3/productInventory'
 import { evaluateV3Production, runV3ProductionTick } from '../src/game/v3/production'
-import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState } from '../src/game/v3/state'
+import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState, V3_STARTER_BUILDINGS } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { Employee, WorkerType } from '../src/game/types'
 import type { V3GameState } from '../src/game/v3/types'
 import { getV3LocalCrewRate } from '../src/game/v3/workforce'
-import { act, assertBlocked, attempt, close, cycles } from './v3-check-helpers'
+import { act, assertBlocked, slotId, attempt, close, cycles, SLOT } from './v3-check-helpers'
 
 const ROLES = Object.keys(V3_ROLES) as WorkerType[]
 const PLANTS = ['distillationUnit', 'lubricantPlant', 'jetFuelPlant'] as const satisfies readonly V3ProcessBuilding[]
@@ -31,8 +31,8 @@ const person = (type: WorkerType, index = 1, level = 1): Employee => ({ id: `emp
 for (const role of ROLES) {
   let state = fixture(3, [person(role)])
   const plantCells: Record<(typeof PLANTS)[number], number> = { distillationUnit: 4, lubricantPlant: 0, jetFuelPlant: 1 }
-  state = act(state, { type: 'build', buildingId: 0, building: 'lubricantPlant' })
-  state = act(state, { type: 'build', buildingId: 1, building: 'jetFuelPlant' })
+  state = act(state, { type: 'build', ...SLOT(0), building: 'lubricantPlant' })
+  state = act(state, { type: 'build', ...SLOT(1), building: 'jetFuelPlant' })
   state = act(state, { type: 'assign_duty', employeeId: state.world.employees[0].id, duty: { kind: 'reserve' } })
   const id = person(role).id
   for (const plant of PLANTS) {
@@ -50,9 +50,9 @@ for (const role of ROLES) {
 }
 // Level scaling and caps on local crew.
 let crew = fixture(3, [person('aviationSpecialist', 1, 5)])
-crew = act(crew, { type: 'build', buildingId: 1, building: 'jetFuelPlant' })
-crew = act(crew, { type: 'assign_duty', employeeId: person('aviationSpecialist').id, duty: { kind: 'line', buildingId: 1 } })
-close(getV3LocalCrewRate(crew, 1), 0.23, 'matched Lv5 = min(0.25, 0.15+0.08)')
+crew = act(crew, { type: 'build', ...SLOT(1), building: 'jetFuelPlant' })
+crew = act(crew, { type: 'assign_duty', employeeId: person('aviationSpecialist').id, duty: { kind: 'line', buildingId: slotId(crew, 1) } })
+close(getV3LocalCrewRate(crew, slotId(crew, 1)), 0.23, 'matched Lv5 = min(0.25, 0.15+0.08)')
 
 // ---- Deterministic vacancy hiring, chapter unlocks, cap, atomic failure ----
 let hiring = createInitialV3GameState()
@@ -110,21 +110,21 @@ close(chem.world.researchPoints - rpBefore, 5 * 1.1)
 
 // ---- R&D lead loses line benefit until return; Support lead returns to Support ----
 let rnd = fixture(2, [person('chemist')])
-rnd = act(rnd, { type: 'build', buildingId: 0, building: 'laboratory' })
+rnd = act(rnd, { type: 'build', ...SLOT(0), building: 'laboratory' })
 rnd = addV3VariantInventory(rnd, V3_DEFAULT_BLUEPRINT_ID.gasoline, 20, 20_000).state
 const niran = rnd.world.employees[0].id
-assert.ok(getV3LocalCrewRate(rnd, 4) > 0)
-rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: niran, labBuildingId: 0 })
-close(getV3LocalCrewRate(rnd, 4), 0, 'lead left the line')
-assertBlocked(rnd, { type: 'assign_duty', employeeId: niran, duty: { kind: 'line', buildingId: 4 } }, 'v3.duty.occupied')
+assert.ok(getV3LocalCrewRate(rnd, slotId(rnd, 4)) > 0)
+rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'precision', module: 'none', knowledgeRank: 0, leadEmployeeId: niran, labBuildingId: slotId(rnd, 0) })
+close(getV3LocalCrewRate(rnd, slotId(rnd, 4)), 0, 'lead left the line')
+assertBlocked(rnd, { type: 'assign_duty', employeeId: niran, duty: { kind: 'line', buildingId: slotId(rnd, 4) } }, 'v3.duty.occupied')
 rnd = cycles(rnd, 4)
-assert.deepEqual(rnd.employeeDuties[niran], { kind: 'line', buildingId: 4 }, 'returns to vacant line')
-assert.ok(getV3LocalCrewRate(rnd, 4) > 0)
+assert.deepEqual(rnd.employeeDuties[niran], { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id }, 'returns to vacant line')
+assert.ok(getV3LocalCrewRate(rnd, slotId(rnd, 4)) > 0)
 const blueprintId = rnd.developmentHistory.at(-1)!.blueprintId
 assert.ok(rnd.employeeRecords[niran].blueprintIds.includes(blueprintId), 'accomplishment: developed blueprint')
 rnd = addV3VariantInventory(rnd, V3_DEFAULT_BLUEPRINT_ID.gasoline, 20, 20_000).state
 rnd = act(rnd, { type: 'assign_duty', employeeId: person('chemist').id, duty: { kind: 'support' } })
-rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('chemist').id, labBuildingId: 0 })
+rnd = act(rnd, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('chemist').id, labBuildingId: slotId(rnd, 0) })
 assert.equal(rnd.developmentProject?.leadContribution, 5, 'Chemist lead gives Q+5 for any family')
 assert.equal(rnd.developmentProject?.quality, 40)
 close(getV3Modifiers(rnd).rp.effective, 0, 'Chemist in R&D gives no support bonus')
@@ -132,14 +132,14 @@ rnd = cycles(rnd, 4)
 assert.deepEqual(rnd.employeeDuties[person('chemist').id], { kind: 'support' })
 // Non-lead roles cannot lead a project.
 let noLead = fixture(2, [person('mechanic')])
-noLead = act(noLead, { type: 'build', buildingId: 0, building: 'laboratory' })
+noLead = act(noLead, { type: 'build', ...SLOT(0), building: 'laboratory' })
 noLead = addV3VariantInventory(noLead, V3_DEFAULT_BLUEPRINT_ID.gasoline, 20, 20_000).state
-assertBlocked(noLead, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('mechanic').id, labBuildingId: 0 }, 'v3.development.invalid_lead')
+assertBlocked(noLead, { type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none', knowledgeRank: 0, leadEmployeeId: person('mechanic').id, labBuildingId: slotId(noLead, 0) }, 'v3.development.invalid_lead')
 
 // ---- XP from actual duty, legacy thresholds; training legal action ----
 let xp = createInitialV3GameState()
 xp = { ...xp, world: { ...xp.world, moneyCents: 10_000_000 } }
-xp = act(xp, { type: 'build', buildingId: 0, building: 'crudeTank' })
+xp = act(xp, { type: 'build', ...SLOT(0), building: 'crudeTank' })
 for (let index = 0; index < 50 && xp.world.employees[0].level < 2; index++) {
   xp = act(xp, { type: 'trade', direction: 'buy', product: 'crude', quantity: 6 })
   xp = cycles(xp, 1)
@@ -180,7 +180,7 @@ assertBlocked(research, { type: 'buy_research', researchId: 'storageOptimization
 let spec = fixture(2)
 spec = assertBlocked(spec, { type: 'choose_specialization', path: 'green' }, 'v3.specialization.locked')
 spec = { ...spec, campaignProgress: { ...spec.campaignProgress, chapter: 3 } }
-spec = act(spec, { type: 'build', buildingId: 0, building: 'lubricantPlant' })
+spec = act(spec, { type: 'build', ...SLOT(0), building: 'lubricantPlant' })
 const before = evaluateV3Production(spec, 25).lines.find((line) => line.buildingId === 0)!
 spec = act(spec, { type: 'choose_specialization', path: 'green' })
 const after = evaluateV3Production(spec, 25).lines.find((line) => line.buildingId === 0)!

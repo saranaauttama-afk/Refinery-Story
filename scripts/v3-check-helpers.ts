@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
 
-import { reduceV3Action } from '../src/game/v3/actions'
+import { getV3DefaultProgramId, reduceV3Action } from '../src/game/v3/actions'
+import { isV3ProcessBuilding } from '../src/game/v3/data'
 import { getV3CrudeCapacity, getV3SellableQuantity } from '../src/game/v3/productInventory'
 import { runV3ProductionTick } from '../src/game/v3/production'
 import { createInitialV3GameState } from '../src/game/v3/state'
-import type { V3Action, V3ActionResult, V3GameState, V3ProductFamily } from '../src/game/v3/types'
+import type { V3Action, V3ActionResult, V3Building, V3GameState, V3ProductFamily } from '../src/game/v3/types'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 export type V3ActionInput = WithoutSequence<V3Action>
@@ -48,18 +49,18 @@ export function legalChapterTwo(): V3GameState {
   state = cycles(state, 4)
   state = act(state, { type: 'accept_job', templateId: 'tutorial:gasoline' })
   state = act(state, { type: 'dispatch_job', quantity: 20 })
-  state = act(state, { type: 'build', buildingId: 0, building: 'laboratory' })
+  state = act(state, { type: 'build', ...SLOT(0), building: 'laboratory' })
   state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 60 })
   state = cycles(state, 2)
   state = act(state, {
     type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none',
-    knowledgeRank: 0, leadEmployeeId: null, labBuildingId: 0,
+    knowledgeRank: 0, leadEmployeeId: null, labBuildingId: slotId(state, 0),
   })
   state = cycles(state, 4)
   const developed = Object.values(state.productBlueprints).find((blueprint) => blueprint.provenance === 'developed')
   assert.ok(developed)
   state = sellAllFree(state, 'gasoline')
-  state = act(state, { type: 'set_program', buildingId: 4, blueprintId: developed!.id })
+  state = act(state, { type: 'set_program', buildingId: slotId(state, 4), blueprintId: developed!.id })
   state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 60 })
   state = cycles(state, 9)
   state = act(state, { type: 'accept_job', templateId: 'local:trial' })
@@ -88,4 +89,33 @@ export function materialBasisTotal(state: V3GameState): number {
   const inventory = Object.values(state.variantInventory).reduce((sum, entry) => sum + entry.totalCostBasisCents, 0)
   const basis = state.materialCostBasis
   return inventory + basis.crudeCents + basis.feedstockCents + basis.electricityCents + basis.wasteCents
+}
+
+/**
+ * Test layout: legacy check "slots" 0..8 map to anchors in the 10×10 core,
+ * 3 apart so every building can reach its Lv3 footprint. Slots 3/4/5 are the
+ * starter Crude Tank / Distillation / Gasoline Tank.
+ */
+export function SLOT(n: number): { x: number; y: number } {
+  return { x: 45 + 3 * (n % 3), y: 45 + 3 * Math.floor(n / 3) }
+}
+
+/** ID of the building anchored at a test slot (fails loudly if none). */
+export function slotId(state: V3GameState, n: number): string {
+  const { x, y } = SLOT(n)
+  const building = Object.values(state.world.buildingsById).find((entry) => entry.x === x && entry.y === y)
+  assert.ok(building, `no building anchored at slot ${n} (${x},${y})`)
+  return building!.id
+}
+
+/**
+ * Labelled fixture helper: inserts a building at a test slot directly (bypassing
+ * cost/chapter) with its default program, for rule-isolation checks only.
+ */
+export function placeFixture(state: V3GameState, type: V3Building['type'], n: number, level: 1 | 2 | 3 = 1): { state: V3GameState; id: string } {
+  const id = `building:fixture:${type}:${n}`
+  const building: V3Building = { id, type, level, ...SLOT(n) }
+  const next: V3GameState = { ...state, world: { ...state.world, buildingsById: { ...state.world.buildingsById, [id]: building } } }
+  if (!isV3ProcessBuilding(type)) return { state: next, id }
+  return { id, state: { ...next, plantPrograms: { ...next.plantPrograms, [id]: { buildingId: id, blueprintId: getV3DefaultProgramId(type), installedModule: 'none', setupRemainingTicks: 0, paused: false } } } }
 }

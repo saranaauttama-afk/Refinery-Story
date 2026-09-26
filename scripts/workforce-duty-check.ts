@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 import { reduceV3Action } from '../src/game/v3/actions'
 import { evaluateV3GasolineProduction, runV3ProductionTick } from '../src/game/v3/production'
-import { createInitialV3GameState } from '../src/game/v3/state'
+import { createInitialV3GameState, V3_STARTER_BUILDINGS } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { Employee } from '../src/game/types'
 import { returnV3EmployeeFromDevelopment } from '../src/game/v3/workforce'
@@ -40,7 +40,7 @@ action = reduceV3Action(state, {
 state = action.state
 preview = evaluateV3GasolineProduction(state, 25)
 close(preview.find((line) => line.buildingId === 0)!.potentialOutputPerMinute, 72)
-close(preview.find((line) => line.buildingId === 4)!.potentialOutputPerMinute, 60)
+close(preview.find((line) => line.buildingId === V3_STARTER_BUILDINGS.distillationUnit.id)!.potentialOutputPerMinute, 60)
 
 const secondOperator: Employee = {
   id: 'employee:operator:000002', type: 'operator', name: 'Mali', level: 1, xp: 0,
@@ -101,15 +101,15 @@ assert.equal(parseV3GameState(JSON.parse(JSON.stringify(production.state))).stat
 state = createInitialV3GameState()
 state = {
   ...state,
-  employeeDuties: { [niranId]: { kind: 'development', projectId: 'project:1', returnBuildingId: 4 } },
+  employeeDuties: { [niranId]: { kind: 'development', projectId: 'project:1', returnBuildingId: V3_STARTER_BUILDINGS.distillationUnit.id } },
 }
 state = returnV3EmployeeFromDevelopment(state, niranId)
-assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: 4 })
+assert.deepEqual(state.employeeDuties[niranId], { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id })
 state = {
   ...state,
   employeeDuties: {
-    [niranId]: { kind: 'development', projectId: 'project:2', returnBuildingId: 4 },
-    [secondOperator.id]: { kind: 'line', buildingId: 4 },
+    [niranId]: { kind: 'development', projectId: 'project:2', returnBuildingId: V3_STARTER_BUILDINGS.distillationUnit.id },
+    [secondOperator.id]: { kind: 'line', buildingId: V3_STARTER_BUILDINGS.distillationUnit.id },
   },
 }
 state = returnV3EmployeeFromDevelopment(state, niranId)

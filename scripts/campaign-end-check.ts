@@ -8,7 +8,7 @@ import { runV3ProductionTick } from '../src/game/v3/production'
 import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3GameState, V3JobReceipt, V3ProductBlueprint, V3ProductFamily } from '../src/game/v3/types'
-import { act, assertBlocked } from './v3-check-helpers'
+import { act, assertBlocked, slotId } from './v3-check-helpers'
 
 // ---- Showcase catalog (Master §11) ----
 const showcases = Object.values(V3_JOB_TEMPLATES).filter((template) => template.kind === 'showcase')
@@ -105,7 +105,7 @@ assert.ok(!cleared.world.unlockedResearchIds.length, 'no all-research gate')
 
 // ---- Sticky clear, single payout, report restorable ----
 const cashAtClear = cleared.world.moneyCents
-let after = act(cleared, { type: 'demolish', buildingId: 5, expectedBuilding: 'gasolineTank' })
+let after = act(cleared, { type: 'demolish', buildingId: slotId(cleared, 5), expectedBuilding: 'gasolineTank' })
 after = { ...after, world: { ...after.world, moneyCents: 0 } }
 after = evaluateV3CampaignProgress(after)
 assert.equal(after.campaignProgress.chapter, 5, 'clear is sticky')

@@ -8,7 +8,7 @@ import { V3_DEFAULT_BLUEPRINT_ID, createInitialV3GameState } from '../src/game/v
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { BuildingType } from '../src/game/types'
 import type { V3GameState } from '../src/game/v3/types'
-import { act, assertBlocked, attempt, close } from './v3-check-helpers'
+import { act, assertBlocked, slotId, attempt, close, SLOT } from './v3-check-helpers'
 
 const PETRO = V3_DEFAULT_BLUEPRINT_ID.petrochemicals
 const PELLET = V3_DEFAULT_BLUEPRINT_ID.plasticPellets
@@ -35,11 +35,11 @@ state = assertBlocked(state, { type: 'accept_job', templateId: 'materials:trial'
 state = assertBlocked(state, { type: 'accept_job', templateId: 'local:trial', branch: 'jetFuel' }, 'v3.job.invalid_branch')
 
 // ---- Petro branch: reservation protects contract Petro from Polymer ----
-state = act(state, { type: 'set_pause', buildingId: 4, paused: true })
-state = act(state, { type: 'build', buildingId: 0, building: 'petrochemicalPlant' })
-state = act(state, { type: 'set_pause', buildingId: 0, paused: true })
-state = act(state, { type: 'build', buildingId: 1, building: 'polymerPlant' })
-state = act(state, { type: 'build', buildingId: 2, building: 'powerPlant' })
+state = act(state, { type: 'set_pause', buildingId: slotId(state, 4), paused: true })
+state = act(state, { type: 'build', ...SLOT(0), building: 'petrochemicalPlant' })
+state = act(state, { type: 'set_pause', buildingId: slotId(state, 0), paused: true })
+state = act(state, { type: 'build', ...SLOT(1), building: 'polymerPlant' })
+state = act(state, { type: 'build', ...SLOT(2), building: 'powerPlant' })
 state = { ...state, world: { ...state.world, electricity: 80, crudeOil: 0 }, materialCostBasis: { ...state.materialCostBasis, crudeCents: 0 } }
 state = addV3VariantInventory(state, PETRO, 40, 4_000).state
 state = act(state, { type: 'accept_job', templateId: 'materials:trial', branch: 'petrochemicals' })
@@ -47,7 +47,7 @@ assert.equal(state.acceptedJob!.family, 'petrochemicals')
 assert.equal(state.acceptedJob!.quantity, 40)
 assert.equal(getV3StockAllocations(state, 'petrochemicals')[0].jobReserved, 40)
 let tick = runV3ProductionTick(state, 25)
-close(tick.lines.find((line) => line.buildingId === 1)!.actualWork, 0, 'Polymer cannot eat contract Petro')
+close(tick.lines.find((line) => line.buildingId === slotId(state, 1))!.actualWork, 0, 'Polymer cannot eat contract Petro')
 close(tick.state.variantInventory[PETRO].quantity, 40)
 // Wrong branch cannot submit: Pellets never ship into a Petro job.
 let wrong = addV3VariantInventory(tick.state, PELLET, 30, 3_000).state
@@ -59,7 +59,7 @@ assert.equal(wrong.clientProgress.materials.lastCompletedMilestoneId, 'materials
 // Released reservation: surplus Petro now feeds Polymer again.
 wrong = addV3VariantInventory({ ...wrong, world: { ...wrong.world, electricity: 80 } }, PETRO, 12, 1_200).state
 tick = runV3ProductionTick(wrong, 25)
-close(tick.lines.find((line) => line.buildingId === 1)!.actualWork, 1)
+close(tick.lines.find((line) => line.buildingId === slotId(wrong, 1))!.actualWork, 1)
 
 // ---- Pellet branch for Regular; branched repeats are manual only ----
 let pellets = act({ ...wrong, productBlueprints: { ...wrong.productBlueprints, 'blueprint:fixture:pellet:65': { ...wrong.productBlueprints[PELLET], id: 'blueprint:fixture:pellet:65', signature: 'fixture:pellet:65', revision: 9, quality: 65, provenance: 'developed', name: 'Fixture Pellets Q65' } } }, { type: 'accept_job', templateId: 'materials:regular', branch: 'plasticPellets' })
@@ -97,7 +97,7 @@ const chain: BuildingType[] = [
 ]
 for (const building of chain) {
   const cell = yard.world.grid.findIndex((entry) => entry === null)
-  yard = act(yard, { type: 'build', buildingId: cell, building })
+  yard = act(yard, { type: 'build', ...SLOT(cell), building })
 }
 const used = yard.world.grid.filter((cell) => cell !== null).length
 assert.equal(used, 17, 'starter 3 + 14 = Master example minus workshop')

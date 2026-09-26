@@ -9,6 +9,7 @@ import { getV3RecoveryOffer, isV3LoanerBuilding } from '../src/game/v3/recovery'
 import { createInitialV3GameState } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
 import type { V3Action, V3GameState } from '../src/game/v3/types'
+import { SLOT, slotId } from './v3-check-helpers'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 
@@ -31,12 +32,12 @@ state = act(state, { type: 'dispatch_job', quantity: 20 })
 assert.equal(state.campaignProgress.chapter, 1)
 assert.ok(state.campaignProgress.claimedFlags.includes('chapter:1'))
 
-state = act(state, { type: 'build', buildingId: 0, building: 'laboratory' })
+state = act(state, { type: 'build', ...SLOT(0), building: 'laboratory' })
 state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 60 })
 state = cycles(state, 2)
 state = act(state, {
   type: 'start_development', family: 'gasoline', profile: 'volume', module: 'none',
-  knowledgeRank: 0, leadEmployeeId: null, labBuildingId: 0,
+  knowledgeRank: 0, leadEmployeeId: null, labBuildingId: slotId(state, 0),
 })
 state = cycles(state, 4)
 const developed = Object.values(state.productBlueprints).find((blueprint) => blueprint.provenance === 'developed')
@@ -45,7 +46,7 @@ const defaultStock = Object.entries(state.variantInventory)
   .filter(([id]) => id !== developed!.id)
   .reduce((sum, [, entry]) => sum + entry.quantity, 0)
 if (defaultStock > 0) state = act(state, { type: 'trade', direction: 'sell', product: 'gasoline', quantity: Math.floor(defaultStock) })
-state = act(state, { type: 'set_program', buildingId: 4, blueprintId: developed!.id })
+state = act(state, { type: 'set_program', buildingId: slotId(state, 4), blueprintId: developed!.id })
 state = act(state, { type: 'trade', direction: 'buy', product: 'crude', quantity: 60 })
 state = cycles(state, 9)
 assert.ok((state.variantInventory[developed!.id]?.quantity ?? 0) >= 40)
@@ -84,9 +85,9 @@ assert.ok(loanerDistillation >= 0)
 const beforeUpgrade = getV3BuildingLevel(loaners, loanerDistillation)
 const upgrade = reduceV3Action(loaners, { type: 'upgrade', sequence: loaners.nextActionSequence, buildingId: loanerDistillation })
 assert.equal(upgrade.events[0].messageId, 'v3.upgrade.unsupported')
-assert.equal(upgrade.getV3BuildingLevel(state, loanerDistillation), beforeUpgrade)
+assert.equal(getV3BuildingLevel(upgrade.state, loanerDistillation), beforeUpgrade)
 const cashBeforeLoanerDemolition = loaners.world.moneyCents
-loaners = act(upgrade.state, { type: 'demolish', buildingId: loanerDistillation, expectedBuilding: 'distillationUnit' })
+loaners = act(upgrade.state, { type: 'demolish', buildingId: slotId(upgrade.state, loanerDistillation), expectedBuilding: 'distillationUnit' })
 assert.equal(loaners.world.moneyCents, cashBeforeLoanerDemolition)
 
 let pause = setV3SelectedSpeed(V3_INITIAL_PAUSE_STATE, 3)
