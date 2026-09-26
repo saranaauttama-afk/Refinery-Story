@@ -32,7 +32,11 @@ const FAMILY_LABEL: Record<V3ProductFamily, BilingualTextValue> = {
   petrochemicals: { en: 'Petrochemicals', th: 'ปิโตรเคมี' },
   plasticPellets: { en: 'Plastic Pellets', th: 'เม็ดพลาสติก' },
 }
-const PORTED: V3ProductFamily[] = ['gasoline', 'lubricants', 'jetFuel']
+const PORTED: V3ProductFamily[] = ['gasoline', 'lubricants', 'jetFuel', 'petrochemicals', 'plasticPellets']
+const COMMODITIES = [
+  { key: 'recycledMaterial' as const, label: { en: 'Recycled material', th: 'วัสดุรีไซเคิล' } },
+  { key: 'asphalt' as const, label: { en: 'Asphalt', th: 'ยางมะตอย' } },
+]
 const MODULES: V3ModuleKey[] = ['none', 'throughput', 'economy', 'precision']
 const PROFILES: V3ProcessProfile[] = ['volume', 'standard', 'precision']
 const LIMIT_TEXT: Record<V3LinePlan['limitedBy'], BilingualTextValue> = {
@@ -107,6 +111,9 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
             {' · '}{t({ en: 'free', th: 'ขายได้' })} {getV3SellableQuantity(state, family).toFixed(1)}
           </Text>
         ))}
+        {COMMODITIES.map(({ key, label }) => (
+          <Text key={key} style={styles.row}>{t(label)}: {getV3ProductQuantity(state, key).toFixed(1)}/{getV3ProductCapacity(state, key)} · ${V3_SPOT_PRICE_CENTS[key] / 100}/{t({ en: 'unit', th: 'หน่วย' })}</Text>
+        ))}
         <Text style={styles.row}>Feedstock: {state.world.feedstock.toFixed(1)}/{getV3FeedstockCapacity(state)} · Waste: {state.world.waste.toFixed(1)}/200</Text>
         {PORTED.map((family) => {
           const free = Math.floor(getV3SellableQuantity(state, family) + 1e-8)
@@ -122,6 +129,20 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
             />
           )
         })}
+        {COMMODITIES.map(({ key, label }) => {
+          const quantity = Math.max(1, Math.min(10, Math.floor(getV3ProductQuantity(state, key) + 1e-8)))
+          return (
+            <Gate
+              key={`sell-${key}`}
+              label={t({ en: `Sell ${quantity} ${label.en}`, th: `ขาย${label.th} ${quantity} หน่วย` })}
+              action={{ type: 'trade', direction: 'sell', product: key, quantity }}
+            />
+          )
+        })}
+        <Gate
+          label={t({ en: 'Convert 10 crude → 10 asphalt (side product)', th: 'แปลง crude 10 → ยางมะตอย 10 (สินค้ารอง)' })}
+          action={{ type: 'convert_asphalt', quantity: 10 }}
+        />
       </View>
 
       <View style={styles.card}>
@@ -148,7 +169,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           return (
             <View key={line.cellIndex} style={styles.line}>
               <Text style={styles.lineTitle}>
-                #{line.cellIndex + 1} {t(BUILDINGS[line.building].name)} Lv{level} · {blueprint?.name} Q{blueprint?.quality} · {t({ en: 'module', th: 'โมดูล' })} {program.installedModule}
+                #{line.cellIndex + 1} {t(BUILDINGS[line.building].name)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality} · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
               </Text>
               <Text style={styles.row}>{t(STATUS_TEXT[line.status])} · {t(LIMIT_TEXT[line.limitedBy])}</Text>
               <Text style={styles.row}>
@@ -167,7 +188,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
                 })}
                 action={{ type: 'upgrade', cellIndex: line.cellIndex }}
               />
-              <View style={styles.chips}>
+              {line.building !== 'wasteTreatmentPlant' && <View style={styles.chips}>
                 {MODULES.map((module) => {
                   const quote = getV3ModuleQuote(state, line.cellIndex, module)
                   if (quote.blocker === 'no_change') return <Text key={module} style={styles.chipActive}>✓ {module}</Text>
@@ -180,7 +201,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
                     </View>
                   )
                 })}
-              </View>
+              </View>}
               {recipes.map((recipe) => recipe.id === program.blueprintId ? null : (
                 <Gate
                   key={recipe.id}
