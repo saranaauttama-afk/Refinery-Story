@@ -42,7 +42,7 @@ export function V3TitleScreen({ hasSave, t, onContinue, onNew, onSettings }: Pro
 
 const styles = StyleSheet.create({
   background: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 64, paddingBottom: 28 },
-  topShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3, 17, 32, 0.22)' },
+  topShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(3, 17, 32, 0.22)' },
   logoPanel: { alignItems: 'center', alignSelf: 'center', width: '100%', paddingVertical: 22, paddingHorizontal: 12, backgroundColor: 'rgba(3, 25, 45, 0.88)', borderWidth: 3, borderColor: pixelUi.border },
   eyebrow: { color: pixelUi.rp, fontFamily: fonts.brandHeading, fontSize: 13, letterSpacing: 3 },
   title: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 49, lineHeight: 49, textAlign: 'center', letterSpacing: 2, textShadowColor: pixelUi.shadow, textShadowOffset: { width: 3, height: 3 }, textShadowRadius: 0 },
