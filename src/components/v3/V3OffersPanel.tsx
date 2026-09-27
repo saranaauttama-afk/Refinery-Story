@@ -31,7 +31,10 @@ const KIND: Record<string, BilingualTextValue> = {
   milestone: { en: 'Milestone', th: 'Milestone' },
   repeat: { en: 'Repeat (income only)', th: 'งานซ้ำ (รายได้อย่างเดียว)' },
   rush: { en: 'Rush (optional, deadline)', th: 'งานด่วน (ไม่บังคับ, มีกำหนดเวลา)' },
+  showcase: { en: 'Showcase (needed to clear)', th: 'โชว์เคส (ต้องทำเพื่อจบเกม)' },
 }
+/** Never crash on a job kind without a label (showcase was missing: C3 offers crash). */
+const kindLabel = (kind: string): BilingualTextValue => KIND[kind] ?? { en: kind, th: kind }
 
 function formatSeconds(seconds: number): string {
   return seconds >= 60 ? `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s` : `${Math.round(seconds)}s`
@@ -59,7 +62,7 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
         const blocked = check(accept)
         return (
           <View key={`${template.id}:${branch ?? ''}`} style={styles.offer}>
-            <Text style={styles.offerTitle}>{t(v3JobLabel(template.id))}{branch ? ` · ${branch === 'petrochemicals' ? 'Petro' : 'Pellets'}` : ''} · {t(KIND[template.kind])}</Text>
+            <Text style={styles.offerTitle}>{t(v3JobLabel(template.id))}{branch ? ` · ${branch === 'petrochemicals' ? 'Petro' : 'Pellets'}` : ''} · {t(kindLabel(template.kind))}</Text>
             {branch && <Text style={styles.muted}>{t({ en: 'Materials: pick ONE product for this job; the other cannot be shipped to it.', th: 'Materials: เลือกสินค้าเพียงชนิดเดียวต่องาน ส่งอีกชนิดเข้างานนี้ไม่ได้' })}</Text>}
             <Text style={styles.row}>
               Q{view.minimumQuality}+ · {view.quantity} {t({ en: 'units', th: 'หน่วย' })} · ${(view.unitPriceCents / 100).toFixed(2)}/{t({ en: 'unit', th: 'หน่วย' })}
@@ -69,7 +72,7 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
             <Text style={[styles.row, view.feasibility !== 'ready' && styles.warning]}>
               {view.feasibility === 'ready'
                 ? t({ en: `Ready · ETA ${view.etaSeconds === null ? '—' : formatSeconds(view.etaSeconds)}`, th: `พร้อม · ETA ${view.etaSeconds === null ? '—' : formatSeconds(view.etaSeconds)}` })
-                : `${view.feasibility === 'planned' ? t({ en: 'Planned', th: 'ต้องเตรียม' }) : t({ en: 'Unavailable', th: 'ยังทำไม่ได้' })}: ${view.reasons.map((reason) => t(REASON[reason])).join(', ')}`}
+                : `${view.feasibility === 'planned' ? t({ en: 'Planned', th: 'ต้องเตรียม' }) : t({ en: 'Unavailable', th: 'ยังทำไม่ได้' })}: ${view.reasons.map((reason) => t(REASON[reason] ?? { en: reason, th: reason })).join(', ')}`}
             </Text>
             {view.rush && (
               <Text style={styles.muted}>{t({ en: `Deadline ${formatSeconds(view.rush.deadlineTicks / 5)} simulated (paused when the game is paused)`, th: `กำหนดส่ง ${formatSeconds(view.rush.deadlineTicks / 5)} ในเกม (หยุดเดินเมื่อหยุดเกม)` })}</Text>

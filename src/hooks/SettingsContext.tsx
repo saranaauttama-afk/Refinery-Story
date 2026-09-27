@@ -25,6 +25,7 @@ export function useLang(): { lang: Settings['language']; t: (value: BilingualTex
   const { settings } = useSettingsContext()
   return {
     lang: settings.language,
-    t: (value: BilingualTextValue) => (settings.language === 'th' ? value.th : value.en),
+    // A missing label must never crash a whole screen (C3 offers crash, 2026-09-27).
+    t: (value: BilingualTextValue) => (value ? (settings.language === 'th' ? value.th : value.en) ?? '' : ''),
   }
 }
