@@ -14,12 +14,22 @@ Total: **51 building sprites · 15 decoration sprites · 16 road tiles ·
 
 **Owner decision (2026-09-27): detailed, and a colour per product line.**
 Style reference = `assets/plants/starter/distillation_unit_lv3.png` (use it as
-the style/reference image in the generator for every building).
+the style/reference image in the generator for every building). Fill
+`{LOOK}` from the group table below and `{ACCENT}` from §3.
 
-- **Isometric pixel art, detailed industrial look** like the reference: brushed
-  grey steel vessels and columns, dense pipe runs, ladders, catwalks with
-  railings, valves, control boxes, small platforms. Crisp dark outlines.
-  Busy but readable — the silhouette must still read at small size.
+- **Isometric pixel art at the reference's level of detail** — crisp dark
+  outlines, small readable parts, shading like the reference. The reference
+  sets the *detail level and rendering*, **not the content**: only process
+  plants get the pipe-and-catwalk look. Each group has its own character so
+  the yard doesn't look like one building repeated:
+
+  | Group | Buildings | What they look like | Avoid |
+  |---|---|---|---|
+  | Process plants | Distillation, Lubricant, Jet Fuel, Petrochemical, Polymer | Columns/reactors/extruders, pipe runs, catwalks, ladders (like the reference) | — |
+  | Storage | Crude/Gasoline/Lubricant/Jet/Petro tanks, Pellet Silo, Recycling Bunker | Big clean tank or silo shapes, a ladder or ring platform, one or two short outlet pipes | pipe forests, catwalk mazes |
+  | Utility | Power Plant, Waste Treatment | Turbine hall + stack / basins and pumps; a few pipes only where they make sense | looking like a process plant |
+  | Buildings | Laboratory, Maintenance Workshop, Sales Office | Actual buildings: walls, windows, roof, doors, AC units, antenna/dish, garage door, awning, small crane | pipes and catwalks |
+
 - Every building stands on a **thin dark-grey concrete pad that exactly fills
   its footprint diamond** (as in the reference). Decorations and roads have no pad.
 - **2:1 isometric** (diamond tiles twice as wide as tall). Camera from the
@@ -33,15 +43,15 @@ the style/reference image in the generator for every building).
 - **Colour = product line.** Steel stays grey on every building; pipes, trim,
   stripes and small panels use the line's accent colour (table in §3). Shared
   / support buildings use safety orange like the reference.
-- Levels: Lv1 simple (one main vessel), Lv2 adds a second unit and more pipes,
-  Lv3 is the densest (multiple towers, pipe bridge, catwalks) like the reference.
+- Levels: Lv1 simple, Lv2 adds a second unit / wing, Lv3 is the busiest version
+  *of that building's own kind* (a Lv3 office gets a bigger building and extras,
+  not pipes).
 
 Base prompt fragment (prepend to each item's description):
 
 > detailed isometric pixel art industrial building for a Kairosoft-style
 > tycoon game, 2:1 isometric, 3/4 view from the south, light from top-left,
-> grey steel with {ACCENT} pipes and trim, dense pipes, ladders and catwalks,
-> crisp dark outlines, strict pixel grid, standing on a thin dark concrete pad
+> grey steel with {ACCENT} trim, {LOOK}, crisp dark outlines, strict pixel grid, standing on a thin dark concrete pad
 > that fills the isometric footprint, no text, no people, no smoke,
 > transparent background, single object
 
