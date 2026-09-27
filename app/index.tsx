@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -43,7 +43,17 @@ import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3GasolineLineCard, V3Ledge
 import { V3Segments } from '../src/components/v3/V3Segments'
 import { V3ClearChecklist } from '../src/components/v3/V3ClearChecklist'
 import { useLang } from '../src/hooks/SettingsContext'
-import { colors, fonts, spacing } from '../src/theme'
+import { colors, fonts, pixelUi, spacing } from '../src/theme'
+import { getStarterPlantArt } from '../src/starterPlantArt'
+
+function V3NavGlyph({ kind }: { kind: 'build' | 'production' | 'staff' | 'clients' | 'company' }) {
+  if (kind === 'build' || kind === 'production') {
+    return <Image source={getStarterPlantArt(kind === 'build' ? 'distillationUnit' : 'gasolineTank', 1)} style={styles.tabPlantGlyph} resizeMode="contain" />
+  }
+  if (kind === 'staff') return <Image source={require('../assets/staff/portraits/operator.png')} style={styles.tabStaffGlyph} resizeMode="cover" />
+  if (kind === 'clients') return <Text style={styles.tabSymbol}>✉</Text>
+  return <View style={styles.tabChart}>{[9, 16, 23].map((height) => <View key={height} style={[styles.tabChartBar, { height }]} />)}</View>
+}
 
 type V3Tab = 'build' | 'production' | 'staff' | 'clients' | 'company'
 type ProductionSection = 'lines' | 'stock' | 'rnd' | 'market'
@@ -247,26 +257,30 @@ export default function V3GameScreen() {
   }
   const calendar = getV3Calendar(state.world.tickCount)
   const money = (cents: number) => `$${Math.floor(cents / 100).toLocaleString()}`
-  const tabs: Array<{ key: V3Tab; label: BilingualTextValue; icon: string }> = [
-    { key: 'build', label: { en: 'Build', th: 'สร้าง' }, icon: '🏗️' },
-    { key: 'production', label: { en: 'Production', th: 'ผลิต' }, icon: '🛢️' },
-    { key: 'staff', label: { en: 'Staff', th: 'พนักงาน' }, icon: '👷' },
-    { key: 'clients', label: { en: 'Clients', th: 'ลูกค้า' }, icon: '🤝' },
-    { key: 'company', label: { en: 'Company', th: 'บริษัท' }, icon: '📊' },
+  const tabs: Array<{ key: V3Tab; label: BilingualTextValue }> = [
+    { key: 'build', label: { en: 'Build', th: 'สร้าง' } },
+    { key: 'production', label: { en: 'Production', th: 'ผลิต' } },
+    { key: 'staff', label: { en: 'Staff', th: 'พนักงาน' } },
+    { key: 'clients', label: { en: 'Clients', th: 'ลูกค้า' } },
+    { key: 'company', label: { en: 'Company', th: 'บริษัท' } },
   ]
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.hud}>
         <View style={styles.hudRow}>
-          <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
-          <Text style={styles.hudItem}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} เดือน ${calendar.month} สัปดาห์ ${calendar.week}` })}</Text>
-          <Text style={styles.hudItem}>🔬 {Math.floor(state.world.researchPoints)}</Text>
-          <Pressable onPress={() => { setCompanySection('ranking'); setTab('company') }} hitSlop={8}><Text style={styles.hudItem}>⭐{getV3Fame(state).level} · 🏆#{getV3PlayerRank(state)} · C{state.campaignProgress.chapter}</Text></Pressable>
-          <Pressable onPress={() => router.push('/settings')} hitSlop={10}><Text style={styles.hudItem}>⚙️</Text></Pressable>
+          <Text style={styles.hudBrand} numberOfLines={1}>Sunrise Refinery</Text>
+          <View style={styles.chapterBadge}><Text style={styles.chapterText}>C{state.campaignProgress.chapter}</Text></View>
+          <Text style={styles.hudDate}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} ด.${calendar.month} ส.${calendar.week}` })}</Text>
+          <Pressable onPress={() => router.push('/settings')} hitSlop={10} style={styles.hudSettings}><Text style={styles.hudSettingsText}>☰</Text></Pressable>
         </View>
         <View style={styles.hudRow}>
-          <Pressable onPress={() => { setProductionSection('stock'); setTab('production') }} hitSlop={8} style={styles.hudPress}><Text style={styles.hudSmall}>🛢️ {state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} · ⛽ {gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} · ⚡ {state.world.electricity.toFixed(0)} ＋</Text></Pressable>
+          <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
+          <Text style={styles.hudItem}>🔬 {Math.floor(state.world.researchPoints)}</Text>
+          <Pressable onPress={() => { setCompanySection('ranking'); setTab('company') }} hitSlop={8}><Text style={styles.hudItem}>★{getV3Fame(state).level}  # {getV3PlayerRank(state)}</Text></Pressable>
+        </View>
+        <View style={styles.hudRow}>
+          <Pressable onPress={() => { setProductionSection('stock'); setTab('production') }} hitSlop={8} style={styles.hudPress}><Text style={styles.hudSmall}>🛢{state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} ⛽{gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} ⚡{state.world.electricity.toFixed(0)}</Text></Pressable>
           <View style={styles.speedRow}>
             {([0, 1, 2, 3] as const).map((value) => (
               <Pressable
@@ -275,7 +289,7 @@ export default function V3GameScreen() {
                 style={[styles.speedChip, pauseState.selectedSpeed === value && styles.speedActive]}
                 onPress={() => setPauseState((current) => setV3SelectedSpeed(current, value))}
               >
-                <Text style={styles.speedText}>{value === 0 ? '⏸' : `${value}×`}</Text>
+                <Text style={[styles.speedText, pauseState.selectedSpeed === value && styles.speedTextActive]}>{value === 0 ? 'Ⅱ' : `${value}×`}</Text>
               </Pressable>
             ))}
           </View>
@@ -396,7 +410,7 @@ export default function V3GameScreen() {
       <View style={styles.tabBar}>
         {tabs.map((entry) => (
           <Pressable key={entry.key} style={[styles.tabButton, tab === entry.key && styles.tabActive]} onPress={() => setTab(tab === entry.key ? null : entry.key)}>
-            <Text style={styles.tabIcon}>{entry.icon}</Text>
+            <V3NavGlyph kind={entry.key} />
             <Text style={styles.tabLabel}>{t(entry.label)}</Text>
             {entry.key === 'company' && state.inbox.items.length > 0 && <View style={styles.badge} />}
           </Pressable>
@@ -407,36 +421,48 @@ export default function V3GameScreen() {
 }
 
 const styles = StyleSheet.create({
-  hud: { backgroundColor: '#10222F', paddingHorizontal: 12, paddingVertical: 6, gap: 4, borderBottomWidth: 2, borderBottomColor: '#274B63' },
-  hudRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  hudMoney: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 20 },
-  hudItem: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
+  hudBrand: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 16, flexShrink: 1 },
+  chapterBadge: { paddingHorizontal: 5, backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border },
+  chapterText: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 11 },
+  hudDate: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 11 },
+  hudSettings: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border },
+  hudSettingsText: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 18 },
+  tabPlantGlyph: { width: 33, height: 29 },
+  tabStaffGlyph: { width: 28, height: 28, borderWidth: 1, borderColor: pixelUi.border },
+  tabSymbol: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 23, height: 29 },
+  tabChart: { width: 30, height: 29, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
+  tabChartBar: { width: 6, backgroundColor: pixelUi.accent },
+  hud: { backgroundColor: pixelUi.canvas, paddingHorizontal: 8, paddingVertical: 5, gap: 3, borderBottomWidth: 3, borderBottomColor: pixelUi.border },
+  hudRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, minHeight: 31, borderBottomWidth: 1, borderBottomColor: pixelUi.borderSoft },
+  hudMoney: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 19 },
+  hudItem: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 12 },
   hudPress: { flexShrink: 1 },
-  hudSmall: { color: '#A9C1CF', fontSize: 12, flexShrink: 1 },
-  speedChip: { minWidth: 38, minHeight: 32, borderRadius: 6, borderWidth: 1, borderColor: '#3F6680', alignItems: 'center', justifyContent: 'center', backgroundColor: '#163A52' },
-  speedText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12 },
+  hudSmall: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 10, flexShrink: 1 },
+  speedChip: { minWidth: 30, minHeight: 28, borderRadius: 2, borderWidth: 2, borderColor: pixelUi.border, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfaceRaised },
+  speedText: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 11 },
   mapArea: { flex: 1 },
-  goalBanner: { position: 'absolute', top: 8, left: 8, right: 8, backgroundColor: 'rgba(13,43,64,0.88)', borderRadius: 10, borderWidth: 1, borderColor: '#6ACDB4', padding: 8, gap: 4 },
-  goalTitle: { color: '#A9F3D9', fontFamily: fonts.heading, fontSize: 12 },
+  goalBanner: { position: 'absolute', top: 8, left: 8, right: 8, backgroundColor: pixelUi.surface, borderRadius: 2, borderWidth: 2, borderColor: pixelUi.border, padding: 8, gap: 3 },
+  goalTitle: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 12 },
   goalText: { color: '#E8F0F4', fontSize: 13, lineHeight: 18 },
   goalWarning: { color: '#FFAD8A', fontSize: 12 },
   overlayBottom: { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: '55%' },
   overlayScroll: { flexGrow: 0 },
   overlayContent: { gap: 8 },
-  sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '62%', backgroundColor: '#0B1D29', borderTopLeftRadius: 16, borderTopRightRadius: 16, borderTopWidth: 2, borderColor: '#274B63' },
+  sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '62%', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderColor: pixelUi.border },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10 },
   sheetTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 18 },
   sheetClose: { color: '#D5E2E9', fontSize: 20 },
-  tabBar: { flexDirection: 'row', backgroundColor: '#10222F', borderTopWidth: 2, borderTopColor: '#274B63', height: 64 },
-  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabActive: { backgroundColor: '#1D4460' },
+  tabBar: { flexDirection: 'row', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderTopColor: pixelUi.border, height: 64 },
+  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRightWidth: 1, borderRightColor: pixelUi.borderSoft },
+  tabActive: { backgroundColor: pixelUi.surfaceRaised, borderBottomWidth: 3, borderBottomColor: pixelUi.accent },
   tabIcon: { fontSize: 20 },
-  tabLabel: { color: '#E8F0F4', fontSize: 11, fontFamily: fonts.heading },
+  tabLabel: { color: pixelUi.textMuted, fontSize: 11, fontFamily: fonts.brandHeading },
   badge: { position: 'absolute', top: 8, right: '28%', width: 9, height: 9, borderRadius: 5, backgroundColor: '#FF6B5B' },
-  speedRow: { flexDirection: 'row', gap: 6 },
+  speedRow: { flexDirection: 'row', gap: 2 },
   speedButton: { flex: 1 },
-  speedActive: { borderColor: '#6ACDB4', backgroundColor: '#2E6C63' },
-  safe: { flex: 1, backgroundColor: '#071C2D' },
+  speedTextActive: { color: pixelUi.canvas },
+  speedActive: { borderColor: '#FFE77C', backgroundColor: pixelUi.accent },
+  safe: { flex: 1, backgroundColor: pixelUi.canvas },
   loading: { flex: 1, backgroundColor: '#071C2D', alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: '#244A63', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   kicker: { color: '#6ACDB4', fontFamily: fonts.heading, fontSize: 9, letterSpacing: 1.5 },
@@ -455,7 +481,7 @@ const styles = StyleSheet.create({
   cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
   row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
   warning: { color: '#FFAD8A' },
-  primary: { backgroundColor: '#FFD447', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  primary: { backgroundColor: pixelUi.accent, borderRadius: 2, borderWidth: 2, borderColor: '#FFE77C', paddingVertical: 12, alignItems: 'center', marginTop: 4 },
   primaryText: { color: '#0A2943', fontFamily: fonts.heading, fontSize: 13 },
   secondary: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 11, alignItems: 'center' },
   secondaryText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
