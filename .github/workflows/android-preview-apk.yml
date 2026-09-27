@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - release/refinery-story-v1
+      - devGraphic
 
 jobs:
   build-apk:
