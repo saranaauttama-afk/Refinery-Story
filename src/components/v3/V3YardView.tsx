@@ -118,6 +118,24 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     }
     return path
   }, [parcels])
+  // Sparse deterministic pixel wear on the concrete. A single cached path for
+  // the owned yard keeps the scene textured without adding a painted road or
+  // occupying any cells the player could build on.
+  const concreteWear = useMemo(() => {
+    const path = Skia.Path.Make()
+    for (const parcel of parcels) {
+      if (parcel.state !== 'owned') continue
+      for (let y = parcel.y; y < parcel.y + parcel.h; y += 2) {
+        for (let x = parcel.x; x < parcel.x + parcel.w; x += 2) {
+          const seed = (x * 73 + y * 131) >>> 0
+          if (seed % 5 > 1) continue
+          const point = v3IsoPoint(x + 0.4 + seed % 3 * 0.1, y + 0.6)
+          path.addRect(Skia.XYWHRect(Math.round(point.sx), Math.round(point.sy), 2, 1))
+        }
+      }
+    }
+    return path
+  }, [parcels])
   // Decorations: one path per placeholder colour (≤15 draw calls for ≤150 items).
   const decorations = state.world.decorations
   const decorPaths = useMemo(() => {
@@ -144,7 +162,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const worldH = bounds.maxY - bounds.minY
   // Frame the starter refinery at a readable scale. Fitting adjacent locked parcels
   // into the opening camera made every plant tiny and hid the buildable yard.
-  const initialScale = clampCameraValue(width / (V3_ISO.tw * 11), 0.85, 1.65)
+  const initialScale = clampCameraValue(width / (V3_ISO.tw * 8), 1.25, 1.8)
   const starter = sprites.filter((sprite) => sprite.id.startsWith('building:starter:'))
   const focus = starter.length ? starter : sprites
   const centerX = focus.length ? focus.reduce((sum, sprite) => sum + sprite.centerX, 0) / focus.length : (bounds.minX + worldW / 2)
@@ -208,9 +226,10 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
               <Path
                 key={parcel.id}
                 path={path}
-                color={parcel.state === 'owned' ? '#C9AE80' : parcel.state === 'available' ? '#A89473' : '#887C68'}
+                color={parcel.state === 'owned' ? '#C8AF89' : parcel.state === 'available' ? '#B9A487' : '#AD9B80'}
               />
             ))}
+            <Path path={concreteWear} color="rgba(115,83,56,0.30)" />
             <Path path={gridPath} color="rgba(54,64,68,0.16)" style="stroke" strokeWidth={0.7} />
             {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
               <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
@@ -270,6 +289,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 export default memo(V3YardView)
 
 const styles = StyleSheet.create({
-  viewport: { overflow: 'hidden', backgroundColor: '#95876D' },
+  viewport: { overflow: 'hidden', backgroundColor: '#AD9B80' },
   webNote: { color: '#D5E2E9', padding: 16 },
 })
