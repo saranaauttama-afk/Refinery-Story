@@ -12,27 +12,38 @@ Total: **51 building sprites · 15 decoration sprites · 16 road tiles ·
 
 ## 1. Style (applies to every asset)
 
-- **Isometric pixel art**, Kairosoft-like: cute, clean, readable at small size.
-  Match the look of the existing sprites in `assets/plants/`.
+**Owner decision (2026-09-27): detailed, and a colour per product line.**
+Style reference = `assets/plants/starter/distillation_unit_lv3.png` (use it as
+the style/reference image in the generator for every building).
+
+- **Isometric pixel art, detailed industrial look** like the reference: brushed
+  grey steel vessels and columns, dense pipe runs, ladders, catwalks with
+  railings, valves, control boxes, small platforms. Crisp dark outlines.
+  Busy but readable — the silhouette must still read at small size.
+- Every building stands on a **thin dark-grey concrete pad that exactly fills
+  its footprint diamond** (as in the reference). Decorations and roads have no pad.
 - **2:1 isometric** (diamond tiles twice as wide as tall). Camera from the
   south; **light from the top-left**, shadows fall to the bottom-right.
-- Crisp pixels: strict pixel grid, limited palette, no anti-aliasing, no blur,
-  no soft gradients, no painterly texture.
-- **Transparent background only** (real alpha, no checkerboard, no ground
-  plate unless the asset *is* ground, no drop-shadow blob outside the footprint).
+- Crisp pixels: strict pixel grid, limited palette, no blur, no painterly
+  texture, no soft glow.
+- **Transparent background only** (real alpha, no checkerboard, nothing
+  outside the pad).
 - No text, no logos, no people, no vehicles (unless listed), no smoke / steam /
   fire (the game animates those in code).
-- Refinery palette: steel greys, off-white tanks, teal pipes, safety yellow and
-  orange accents. Each product family has an accent colour (see §3) so players
-  can tell lines apart.
+- **Colour = product line.** Steel stays grey on every building; pipes, trim,
+  stripes and small panels use the line's accent colour (table in §3). Shared
+  / support buildings use safety orange like the reference.
+- Levels: Lv1 simple (one main vessel), Lv2 adds a second unit and more pipes,
+  Lv3 is the densest (multiple towers, pipe bridge, catwalks) like the reference.
 
 Base prompt fragment (prepend to each item's description):
 
-> isometric pixel art sprite for a cute tycoon game, 2:1 isometric, 3/4 view
-> from the south, light from top-left, crisp pixel art, strict pixel grid,
-> limited palette, no anti-aliasing, no blur, no text, no people, transparent
-> background, single object, its base exactly fills the given isometric
-> footprint
+> detailed isometric pixel art industrial building for a Kairosoft-style
+> tycoon game, 2:1 isometric, 3/4 view from the south, light from top-left,
+> grey steel with {ACCENT} pipes and trim, dense pipes, ladders and catwalks,
+> crisp dark outlines, strict pixel grid, standing on a thin dark concrete pad
+> that fills the isometric footprint, no text, no people, no smoke,
+> transparent background, single object
 
 ---
 
@@ -84,25 +95,25 @@ its own size. Level 3 should look clearly the most advanced.
 File path = existing name, so they replace the old 1-tile art in place.
 Starter buildings live in `assets/plants/starter/`, the rest in `assets/plants/`.
 
-| Building | File name (…`_lv1/2/3.png`) | Lv1 | Lv2 | Lv3 | Accent / look |
+| Building | File name (…`_lv1/2/3.png`) | Lv1 | Lv2 | Lv3 | {ACCENT} colour / look |
 |---|---|---|---|---|---|
-| Distillation Unit | `starter/distillation_unit` | 3×3 | 4×4 | 5×4 | Gasoline (red-orange); tall columns |
-| Crude Tank | `starter/crude_tank` | 2×2 | 3×2 | 3×3 | Black/dark brown crude; round tanks |
-| Gasoline Tank | `starter/gasoline_tank` | 2×2 | 3×2 | 3×3 | Red-orange band |
-| Lubricant Plant | `lubricant_plant` | 3×3 | 4×4 | 5×4 | Amber/gold; blending vessels |
-| Lubricant Tank | `lubricant_tank` | 2×2 | 3×2 | 3×3 | Amber band |
-| Jet Fuel Plant | `jet_fuel_plant` | 3×3 | 4×4 | 5×4 | Sky blue; clean, high-tech |
-| Jet Fuel Tank | `jet_fuel_tank` | 2×2 | 3×2 | 3×3 | Sky-blue band |
-| Petrochemical Plant | `petrochemical_plant` | 3×3 | 4×4 | 5×4 | Purple; reactor spheres |
-| Petrochemical Tank | `petrochemical_tank` | 2×2 | 3×2 | 3×3 | Purple band, pressure spheres |
-| Polymer Plant | `polymer_plant` | 3×3 | 4×4 | 5×4 | Green; extruders, conveyors |
-| Pellet Silo | `pellet_silo` | 2×2 | 3×2 | 3×3 | Green; tall silos |
-| Power Plant | `power_plant` | 3×3 | 3×3 | 4×3 | Yellow; turbines, cooling stack |
-| Laboratory | `laboratory` | 2×2 | 3×3 | 3×3 | White/teal; small lab building, dish/antenna at Lv3 |
-| Maintenance Workshop | `maintenance_workshop` | 2×2 | 3×2 | 3×3 | Orange; garage door, crane |
-| Waste Treatment Plant | `waste_treatment_plant` | 2×2 | 3×2 | 3×3 | Brown-green; settling ponds |
-| Recycling Bunker | `recycling_bunker` | 2×2 | 3×2 | 3×3 | Grey concrete bunker, bins |
-| Sales Office | `sales_office` | 2×2 | 2×2 | 3×2 | Friendly office, awning, glass front |
+| Distillation Unit | `starter/distillation_unit` | 3×3 | 4×4 | 5×4 | **Orange** (gasoline line); tall columns — the reference |
+| Crude Tank | `starter/crude_tank` | 2×2 | 3×2 | 3×3 | **Dark brown/black** band; round tanks |
+| Gasoline Tank | `starter/gasoline_tank` | 2×2 | 3×2 | 3×3 | **Orange** band |
+| Lubricant Plant | `lubricant_plant` | 3×3 | 4×4 | 5×4 | **Gold/amber**; blending vessels |
+| Lubricant Tank | `lubricant_tank` | 2×2 | 3×2 | 3×3 | **Gold/amber** band |
+| Jet Fuel Plant | `jet_fuel_plant` | 3×3 | 4×4 | 5×4 | **Sky blue**; clean, high-tech |
+| Jet Fuel Tank | `jet_fuel_tank` | 2×2 | 3×2 | 3×3 | **Sky blue** band |
+| Petrochemical Plant | `petrochemical_plant` | 3×3 | 4×4 | 5×4 | **Purple**; reactor spheres |
+| Petrochemical Tank | `petrochemical_tank` | 2×2 | 3×2 | 3×3 | **Purple** band, pressure spheres |
+| Polymer Plant | `polymer_plant` | 3×3 | 4×4 | 5×4 | **Green**; extruders, conveyors |
+| Pellet Silo | `pellet_silo` | 2×2 | 3×2 | 3×3 | **Green**; tall silos |
+| Power Plant | `power_plant` | 3×3 | 3×3 | 4×3 | **Yellow**; turbines, cooling stack |
+| Laboratory | `laboratory` | 2×2 | 3×3 | 3×3 | **Teal**; white lab block, dish/antenna at Lv3 |
+| Maintenance Workshop | `maintenance_workshop` | 2×2 | 3×2 | 3×3 | **Safety orange**; garage door, crane |
+| Waste Treatment Plant | `waste_treatment_plant` | 2×2 | 3×2 | 3×3 | **Olive**; settling ponds |
+| Recycling Bunker | `recycling_bunker` | 2×2 | 3×2 | 3×3 | **Lime green**; concrete bunker, bins |
+| Sales Office | `sales_office` | 2×2 | 2×2 | 3×2 | **Safety orange**; friendly office, awning, glass front |
 
 Notes:
 - Power Plant Lv1 and Lv2 share 3×3 and Lab Lv2 and Lv3 share 3×3; make the
