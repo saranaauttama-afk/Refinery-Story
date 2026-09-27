@@ -26,6 +26,7 @@ import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
 import { findV3PlacementSpot, getV3BuildingType } from '../src/game/v3/yard'
 import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
+import { V3TitleScreen } from '../src/components/v3/V3TitleScreen'
 import { V3YardPanel, useV3YardController } from '../src/components/v3/V3YardPanel'
 import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
 import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
@@ -66,6 +67,7 @@ export default function V3GameScreen() {
   const router = useRouter()
   const { t } = useLang()
   const [loadResult, setLoadResult] = useState<V3LoadResult | null>(null)
+  const [showTitle, setShowTitle] = useState(true)
   const [state, setState] = useState<V3GameState | null>(null)
   const [lastEvent, setLastEvent] = useState<V3ActionEvent | null>(null)
   const [pauseState, setPauseState] = useState(V3_INITIAL_PAUSE_STATE)
@@ -114,7 +116,7 @@ export default function V3GameScreen() {
   // Real-time simulation: whole ticks from elapsed time × speed; nothing runs while paused.
   const speed = getV3EffectiveSpeed(pauseState)
   useEffect(() => {
-    if (speed === 0) return
+    if (speed === 0 || showTitle) return
     let clock: V3Clock = { carryMs: 0 }
     let last = Date.now()
     let lastSave = last
@@ -155,7 +157,7 @@ export default function V3GameScreen() {
         void saveV3GameState(stateRef.current)
       }
     }
-  }, [speed])
+  }, [speed, showTitle])
 
   useEffect(() => onV3ResetRequested(() => { void startFresh() }), [])
 
@@ -237,6 +239,27 @@ export default function V3GameScreen() {
     )
   }
 
+  if (showTitle) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <V3TitleScreen
+          hasSave={loadResult.status === 'loaded'}
+          t={t}
+          onContinue={() => setShowTitle(false)}
+          onNew={() => Alert.alert(
+            t({ en: 'Start a new game?', th: 'เริ่มเกมใหม่?' }),
+            t({ en: 'This replaces your current refinery.', th: 'เซฟโรงกลั่นปัจจุบันจะถูกแทนที่' }),
+            [
+              { text: t({ en: 'Cancel', th: 'ยกเลิก' }), style: 'cancel' },
+              { text: t({ en: 'Start new', th: 'เริ่มใหม่' }), style: 'destructive', onPress: () => { void startFresh().then(() => setShowTitle(false)) } },
+            ],
+          )}
+          onSettings={() => router.push('/settings')}
+        />
+      </SafeAreaView>
+    )
+  }
+
   const labSpot = findV3PlacementSpot(state, 'laboratory')
   const crudeCapacity = getV3CrudeCapacity(state)
   const gasoline = getV3ProductQuantity(state, 'gasoline')
@@ -272,7 +295,7 @@ export default function V3GameScreen() {
           <Text style={styles.hudBrand} numberOfLines={1}>Sunrise Refinery</Text>
           <View style={styles.chapterBadge}><Text style={styles.chapterText}>C{state.campaignProgress.chapter}</Text></View>
           <Text style={styles.hudDate}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} ด.${calendar.month} ส.${calendar.week}` })}</Text>
-          <Pressable onPress={() => router.push('/settings')} hitSlop={10} style={styles.hudSettings}><Text style={styles.hudSettingsText}>☰</Text></Pressable>
+          <Pressable onPress={() => { setTab(null); setShowTitle(true) }} hitSlop={10} style={styles.hudSettings}><Text style={styles.hudSettingsText}>☰</Text></Pressable>
         </View>
         <View style={styles.hudRow}>
           <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
@@ -450,8 +473,8 @@ const styles = StyleSheet.create({
   overlayContent: { gap: 8 },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '62%', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderColor: pixelUi.border },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10 },
-  sheetTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 18 },
-  sheetClose: { color: '#D5E2E9', fontSize: 20 },
+  sheetTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 20 },
+  sheetClose: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 23 },
   tabBar: { flexDirection: 'row', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderTopColor: pixelUi.border, height: 64 },
   tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRightWidth: 1, borderRightColor: pixelUi.borderSoft },
   tabActive: { backgroundColor: pixelUi.surfaceRaised, borderBottomWidth: 3, borderBottomColor: pixelUi.accent },
