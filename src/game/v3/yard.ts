@@ -9,6 +9,7 @@ import {
   type V3LandParcel,
 } from './data'
 import type { V3Building, V3GameState } from './types'
+import { getV3DecorCells } from './decorData'
 
 export type V3PlacementBlocker = 'out_of_bounds' | 'locked_land' | 'overlap' | 'no_footprint'
 
@@ -69,6 +70,11 @@ export function getV3Occupancy(state: V3GameState, ignoreId: string | null = nul
     for (let dx = 0; dx < footprint.w; dx++) {
       for (let dy = 0; dy < footprint.h; dy++) occupancy.set(key(building.x + dx, building.y + dy), building.id)
     }
+  }
+  // Decorations share the grid: they block buildings and each other.
+  for (const decoration of Object.values(state.world.decorations ?? {})) {
+    if (decoration.id === ignoreId) continue
+    for (const cell of getV3DecorCells(decoration.kind, decoration.rotated, decoration.x, decoration.y)) occupancy.set(key(cell.x, cell.y), decoration.id)
   }
   return occupancy
 }

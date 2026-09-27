@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import type { BilingualTextValue } from '../../game/types'
 import { V3_AWARD_REPUTATION, V3_FAME_LEVELS } from '../../game/v3/data'
 import { getV3Fame } from '../../game/v3/fame'
+import { getV3Appeal } from '../../game/v3/decor'
 import type { V3GameState } from '../../game/v3/types'
 import { fonts } from '../../theme'
 
@@ -15,12 +16,16 @@ export function V3FamePanel({ state, t }: { state: V3GameState; t: (value: Bilin
       <View style={styles.bar}><View style={[styles.fill, { width: `${Math.round(fame.progress * 100)}%` }]} /></View>
       <Text style={styles.row}>
         {fame.next
-          ? t({ en: `Reputation ${fame.reputation} / ${fame.next.threshold} for Lv${fame.next.level}`, th: `ชื่อเสียง ${fame.reputation} / ${fame.next.threshold} เพื่อขึ้น Lv${fame.next.level}` })
-          : t({ en: `Reputation ${fame.reputation} · highest level`, th: `ชื่อเสียง ${fame.reputation} · ระดับสูงสุดแล้ว` })}
+          ? t({ en: `Reputation ${Math.floor(fame.reputation)} / ${fame.next.threshold} for Lv${fame.next.level}`, th: `ชื่อเสียง ${Math.floor(fame.reputation)} / ${fame.next.threshold} เพื่อขึ้น Lv${fame.next.level}` })
+          : t({ en: `Reputation ${Math.floor(fame.reputation)} · highest level`, th: `ชื่อเสียง ${Math.floor(fame.reputation)} · ระดับสูงสุดแล้ว` })}
       </Text>
       <Text style={styles.muted}>{t({
         en: `Gain it from client milestones (Trial 5 · Regular 10 · Partner 20) and yearly awards (S ${V3_AWARD_REPUTATION.S} · A ${V3_AWARD_REPUTATION.A} · B ${V3_AWARD_REPUTATION.B}).`,
         th: `ได้จาก milestone ลูกค้า (ทดลอง 5 · ประจำ 10 · พาร์ทเนอร์ 20) และรางวัลประจำปี (S ${V3_AWARD_REPUTATION.S} · A ${V3_AWARD_REPUTATION.A} · B ${V3_AWARD_REPUTATION.B})`,
+      })}</Text>
+      <Text style={styles.row}>{t({
+        en: `Yard appeal +${(getV3Appeal(state).bonus * 100).toFixed(1)}% to every fame gain (max 10%, from decorations).`,
+        th: `ความน่าอยู่ของโรงงาน: ชื่อเสียงที่ได้ +${(getV3Appeal(state).bonus * 100).toFixed(1)}% (สูงสุด 10% จากของแต่ง)`,
       })}</Text>
       {V3_FAME_LEVELS.map((entry) => (
         <Text key={entry.level} style={[styles.row, entry.level === fame.level && styles.current, entry.level > fame.level && styles.locked]}>

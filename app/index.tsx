@@ -294,7 +294,10 @@ export default function V3GameScreen() {
             upgradeGrowth={yard.upgradeGrowth}
             floaters={floaters}
             alerts={alerts}
-            onTapTile={yard.onTapTile}
+            onTapTile={(x, y) => {
+              if (yard.mode.kind === 'decor') applyPanel({ type: 'place_decoration', sequence: state.nextActionSequence, kind: yard.mode.decor, x, y, rotated: yard.mode.rotated })
+              else yard.onTapTile(x, y)
+            }}
           />
         )}
         <View style={styles.goalBanner} pointerEvents="box-none">

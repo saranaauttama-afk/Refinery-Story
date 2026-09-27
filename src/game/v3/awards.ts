@@ -1,3 +1,4 @@
+import { boostV3Reputation } from './decor'
 import { V3_AWARD_REPUTATION, V3_BUILDINGS, V3_PLANT_BY_FAMILY } from './data'
 import { V3_RANK_REWARDS, getV3PlayerRank } from './rivals'
 import type { V3AwardGrade, V3AwardPeriod, V3GameState, V3ProductFamily } from './types'
@@ -58,7 +59,7 @@ export function advanceV3Awards(state: V3GameState): V3GameState {
         ...next.world,
         researchPoints: next.world.researchPoints + rpAwarded,
         // Fame grows every period by grade (uncapped, no money) plus first-time rank rewards.
-        reputation: next.world.reputation + V3_AWARD_REPUTATION[grade] + rankReputation,
+        reputation: next.world.reputation + boostV3Reputation(next, V3_AWARD_REPUTATION[grade] + rankReputation),
       },
       awards: {
         current: startV3AwardPeriod(next, period.startTick + V3_AWARD_PERIOD_TICKS),

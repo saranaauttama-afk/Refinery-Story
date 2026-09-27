@@ -1,3 +1,4 @@
+import { boostV3Reputation } from './decor'
 import { consumeV3ProtectedInventory, getV3ProductCapacity, getV3StockAllocations, recordV3Ledger } from './productInventory'
 import { evaluateV3CampaignProgress } from './campaign'
 import { getV3Modifiers } from './modifiers'
@@ -273,7 +274,7 @@ export function dispatchV3Job(state: V3GameState, requestedQuantity: number, blu
       moneyCents: consumed.state.world.moneyCents + totalPaidCents,
       researchPoints: consumed.state.world.researchPoints +
         (completed ? (template?.researchReward ?? 0) * (1 + getV3Modifiers(state).rp.effective) : 0),
-      reputation: consumed.state.world.reputation + (completed ? template?.reputationReward ?? 0 : 0),
+      reputation: consumed.state.world.reputation + boostV3Reputation(consumed.state, completed ? template?.reputationReward ?? 0 : 0),
       employees: consumed.state.world.employees.map((employee) =>
         completed && template?.milestone && (job.contributorWork[employee.id] ?? 0) > 0
           ? applyV3LevelUps({ ...employee, xp: employee.xp + 5 })

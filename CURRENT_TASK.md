@@ -48,9 +48,11 @@
 - Decoration track on `devGraphic` (owner request 2026-09-27), 3 steps:
   1. DONE yard scale 2: lines start 3×3, tanks 2×2, land 24×24 → 48×48,
      iso tile 32×16, schema 15 with revision-14 save migration (yard-check).
-  2. Decorations (~15 items, cheap, unlocked by chapter) + capped appeal →
-     fame gain (max +10%, diminishing per item type), 150-item cap.
-  3. Decoration placement UI in the Build tab + full-yard perf check.
+  2. DONE decorations: 15 items (decorData.ts), chapter/Expo unlocks, shared
+     grid with buildings, full refund, 150 cap, appeal → fame gain ≤ +10%
+     (repeats ×0.85, decor-check).
+  3. DONE placement UI (Build sheet palette, tap-to-paint mode, tap item to
+     remove) + batched placeholder rendering. NEXT: real decoration art.
 - **Current task: V3-19** Android acceptance and handoff (owner device play).
 - Backlog (owner): per-recipe stock table; Crude → Gasoline + Feedstock → Lube flow bar.
 

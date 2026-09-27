@@ -1,3 +1,4 @@
+import { boostV3Reputation } from './decor'
 import { getV3Fame } from './fame'
 import { consumeV3ProtectedInventory, getV3StockAllocations, recordV3Ledger } from './productInventory'
 import { V3_RIVALS } from './rivals'
@@ -73,7 +74,7 @@ export function enterV3Expo(state: V3GameState, blueprintId: string): { state: V
   const entry: V3ExpoEntry = { year: calendar.year, blueprintId, family: blueprint.family, quality: blueprint.quality, score, rank, rivalScores: rivals, cashCents, reputation }
   let next: V3GameState = {
     ...consumed.state,
-    world: { ...consumed.state.world, moneyCents: consumed.state.world.moneyCents + cashCents, reputation: consumed.state.world.reputation + reputation },
+    world: { ...consumed.state.world, moneyCents: consumed.state.world.moneyCents + cashCents, reputation: consumed.state.world.reputation + boostV3Reputation(consumed.state, reputation) },
     expoResults: [...consumed.state.expoResults, entry],
     operatingLedger: { ...consumed.state.operatingLedger, grantsCents: consumed.state.operatingLedger.grantsCents + cashCents },
   }

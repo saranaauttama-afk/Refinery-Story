@@ -9,6 +9,8 @@ import {
   validateV3ParcelUnlock,
   validateV3Placement,
 } from './yard'
+import { validateV3DecorPlacement } from './decor'
+import { V3_DECOR } from './decorData'
 import { getV3FeedstockCapacity } from './production'
 import type { BuildingType, ProductKey, WorkerType } from '../types'
 import { unlockV3Research, validateV3Research } from './research'
@@ -441,6 +443,40 @@ export function reduceV3Action(state: V3GameState, action: V3Action): V3ActionRe
       ...state,
       world: { ...state.world, buildingsById: { ...state.world.buildingsById, [placed.id]: { ...placed, x: action.x, y: action.y } } },
     }, event('success', 'v3.action.ok'))
+  }
+
+  if (action.type === 'place_decoration') {
+    const invalid = validateV3DecorPlacement(state, action.kind, action.rotated, action.x, action.y)
+    if (invalid) {
+      const id = invalid.blocker === 'insufficient_cash' ? 'v3.build.insufficient_cash'
+        : ['out_of_bounds', 'locked_land', 'overlap', 'no_footprint'].includes(invalid.blocker) ? `v3.place.${invalid.blocker}` : `v3.decor.${invalid.blocker}`
+      return consumedResult(state, action, state, event('blocked', id as V3ActionEvent['messageId'], invalid.params))
+    }
+    const costCents = V3_DECOR[action.kind].costDollars * 100
+    const decorationId = `decor:${String(action.sequence).padStart(8, '0')}`
+    return consumedResult(state, action, {
+      ...state,
+      world: {
+        ...state.world,
+        moneyCents: state.world.moneyCents - costCents,
+        decorations: { ...state.world.decorations, [decorationId]: { id: decorationId, kind: action.kind, x: action.x, y: action.y, rotated: action.rotated } },
+      },
+      operatingLedger: { ...state.operatingLedger, capexCents: state.operatingLedger.capexCents + costCents },
+    }, event('success', 'v3.action.ok', { costCents, decorationId }))
+  }
+
+  if (action.type === 'remove_decoration') {
+    const decoration = state.world.decorations[action.decorationId]
+    if (!decoration) return consumedResult(state, action, state, event('blocked', 'v3.decor.missing'))
+    // Full refund: decorating is meant to be tried freely; capex is reversed too.
+    const refundCents = V3_DECOR[decoration.kind].costDollars * 100
+    const { [decoration.id]: _removed, ...rest } = state.world.decorations
+    void _removed
+    return consumedResult(state, action, {
+      ...state,
+      world: { ...state.world, moneyCents: state.world.moneyCents + refundCents, decorations: rest },
+      operatingLedger: { ...state.operatingLedger, capexCents: Math.max(0, state.operatingLedger.capexCents - refundCents) },
+    }, event('success', 'v3.action.ok', { refundCents }))
   }
 
   if (action.type === 'unlock_land_parcel') {

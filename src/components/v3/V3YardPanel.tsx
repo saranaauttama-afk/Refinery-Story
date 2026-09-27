@@ -12,6 +12,8 @@ import { getV3ParcelViews, getV3PlacementPreview, getV3UpgradePreview } from '..
 import { fonts } from '../../theme'
 import { v3ParcelLabel } from './v3Labels'
 import { getV3AdjacencyPreview, getV3LineAdjacency } from '../../game/v3/adjacency'
+import { getV3Appeal, getV3DecorAt, getV3DecorLock, listV3Decorations } from '../../game/v3/decor'
+import { V3_DECOR, V3_DECOR_CAP, V3_DECOR_KINDS, type V3DecorKind } from '../../game/v3/decorData'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -21,6 +23,8 @@ type Mode =
   | { kind: 'inspect' }
   | { kind: 'build'; building: BuildingType; anchor: { x: number; y: number } | null }
   | { kind: 'move'; buildingId: string; anchor: { x: number; y: number } | null }
+  /** Decor painting: every map tap places one item (the screen applies it). */
+  | { kind: 'decor'; decor: V3DecorKind; rotated: boolean }
 
 export type V3YardController = ReturnType<typeof useV3YardController>
 
@@ -29,6 +33,7 @@ export function useV3YardController(state: V3GameState) {
   const [mode, setMode] = useState<Mode>({ kind: 'inspect' })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [parcelId, setParcelId] = useState<string | null>(null)
+  const [decorId, setDecorId] = useState<string | null>(null)
   const placement = useMemo(() => {
     if (mode.kind === 'build' && mode.anchor) return getV3PlacementPreview(state, mode.building, 1, mode.anchor.x, mode.anchor.y)
     if (mode.kind === 'move' && mode.anchor) {
@@ -41,11 +46,14 @@ export function useV3YardController(state: V3GameState) {
   const upgrade = selected && mode.kind === 'inspect' ? getV3UpgradePreview(state, selected.id) : null
   const onTapTile = (x: number, y: number) => {
     if (mode.kind === 'build' || mode.kind === 'move') return setMode({ ...mode, anchor: { x, y } })
-    setSelectedId(getV3BuildingAt(state, x, y)?.id ?? null)
+    if (mode.kind === 'decor') return
+    const building = getV3BuildingAt(state, x, y)
+    setSelectedId(building?.id ?? null)
+    setDecorId(building ? null : getV3DecorAt(state, x, y)?.id ?? null)
   }
   return {
-    mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, placement, upgrade, onTapTile,
-    mapSelectedId: mode.kind === 'inspect' ? selectedId : mode.kind === 'move' ? mode.buildingId : null,
+    mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, placement, upgrade, onTapTile, decorId, setDecorId,
+    mapSelectedId: mode.kind === 'inspect' ? selectedId ?? decorId : mode.kind === 'move' ? mode.buildingId : null,
     upgradeGrowth: upgrade && upgrade.status !== 'max' ? { cells: upgrade.growth, ok: upgrade.status === 'valid' } : null,
   }
 }
@@ -65,7 +73,7 @@ type Props = {
 
 /** Selected-building card, the build/move confirmation bar, and the build/land sheet. */
 export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish, onClose, section }: Props) {
-  const { mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, upgrade } = yard
+  const { mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, upgrade, decorId, setDecorId } = yard
   const selected = getV3Building(state, selectedId)
 
   const check = (action: ActionInput): V3ActionEvent | null => {
@@ -135,7 +143,73 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
     )
   })() : null
 
-  const modeBar = mode.kind === 'inspect' ? null : (() => {
+  const decoration = decorId ? state.world.decorations[decorId] ?? null : null
+  const decorInfo = decoration ? (
+    <View style={styles.card}>
+      <View style={styles.titleRow}>
+        <Text style={styles.cardTitle}>{t(V3_DECOR[decoration.kind].label)}</Text>
+        <Pressable onPress={() => setDecorId(null)} hitSlop={12}><Text style={styles.close}>✕</Text></Pressable>
+      </View>
+      <Text style={styles.muted}>{t({ en: `Appeal +${V3_DECOR[decoration.kind].appeal} (less for repeats)`, th: `ความน่าอยู่ +${V3_DECOR[decoration.kind].appeal} (ชิ้นซ้ำได้น้อยลง)` })}</Text>
+      <Gate
+        label={t({ en: `Remove · refund $${V3_DECOR[decoration.kind].costDollars}`, th: `เก็บคืน · ได้เงินคืน $${V3_DECOR[decoration.kind].costDollars}` })}
+        action={{ type: 'remove_decoration', decorationId: decoration.id }}
+        onDone={() => setDecorId(null)}
+      />
+    </View>
+  ) : null
+
+  const decorBar = mode.kind === 'decor' ? (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{t({ en: `Placing ${V3_DECOR[mode.decor].label.en}`, th: `กำลังวาง${V3_DECOR[mode.decor].label.th}` })} · ${V3_DECOR[mode.decor].costDollars}</Text>
+      <Text style={styles.muted}>{t({ en: 'Tap tiles to place, one per tap. Tap a placed item later to remove it (full refund).', th: 'แตะช่องเพื่อวาง แตะหนึ่งครั้งได้หนึ่งชิ้น วางแล้วแตะที่ชิ้นนั้นเพื่อเก็บคืนได้ (คืนเงินเต็ม)' })}</Text>
+      <View style={styles.row2}>
+        {V3_DECOR[mode.decor].w !== V3_DECOR[mode.decor].h && (
+          <Pressable style={styles.button} onPress={() => setMode({ ...mode, rotated: !mode.rotated })}>
+            <Text style={styles.buttonText}>{t({ en: 'Rotate', th: 'หมุน' })} {mode.rotated ? '↕' : '↔'}</Text>
+          </Pressable>
+        )}
+        <Pressable style={styles.button} onPress={() => setMode({ kind: 'inspect' })}>
+          <Text style={styles.buttonText}>{t({ en: 'Done', th: 'เสร็จ' })}</Text>
+        </Pressable>
+      </View>
+    </View>
+  ) : null
+
+  const appeal = getV3Appeal(state)
+  const decorCount = listV3Decorations(state).length
+  const decorPalette = (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{t({ en: 'Decorations', th: 'ของแต่ง' })}</Text>
+      <Text style={styles.row}>{t({
+        en: `Appeal ${appeal.points.toFixed(0)} → fame gain +${(appeal.bonus * 100).toFixed(1)}% (max 10%) · ${decorCount}/${V3_DECOR_CAP}`,
+        th: `ความน่าอยู่ ${appeal.points.toFixed(0)} → ชื่อเสียงเพิ่มเร็วขึ้น +${(appeal.bonus * 100).toFixed(1)}% (สูงสุด 10%) · ${decorCount}/${V3_DECOR_CAP} ชิ้น`,
+      })}</Text>
+      <Text style={styles.muted}>{t({ en: 'Variety counts: repeats of the same item give less.', th: 'ของหลากหลายได้ค่ามากกว่า ชิ้นซ้ำชนิดเดิมได้น้อยลงเรื่อย ๆ' })}</Text>
+      <View style={styles.row2}>
+        {V3_DECOR_KINDS.map((kind) => {
+          const spec = V3_DECOR[kind]
+          const lock = getV3DecorLock(state, kind)
+          return (
+            <Pressable
+              key={kind}
+              disabled={Boolean(lock)}
+              accessibilityState={{ disabled: Boolean(lock) }}
+              style={[styles.chip, lock && styles.disabled]}
+              onPress={() => { setSelectedId(null); setDecorId(null); setMode({ kind: 'decor', decor: kind, rotated: false }); onClose?.() }}
+            >
+              <Text style={styles.buttonText}>{t(spec.label)}</Text>
+              <Text style={styles.muted}>{lock
+                ? (lock.blocker === 'locked' ? t({ en: `Unlocks C${lock.chapter}`, th: `ปลดล็อก C${lock.chapter}` }) : t({ en: 'Win the Expo', th: 'ชนะเอ็กซ์โป' }))
+                : `${spec.w}×${spec.h} · $${spec.costDollars} · +${spec.appeal}`}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+    </View>
+  )
+
+  const modeBar = mode.kind === 'inspect' || mode.kind === 'decor' ? null : (() => {
     const anchor = mode.anchor
     const action: ActionInput | null = !anchor ? null : mode.kind === 'build'
       ? { type: 'build', building: mode.building, x: anchor.x, y: anchor.y }
@@ -173,7 +247,9 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
   return (
     <>
       {section === 'overlay' && modeBar}
+      {section === 'overlay' && decorBar}
       {section === 'overlay' && mode.kind === 'inspect' && info}
+      {section === 'overlay' && mode.kind === 'inspect' && !info && decorInfo}
       {section === 'sheet' && mode.kind === 'inspect' && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Build', th: 'สร้าง' })}</Text>
@@ -192,6 +268,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
           </View>
         </View>
       )}
+      {section === 'sheet' && mode.kind === 'inspect' && decorPalette}
       {section === 'sheet' && mode.kind === 'inspect' && parcels.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t({ en: 'Land', th: 'ที่ดิน' })}</Text>

@@ -29,6 +29,7 @@ import {
   type V3PlacementPreview,
 } from '../../game/v3/yardView'
 import { getV3BuildingArt } from './v3Art'
+import { V3_DECOR_PLACEHOLDER_COLOR, getV3DecorFootprint } from '../../game/v3/decorData'
 
 const MIN_SCALE = 0.35
 const MAX_SCALE = 2.2
@@ -104,6 +105,22 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     }
     return path
   }, [roads])
+  // Decorations: one path per placeholder colour (≤15 draw calls for ≤150 items).
+  const decorations = state.world.decorations
+  const decorPaths = useMemo(() => {
+    const byColor = new Map<string, ReturnType<typeof Skia.Path.Make>>()
+    for (const decoration of Object.values(decorations ?? {})) {
+      const color = V3_DECOR_PLACEHOLDER_COLOR[decoration.kind]
+      if (!byColor.has(color)) byColor.set(color, Skia.Path.Make())
+      const { w, h } = getV3DecorFootprint(decoration.kind, decoration.rotated)
+      const inset = 0.12
+      const [a, b, c, d] = v3IsoRect({ x: decoration.x + inset, y: decoration.y + inset, w: w - inset * 2, h: h - inset * 2 })
+      const path = byColor.get(color)!
+      path.moveTo(a.sx, a.sy); path.lineTo(b.sx, b.sy); path.lineTo(c.sx, c.sy); path.lineTo(d.sx, d.sy); path.close()
+    }
+    return [...byColor.entries()]
+  }, [decorations])
+  const selectedDecor = selectedId ? decorations?.[selectedId] ?? null : null
   const parcelPaths = useMemo(() => parcels.map((parcel) => ({ parcel, path: diamond(v3IsoRect(parcel)) })), [parcels])
   const bounds = useMemo(() => getV3IsoBounds(state), [landKey])
   const font = useMemo(() => (Platform.OS === 'web'
@@ -180,6 +197,11 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
               <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
             ))}
             <Path path={roadPath} color="#9A9386" style="stroke" strokeWidth={4} />
+            {decorPaths.map(([color, path]) => <Path key={`decor-${color}`} path={path} color={color} />)}
+            {selectedDecor && (() => {
+              const { w, h } = getV3DecorFootprint(selectedDecor.kind, selectedDecor.rotated)
+              return <Path path={diamond(v3IsoRect({ x: selectedDecor.x, y: selectedDecor.y, w, h }))} color="#FFFFFF" style="stroke" strokeWidth={2} />
+            })()}
             {upgradeGrowth?.cells.map((cell) => (
               <Path key={`g${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={upgradeGrowth.ok ? 'rgba(106,205,180,0.6)' : 'rgba(255,99,99,0.6)'} />
             ))}

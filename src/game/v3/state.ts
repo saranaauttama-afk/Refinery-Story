@@ -87,6 +87,7 @@ export function createInitialV3GameState(): V3GameState {
       electricity: 0,
       waste: 0,
       buildingsById,
+      decorations: {},
       unlockedParcelIds: ['core'],
       employees: [operator],
       unlockedResearchIds: [],

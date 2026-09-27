@@ -7,6 +7,8 @@ import type {
   WorkerType,
 } from '../types'
 
+import type { V3DecorKind, V3Decoration } from './decorData'
+
 export const V3_RULESET_VERSION = 3 as const
 /** 15 = yard scale 2 (finer tiles, 24×24 → 48×48 land); 14 saves migrate on load. */
 export const V3_PREVIEW_SCHEMA_REVISION = 15 as const
@@ -271,6 +273,8 @@ export type V3WorldState = {
   waste: number
   /** Every placed building; occupancy is derived from these, never stored. */
   buildingsById: Record<string, V3Building>
+  /** Player decorations; share the tile grid with buildings (decoration track). */
+  decorations: Record<string, V3Decoration>
   unlockedParcelIds: string[]
   employees: Employee[]
   unlockedResearchIds: ResearchKey[]
@@ -312,6 +316,11 @@ export type V3GameState = {
 }
 
 export type V3ActionMessageId =
+  | 'v3.decor.locked'
+  | 'v3.decor.expo_required'
+  | 'v3.decor.cap'
+  | 'v3.decor.missing'
+  | 'v3.decor.unknown'
   | 'v3.action.ok'
   | 'v3.action.sequence_mismatch'
   | 'v3.build.invalid_cell'
@@ -645,7 +654,22 @@ export type V3SetAutoRepeatAction = {
   templateId: string | null
 }
 
-export type V3Action = V3PromoteEmployeeAction | V3HireCandidateAction | V3EnterExpoAction | V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
+export type V3PlaceDecorationAction = {
+  type: 'place_decoration'
+  sequence: number
+  kind: V3DecorKind
+  x: number
+  y: number
+  rotated: boolean
+}
+
+export type V3RemoveDecorationAction = {
+  type: 'remove_decoration'
+  sequence: number
+  decorationId: string
+}
+
+export type V3Action = V3PlaceDecorationAction | V3RemoveDecorationAction | V3PromoteEmployeeAction | V3HireCandidateAction | V3EnterExpoAction | V3ResolveInboxAction | V3RestoreOperationsAction | V3ConvertAsphaltAction | V3SetAutoRepeatAction | V3HireEmployeeAction | V3TrainEmployeeAction | V3ChooseSpecializationAction | V3SetModuleAction | V3BuyResearchAction | V3MoveBuildingAction | V3UnlockLandParcelAction | V3BuildAction | V3UpgradeAction | V3TradeAction | V3SetProgramAction | V3SetPauseAction | V3AssignDutyAction | V3ResumeEmployeeAction | V3StartDevelopmentAction | V3CancelDevelopmentAction | V3SetBlueprintPresentationAction | V3AcceptJobAction | V3DispatchJobAction | V3CancelJobAction | V3SetStockPolicyAction | V3StartRecoveryAction | V3RestoreStarterLoanersAction | V3DemolishAction
 
 export type V3StaffRequirement = {
   workerType: WorkerType

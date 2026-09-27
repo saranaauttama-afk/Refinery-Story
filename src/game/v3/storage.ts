@@ -3,6 +3,8 @@ import { BUILDINGS } from '../data/buildings'
 import { V3_COMMODITY_ID, V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, V3_YARD_MIGRATION_STRETCH, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
 import { createInitialV3GameState } from './state'
 import { getV3Parcel, migrateV3YardScale, validateV3Placement } from './yard'
+import { isV3DecorKind, validateV3DecorCells } from './decor'
+import { V3_DECOR_CAP, type V3Decoration } from './decorData'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
   V3_RULESET_VERSION,
@@ -48,11 +50,19 @@ function validYard(world: Record<string, unknown>): boolean {
   if (!buildings.every(([key, building]) =>
     isRecord(building) && building.id === key && typeof building.type === 'string' && BUILDING_KEYS.has(building.type) &&
     [1, 2, 3].includes(building.level as number) && Number.isInteger(building.x) && Number.isInteger(building.y))) return false
-  // Re-place every building through the shared validator against the rest.
-  const probe = { world: { buildingsById: world.buildingsById, unlockedParcelIds: parcels } } as unknown as V3GameState
+  if (!isRecord(world.decorations)) return false
+  const decorations = Object.entries(world.decorations)
+  if (decorations.length > V3_DECOR_CAP || !decorations.every(([key, decoration]) =>
+    isRecord(decoration) && decoration.id === key && !Object.hasOwn(world.buildingsById as object, key) && isV3DecorKind(decoration.kind) &&
+    typeof decoration.rotated === 'boolean' && Number.isInteger(decoration.x) && Number.isInteger(decoration.y))) return false
+  // Re-place every building and decoration through the shared validators against the rest.
+  const probe = { world: { buildingsById: world.buildingsById, decorations: world.decorations, unlockedParcelIds: parcels } } as unknown as V3GameState
   return buildings.every(([id, building]) => {
     const entry = building as V3Building
     return validateV3Placement(probe, entry.type, entry.level, entry.x, entry.y, id) === null
+  }) && decorations.every(([id, decoration]) => {
+    const entry = decoration as V3Decoration
+    return validateV3DecorCells(probe, entry.kind, entry.rotated, entry.x, entry.y, id) === null
   })
 }
 
@@ -91,8 +101,14 @@ function migrateV3Revision14(input: unknown): unknown {
   }
 }
 
+/** Saves from before the decoration track have no decorations field: start empty. */
+function withV3DefaultDecorations(input: unknown): unknown {
+  if (!isRecord(input) || !isRecord(input.world) || input.world.decorations !== undefined) return input
+  return { ...input, world: { ...input.world, decorations: {} } }
+}
+
 export function parseV3GameState(input: unknown): V3LoadResult {
-  const value = migrateV3Revision14(input)
+  const value = withV3DefaultDecorations(migrateV3Revision14(input))
   if (!isRecord(value)) {
     return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   }
