@@ -41,6 +41,10 @@
 - V3-21 a–e (fame, market, rivals, expo, careers): **complete in code**.
 - V3-21f (walking staff/trucks) moved to the art backlog by the owner.
 - V3-18 first calibration: **complete** (legal bot clears at 288 simulated min).
+- UI structure pass (owner request, 2026-09-27, before the art pass): tabs are now
+  Build · Production · Staff · Clients · Company with segmented sub-sections;
+  reset lives only in Settings; specialization moved to Company; C4 goal shows a
+  clear-condition checklist; staff Train/Promote spell out their effect.
 - **Current task: V3-19** Android acceptance and handoff (owner device play).
 - Backlog (owner): per-recipe stock table; Crude → Gasoline + Feedstock → Lube flow bar.
 

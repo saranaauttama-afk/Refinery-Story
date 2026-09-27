@@ -19,7 +19,11 @@ type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
 type Translate = (value: BilingualTextValue) => string
 
+export type V3MidgameSection = 'stock' | 'lines' | 'rnd'
+
 type Props = {
+  /** Which group of cards to show; omitted shows every card. */
+  section?: V3MidgameSection
   state: V3GameState
   apply: (action: V3Action) => void
   t: Translate
@@ -65,7 +69,8 @@ function researchEffectText(effect: V3ResearchEffect): BilingualTextValue {
   }
 }
 
-export function V3MidgamePanels({ state, apply, t, describe }: Props) {
+export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
+  const show = (group: V3MidgameSection) => !section || section === group
   const [devFamily, setDevFamily] = useState<V3ProductFamily>('gasoline')
   const [devModule, setDevModule] = useState<V3ModuleKey>('none')
 
@@ -104,6 +109,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
 
   return (
     <>
+      {show('stock') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Products & storage', th: 'สินค้าและถังเก็บ' })}</Text>
         {PORTED.map((family) => (
@@ -145,7 +151,9 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           action={{ type: 'convert_asphalt', quantity: 10 }}
         />
       </View>
+      )}
 
+      {show('lines') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Maintenance', th: 'ค่าบำรุงรักษา' })}</Text>
         {state.maintenanceEmergency ? (
@@ -167,7 +175,9 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           <Text style={styles.row}>{t({ en: 'Starter Distillation and core tanks are free until C2.', th: 'Distillation และถังหลักเริ่มต้นไม่เสียค่าบำรุงจนถึงบท C2' })}</Text>
         )}
       </View>
+      )}
 
+      {show('lines') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Power', th: 'ระบบไฟฟ้า' })}</Text>
         <Text style={styles.row}>{t({ en: 'Battery', th: 'แบตเตอรี่' })}: {state.world.electricity.toFixed(1)}/{getV3BatteryCapacity(state)}</Text>
@@ -179,7 +189,9 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           <Text style={styles.warning}>{t({ en: 'Demand exceeds supply: build or upgrade a Power Plant.', th: 'ใช้ไฟเกินกำลังจ่าย: สร้างหรืออัปเกรดโรงไฟฟ้า' })}</Text>
         )}
       </View>
+      )}
 
+      {show('lines') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Production lines', th: 'ไลน์การผลิต' })}</Text>
         {plan.lines.map((line) => {
@@ -239,7 +251,9 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           )
         })}
       </View>
+      )}
 
+      {show('rnd') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Research', th: 'งานวิจัย' })} · {state.world.researchPoints.toFixed(1)} RP</Text>
         {(Object.keys(V3_RESEARCH) as Array<keyof typeof V3_RESEARCH>).map((researchId) => (
@@ -250,8 +264,10 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           />
         ))}
       </View>
+      )}
 
 
+      {show('rnd') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Product development', th: 'พัฒนาสูตรสินค้า' })}</Text>
         <View style={styles.chips}>
@@ -287,6 +303,7 @@ export function V3MidgamePanels({ state, apply, t, describe }: Props) {
           />
         ))}
       </View>
+      )}
     </>
   )
 }

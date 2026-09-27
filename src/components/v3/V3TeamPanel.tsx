@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, WorkerType } from '../../game/types'
 import { reduceV3Action } from '../../game/v3/actions'
-import { V3_ROLES, V3_SPECIALIZATION, V3_STAFF_LEVELS, isV3ProcessBuilding } from '../../game/v3/data'
+import { V3_ROLES, V3_STAFF_LEVELS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3Modifiers, type V3CappedChannel } from '../../game/v3/modifiers'
 import type { V3Action, V3ActionEvent, V3EmployeeDuty, V3GameState } from '../../game/v3/types'
 import { listV3Buildings } from '../../game/v3/yard'
@@ -101,6 +101,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
           const record = state.employeeRecords[employee.id]
           const threshold = V3_STAFF_LEVELS.xpToNextLevel[employee.level]
           const training = getV3TrainingCost(employee)
+          const rank = getV3CareerRank(state, employee.id)
           const contribution = duty?.kind === 'line'
             ? t({ en: `local crew +${(getV3LocalCrewRate(state, duty.buildingId) * 100).toFixed(0)}%`, th: `ทีมไลน์ +${(getV3LocalCrewRate(state, duty.buildingId) * 100).toFixed(0)}%` })
             : modifiers.supportContributions[employee.id]
@@ -129,15 +130,35 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
                   <Gate label={t({ en: 'Resume after funding wages', th: 'กลับเข้าทำงานหลังเตรียมค่าจ้าง' })} action={{ type: 'resume_employee', employeeId: employee.id }} />
                 )}
                 <Gate label={t({ en: '→ Reserve', th: '→ สำรอง' })} action={{ type: 'assign_duty', employeeId: employee.id, duty: { kind: 'reserve' } }} />
-                <Gate label={t({ en: `Train · $${training.cents / 100} + ${training.rp} RP`, th: `ฝึก · $${training.cents / 100} + ${training.rp} RP` })} action={{ type: 'train_employee', employeeId: employee.id }} />
-                {getV3CareerRank(state, employee.id) < V3_CAREER.maxRank && (
-                  <Gate
-                    label={t({
-                      en: `Promote to ${V3_CAREER.titles[getV3CareerRank(state, employee.id) + 1].en} · $${V3_CAREER.promotionDollars[getV3CareerRank(state, employee.id)]} + ${V3_CAREER.promotionRp[getV3CareerRank(state, employee.id)]} RP (Lv→1, +5% crew / ×1.25 support)`,
-                      th: `เลื่อนเป็น${V3_CAREER.titles[getV3CareerRank(state, employee.id) + 1].th} · $${V3_CAREER.promotionDollars[getV3CareerRank(state, employee.id)]} + ${V3_CAREER.promotionRp[getV3CareerRank(state, employee.id)]} RP (เลเวลกลับเป็น 1, ไลน์ +5% / support ×1.25)`,
-                    })}
-                    action={{ type: 'promote_employee', employeeId: employee.id }}
-                  />
+              </View>
+              <View style={styles.grow}>
+                {/* Line crew gain mirrors getV3LocalCrewRate: +0.02 per level above 1, role-capped. */}
+                <Text style={styles.growTitle}>{t({ en: 'Grow', th: 'พัฒนาพนักงาน' })}</Text>
+                {employee.level < V3_STAFF_LEVELS.maxLevel ? (
+                  <>
+                    <Text style={styles.row}>{t({
+                      en: `Train Lv${employee.level} → Lv${employee.level + 1}: line crew +2% (capped)${employee.type === 'operator' && employee.level + 1 === 3 ? ' · unlocks R&D lead Q+5' : ''}`,
+                      th: `ฝึก Lv${employee.level} → Lv${employee.level + 1}: ทีมไลน์ +2% (มีเพดาน)${employee.type === 'operator' && employee.level + 1 === 3 ? ' · ปลดล็อกนำ R&D Q+5' : ''}`,
+                    })}</Text>
+                    <Gate label={t({ en: `Train · $${training.cents / 100} + ${training.rp} RP`, th: `ฝึกอบรม · $${training.cents / 100} + ${training.rp} RP` })} action={{ type: 'train_employee', employeeId: employee.id }} />
+                  </>
+                ) : (
+                  <Text style={styles.row}>{t({ en: 'Max level reached.', th: 'เลเวลเต็มแล้ว' })}</Text>
+                )}
+                {rank < V3_CAREER.maxRank ? (
+                  <>
+                    <Text style={styles.row}>{t({
+                      en: `Promote to ${V3_CAREER.titles[rank + 1].en}: level resets to 1, permanent line +${Math.round(V3_CAREER.crewRatePerRank * 100)}% / support ×${1 + V3_CAREER.supportPerRank}`,
+                      th: `เลื่อนเป็น${V3_CAREER.titles[rank + 1].th}: เลเวลกลับเป็น 1 แต่ได้โบนัสถาวร ไลน์ +${Math.round(V3_CAREER.crewRatePerRank * 100)}% / Support ×${1 + V3_CAREER.supportPerRank}`,
+                    })}</Text>
+                    <Text style={styles.muted}>{t({
+                      en: `Needs Lv${V3_STAFF_LEVELS.maxLevel} · $${V3_CAREER.promotionDollars[rank]} + ${V3_CAREER.promotionRp[rank]} RP`,
+                      th: `ต้อง Lv${V3_STAFF_LEVELS.maxLevel} · $${V3_CAREER.promotionDollars[rank]} + ${V3_CAREER.promotionRp[rank]} RP`,
+                    })}</Text>
+                    <Gate label={t({ en: 'Promote', th: 'เลื่อนตำแหน่ง' })} action={{ type: 'promote_employee', employeeId: employee.id }} />
+                  </>
+                ) : (
+                  <Text style={styles.muted}>{t({ en: 'Top career rank.', th: 'ตำแหน่งสูงสุดแล้ว' })}</Text>
                 )}
               </View>
             </View>
@@ -174,20 +195,6 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
         <Text style={styles.muted}>{t({ en: 'Safety skills are inactive in V3 (no incident system).', th: 'ทักษะด้านความปลอดภัยยังไม่มีผลใน V3 (ไม่มีระบบอุบัติเหตุ)' })}</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t({ en: 'Specialization (optional, C3)', th: 'แนวทางโรงงาน (ไม่บังคับ, C3)' })}</Text>
-        {state.world.specialization ? (
-          <Text style={styles.row}>✓ {state.world.specialization}</Text>
-        ) : (
-          (Object.keys(V3_SPECIALIZATION) as Array<keyof typeof V3_SPECIALIZATION>).map((path) => (
-            <Gate
-              key={path}
-              label={`${path} · rate ×${V3_SPECIALIZATION[path].rate} · energy ×${V3_SPECIALIZATION[path].energy} · waste ×${V3_SPECIALIZATION[path].waste}`}
-              action={{ type: 'choose_specialization', path }}
-            />
-          ))
-        )}
-      </View>
     </>
   )
 }
@@ -201,6 +208,8 @@ const styles = StyleSheet.create({
   muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
   warning: { color: '#FFAD8A' },
   reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
+  grow: { marginTop: 4, padding: 8, borderRadius: 8, backgroundColor: '#10324A', gap: 6 },
+  growTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   gate: { minWidth: '45%', flexGrow: 1 },
   secondary: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
