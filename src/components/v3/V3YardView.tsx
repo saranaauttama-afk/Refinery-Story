@@ -20,7 +20,6 @@ import { clampCameraValue } from '../../factoryCamera'
 import type { V3GameState } from '../../game/v3/types'
 import {
   V3_ISO,
-  deriveV3RoadNetwork,
   getV3IsoBounds,
   getV3ParcelViews,
   getV3SpritePlacements,
@@ -102,7 +101,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const landKey = `${state.world.unlockedParcelIds.join(',')}|${state.campaignProgress.chapter}`
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
-  const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
   // Ground detail is built once per land change as ONE path each (grid, roads),
   // never per tile per frame: keeps a 48×48 yard smooth on phones.
   const gridPath = useMemo(() => {
@@ -120,15 +118,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     }
     return path
   }, [parcels])
-  const roadPath = useMemo(() => {
-    const path = Skia.Path.Make()
-    for (const node of roads) {
-      const from = v3IsoPoint(node.x, node.y)
-      if (node.links.e) { const to = v3IsoPoint(node.x + 1, node.y); path.moveTo(from.sx, from.sy); path.lineTo(to.sx, to.sy) }
-      if (node.links.s) { const to = v3IsoPoint(node.x, node.y + 1); path.moveTo(from.sx, from.sy); path.lineTo(to.sx, to.sy) }
-    }
-    return path
-  }, [roads])
   // Decorations: one path per placeholder colour (≤15 draw calls for ≤150 items).
   const decorations = state.world.decorations
   const decorPaths = useMemo(() => {
@@ -153,9 +142,15 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 
   const worldW = bounds.maxX - bounds.minX
   const worldH = bounds.maxY - bounds.minY
-  const initialScale = clampCameraValue(Math.min(width / worldW, height / worldH) * 1.3, MIN_SCALE, MAX_SCALE)
-  const initialX = width / 2 - (bounds.minX + worldW / 2) * initialScale
-  const initialY = height / 2 - (bounds.minY + worldH / 2) * initialScale
+  // Frame the starter refinery at a readable scale. Fitting adjacent locked parcels
+  // into the opening camera made every plant tiny and hid the buildable yard.
+  const initialScale = clampCameraValue(width / (V3_ISO.tw * 11), 0.85, 1.65)
+  const starter = sprites.filter((sprite) => sprite.id.startsWith('building:starter:'))
+  const focus = starter.length ? starter : sprites
+  const centerX = focus.length ? focus.reduce((sum, sprite) => sum + sprite.centerX, 0) / focus.length : (bounds.minX + worldW / 2)
+  const centerY = focus.length ? focus.reduce((sum, sprite) => sum + sprite.bottomY, 0) / focus.length : (bounds.minY + worldH / 2)
+  const initialX = width / 2 - centerX * initialScale
+  const initialY = height * 0.36 - centerY * initialScale
 
   const tx = useSharedValue(initialX)
   const ty = useSharedValue(initialY)
@@ -213,14 +208,13 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
               <Path
                 key={parcel.id}
                 path={path}
-                color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
+                color={parcel.state === 'owned' ? '#C9AE80' : parcel.state === 'available' ? '#A89473' : '#887C68'}
               />
             ))}
-            <Path path={gridPath} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
+            <Path path={gridPath} color="rgba(54,64,68,0.16)" style="stroke" strokeWidth={0.7} />
             {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
               <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
             ))}
-            <Path path={roadPath} color="#9A9386" style="stroke" strokeWidth={4} />
             {decorPaths.map(([color, path]) => <Path key={`decor-${color}`} path={path} color={color} />)}
             {selectedDecor && (() => {
               const { w, h } = getV3DecorFootprint(selectedDecor.kind, selectedDecor.rotated)
@@ -276,6 +270,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 export default memo(V3YardView)
 
 const styles = StyleSheet.create({
-  viewport: { overflow: 'hidden', backgroundColor: '#4A6B3F' },
+  viewport: { overflow: 'hidden', backgroundColor: '#95876D' },
   webNote: { color: '#D5E2E9', padding: 16 },
 })
