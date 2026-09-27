@@ -1,5 +1,6 @@
 import type { BuildingType } from '../types'
 import {
+  V3_BUILDINGS,
   V3_BUILDING_LIMITS,
   V3_FOOTPRINTS,
   V3_LAND_PARCELS,
@@ -135,4 +136,64 @@ export function validateV3ParcelUnlock(state: V3GameState, parcelId: string): { 
   if (parcel.requires && !state.world.unlockedParcelIds.includes(parcel.requires)) return { blocker: 'requires_parcel', params: { parcel: parcel.requires } }
   if (state.world.moneyCents < parcel.costDollars * 100) return { blocker: 'insufficient_cash', params: { costCents: parcel.costDollars * 100 } }
   return null
+}
+
+export type V3YardMigration = {
+  buildingsById: Record<string, V3Building>
+  /** Buildings that could not keep their level and were placed smaller (never expected). */
+  downgraded: string[]
+  /** Buildings with no room at all: removed and refunded (never expected). */
+  refunded: Array<{ id: string; cents: number }>
+}
+
+/**
+ * Scale-1 → scale-2 yard migration. Each building keeps its id, type and level;
+ * its anchor is stretched around the world centre, then snapped to the nearest
+ * free spot on the player's own land. Largest footprints are placed first.
+ * Fallbacks (smaller level, then refund) only exist so a save can never be lost.
+ */
+export function migrateV3YardScale(
+  buildingsById: Record<string, V3Building>,
+  unlockedParcelIds: string[],
+  stretch: number,
+): V3YardMigration {
+  const placed: Record<string, V3Building> = {}
+  const probe = { world: { buildingsById: placed, unlockedParcelIds } } as unknown as V3GameState
+  const area = (building: V3Building) => {
+    const footprint = getV3Footprint(building.type, building.level)
+    return footprint ? footprint.w * footprint.h : 0
+  }
+  const order = Object.values(buildingsById).sort((a, b) => area(b) - area(a) || a.id.localeCompare(b.id))
+  const result: V3YardMigration = { buildingsById: placed, downgraded: [], refunded: [] }
+  const centre = V3_WORLD_SIZE / 2
+  const nearest = (building: V3Building, level: number): { x: number; y: number } | null => {
+    const tx = Math.round(centre + (building.x - centre) * stretch)
+    const ty = Math.round(centre + (building.y - centre) * stretch)
+    for (let radius = 0; radius < V3_WORLD_SIZE; radius++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue
+          if (!validateV3Placement(probe, building.type, level, tx + dx, ty + dy)) return { x: tx + dx, y: ty + dy }
+        }
+      }
+    }
+    return null
+  }
+  for (const building of order) {
+    let spot = nearest(building, building.level)
+    let level = building.level
+    while (!spot && level > 1) {
+      level -= 1
+      spot = nearest(building, level)
+    }
+    if (spot) {
+      if (level !== building.level) result.downgraded.push(building.id)
+      placed[building.id] = { ...building, level, x: spot.x, y: spot.y }
+    } else {
+      const cost = V3_BUILDINGS[building.type]
+      const upgrades = (cost.upgradeCostDollars ?? [0, 0]).slice(0, building.level - 1).reduce((sum, dollars) => sum + dollars, 0)
+      result.refunded.push({ id: building.id, cents: (cost.buildCostDollars + upgrades) * 100 })
+    }
+  }
+  return result
 }

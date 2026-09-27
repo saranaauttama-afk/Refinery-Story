@@ -93,12 +93,12 @@ export function materialBasisTotal(state: V3GameState): number {
 }
 
 /**
- * Test layout: legacy check "slots" 0..8 map to anchors in the 10×10 core,
- * 3 apart so every building can reach its Lv3 footprint. Slots 3/4/5 are the
- * starter Crude Tank / Distillation / Gasoline Tank.
+ * Test layout: legacy check "slots" 0..8 map to anchors in the 24×24 core
+ * (yard scale 2), 6 apart so every building can reach its Lv3 5×4 footprint.
+ * Slots 3/4/5 are the starter Crude Tank / Distillation / Gasoline Tank.
  */
 export function SLOT(n: number): { x: number; y: number } {
-  return { x: 45 + 3 * (n % 3), y: 45 + 3 * Math.floor(n / 3) }
+  return { x: 41 + 6 * (n % 3), y: 41 + 6 * Math.floor(n / 3) }
 }
 
 /** ID of the building anchored at a test slot (fails loudly if none). */

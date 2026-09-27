@@ -14,9 +14,9 @@ import {
  * each can grow to its Lv3 footprint without moving.
  */
 export const V3_STARTER_BUILDINGS = {
-  crudeTank: { id: 'building:starter:crude', type: 'crudeTank', level: 1, x: 45, y: 48 },
-  distillationUnit: { id: 'building:starter:distillation', type: 'distillationUnit', level: 1, x: 48, y: 48 },
-  gasolineTank: { id: 'building:starter:gasoline', type: 'gasolineTank', level: 1, x: 51, y: 48 },
+  crudeTank: { id: 'building:starter:crude', type: 'crudeTank', level: 1, x: 41, y: 47 },
+  distillationUnit: { id: 'building:starter:distillation', type: 'distillationUnit', level: 1, x: 47, y: 47 },
+  gasolineTank: { id: 'building:starter:gasoline', type: 'gasolineTank', level: 1, x: 53, y: 47 },
 } as const satisfies Record<string, V3Building>
 
 export const V3_DEFAULT_BLUEPRINT_ID: Record<V3ProductFamily, string> = {

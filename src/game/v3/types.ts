@@ -8,7 +8,8 @@ import type {
 } from '../types'
 
 export const V3_RULESET_VERSION = 3 as const
-export const V3_PREVIEW_SCHEMA_REVISION = 14 as const
+/** 15 = yard scale 2 (finer tiles, 24×24 → 48×48 land); 14 saves migrate on load. */
+export const V3_PREVIEW_SCHEMA_REVISION = 15 as const
 
 export type V3ProductFamily = Extract<
   ProductKey,

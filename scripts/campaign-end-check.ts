@@ -117,7 +117,7 @@ assert.deepEqual(report.partners, ['airline', 'local', 'performance'])
 assert.deepEqual(report.families, ['gasoline', 'jetFuel'])
 assert.equal(report.showcaseTemplateId, 'showcase:gasoline')
 assert.equal(report.starProduct?.blueprintId, developed.id)
-assert.equal(report.unlockedArea, 100, 'cleared on the starting 10×10: no need for every building or all land')
+assert.equal(report.unlockedArea, 576, 'cleared on the starting 24×24: no need for every building or all land')
 assert.ok(!cleared.world.unlockedResearchIds.length, 'no all-research gate')
 
 // ---- Sticky clear, single payout, report restorable ----

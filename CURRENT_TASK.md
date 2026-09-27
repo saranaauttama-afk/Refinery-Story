@@ -45,6 +45,12 @@
   Build · Production · Staff · Clients · Company with segmented sub-sections;
   reset lives only in Settings; specialization moved to Company; C4 goal shows a
   clear-condition checklist; staff Train/Promote spell out their effect.
+- Decoration track on `devGraphic` (owner request 2026-09-27), 3 steps:
+  1. DONE yard scale 2: lines start 3×3, tanks 2×2, land 24×24 → 48×48,
+     iso tile 32×16, schema 15 with revision-14 save migration (yard-check).
+  2. Decorations (~15 items, cheap, unlocked by chapter) + capped appeal →
+     fame gain (max +10%, diminishing per item type), 150-item cap.
+  3. Decoration placement UI in the Build tab + full-yard perf check.
 - **Current task: V3-19** Android acceptance and handoff (owner device play).
 - Backlog (owner): per-recipe stock table; Crude → Gasoline + Feedstock → Lube flow bar.
 

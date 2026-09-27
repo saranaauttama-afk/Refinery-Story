@@ -19,26 +19,26 @@ function c2(): V3GameState {
 }
 
 // ---- Tank adjacency: +5% rate, 4-direction edges, once per target ----
-let state = act(c2(), { type: 'build', x: 45, y: 45, building: 'lubricantPlant' })
-const lube = getV3BuildingAt(state, 45, 45)!.id
+let state = act(c2(), { type: 'build', x: 40, y: 40, building: 'lubricantPlant' })
+const lube = getV3BuildingAt(state, 40, 40)!.id
 const base = evaluateV3Production(state, 25).lines.find((line) => line.buildingId === lube)!.requestedWork
-const preview = getV3AdjacencyPreview(state, 'lubricantTank', 1, 47, 45)
+const preview = getV3AdjacencyPreview(state, 'lubricantTank', 1, 43, 40)
 assert.deepEqual(preview, [{ buildingId: lube, kind: 'tank' }], 'preview shows the benefit before placing')
-assert.deepEqual(getV3AdjacencyPreview(state, 'lubricantTank', 1, 47, 47), [], 'diagonal does not count')
-assert.deepEqual(getV3AdjacencyPreview(state, 'gasolineTank', 1, 47, 45), [], 'only the matching tank counts')
-state = act(state, { type: 'build', x: 47, y: 45, building: 'lubricantTank' })
+assert.deepEqual(getV3AdjacencyPreview(state, 'lubricantTank', 1, 43, 43), [], 'diagonal does not count')
+assert.deepEqual(getV3AdjacencyPreview(state, 'gasolineTank', 1, 43, 40), [], 'only the matching tank counts')
+state = act(state, { type: 'build', x: 43, y: 40, building: 'lubricantTank' })
 close(evaluateV3Production(state, 25).lines.find((line) => line.buildingId === lube)!.requestedWork, base * 1.05)
-state = act(state, { type: 'build', x: 45, y: 47, building: 'lubricantTank' })
+state = act(state, { type: 'build', x: 40, y: 43, building: 'lubricantTank' })
 close(getV3AdjacencyRate(state, lube), 1.05, 'a second tank does not stack')
 assert.ok(state.discoveredAdjacencies.includes('tank:lubricantPlant'), 'discovery history recorded')
 const distillRate = getV3AdjacencyRate(state, V3_STARTER_BUILDINGS.distillationUnit.id)
 close(distillRate, 1, 'starter tanks are spaced, no free bonus')
 
 // ---- Workshop adjacency: -10% upkeep for touching lines only, 25% total cap ----
-let upkeep = act(c2(), { type: 'build', x: 45, y: 45, building: 'lubricantPlant' })
-const lubeLine = getV3BuildingAt(upkeep, 45, 45)!.id
+let upkeep = act(c2(), { type: 'build', x: 40, y: 40, building: 'lubricantPlant' })
+const lubeLine = getV3BuildingAt(upkeep, 40, 40)!.id
 const dueBefore = evaluateV3Maintenance(upkeep).lines.find((line) => line.buildingId === lubeLine)!
-upkeep = act(upkeep, { type: 'build', x: 45, y: 47, building: 'maintenanceWorkshop' })
+upkeep = act(upkeep, { type: 'build', x: 40, y: 43, building: 'maintenanceWorkshop' })
 assert.equal(getV3LineAdjacency(upkeep, lubeLine).workshop, true)
 const dueAfter = evaluateV3Maintenance(upkeep).lines.find((line) => line.buildingId === lubeLine)!
 assert.ok(dueAfter.cut >= 0.1 + 0.05 - 1e-9 && dueAfter.cut <= 0.25 + 1e-9, 'local 10% + workshop 5% global, capped')
@@ -47,13 +47,13 @@ const distillUpkeep = evaluateV3Maintenance(upkeep).lines.find((line) => line.bu
 if (distillUpkeep) assert.ok(distillUpkeep.cut < dueAfter.cut, 'non-touching line gets only the global cut')
 
 // ---- Move/swap cannot farm: no reward exists, history keeps one entry per kind ----
-const tank = getV3BuildingAt(state, 47, 45)!.id
+const tank = getV3BuildingAt(state, 43, 40)!.id
 let farm = state
 const cash = farm.world.moneyCents
 const rp = farm.world.researchPoints
 for (let index = 0; index < 5; index++) {
   farm = act(farm, { type: 'move_building', buildingId: tank, x: 51, y: 52 })
-  farm = act(farm, { type: 'move_building', buildingId: tank, x: 47, y: 45 })
+  farm = act(farm, { type: 'move_building', buildingId: tank, x: 43, y: 40 })
 }
 assert.equal(farm.world.moneyCents, cash)
 assert.equal(farm.world.researchPoints, rp)

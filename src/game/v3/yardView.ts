@@ -150,7 +150,8 @@ export function deriveV3RoadNetwork(state: V3GameState): V3RoadNode[] {
 }
 
 // ---- Isometric projection (Kairosoft-style diamond tiles, art-independent) ----
-export const V3_ISO = { tw: 64, th: 32 } as const
+/** Yard scale 2 halves the tile so the 24×24 start looks like the old 10×10 did. */
+export const V3_ISO = { tw: 32, th: 16 } as const
 
 export function v3IsoPoint(x: number, y: number): { sx: number; sy: number } {
   return { sx: (x - y) * V3_ISO.tw / 2, sy: (x + y) * V3_ISO.th / 2 }

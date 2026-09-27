@@ -4,7 +4,7 @@ import { V3_FOOTPRINTS, V3_LAND_PARCELS, V3_WORLD_SIZE } from '../src/game/v3/da
 import { runV3ProductionTick } from '../src/game/v3/production'
 import { V3_STARTER_BUILDINGS, createInitialV3GameState } from '../src/game/v3/state'
 import { parseV3GameState } from '../src/game/v3/storage'
-import type { V3GameState } from '../src/game/v3/types'
+import type { V3Building, V3GameState } from '../src/game/v3/types'
 import {
   getV3BuildingAt,
   getV3Footprint,
@@ -50,7 +50,7 @@ for (const parcel of V3_LAND_PARCELS) {
 }
 const areaAfter = (ring: number) => V3_LAND_PARCELS.filter((parcel) => parcel.id === 'core' || Number(parcel.id.slice(4, 5)) <= ring)
   .reduce((sum, parcel) => sum + parcel.w * parcel.h, 0)
-assert.deepEqual([0, 1, 2, 3].map(areaAfter), [100, 196, 400, 784], '10×10 → 14×14 → 20×20 → 28×28')
+assert.deepEqual([0, 1, 2, 3].map(areaAfter), [576, 1024, 1600, 2304], '24×24 → 32×32 → 40×40 → 48×48')
 // Parcels never overlap each other.
 const covered = new Set<string>()
 for (const parcel of V3_LAND_PARCELS) {
@@ -62,18 +62,18 @@ for (const parcel of V3_LAND_PARCELS) {
 
 // ---- Placement: multi-cell footprint, overlap, bounds, locked land, atomic failure ----
 let state = at(2)
-assert.equal(getV3UnlockedArea(state), 100)
-state = act(state, { type: 'build', x: 45, y: 45, building: 'powerPlant' })
-const power = getV3BuildingAt(state, 46, 46)!
-assert.equal(power.type, 'powerPlant', '2×2 footprint occupies all four cells')
-assert.equal(getV3Occupancy(state).get('46,46'), power.id)
-state = assertBlocked(state, { type: 'build', x: 46, y: 46, building: 'crudeTank' }, 'v3.place.overlap')
-state = assertBlocked(state, { type: 'build', x: 44, y: 45, building: 'crudeTank' }, 'v3.place.locked_land')
-state = assertBlocked(state, { type: 'build', x: 54, y: 54, building: 'lubricantPlant' }, 'v3.place.locked_land')
+assert.equal(getV3UnlockedArea(state), 576)
+state = act(state, { type: 'build', x: 40, y: 40, building: 'powerPlant' })
+const power = getV3BuildingAt(state, 42, 42)!
+assert.equal(power.type, 'powerPlant', '3×3 footprint occupies all nine cells')
+assert.equal(getV3Occupancy(state).get('41,41'), power.id)
+state = assertBlocked(state, { type: 'build', x: 41, y: 41, building: 'crudeTank' }, 'v3.place.overlap')
+state = assertBlocked(state, { type: 'build', x: 37, y: 40, building: 'crudeTank' }, 'v3.place.locked_land')
+state = assertBlocked(state, { type: 'build', x: 60, y: 60, building: 'lubricantPlant' }, 'v3.place.locked_land')
 state = assertBlocked(state, { type: 'build', x: 99, y: 99, building: 'lubricantPlant' }, 'v3.place.out_of_bounds')
 state = assertBlocked(state, { type: 'build', x: -1, y: 50, building: 'crudeTank' }, 'v3.place.out_of_bounds')
 state = assertBlocked(state, { type: 'build', x: 45.5, y: 50, building: 'crudeTank' }, 'v3.place.out_of_bounds')
-state = assertBlocked(state, { type: 'build', x: 45, y: 53, building: 'jetFuelPlant' }, 'v3.build.locked')
+state = assertBlocked(state, { type: 'build', x: 44, y: 53, building: 'jetFuelPlant' }, 'v3.build.locked')
 
 // ---- Land unlock: cost, chapter, ring order, idempotence ----
 let land = at(1)
@@ -83,29 +83,29 @@ land = at(2, 100_000)
 land = assertBlocked(land, { type: 'unlock_land_parcel', parcelId: 'ring1:north' }, 'v3.land.insufficient_cash')
 land = at(2)
 land = act(land, { type: 'unlock_land_parcel', parcelId: 'ring1:north' })
-assert.equal(getV3UnlockedArea(land), 100 + 14 * 2)
+assert.equal(getV3UnlockedArea(land), 576 + 32 * 4)
 assert.equal(100_000_000 - land.world.moneyCents, 150_000)
 land = assertBlocked(land, { type: 'unlock_land_parcel', parcelId: 'ring1:north' }, 'v3.land.owned')
-land = act(land, { type: 'build', x: 43, y: 43, building: 'crudeTank' })
+land = act(land, { type: 'build', x: 36, y: 36, building: 'crudeTank' })
 
 // ---- Upgrade: footprint grows right/down; collision or locked land costs nothing ----
 let upgrade = at(2)
-upgrade = act(upgrade, { type: 'build', x: 45, y: 45, building: 'laboratory' })
-const lab = getV3BuildingAt(upgrade, 45, 45)!.id
-upgrade = act(upgrade, { type: 'build', x: 46, y: 45, building: 'crudeTank' })
+upgrade = act(upgrade, { type: 'build', x: 40, y: 40, building: 'laboratory' })
+const lab = getV3BuildingAt(upgrade, 40, 40)!.id
+upgrade = act(upgrade, { type: 'build', x: 42, y: 40, building: 'crudeTank' })
 const cash = upgrade.world.moneyCents
 upgrade = assertBlocked(upgrade, { type: 'upgrade', buildingId: lab }, 'v3.place.overlap')
 assert.equal(upgrade.world.moneyCents, cash, 'blocked upgrade charges nothing')
 assert.equal(upgrade.world.buildingsById[lab].level, 1)
-const crude = getV3BuildingAt(upgrade, 46, 45)!.id
-upgrade = act(upgrade, { type: 'move_building', buildingId: crude, x: 45, y: 52 })
+const crude = getV3BuildingAt(upgrade, 42, 40)!.id
+upgrade = act(upgrade, { type: 'move_building', buildingId: crude, x: 40, y: 53 })
 upgrade = act(upgrade, { type: 'upgrade', buildingId: lab })
 assert.equal(upgrade.world.buildingsById[lab].level, 2)
-assert.equal(getV3BuildingAt(upgrade, 46, 46)!.id, lab, 'Lv2 lab covers 2×2')
+assert.equal(getV3BuildingAt(upgrade, 42, 42)!.id, lab, 'Lv2 lab covers 3×3')
 // Edge of unlocked land blocks growth.
 let edge = at(2)
-edge = act(edge, { type: 'build', x: 54, y: 45, building: 'crudeTank' })
-const edgeTank = getV3BuildingAt(edge, 54, 45)!.id
+edge = act(edge, { type: 'build', x: 60, y: 40, building: 'crudeTank' })
+const edgeTank = getV3BuildingAt(edge, 60, 40)!.id
 assertBlocked(edge, { type: 'upgrade', buildingId: edgeTank }, 'v3.place.locked_land')
 // Upgrade makes the level real in production.
 let distill = at(2)
@@ -113,17 +113,18 @@ const workBefore = runV3ProductionTick({ ...distill, world: { ...distill.world, 
 distill = act(distill, { type: 'upgrade', buildingId: DISTILL })
 const workAfter = runV3ProductionTick({ ...distill, world: { ...distill.world, crudeOil: 60 } }, 25).lines[0].requestedWork
 assert.ok(workAfter > workBefore, 'Lv2 rate applies')
-assert.deepEqual(getV3Footprint('distillationUnit', 2), { w: 2, h: 2 })
+assert.deepEqual(getV3Footprint('distillationUnit', 2), { w: 4, h: 4 })
+assert.deepEqual(getV3Footprint('distillationUnit', 1), { w: 3, h: 3 }, 'process lines start at 3×3')
 
 // ---- Move: whole footprint validated; state keyed by ID survives ----
 let move = at(2)
 const niran = move.world.employees[0].id
 move = act(move, { type: 'set_program', buildingId: DISTILL, blueprintId: Object.keys(move.productBlueprints)[0] })
 const beforeMove = move
-move = assertBlocked(move, { type: 'move_building', buildingId: DISTILL, x: 45, y: 48 }, 'v3.place.overlap')
+move = assertBlocked(move, { type: 'move_building', buildingId: DISTILL, x: 41, y: 47 }, 'v3.place.overlap')
 move = assertBlocked(move, { type: 'move_building', buildingId: DISTILL, x: 60, y: 60 }, 'v3.place.locked_land')
 move = assertBlocked(move, { type: 'move_building', buildingId: 'building:none', x: 46, y: 46 }, 'v3.building.missing')
-move = act(move, { type: 'move_building', buildingId: DISTILL, x: 46, y: 51 })
+move = act(move, { type: 'move_building', buildingId: DISTILL, x: 44, y: 53 })
 assert.deepEqual(move.plantPrograms[DISTILL], beforeMove.plantPrograms[DISTILL])
 assert.deepEqual(move.employeeDuties[niran], { kind: 'line', buildingId: DISTILL })
 assert.equal(move.world.moneyCents, beforeMove.world.moneyCents)
@@ -132,8 +133,8 @@ assert.equal(getV3BuildingAt(move, 48, 48), null, 'old cell is free')
 
 // ---- Demolish safeguards ----
 let demolish = at(2)
-demolish = act(demolish, { type: 'build', x: 45, y: 45, building: 'laboratory' })
-const labId = getV3BuildingAt(demolish, 45, 45)!.id
+demolish = act(demolish, { type: 'build', x: 40, y: 40, building: 'laboratory' })
+const labId = getV3BuildingAt(demolish, 40, 40)!.id
 demolish = assertBlocked(demolish, { type: 'demolish', buildingId: labId, expectedBuilding: 'crudeTank' }, 'v3.demolish.building_changed')
 demolish = { ...demolish, world: { ...demolish.world, crudeOil: 55 } }
 demolish = assertBlocked(demolish, { type: 'demolish', buildingId: V3_STARTER_BUILDINGS.crudeTank.id, expectedBuilding: 'crudeTank' }, 'v3.demolish.stock_overflow')
@@ -142,14 +143,14 @@ demolish = assertBlocked(demolish, { type: 'demolish', buildingId: DISTILL, expe
 
 // ---- Building-type caps (shared validator) ----
 let caps = at(0)
-caps = assertBlocked(caps, { type: 'build', x: 45, y: 45, building: 'distillationUnit' }, 'v3.place.building_limit')
+caps = assertBlocked(caps, { type: 'build', x: 40, y: 40, building: 'distillationUnit' }, 'v3.place.building_limit')
 caps = at(2)
 caps = buildAnywhere(caps, 'distillationUnit').state
-assertBlocked(caps, { type: 'build', x: 45, y: 45, building: 'distillationUnit' }, 'v3.place.building_limit')
+assertBlocked(caps, { type: 'build', x: 40, y: 53, building: 'distillationUnit' }, 'v3.place.building_limit')
 caps = buildAnywhere(caps, 'laboratory').state
-assertBlocked(caps, { type: 'build', x: 45, y: 53, building: 'laboratory' }, 'v3.place.building_limit')
+assertBlocked(caps, { type: 'build', x: 40, y: 58, building: 'laboratory' }, 'v3.place.building_limit')
 caps = buildAnywhere(caps, 'powerPlant').state
-assertBlocked(caps, { type: 'build', x: 52, y: 52, building: 'powerPlant' }, 'v3.place.building_limit')
+assertBlocked(caps, { type: 'build', x: 55, y: 55, building: 'powerPlant' }, 'v3.place.building_limit')
 let tanks = at(2)
 for (let index = 0; index < 4; index++) tanks = buildAnywhere(tanks, 'crudeTank').state
 assert.equal(Object.values(tanks.world.buildingsById).filter((building) => building.type === 'crudeTank').length, 5, 'tanks are uncapped')
@@ -174,8 +175,8 @@ const reloaded = parseV3GameState(saved)
 assert.equal(reloaded.status, 'loaded')
 assert.deepEqual(reloaded.state, upgrade)
 const overlapping = JSON.parse(JSON.stringify(upgrade))
-overlapping.world.buildingsById[crude].x = 46
-overlapping.world.buildingsById[crude].y = 46
+overlapping.world.buildingsById[crude].x = 41
+overlapping.world.buildingsById[crude].y = 41
 assert.equal(parseV3GameState(overlapping).status, 'invalid', 'overlap in a save is rejected')
 const offLand = JSON.parse(JSON.stringify(upgrade))
 offLand.world.buildingsById[crude].x = 20
@@ -191,25 +192,25 @@ const fresh = createInitialV3GameState()
 const views = getV3ParcelViews(fresh)
 assert.deepEqual(views.map((view) => view.id).sort(), ['core', 'ring1:east', 'ring1:north', 'ring1:south', 'ring1:west'])
 assert.ok(views.filter((view) => view.id !== 'core').every((view) => view.state === 'locked'), 'C0: ring1 shown as locked with a reason')
-assert.deepEqual(getV3YardBounds(fresh), { x: 43, y: 43, w: 14, h: 14 }, 'camera bounds cover drawn land, not 100×100')
-const visible = getV3VisibleTileRange({ width: 240, height: 240 }, { tx: -43 * V3_TILE_PX, ty: -43 * V3_TILE_PX, scale: 1 })
-assert.deepEqual([visible.x, visible.y, visible.w, visible.h], [43, 43, 11, 11])
-const preview = getV3PlacementPreview(fresh, 'powerPlant', 1, 54, 54)
+assert.deepEqual(getV3YardBounds(fresh), { x: 34, y: 34, w: 32, h: 32 }, 'camera bounds cover drawn land, not 100×100')
+const visible = getV3VisibleTileRange({ width: 240, height: 240 }, { tx: -34 * V3_TILE_PX, ty: -34 * V3_TILE_PX, scale: 1 })
+assert.deepEqual([visible.x, visible.y, visible.w, visible.h], [34, 34, 11, 11])
+const preview = getV3PlacementPreview(fresh, 'powerPlant', 1, 60, 60)
 assert.equal(preview.status, 'locked_land')
-assert.equal(preview.cells.length, 4)
-assert.equal(getV3PlacementPreview(fresh, 'powerPlant', 1, 45, 45).status, 'valid')
+assert.equal(preview.cells.length, 9)
+assert.equal(getV3PlacementPreview(fresh, 'powerPlant', 1, 40, 40).status, 'valid')
 const distillPreview = getV3UpgradePreview(fresh, DISTILL)!
-assert.equal(distillPreview.growth.length, 3, 'Lv1 1×1 → Lv2 2×2 adds three tiles')
+assert.equal(distillPreview.growth.length, 7, 'Lv1 3×3 → Lv2 4×4 adds seven tiles')
 assert.equal(distillPreview.status, 'valid')
-const crowded = act(at(2), { type: 'build', x: 49, y: 48, building: 'crudeTank' })
+const crowded = act(at(2), { type: 'build', x: 50, y: 47, building: 'crudeTank' })
 assert.equal(getV3UpgradePreview(crowded, DISTILL)!.status, 'overlap', 'preview shows the blocker before paying')
 const roads = deriveV3RoadNetwork(fresh)
-assert.equal(roads.length, 40, 'core outline has 40 grid nodes')
+assert.equal(roads.length, 96, 'core outline has 96 grid nodes')
 assert.equal(roads.filter((node) => node.kind === 'corner').length, 4)
 assert.ok(roads.every((node) => node.kind === 'corner' || node.kind === 'straight'))
 const joined = act(at(2), { type: 'unlock_land_parcel', parcelId: 'ring1:north' })
 assert.ok(deriveV3RoadNetwork(joined).some((node) => node.kind === 'tee'), 'parcel seams create junctions')
-assert.deepEqual(getV3BuildingViews(fresh).map((view) => [view.type, view.w, view.h]).sort(), [['crudeTank', 1, 1], ['distillationUnit', 1, 1], ['gasolineTank', 1, 1]])
+assert.deepEqual(getV3BuildingViews(fresh).map((view) => [view.type, view.w, view.h]).sort(), [['crudeTank', 2, 2], ['distillationUnit', 3, 3], ['gasolineTank', 2, 2]])
 // ---- V3-20 isometric projection, sprite order and calendar ----
 for (const [x, y] of [[45, 45], [50, 49], [0, 0], [99, 3]]) {
   const point = v3IsoPoint(x + 0.5, y + 0.5)
@@ -222,4 +223,32 @@ assert.deepEqual(getV3Calendar(299), { year: 1, month: 1, week: 4 })
 assert.deepEqual(getV3Calendar(3_600), { year: 2, month: 1, week: 1 }, 'one in-game year = one award period')
 void attempt
 
-console.log('PASS: V3-15.5 yard: footprints, parcels 10→28, multi-cell placement, overlap/bounds/locked land, atomic upgrade growth, move, demolish guards, caps, occupancy, reload/reset, renderer model (culling, previews, roads, iso projection, calendar)')
+// ---- Revision 14 (yard scale 1) saves migrate: same ids/levels/programs, no overlap, own land only ----
+{
+  const scale1: V3GameState = JSON.parse(JSON.stringify(createInitialV3GameState()))
+  const legacy = { ...scale1, schemaRevision: 14, world: { ...scale1.world, buildingsById: {
+    'building:starter:crude': { ...scale1.world.buildingsById['building:starter:crude'], x: 45, y: 48 },
+    'building:starter:distillation': { ...scale1.world.buildingsById['building:starter:distillation'], x: 48, y: 48 },
+    'building:starter:gasoline': { ...scale1.world.buildingsById['building:starter:gasoline'], x: 51, y: 48 },
+  } } }
+  // A scale-1 core packed solid (worst case): 1 line + 99 tanks must all still fit.
+  const packed: Record<string, V3Building> = {}
+  let n = 0
+  for (let y = 45; y < 55; y++) for (let x = 45; x < 55; x++) {
+    const id = n === 0 ? 'building:starter:distillation' : `building:packed:${n}`
+    packed[id] = { id, type: n === 0 ? 'distillationUnit' : 'crudeTank', level: 1, x, y }
+    n += 1
+  }
+  for (const [label, sample] of [['starter', legacy], ['packed', { ...legacy, world: { ...legacy.world, buildingsById: packed } }]] as const) {
+    const loaded = parseV3GameState(JSON.parse(JSON.stringify(sample)))
+    assert.equal(loaded.status, 'loaded', `${label} revision-14 save migrates`)
+    if (loaded.status !== 'loaded') continue
+    assert.equal(loaded.state.schemaRevision, 15)
+    assert.deepEqual(Object.keys(loaded.state.world.buildingsById).sort(), Object.keys(sample.world.buildingsById).sort(), `${label}: every building kept`)
+    for (const [id, building] of Object.entries(sample.world.buildingsById)) assert.equal(loaded.state.world.buildingsById[id].level, building.level, `${label}: levels kept`)
+    assert.equal(loaded.state.world.moneyCents, sample.world.moneyCents, `${label}: nothing refunded`)
+    assertConsistent(loaded.state)
+  }
+}
+
+console.log('PASS: V3-15.5 yard: footprints, parcels 24→48 (yard scale 2) + revision-14 migration, multi-cell placement, overlap/bounds/locked land, atomic upgrade growth, move, demolish guards, caps, occupancy, reload/reset, renderer model (culling, previews, roads, iso projection, calendar)')

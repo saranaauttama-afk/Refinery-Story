@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { BUILDINGS } from '../data/buildings'
-import { V3_COMMODITY_ID, V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
+import { V3_COMMODITY_ID, V3_DEVELOPMENT_BY_FAMILY, V3_ROLES, V3_YARD_MIGRATION_STRETCH, isV3ProcessBuilding, type V3ProcessBuilding } from './data'
 import { createInitialV3GameState } from './state'
-import { getV3Parcel, validateV3Placement } from './yard'
+import { getV3Parcel, migrateV3YardScale, validateV3Placement } from './yard'
 import {
   V3_PREVIEW_SCHEMA_REVISION,
   V3_RULESET_VERSION,
@@ -56,8 +56,43 @@ function validYard(world: Record<string, unknown>): boolean {
   })
 }
 
+/**
+ * Revision 14 → 15: same world, yard re-laid-out at scale 2. Buildings keep
+ * id/type/level/programs/staff; only anchors move. Anything unexpected is left
+ * untouched so the normal validation below still decides.
+ */
+function migrateV3Revision14(input: unknown): unknown {
+  if (!isRecord(input) || input.schemaRevision !== 14 || !isRecord(input.world)) return input
+  const world = input.world
+  if (!isRecord(world.buildingsById) || !Array.isArray(world.unlockedParcelIds)) return input
+  const buildings = world.buildingsById as Record<string, V3Building>
+  if (!Object.values(buildings).every((building) => isRecord(building) && typeof building.type === 'string' && BUILDING_KEYS.has(building.type) &&
+    [1, 2, 3].includes(building.level) && Number.isInteger(building.x) && Number.isInteger(building.y))) return input
+  const migration = migrateV3YardScale(buildings, world.unlockedParcelIds as string[], V3_YARD_MIGRATION_STRETCH)
+  const refundCents = migration.refunded.reduce((sum, entry) => sum + entry.cents, 0)
+  const removed = new Set(migration.refunded.map((entry) => entry.id))
+  const programs = isRecord(input.plantPrograms)
+    ? Object.fromEntries(Object.entries(input.plantPrograms).filter(([id]) => !removed.has(id)))
+    : input.plantPrograms
+  const duties = isRecord(input.employeeDuties)
+    ? Object.fromEntries(Object.entries(input.employeeDuties).map(([id, duty]) =>
+      [id, isRecord(duty) && typeof duty.buildingId === 'string' && removed.has(duty.buildingId) ? { kind: 'reserve' } : duty]))
+    : input.employeeDuties
+  return {
+    ...input,
+    plantPrograms: programs,
+    employeeDuties: duties,
+    schemaRevision: V3_PREVIEW_SCHEMA_REVISION,
+    world: {
+      ...world,
+      buildingsById: migration.buildingsById,
+      moneyCents: typeof world.moneyCents === 'number' ? world.moneyCents + refundCents : world.moneyCents,
+    },
+  }
+}
+
 export function parseV3GameState(input: unknown): V3LoadResult {
-  const value = input
+  const value = migrateV3Revision14(input)
   if (!isRecord(value)) {
     return { status: 'invalid', state: null, reason: 'Save root is not an object.' }
   }

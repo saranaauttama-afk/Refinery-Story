@@ -63,13 +63,6 @@ function diamond(points: Array<{ sx: number; sy: number }>) {
   return path
 }
 
-function line(a: { sx: number; sy: number }, b: { sx: number; sy: number }) {
-  const path = Skia.Path.Make()
-  path.moveTo(a.sx, a.sy)
-  path.lineTo(b.sx, b.sy)
-  return path
-}
-
 const Sprite = memo(function Sprite({ source, x, y, size }: { source: ImageSourcePropType; x: number; y: number; size: number }) {
   const image = useImage(source as DataSourceParam)
   if (!image) return null
@@ -85,6 +78,33 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
   const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
+  // Ground detail is built once per land change as ONE path each (grid, roads),
+  // never per tile per frame: keeps a 48×48 yard smooth on phones.
+  const gridPath = useMemo(() => {
+    const path = Skia.Path.Make()
+    for (const parcel of parcels) {
+      if (parcel.state !== 'owned') continue
+      for (let index = 0; index <= parcel.w; index++) {
+        const a = v3IsoPoint(parcel.x + index, parcel.y); const b = v3IsoPoint(parcel.x + index, parcel.y + parcel.h)
+        path.moveTo(a.sx, a.sy); path.lineTo(b.sx, b.sy)
+      }
+      for (let index = 0; index <= parcel.h; index++) {
+        const a = v3IsoPoint(parcel.x, parcel.y + index); const b = v3IsoPoint(parcel.x + parcel.w, parcel.y + index)
+        path.moveTo(a.sx, a.sy); path.lineTo(b.sx, b.sy)
+      }
+    }
+    return path
+  }, [parcels])
+  const roadPath = useMemo(() => {
+    const path = Skia.Path.Make()
+    for (const node of roads) {
+      const from = v3IsoPoint(node.x, node.y)
+      if (node.links.e) { const to = v3IsoPoint(node.x + 1, node.y); path.moveTo(from.sx, from.sy); path.lineTo(to.sx, to.sy) }
+      if (node.links.s) { const to = v3IsoPoint(node.x, node.y + 1); path.moveTo(from.sx, from.sy); path.lineTo(to.sx, to.sy) }
+    }
+    return path
+  }, [roads])
+  const parcelPaths = useMemo(() => parcels.map((parcel) => ({ parcel, path: diamond(v3IsoRect(parcel)) })), [parcels])
   const bounds = useMemo(() => getV3IsoBounds(state), [landKey])
   const font = useMemo(() => (Platform.OS === 'web'
     ? null
@@ -148,29 +168,18 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
       <GestureDetector gesture={gesture}>
         <Canvas style={{ width, height }}>
           <Group transform={transform}>
-            {parcels.map((parcel) => (
-              <Group key={parcel.id}>
-                <Path
-                  path={diamond(v3IsoRect(parcel))}
-                  color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
-                />
-                {parcel.state === 'owned' && Array.from({ length: parcel.w + 1 }, (_, index) => (
-                  <Path key={`c${index}`} path={line(v3IsoPoint(parcel.x + index, parcel.y), v3IsoPoint(parcel.x + index, parcel.y + parcel.h))} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
-                ))}
-                {parcel.state === 'owned' && Array.from({ length: parcel.h + 1 }, (_, index) => (
-                  <Path key={`r${index}`} path={line(v3IsoPoint(parcel.x, parcel.y + index), v3IsoPoint(parcel.x + parcel.w, parcel.y + index))} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
-                ))}
-                {parcel.id === highlightParcelId && (
-                  <Path path={diamond(v3IsoRect(parcel))} color="#FFD447" style="stroke" strokeWidth={4} />
-                )}
-              </Group>
+            {parcelPaths.map(({ parcel, path }) => (
+              <Path
+                key={parcel.id}
+                path={path}
+                color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
+              />
             ))}
-            {roads.map((node) => (
-              <Group key={`road-${node.x}-${node.y}`}>
-                {node.links.e && <Path path={line(v3IsoPoint(node.x, node.y), v3IsoPoint(node.x + 1, node.y))} color="#9A9386" style="stroke" strokeWidth={6} />}
-                {node.links.s && <Path path={line(v3IsoPoint(node.x, node.y), v3IsoPoint(node.x, node.y + 1))} color="#9A9386" style="stroke" strokeWidth={6} />}
-              </Group>
+            <Path path={gridPath} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
+            {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
+              <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
             ))}
+            <Path path={roadPath} color="#9A9386" style="stroke" strokeWidth={4} />
             {upgradeGrowth?.cells.map((cell) => (
               <Path key={`g${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={upgradeGrowth.ok ? 'rgba(106,205,180,0.6)' : 'rgba(255,99,99,0.6)'} />
             ))}
@@ -196,8 +205,8 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
               return (
                 <SkiaText
                   key={floater.id}
-                  x={point.sx - 18}
-                  y={point.sy - 44 - floater.age * 36}
+                  x={point.sx - 14}
+                  y={point.sy - 28 - floater.age * 28}
                   text={floater.text}
                   font={font}
                   color={floater.color}

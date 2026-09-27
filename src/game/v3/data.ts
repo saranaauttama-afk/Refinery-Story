@@ -181,26 +181,37 @@ export const V3_WORLD_SIZE = 100
 export type V3Footprint = { w: number; h: number }
 const fp = (w: number, h: number): V3Footprint => ({ w, h })
 
-/** Single source of footprint truth per type × level (index 1..3), used by rules and UI. */
+/**
+ * Single source of footprint truth per type × level (index 1..3), used by rules and UI.
+ * Yard scale 2 (2026-09-27): finer tiles so 1×1 decorations (road, lamp, tree)
+ * fit beside buildings. Process lines start at 3×3; tanks at 2×2.
+ */
+const LINE: [V3Footprint, V3Footprint, V3Footprint] = [fp(3, 3), fp(4, 4), fp(5, 4)]
+const TANK: [V3Footprint, V3Footprint, V3Footprint] = [fp(2, 2), fp(3, 2), fp(3, 3)]
 export const V3_FOOTPRINTS: Partial<Record<BuildingType, [V3Footprint, V3Footprint, V3Footprint]>> = {
-  distillationUnit: [fp(1, 1), fp(2, 2), fp(2, 3)],
-  crudeTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  gasolineTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  lubricantTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  jetFuelTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  petrochemicalTank: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  pelletSilo: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  recyclingBunker: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  laboratory: [fp(1, 1), fp(2, 2), fp(2, 2)],
-  powerPlant: [fp(2, 2), fp(2, 2), fp(3, 2)],
-  lubricantPlant: [fp(2, 2), fp(2, 2), fp(3, 2)],
-  jetFuelPlant: [fp(2, 2), fp(3, 2), fp(3, 3)],
-  petrochemicalPlant: [fp(2, 2), fp(3, 2), fp(3, 3)],
-  polymerPlant: [fp(2, 2), fp(3, 2), fp(3, 3)],
-  wasteTreatmentPlant: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  maintenanceWorkshop: [fp(1, 1), fp(2, 1), fp(2, 2)],
-  salesOffice: [fp(1, 1), fp(1, 1), fp(2, 1)],
+  distillationUnit: LINE,
+  lubricantPlant: LINE,
+  jetFuelPlant: LINE,
+  petrochemicalPlant: LINE,
+  polymerPlant: LINE,
+  crudeTank: TANK,
+  gasolineTank: TANK,
+  lubricantTank: TANK,
+  jetFuelTank: TANK,
+  petrochemicalTank: TANK,
+  pelletSilo: TANK,
+  recyclingBunker: TANK,
+  wasteTreatmentPlant: TANK,
+  maintenanceWorkshop: TANK,
+  laboratory: [fp(2, 2), fp(3, 3), fp(3, 3)],
+  powerPlant: [fp(3, 3), fp(3, 3), fp(4, 3)],
+  salesOffice: [fp(2, 2), fp(2, 2), fp(3, 2)],
 }
+
+/** Yard scale revision stored in saves; scale 1 = the old 10×10 → 28×28 grid. */
+export const V3_YARD_SCALE = 2
+/** Old scale-1 coordinates are stretched by this around the world center when migrating. */
+export const V3_YARD_MIGRATION_STRETCH = 2.4
 
 export type V3LandParcel = {
   id: string
@@ -229,14 +240,15 @@ function ring(ring: number, inner: number, outer: number, costDollars: number, c
 }
 
 /**
- * Start 10×10, then rings to 14×14 (C2), 20×20 (C4) and 28×28 (after clear).
- * Ring totals mirror the old 4×4/5×5/6×6 prices; the engine supports 100×100.
+ * Yard scale 2: start 24×24, then rings to 32×32 (C2), 40×40 (C4) and 48×48
+ * (after clear). Same parcel ids and prices as scale 1, so ownership carries
+ * over on migration. Capped at 48×48 to keep the map light on phones.
  */
 export const V3_LAND_PARCELS: V3LandParcel[] = [
-  { id: 'core', x: 45, y: 45, w: 10, h: 10, costDollars: 0, chapter: 0, requires: null },
-  ...ring(1, 10, 14, 1_500, 2),
-  ...ring(2, 14, 20, 6_250, 4),
-  ...ring(3, 20, 28, 25_000, 5),
+  { id: 'core', x: 38, y: 38, w: 24, h: 24, costDollars: 0, chapter: 0, requires: null },
+  ...ring(1, 24, 32, 1_500, 2),
+  ...ring(2, 32, 40, 6_250, 4),
+  ...ring(3, 40, 48, 25_000, 5),
 ]
 
 /** Specific building caps by chapter (index = chapter); absent types are uncapped. */

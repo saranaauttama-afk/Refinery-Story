@@ -7,7 +7,7 @@
  * exactly where it stalled. It is evidence for the R3 gate and a baseline for
  * V3-18 calibration, not a balance change.
  */
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, writeFileSync } from 'node:fs'
 
 import { reduceV3Action } from '../src/game/v3/actions'
 import { V3_BUILDINGS, V3_LAND_PARCELS, V3_PLANT_BY_FAMILY, V3_ROLES, V3_SPOT_PRICE_CENTS } from '../src/game/v3/data'
@@ -407,7 +407,11 @@ while (state.world.tickCount < MAX_TICKS) {
     trajectory.push(`${minutes()}m score ${getV3IndustryScore(state).total} rivals ${rivalsNow.join('/')} rep ${state.world.reputation} bestQ ${Math.max(0, ...Object.values(state.productBlueprints).map((blueprint) => blueprint.quality))}`)
   }
   const chapter = state.campaignProgress.chapter
-  if (!reached[chapter]) { reached[chapter] = minutes(); note(`reached chapter ${chapter}`) }
+  if (!reached[chapter]) {
+    reached[chapter] = minutes(); note(`reached chapter ${chapter}`)
+    // Save-shaped snapshots for migration checks (V3_RUN_SNAPSHOTS=<dir>).
+    if (process.env.V3_RUN_SNAPSHOTS) writeFileSync(`${process.env.V3_RUN_SNAPSHOTS}/c${chapter}.json`, JSON.stringify(state))
+  }
   const signature = `${chapter}|${state.jobReceipts.receipts.length}|${Object.keys(state.productBlueprints).length}|${Object.keys(state.world.buildingsById).length}|rank${getV3PlayerRank(state)}|expo${state.expoResults.filter((entry) => entry.rank === 1).length}|${Math.floor(getV3IndustryScore(state).total / 500)}`
   if (signature !== lastSignature) { lastSignature = signature; lastProgressTick = state.world.tickCount }
   if (chapter >= 5) { outcome.cleared = true; if (process.env.V3_RUN_TRAJECTORY !== '1') break }
@@ -443,4 +447,5 @@ console.log(JSON.stringify({
   unlockedParcels: state.world.unlockedParcelIds,
   staff: state.world.employees.map((employee) => `${employee.type}:L${employee.level}`),
 }, null, 2))
+if (process.env.V3_RUN_SNAPSHOTS) writeFileSync(`${process.env.V3_RUN_SNAPSHOTS}/final.json`, JSON.stringify(state))
 process.exitCode = outcome.cleared ? 0 : 1
