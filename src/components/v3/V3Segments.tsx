@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { fonts } from '../../theme'
+import { fonts, pixelUi } from '../../theme'
 
 /** Segmented control for sub-sections inside a bottom-sheet tab. */
 export function V3Segments<K extends string>({ items, value, onChange }: {
@@ -30,10 +30,10 @@ export function V3Segments<K extends string>({ items, value, onChange }: {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', gap: 4, padding: 4, backgroundColor: '#10222F', borderRadius: 10, borderWidth: 1, borderColor: '#274B63' },
-  item: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  active: { backgroundColor: '#1D4460' },
-  label: { color: '#8FA9BA', fontFamily: fonts.heading, fontSize: 12 },
-  labelActive: { color: '#FFD447' },
-  dot: { position: 'absolute', top: 6, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: '#FF6B5B' },
+  wrap: { flexDirection: 'row', gap: 3, padding: 4, backgroundColor: pixelUi.shadow, borderWidth: 2, borderColor: pixelUi.border },
+  item: { flex: 1, minHeight: 42, borderWidth: 1, borderColor: pixelUi.borderSoft, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  active: { backgroundColor: pixelUi.surfaceRaised, borderBottomWidth: 3, borderBottomColor: pixelUi.accent },
+  label: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 12 },
+  labelActive: { color: pixelUi.accent },
+  dot: { position: 'absolute', top: 5, right: 5, width: 6, height: 6, backgroundColor: pixelUi.warning },
 })
