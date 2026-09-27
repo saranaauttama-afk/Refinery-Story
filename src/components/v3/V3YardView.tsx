@@ -64,10 +64,34 @@ function diamond(points: Array<{ sx: number; sy: number }>) {
   return path
 }
 
-const Sprite = memo(function Sprite({ source, x, y, size }: { source: ImageSourcePropType; x: number; y: number; size: number }) {
+/**
+ * Draws a building's art at its real aspect ratio (Doc/ART_ASSET_LIST_V3.md §2):
+ * width is fixed to the footprint's diamond width, height follows from the
+ * source image's own aspect ratio, and the art's bottom edge sits flush on the
+ * footprint's bottom corner. Alert badge (if any) floats above the art's top.
+ */
+const Sprite = memo(function Sprite({
+  source, centerX, bottomY, footprintWidth, alert, font,
+}: {
+  source: ImageSourcePropType
+  centerX: number
+  bottomY: number
+  footprintWidth: number
+  alert?: string
+  font: ReturnType<typeof matchFont> | null
+}) {
   const image = useImage(source as DataSourceParam)
   if (!image) return null
-  return <SkiaImage image={image} x={x} y={y} width={size} height={size} fit="contain" sampling={PIXEL} />
+  const width = footprintWidth
+  const height = width * (image.height() / image.width())
+  const x = centerX - width / 2
+  const y = bottomY - height
+  return (
+    <>
+      <SkiaImage image={image} x={x} y={y} width={width} height={height} fit="fill" sampling={PIXEL} />
+      {alert && font && <SkiaText x={centerX - 4} y={y - 6} text="!" font={font} color="#FFD447" />}
+    </>
+  )
 })
 
 /**
@@ -211,11 +235,17 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
                 <Group key={sprite.id}>
                   {sprite.id === selectedId && <Path path={diamond(v3IsoRect(sprite))} color="rgba(255,255,255,0.45)" />}
                   {art
-                    ? <Sprite source={art} x={sprite.px} y={sprite.py} size={sprite.size} />
+                    ? (
+                      <Sprite
+                        source={art}
+                        centerX={sprite.centerX}
+                        bottomY={sprite.bottomY}
+                        footprintWidth={sprite.footprintWidth}
+                        alert={alerts[sprite.id]}
+                        font={font}
+                      />
+                    )
                     : <Path path={diamond(v3IsoRect(sprite))} color="#888" />}
-                  {alerts[sprite.id] && font && (
-                    <SkiaText x={sprite.px + sprite.size / 2 - 4} y={sprite.py + 10} text="!" font={font} color="#FFD447" />
-                  )}
                 </Group>
               )
             })}

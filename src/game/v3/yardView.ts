@@ -186,17 +186,21 @@ export function getV3IsoBounds(state: V3GameState): { minX: number; minY: number
 }
 
 /**
- * Sprite placement for a building: square art whose base diamond sits on the
- * footprint. Returned in draw order (back to front) so overlaps look right.
+ * Sprite placement for a building: per the V3 art rules (Doc/ART_ASSET_LIST_V3.md
+ * §2), the art's width always matches the footprint diamond's screen width, its
+ * height comes from the art's own aspect ratio (read from the image once loaded —
+ * see `Sprite` in V3YardView), and its bottom edge sits flush on the footprint's
+ * bottom corner. `footprintWidth`/`centerX`/`bottomY` give the renderer everything
+ * it needs to place the art; the renderer computes the actual draw height.
+ * Returned in draw order (back to front) so overlaps look right.
  */
-export function getV3SpritePlacements(state: V3GameState): Array<V3BuildingView & { px: number; py: number; size: number; depth: number }> {
+export function getV3SpritePlacements(state: V3GameState): Array<V3BuildingView & { centerX: number; bottomY: number; footprintWidth: number; depth: number }> {
   return getV3BuildingViews(state).map((building) => {
     const [top, right, bottom, left] = v3IsoRect(building)
-    const width = right.sx - left.sx
-    const size = width * 1.3
+    const footprintWidth = right.sx - left.sx
     const centerX = (left.sx + right.sx) / 2
     void top
-    return { ...building, px: centerX - size / 2, py: bottom.sy - size * 0.92, size, depth: building.x + building.w + building.y + building.h }
+    return { ...building, centerX, bottomY: bottom.sy, footprintWidth, depth: building.x + building.w + building.y + building.h }
   }).sort((a, b) => a.depth - b.depth || a.id.localeCompare(b.id))
 }
 
