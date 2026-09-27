@@ -1,0 +1,63 @@
+name: Android Preview APK
+
+# Release-branch install build. Release mode embeds the JavaScript bundle so
+# testers always run the exact source from this commit instead of a stale Metro
+# cache left by an older debug installation.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release/refinery-story-v1
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify TypeScript
+        run: npm run typecheck
+
+      - name: Materialize pixel refinery launcher icon
+        run: node scripts/refresh-app-icon.cjs
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install --non-interactive
+
+      - name: Build bundled release APK
+        working-directory: android
+        # Test phones are arm64. Building only that ABI avoids compiling four
+        # native variants and keeps Gradle below the hosted runner memory limit.
+        run: >-
+          ./gradlew assembleRelease
+          --no-daemon
+          --max-workers=2
+          -PreactNativeArchitectures=arm64-v8a
+          -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8"
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: refinery-story-bundled-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14

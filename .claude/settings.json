@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(del \"d:\\\\My App\\\\Refinery-Story\\\\package-lock.json\")",
+      "Bash(cmd /c \"npm run typecheck\")",
+      "Bash(cmd /c \"npx tsc --noEmit 2>&1\")"
     ]
   }
 }

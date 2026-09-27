@@ -1,245 +1,200 @@
-import { useState } from 'react'
-import { BUILDINGS } from '../data/buildings'
-import { BUILDING_UPGRADE_BALANCE, EXPANSION_BALANCE } from '../data/balance'
-import type { BuildingConfig, BuildingType, GridCell } from '../types'
-import BilingualText from './BilingualText'
-import { text, toAriaLabel } from '../translations'
+import { StyleSheet, View } from 'react-native'
+import { getTileStaffBadge, getTileStatusBadge } from '../buildingIdentity'
+import type { BuildingType, DerivedStats, GameState, GridCell } from '../game/types'
+import BuildingTile from './BuildingTile'
+import { radii, spacing } from '../theme'
 
-const UPGRADEABLE_TYPES: ReadonlySet<BuildingType> = new Set([
+// Buildings that are part of the core crude -> gasoline / feedstock ->
+// product chain -- these get the "actively producing" pulse glow when the
+// refinery has crude to process. Storage/support buildings (gasoline tank,
+// laboratory, maintenance workshop, sales office) don't pulse.
+const PRODUCTION_BUILDING_TYPES = new Set<BuildingType>([
   'crudeTank',
-  'productTank',
   'distillationUnit',
-  'laboratory',
-  'maintenanceWorkshop',
-  'salesOffice',
+  'lubricantPlant',
+  'jetFuelPlant',
+  'petrochemicalPlant',
 ])
 
-const UPGRADE_COST_BY_LEVEL = [
-  0,
-  BUILDING_UPGRADE_BALANCE.upgradeLv1ToLv2Cost,
-  BUILDING_UPGRADE_BALANCE.upgradeLv2ToLv3Cost,
-  0,
-]
-
 type BuildingGridProps = {
+  game: GameState
+  derived: DerivedStats
   grid: GridCell[]
   gridLevels: number[]
-  gridExpansionLevel: number
-  money: number
-  refineryLevel: number
-  selectedBuilding: BuildingType
-  onPlaceBuilding: (cellIndex: number) => void
-  onSelectBuilding: (building: BuildingType) => void
-  onRemoveBuilding: (cellIndex: number) => void
-  onUpgradeBuilding: (cellIndex: number) => void
+  containerWidth: number
+  onCellPress?: (index: number) => void
+  // True when the refinery is actively running (crudeOil > 0) -- gates the
+  // production-pulse glow on PRODUCTION_BUILDING_TYPES tiles.
+  isActive?: boolean
 }
 
-function BuildingGrid({
-  grid,
-  gridLevels,
-  gridExpansionLevel,
-  money,
-  refineryLevel,
-  selectedBuilding,
-  onPlaceBuilding,
-  onSelectBuilding,
-  onRemoveBuilding,
-  onUpgradeBuilding,
-}: BuildingGridProps) {
-  const [isRemoveMode, setIsRemoveMode] = useState(false)
-  const selectedConfig = BUILDINGS[selectedBuilding]
-  const selectedIsLocked = !!(
-    selectedConfig.unlockLevel && refineryLevel < selectedConfig.unlockLevel
-  )
-  const cols = EXPANSION_BALANCE[Math.min(gridExpansionLevel, EXPANSION_BALANCE.length - 1)].size
+function BuildingGrid({ game, derived, grid, gridLevels, containerWidth, onCellPress, isActive }: BuildingGridProps) {
+  const cols = Math.round(Math.sqrt(grid.length))
+  const yardPadding = spacing.md
+  const tileMargin = 4 * 2 // BuildingTile's margin on each side
+  const tileSize = (containerWidth - yardPadding * 2) / cols - tileMargin
+  const decorUnit = Math.max(10, Math.round(tileSize * 0.16))
 
   return (
-    <section className="layout-grid">
-      <article className="panel build-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="panel-kicker">
-              <BilingualText text={text.buildings.kicker} />
-            </p>
-            <h2>
-              <BilingualText text={text.buildings.title} />
-            </h2>
-          </div>
-        </div>
-
-        <div className="build-options">
-          {(Object.entries(BUILDINGS) as [BuildingType, BuildingConfig][]).map(
-            ([key, building]) => {
-              const isLocked = !!(
-                building.unlockLevel && refineryLevel < building.unlockLevel
-              )
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`build-option ${selectedBuilding === key ? 'selected' : ''} ${isLocked ? 'locked' : ''}`}
-                  onClick={() => onSelectBuilding(key)}
-                  disabled={isLocked}
-                >
-                  <span className="build-option-title">
-                    <BilingualText text={building.name} />{' '}
-                    {isLocked ? (
-                      <span className="build-option-lock-badge">
-                        <BilingualText text={text.buildings.locked} />
-                      </span>
-                    ) : (
-                      <span>${building.cost}</span>
-                    )}
-                  </span>
-                  <span className="build-option-role">
-                    <BilingualText text={text.data.buildings[key].role} />
-                  </span>
-                  <span className="build-option-copy">
-                    <BilingualText text={building.description} />
-                    {isLocked && (
-                      <span className="build-option-unlock-note">
-                        <BilingualText
-                          text={text.buildings.unlockAtLevel(building.unlockLevel!)}
-                        />
-                      </span>
-                    )}
-                  </span>
-                </button>
-              )
-            },
-          )}
-        </div>
-
-        <p className="helper-text">
-          <BilingualText text={text.buildings.adjacencyNote} />
-        </p>
-      </article>
-
-      <article className={`panel grid-panel ${isRemoveMode ? 'remove-mode' : ''}`}>
-        <div className="panel-heading">
-          <div>
-            <p className="panel-kicker">
-              <BilingualText text={text.buildings.gridKicker} />
-            </p>
-            <h2>
-              <BilingualText text={text.buildings.gridTitle} />
-            </h2>
-          </div>
-          <button
-            type="button"
-            className={`action-button remove-mode-toggle ${isRemoveMode ? 'active' : ''}`}
-            onClick={() => setIsRemoveMode((prev) => !prev)}
-          >
-            <BilingualText
-              text={isRemoveMode ? text.buildings.removeModeActive : text.buildings.removeModeButton}
-            />
-          </button>
-        </div>
-
-        {isRemoveMode && (
-          <p className="helper-text no-refund-warning">
-            <BilingualText text={text.buildings.noRefundWarning} />
-          </p>
-        )}
-
-        <div
-          className="refinery-grid"
-          role="grid"
-          aria-label={toAriaLabel(text.buildings.gridAriaLabel)}
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-        >
-          {grid.map((cell, index) => {
-            const building = cell ? BUILDINGS[cell] : null
-
-            if (isRemoveMode) {
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  className={`grid-cell ${cell ? 'filled removable' : 'empty'}`}
-                  onClick={() => cell && onRemoveBuilding(index)}
-                  disabled={cell === null}
-                >
-                  {building ? (
-                    <>
-                      <span className="grid-cell-code">✕</span>
-                      <span className="grid-cell-name">
-                        <BilingualText text={text.buildings.removeCell(building.name)} />
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="grid-cell-code">+</span>
-                      <span className="grid-cell-name">
-                        <BilingualText
-                          text={text.buildings.placeBuilding(selectedConfig.name)}
-                        />
-                      </span>
-                    </>
-                  )}
-                </button>
-              )
-            }
-
-            if (cell && building) {
-              const level = gridLevels[index] ?? 1
-              const isUpgradeable = UPGRADEABLE_TYPES.has(cell)
-              const canUpgrade = isUpgradeable && level < BUILDING_UPGRADE_BALANCE.maxBuildingLevel
-              const upgradeCost = UPGRADE_COST_BY_LEVEL[level] ?? 0
-              const canAffordUpgrade = money >= upgradeCost
-
-              return (
-                <div key={index} className="grid-cell filled" role="gridcell">
-                  <div className="grid-cell-header">
-                    <span className="grid-cell-code">{building.shortName}</span>
-                    {isUpgradeable && (
-                      <span className={`grid-cell-level-badge${level >= BUILDING_UPGRADE_BALANCE.maxBuildingLevel ? ' max' : ''}`}>
-                        {level < BUILDING_UPGRADE_BALANCE.maxBuildingLevel ? (
-                          <BilingualText text={text.buildings.levelBadge(level)} />
-                        ) : (
-                          <BilingualText text={text.buildings.maxLevelBadge} />
-                        )}
-                      </span>
-                    )}
-                  </div>
-                  <span className="grid-cell-name">
-                    <BilingualText text={building.name} />
-                  </span>
-                  {canUpgrade && (
-                    <button
-                      type="button"
-                      className="grid-cell-upgrade"
-                      disabled={!canAffordUpgrade}
-                      onClick={() => onUpgradeBuilding(index)}
-                    >
-                      <BilingualText text={text.buildings.upgradeButton(upgradeCost)} />
-                    </button>
-                  )}
-                </div>
-              )
-            }
-
-            return (
-              <button
-                key={index}
-                type="button"
-                className="grid-cell empty"
-                onClick={() => onPlaceBuilding(index)}
-                disabled={selectedIsLocked || money < selectedConfig.cost}
-              >
-                <span className="grid-cell-code">+</span>
-                <span className="grid-cell-name">
-                  <BilingualText
-                    text={text.buildings.placeBuilding(selectedConfig.name)}
-                  />
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </article>
-    </section>
+    <View style={styles.wrap}>
+      <View pointerEvents="none" style={styles.decorLayer}>
+        <View style={styles.yardZoneStorage} />
+        <View style={styles.yardZoneProcess} />
+        <View style={styles.yardZoneLogistics} />
+        <View style={styles.serviceLaneHorizontal} />
+        <View style={styles.serviceLaneVertical} />
+        <View style={styles.pipeRun} />
+        <View style={styles.pipeBranch} />
+        <View style={[styles.tankClusterLarge, { width: decorUnit * 2.8, height: decorUnit * 2.8 }]} />
+        <View style={[styles.tankClusterMedium, { width: decorUnit * 2.1, height: decorUnit * 2.1 }]} />
+        <View style={[styles.tankClusterSmall, { width: decorUnit * 1.6, height: decorUnit * 1.6 }]} />
+        <View style={styles.loadingStrip} />
+      </View>
+      {grid.map((cell, i) => {
+        const isProducing = Boolean(isActive && cell && PRODUCTION_BUILDING_TYPES.has(cell))
+        const staffBadge = cell ? getTileStaffBadge(game, i) : null
+        const statusBadge = cell ? getTileStatusBadge(cell, i, game, derived) : null
+        return (
+          <BuildingTile
+            key={i}
+            type={cell}
+            level={gridLevels[i] ?? 1}
+            size={tileSize}
+            onPress={() => onCellPress?.(i)}
+            active={isProducing}
+            staffBadge={staffBadge}
+            statusBadge={statusBadge}
+          />
+        )
+      })}
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  wrap: {
+    position: 'relative',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#B7A47F',
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: '#8E7B5F',
+    padding: spacing.md,
+    justifyContent: 'center',
+    width: '100%',
+    overflow: 'hidden',
+  },
+  decorLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  yardZoneStorage: {
+    position: 'absolute',
+    left: '4%',
+    top: '6%',
+    width: '27%',
+    height: '24%',
+    borderRadius: 28,
+    backgroundColor: 'rgba(91, 141, 191, 0.10)',
+    borderWidth: 2,
+    borderColor: 'rgba(63, 110, 158, 0.22)',
+  },
+  yardZoneProcess: {
+    position: 'absolute',
+    right: '6%',
+    top: '12%',
+    width: '38%',
+    height: '28%',
+    borderRadius: 34,
+    backgroundColor: 'rgba(232, 131, 58, 0.08)',
+    borderWidth: 2,
+    borderColor: 'rgba(201, 106, 31, 0.22)',
+  },
+  yardZoneLogistics: {
+    position: 'absolute',
+    left: '10%',
+    right: '8%',
+    bottom: '10%',
+    height: '18%',
+    borderRadius: 32,
+    backgroundColor: 'rgba(50, 42, 32, 0.08)',
+  },
+  serviceLaneHorizontal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '32%',
+    height: 10,
+    backgroundColor: 'rgba(84, 71, 53, 0.18)',
+  },
+  serviceLaneVertical: {
+    position: 'absolute',
+    top: '20%',
+    bottom: '8%',
+    right: '21%',
+    width: 8,
+    backgroundColor: 'rgba(84, 71, 53, 0.12)',
+  },
+  pipeRun: {
+    position: 'absolute',
+    left: '28%',
+    right: '16%',
+    top: '18%',
+    height: 6,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(137, 154, 168, 0.70)',
+  },
+  pipeBranch: {
+    position: 'absolute',
+    left: '52%',
+    top: '18%',
+    width: 6,
+    height: '30%',
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(137, 154, 168, 0.50)',
+  },
+  tankClusterLarge: {
+    position: 'absolute',
+    left: '8%',
+    top: '12%',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    borderWidth: 2,
+    borderColor: 'rgba(91, 141, 191, 0.40)',
+  },
+  tankClusterMedium: {
+    position: 'absolute',
+    left: '16%',
+    top: '17%',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    borderWidth: 2,
+    borderColor: 'rgba(91, 141, 191, 0.28)',
+  },
+  tankClusterSmall: {
+    position: 'absolute',
+    left: '12%',
+    top: '24%',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 2,
+    borderColor: 'rgba(91, 141, 191, 0.24)',
+  },
+  loadingStrip: {
+    position: 'absolute',
+    right: '6%',
+    bottom: '12%',
+    width: '20%',
+    height: 28,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(230, 224, 213, 0.62)',
+    borderWidth: 2,
+    borderColor: 'rgba(110, 126, 140, 0.38)',
+  },
+})
 
 export default BuildingGrid

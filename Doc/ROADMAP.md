@@ -1,195 +1,219 @@
-# Refinery Story Roadmap
+# Refinery Story — Game Roadmap
 
-## Phase 1 - Prototype
-
-Completed:
-
-- Buildings (place, remove, combo bonuses)
-- Contracts (3 tiers, 16 contracts)
-- Research (6 items, prerequisites)
-- Workers (6 types, tier grouping, locked states)
-- Random Events (14 events)
-- Choice Events (12 events)
-- Milestones (4)
-- Reputation (4 tiers, contract bonuses)
-- Save / Load (localStorage)
-- Grid Expansion (3x3, 4x4, 5x5)
-- Goal / Win Condition
-- Shipment System Phase 2 Lite (5 sizes, ETA, cost-per-unit, logistics bonus)
-- Building Upgrade Depth (Lv1–3 for all building types)
-- Balance Pass 1
-- Balance Pass 2 — Onboarding Fix (base storage raised, Starter Guide corrected)
-- Research Expansion Lite (10 research items total, 775 RP tree)
-- Balance Pass 3 — Post Research Expansion (storage optimization bonus, contract analytics RP rate)
-- Plant Module Foundation Phase A (ProductKey, ProductInventory types, productInventory in GameState, save migration defaults)
-- Product Expansion Prototype — Asphalt (AsphaltPanel, 2 contracts, manual batch, ContractsPanel multi-product support)
-- Asphalt Balance Pass (Contract 17 requirement 50→75, reward $3000→$2200, maxStorage 200→150)
-- Multi-product Contract Polish (product badges, structured Requires/Reward rows, getContractRequirement helper)
-- Product Expansion Prototype — Jet Fuel (JetFuelPanel, 2 contracts, manual batch, ContractsPanel + App.tsx extension)
-- Jet Fuel Balance Pass (maxStorage 150 → 200, unblocks Contract 20)
-- Secondary Product Idle UI Pass (AsphaltPanel and JetFuelPanel collapse to compact done state when all related contracts are fulfilled)
-- Standing Orders Phase 1 (asphaltMaintenance: 40 asphalt/3 min/$900; jetFuelCharter: 60 jet fuel/5 min/$2,200; cooldown saved in standingOrderCooldowns)
-- Standing Orders UX/Balance Review (verdict A — healthy; no balance pass needed)
-- Final Web Prototype Polish (toLocaleString formatting, completed contract cards compact, contracts-list gap 14→10px, standing orders amber separator)
+Last updated: 2026-06-25  
+Branch base: `devMobile` → `cleanup/dead-code-and-deps` → `feature/restore-hidden-routes` → `feature/diamond-shell-camera`
 
 ---
 
-## Phase 1B — Multi-Product Economy (Complete — Prototype v0.4)
+## สถานะปัจจุบัน (Done)
 
-**Milestone: Refinery Story Prototype v0.4 — Multi-Product Economy**
+### Session 2 — June 2026 (major update)
+- [x] FAB navigation — tab bar hidden, floating action button bottom-right
+- [x] 3-screen regroup: Factory / Business / Company (จาก 5 screens)
+- [x] Factory screen redesign: company block, resource dock, action dock
+- [x] Staff screen: recruitment scene (pixel characters), Recruitment|Team toggle
+- [x] Production screen: live status grid, product cards, compact automation
+- [x] Business screen: 4→3 tabs (Contracts / Supply / Recruit)
+- [x] Company screen: Team / Grow / Settings
+- [x] Build sheet redesign: grouped cards + plant art thumbnails
+- [x] Building info sheet: plant art hero + upgrade panel + before/after stats
+- [x] Upgrade refinery modal: level strip + unlocks preview + requirements checklist
+- [x] Level cap Lv20 + win condition rebalance (Lv15 + rep 400)
+- [x] Pool refresh 600 → 3600 ticks (~12 min = 1 business day)
 
-Shipped: Gasoline (primary, auto-loop), Asphalt (Level 5, manual batch, 2 one-time contracts + 1 standing order), Jet Fuel (Level 7, manual batch, 2 one-time contracts + 1 standing order).
+### Infrastructure
+- [x] Expo / React Native project structure
+- [x] GameContext + useGameLoop (tick-based simulation)
+- [x] AsyncStorage save/load with sanitizer
+- [x] TypeScript strict — circular dep แก้แล้ว (`employeeUtils.ts`)
+- [x] Dead code cleanup (renderers, boost vars, buildingIcons)
 
-Standing orders give asphalt and jet fuel persistent demand after one-time contracts are complete.
+### Core Loop
+- [x] Crude → Gasoline production chain
+- [x] Feedstock layer (Distillation Unit → downstream plants)
+- [x] 5 secondary products: Asphalt, Lubricants, Jet Fuel, Petrochemicals, (Recycled/Pellets defined แต่ยังไม่ active)
+- [x] Auto-trade ครบ 5 products
+- [x] Contracts (37 contracts across all product lines)
+- [x] Standing Orders (4 repeatable orders)
+- [x] Grid Expansion (3×3 → planned 5×5 yard → late 6×6 outer band)
+- [x] Hidden combo system (5 combos)
+- [x] Choice events + Random events
 
-Remaining open concerns (not blocking, deferred to next phase):
-- No full plant module selection UI (Kairosoft-style module picker per distillation unit)
-- Lubricants and Plastic Pellets are defined in ProductKey but are not yet playable
-- ContractsPanel vertical length (18+ cards at late game — partially improved by Final Polish)
-- Asphalt Contract 18 and Jet Fuel Contract 19 profit/crude are 2–3× above gasoline T3 (one-time, low impact; deferred to Multi-Product Balance Pass 2)
+### Progression
+- [x] Refinery levels + perk tree (3 branches × 3 tiers)
+- [x] Tech eras (Foundation → Expansion → Modern → Energy Transition)
+- [x] Research (10 items)
+- [x] Milestones (16)
+- [x] Annual Awards + rival ranking
+- [x] ESG / Safety axis
+- [x] Individual staff (hire, train, veteran trait, specialist assignment)
+- [x] Seasonal gasoline demand
 
-Recommended next for multi-product economy:
-- Multi-Product Balance Pass 2 (review Asphalt 18 and Jet Fuel 19 profit/crude; optional if review deems healthy)
-- Lubricants Prototype (third secondary product, follows Asphalt/Jet Fuel + Standing Orders pattern)
-- Full Plant Module Selection Design (design doc — define per-cell module picker for future implementation)
-
----
-
-## Phase 2A — Product Expansion (Complete — v0.7)
-
-**Milestone: Refinery Story v0.7 — Full Product Expansion**
-
-Completed:
-
-- Multi-product inventory framework (ProductInventory types, productInventory in GameState, save migration)
-- Lubricants (Level 5, Lubricant Plant, sell panel, 3 one-time contracts IDs 21–23)
-- Jet Fuel (Level 10, Jet Fuel Plant, sell panel rework, consolidated to single production path)
-- Petrochemicals (Level 15, Petrochemical Plant, sell panel, 3 one-time contracts IDs 24–26)
-- Product-specific selling for all secondary products (sell 1/10/all with Sales Agent bonus)
-- Advanced production buildings (Lubricant Plant, Jet Fuel Plant, Petrochemical Plant)
-- Product System Cleanup 1.0 (removed dual Jet Fuel production path)
-
-Current product ladder:
-
-| Level | Product | Building | Price |
-|-------|---------|----------|-------|
-| 1 | Gasoline | Distillation Unit | $18/unit |
-| 5 | Lubricants | Lubricant Plant | $45/unit |
-| 10 | Jet Fuel | Jet Fuel Plant | $90/unit |
-| 15 | Petrochemicals | Petrochemical Plant | $150/unit |
-
----
-
-## Phase 2B — Economy & Balance (Next Recommended)
-
-Completed:
-
-- Demand & Goals Pass 1.0 (save-load inventory bug fix, Jet Fuel Charter rework
-  Lv7→10 / $2,200→$7,000, Lubricant Supply standing order Lv6, Petrochem Export
-  standing order Lv15, 4 late-game milestones: Jet Fuel Pioneer, Aviation
-  Partner, Petrochemical Pioneer, Product Mogul)
-
-Suggested goals:
-
-- Sales Agent diminishing returns (flat bonus scales poorly with high-value products at late game)
-- Upgrade cost review (Level 10–15 gap may need cost/reward adjustment)
-- Contract reward review (petrochemical contracts vs gasoline T3 income comparison)
-- Product profitability review ($/crude across all 4 product lines at each unlock level)
-- Storage balance pass (all plant products at maxStorage 200 — may need per-product tuning)
+### UI / Navigation
+- [x] 5-tab navigation: Factory, Production, Staff, Business, HQ
+- [x] HQ ครอบทุกอย่างที่เคยซ่อนใน Stats (expansion, activity log, ESG, settings, store)
+- [x] Production มี Asphalt production section
+- [x] Stats tab ถูกเอาออกจาก tab bar
+- [x] Diamond Ground isometric renderer (11×11 shell, flat-top)
+- [x] Pan camera บน diamond shell (GestureDetector + Reanimated)
+- [x] Floating HUD (resource bar, goal chip, trade pill)
+- [x] Bottom sheets (Build, Building Info, More Info, Events)
 
 ---
 
-## Phase 3 — Refinery Process Chain (Complete — v1.0)
+## Phase 1 — Gameplay Depth (เพิ่ม content ที่ยังขาด)
 
-The refinery becomes the star. Inserted a feedstock intermediate so production is
-a chain: crude → (Distillation) → feedstock → advanced plants. Gasoline/asphalt
-stay crude-direct (tutorial tier). Distillation is now the economic engine;
-grid layout & feedstock routing are real decisions. Three duplicated plant tick
-blocks unified into one config-driven loop.
+### 1A: Recycled Material + Plastic Pellets Chain
+**Priority: สูง** — art assets พร้อมแล้ว (`recycling_bunker`, `pellet_silo`), types ใน codebase มีแล้ว
 
-See Doc/WORK_PLAN.md and PLAYTEST_NOTES 2026-06-12 "Process Chain".
+- [x] `recyclingBunker` → ผลิต `recycledMaterial` จาก waste byproduct
+- [x] `pelletSilo` → ผลิต `plasticPellets` จาก `recycledMaterial`
+- [x] Contracts สำหรับทั้ง 2 products (IDs 27-32)
+- [x] Standing Orders: recyclingContract + pelletExport
+- [x] Production/Factory screen แสดง inventory + sell button
+- [x] Unlock levels: wasteTreatmentPlant Lv8, polymerPlant Lv20
+- [x] waste → recycledMaterial, petrochemicals → plasticPellets
 
----
+### 1B: Staff Hiring Cap + Retirement
+**Priority: สูง** — ตอนนี้จ้างได้ไม่จำกัด ทำให้ late game ไม่มี tension
 
-## Phase 2D — Staff Cleanup & Economy (Complete — v0.9)
+- [x] Max per type = floor(2 + refineryLevel/3) (เช่น max 5 per type หรือ total 20)
+- [x] Retirement mechanic: พนักงานสูงอายุ retire หลัง N ปี (ออก event ให้รู้ล่วงหน้า)
+- [x] Slot ว่างทันที + mentor XP bonus จาก high-level retiree
+- [x] Severance pay + mentoring XP legacy
 
-- Removed redundant WorkforcePanel; deduped worker bonus text into a shared util
-- Consolidated 3 sell-product panels into one config-driven ProductPanel
-- Sales Agent flat bonus → percentage; unified productSellMultiplier across all products
-- Wages/Payroll system tied to Annual Awards (net profit drives the grade — real hiring tension)
-- Combined balance pass (production floor 250→180ms; verified the stacked-multiplier curve is healthy)
+### 1C: Contracts Panel UX
+**Priority: กลาง** — panel ยาวมาก ที่ level สูงๆ
 
-See Doc/WORK_PLAN.md and PLAYTEST_NOTES 2026-06-12 "Economy Pass".
-
----
-
-## Phase 2C — Depth Systems (Complete — v0.8)
-
-**Milestone: Refinery Story v0.8 — Gameplay Systems Expansion**
-
-Four Kairosoft-style systems added (all save-compatible):
-
-- Staff Training & Levels — per-type crew Level 1–5 with passive XP and paid
-  instant training; level scales bonus effectiveness ×1.0 → ×1.6
-- Refinery Upgrade Perk Tree — 1 point per level-up, spent across Efficiency /
-  Capacity / Quality branches (3 directional tiers each)
-- Tech Eras — Foundation → Expansion → Modern with cumulative global bonuses and
-  a one-time advancement banner
-- Annual Awards — 12-minute business year graded S/A/B/C with cash + reputation
-  rewards, ceremony modal, and rolling 12-year history
-
-See Doc/GAMEPLAY_SYSTEMS_EXPANSION.md for design rationale.
+- [x] Collapse completed contracts
+- [x] Filter: All / Ready / Gas / Asphalt / Jet / Lube / Petrochem / Recycled / Pellets
+- [x] Badge count บน Business tab + FAB
 
 ---
 
-## Phase 2 — Feel and Identity
+## Phase 2 — Visual & Feel
 
-Completed:
+### 2A: Building Visual Identity (Diamond Ground)
+**Priority: กลาง** — ตอนนี้ buildings ที่ไม่มี plant art ใช้แค่ shortcode
 
-- Worker Feedback Pass (visible bonus text per hire in WorkforcePanel and StaffPanel)
-- Polish Pass 1 — UI Clarity (disabled-reason labels, contract tier grouping, milestone badge cleanup, dev tools separation)
+- [x] Plant art (lv1-3) บน diamond tile ทุก building
+- [x] Level badge + category badge ในinfo sheet
+- [x] Status badge มีอยู่แล้ว
 
-Planned:
+### 2B: Factory Atmosphere
+**Priority: ต่ำ** — ขึ้นอยู่กับ art direction
 
-- Staff Depth Lite (hiring tension, visual workers, midgame goal expansion)
-- Visual Workers / Pixel Placeholder
-- Building Identity Pass (icons or color coding per type)
-- Staff Hiring Pool Lite (limited hire slots per session)
-- Shipment Buy Button Reduction Plan (reduce clutter, promote shipments)
-- Midgame Goal Expansion (new milestone or mid-tier objective)
-- Final Playtest (structured play-through, document findings before Phase 3)
+- [ ] Road / pipe layer บน diamond ground
+- [ ] Smoke particle บน active buildings
+- [ ] Day/night cycle ที่มีผลกับ scene จริง (ไม่ใช่แค่ tint)
 
----
+### 2C: Sound & Haptics Pass
+**Priority: ต่ำ**
 
-## Phase 3 - Depth
-
-Planned:
-
-- Staff Training System
-- Staff Level System
-- Rare / Specialist Employees
-- Worker Assignment to Buildings
-- Supplier Relationship System
-- Crude Shipment Enhancements
+- [ ] Production tick sound
+- [ ] Contract fulfill sound
+- [ ] Level up fanfare
+- [ ] Haptic feedback ครบทุก action สำคัญ
 
 ---
 
-## Phase 4 - Visual Polish
+## Phase 3 — Meta & Retention
 
-Planned:
+### 3A: Award History Screen
+**Priority: กลาง** — ข้อมูลมีแล้วใน `game.awardHistory` แค่ต้องทำ UI
 
-- Pixel Art Buildings
-- Pixel Workers on Grid
-- Animation (production cycle, events)
-- Better UI Layout and Icons
+- [x] Company/Grow tab แสดง last award + activity log
+- [x] Grade, score, rank, payroll, net profit ใน Grow tab
+- [ ] Chart แสดง score trend (ยังไม่ทำ)
+
+### 3B: Save Export / Import
+**Priority: กลาง** — ป้องกัน data loss เมื่อ reinstall
+
+- [ ] Export save เป็น JSON file (share sheet)
+- [ ] Import จาก file picker
+- [ ] Validate + migrate format ก่อน import
+
+### 3C: Onboarding / First-Run Guide
+**Priority: กลาง** — มือใหม่ไม่รู้ต้องทำอะไร
+
+- [ ] First-run overlay แนะนำ 3 steps แรก
+- [ ] Highlight ปุ่มที่ต้องกดครั้งแรก
+- [ ] ปิดได้ ไม่รบกวนผู้เล่นเก่า
 
 ---
 
-## Phase 5 - Release Candidate
+## Phase 4 — Kairosoft Feel (Long-term)
 
-Planned:
+- [ ] Workers เดินใน factory scene
+- [ ] Trucks เคลื่อนที่เมื่อ shipment มาถึง
+- [ ] Production feedback animation บน tiles (spark, pulse)
+- [ ] Rival refinery cameo ใน award ceremony (แสดงชื่อ + building count)
 
-- Final Balance Pass
-- Full Content Review
-- Bug Fixing
-- Final UI Polish
+---
+
+## Phase 5 — Gameplay Feel (Proposed)
+
+### 5A: Crisis Events
+**Priority: สูง** — เพิ่ม active decision making ที่ขาดอยู่ใน mid-late game
+
+ตอนนี้ random events เป็น passive "เกิดขึ้น → รับผล" ไม่มี player agency
+
+- [ ] Event บางอย่างให้เวลา N วัน (game time) ก่อนถูก penalty
+- [ ] ตัวอย่าง: "equipment กำลังพัง — จ่าย $X ซ่อมตอนนี้ หรือรอเสี่ยง production หยุด"
+- [ ] Timer แสดงใน Factory screen (เหมือน choice event แต่มี countdown)
+- [ ] ระดับความเร่งด่วน: low / medium / high — ส่งผลต่อ penalty ถ้าปล่อยทิ้ง
+- [ ] Design: ไม่ควรมีพร้อมกันมากกว่า 1-2 crisis พร้อมกัน
+
+### 5B: Grid Combo Hints
+**Priority: กลาง** — ช่วย new player เรียนรู้ layout โดยไม่ spoil
+
+ตอนนี้ hidden combo มี 5 อัน แต่ผู้เล่นส่วนใหญ่ไม่รู้ว่ามีอยู่
+
+- [ ] เมื่อกด build mode บน tile ให้ highlight tiles ข้างๆ ที่จะ complete combo ถ้าวางถูก
+- [ ] แสดงเป็น subtle glow ไม่บอกชื่อ combo — แค่บอกว่า "placement นี้ดี"
+- [ ] ทำงานบน diamond ground renderer ปัจจุบัน
+- [ ] ไม่แสดงถ้า combo นั้น discover แล้ว
+
+### 5C: Milestone Narrative Headlines
+**Priority: กลาง** — ทำให้ progression มีน้ำหนักมากขึ้น
+
+ตอนนี้ milestone เป็นแค่ checklist reward ไม่มี sense of story
+
+- [ ] Milestone สำคัญ (level 5, 10, 15, era change) trigger "news headline" modal
+- [ ] Flavor text เปลี่ยนตาม `game.refineryName` — เช่น "Sunrise Refinery คว้าสถานะ Regional Supplier"
+- [ ] ใช้ pattern เดียวกับ EraBanner (auto-dismiss toast) ไม่ block gameplay
+- [ ] สร้าง headline template ต่อ milestone key ใน translations.ts
+
+---
+
+## Deferred / Needs Design Discussion
+
+| หัวข้อ | เหตุผลที่ defer |
+|---|---|
+| Multi-cut process chain (naphtha/distillate/residue) | complexity สูงเกินสำหรับ Kairosoft style |
+| Per-plant module picker | ต้องออกแบบ UX ใหม่ทั้งหมด |
+| Mixed-product contracts | ต้องแก้ completion logic |
+| Multiplayer / leaderboard | out of scope สำหรับ solo dev |
+| Web version | focus mobile ก่อน |
+
+---
+
+## Branch Convention
+
+```
+feature/<system>-<description>   เช่น feature/recycled-material-chain
+fix/<what>                        เช่น fix/contracts-panel-overflow
+cleanup/<what>                    เช่น cleanup/dead-code-and-deps
+```
+
+Branch ใหม่ทุกอันแตกจาก branch ล่าสุดที่ clean + typecheck pass
+
+---
+
+## Rules (ไม่เปลี่ยนโดยไม่มีเหตุผลชัดเจน)
+
+1. `npx tsc --noEmit` ต้อง pass ก่อน commit ทุกครั้ง
+2. ไม่เปลี่ยน save format โดยไม่มี migration ใน `sanitizeLoadedGameState`
+3. ไม่เพิ่ม renderer ใหม่โดยไม่ตัดของเก่าออกก่อน
+4. Balance constants อยู่ใน `balance.ts` เท่านั้น ห้าม hardcode ใน component
+5. Art assets ใหม่ต้องมี lv1/lv2/lv3 ครบก่อน implement
