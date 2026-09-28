@@ -153,18 +153,18 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   }, [decorations])
   const selectedDecor = selectedId ? decorations?.[selectedId] ?? null : null
   const parcelPaths = useMemo(() => parcels.map((parcel) => ({ parcel, path: diamond(v3IsoRect(parcel)) })), [parcels])
-  // Draw the visible outside faces of the platform, not lines inside the
-  // buildable grid. This follows the parcel outline as the yard expands.
-  const seawall = useMemo(() => {
-    const depth = 12
+  // A shallow concrete curb marks the buildable parcel boundary against the
+  // surrounding factory apron and follows it as the yard expands.
+  const yardEdges = useMemo(() => {
+    const depth = 5
     const faces: Array<{ key: string; path: ReturnType<typeof Skia.Path.Make>; edge: ReturnType<typeof Skia.Path.Make>; color: string }> = []
     for (const parcel of parcels) {
       const [, right, bottom, left] = v3IsoRect(parcel)
       const eastCovered = parcels.some((other) => other.id !== parcel.id && other.x === parcel.x + parcel.w && other.y <= parcel.y && other.y + other.h >= parcel.y + parcel.h)
       const southCovered = parcels.some((other) => other.id !== parcel.id && other.y === parcel.y + parcel.h && other.x <= parcel.x && other.x + other.w >= parcel.x + parcel.w)
       for (const [name, start, end, color] of [
-        ['east', right, bottom, '#34495B'],
-        ['south', bottom, left, '#496274'],
+        ['east', right, bottom, '#8D795F'],
+        ['south', bottom, left, '#A28A69'],
       ] as const) {
         if ((name === 'east' && eastCovered) || (name === 'south' && southCovered)) continue
         const edge = Skia.Path.Make()
@@ -246,11 +246,11 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 
   return (
     <View style={[styles.viewport, { width, height }]}>
-      <Image source={require('../../../assets/bg/refinery_open_sea_v1.png')} style={styles.seaBackdrop} resizeMode="cover" />
+      <Image source={require('../../../assets/bg/refinery_factory_yard_v1.png')} style={styles.yardBackdrop} resizeMode="cover" />
       <GestureDetector gesture={gesture}>
         <Canvas style={{ width, height }}>
           <Group transform={transform}>
-            {seawall.map((face) => <Path key={face.key} path={face.path} color={face.color} />)}
+            {yardEdges.map((face) => <Path key={face.key} path={face.path} color={face.color} />)}
             {parcelPaths.map(({ parcel, path }) => (
               <Path
                 key={parcel.id}
@@ -258,7 +258,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
                 color={parcel.state === 'owned' ? '#C8AF89' : parcel.state === 'available' ? '#B9A487' : '#AD9B80'}
               />
             ))}
-            {seawall.map((face) => <Path key={`${face.key}:rim`} path={face.edge} color="#E5C785" style="stroke" strokeWidth={1.5} />)}
+            {yardEdges.map((face) => <Path key={`${face.key}:rim`} path={face.edge} color="#DBC39A" style="stroke" strokeWidth={1} />)}
             <Path path={concreteWear} color="rgba(115,83,56,0.30)" />
             <Path path={gridPath} color="rgba(54,64,68,0.16)" style="stroke" strokeWidth={0.7} />
             {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
@@ -319,7 +319,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 export default memo(V3YardView)
 
 const styles = StyleSheet.create({
-  viewport: { overflow: 'hidden', backgroundColor: '#0866BA' },
-  seaBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
+  viewport: { overflow: 'hidden', backgroundColor: '#C8AF89' },
+  yardBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
   webNote: { color: '#D5E2E9', padding: 16 },
 })
