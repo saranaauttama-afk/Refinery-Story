@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { Image, Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native'
+import { Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native'
 import {
   Canvas,
   FilterMode,
@@ -30,9 +30,13 @@ import {
 import { getV3BuildingArt } from './v3Art'
 import { V3_DECOR_PLACEHOLDER_COLOR, getV3DecorFootprint } from '../../game/v3/decorData'
 
-const MIN_SCALE = 0.35
+const MIN_SCALE = 0.4
 const MAX_SCALE = 2.2
 const PIXEL = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const // nearest-neighbour, same as the legacy map
+// Share the same isometric camera with buildings and the buildable grid.
+// 512×768 source pixels become 2048×3072 world pixels without blurring.
+// The painted road stays above the initial refinery and the expanded parcels.
+const YARD_SCENE = { x: -1024, y: -760, width: 2048, height: 3072 } as const
 
 export type V3Floater = { id: string; x: number; y: number; text: string; color: string; age: number }
 
@@ -98,6 +102,7 @@ const Sprite = memo(function Sprite({
  * parcels; buildings use the existing pixel art placed on their real footprint.
  */
 function V3YardView({ state, width, height, selectedId, highlightParcelId, placement, upgradeGrowth, floaters, alerts, onTapTile }: Props) {
+  const yardImage = useImage(require('../../../assets/bg/refinery_factory_yard_v1.png'))
   const landKey = `${state.world.unlockedParcelIds.join(',')}|${state.campaignProgress.chapter}`
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
@@ -153,33 +158,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   }, [decorations])
   const selectedDecor = selectedId ? decorations?.[selectedId] ?? null : null
   const parcelPaths = useMemo(() => parcels.map((parcel) => ({ parcel, path: diamond(v3IsoRect(parcel)) })), [parcels])
-  // A shallow concrete curb marks the buildable parcel boundary against the
-  // surrounding factory apron and follows it as the yard expands.
-  const yardEdges = useMemo(() => {
-    const depth = 5
-    const faces: Array<{ key: string; path: ReturnType<typeof Skia.Path.Make>; edge: ReturnType<typeof Skia.Path.Make>; color: string }> = []
-    for (const parcel of parcels) {
-      const [, right, bottom, left] = v3IsoRect(parcel)
-      const eastCovered = parcels.some((other) => other.id !== parcel.id && other.x === parcel.x + parcel.w && other.y <= parcel.y && other.y + other.h >= parcel.y + parcel.h)
-      const southCovered = parcels.some((other) => other.id !== parcel.id && other.y === parcel.y + parcel.h && other.x <= parcel.x && other.x + other.w >= parcel.x + parcel.w)
-      for (const [name, start, end, color] of [
-        ['east', right, bottom, '#8D795F'],
-        ['south', bottom, left, '#A28A69'],
-      ] as const) {
-        if ((name === 'east' && eastCovered) || (name === 'south' && southCovered)) continue
-        const edge = Skia.Path.Make()
-        edge.moveTo(start.sx, start.sy)
-        edge.lineTo(end.sx, end.sy)
-        faces.push({
-          key: `${parcel.id}:${name}`,
-          path: diamond([start, end, { sx: end.sx, sy: end.sy + depth }, { sx: start.sx, sy: start.sy + depth }]),
-          edge,
-          color,
-        })
-      }
-    }
-    return faces
-  }, [parcels])
   const bounds = useMemo(() => getV3IsoBounds(state), [landKey])
   const font = useMemo(() => (Platform.OS === 'web'
     ? null
@@ -196,6 +174,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const centerY = focus.length ? focus.reduce((sum, sprite) => sum + sprite.bottomY, 0) / focus.length : (bounds.minY + worldH / 2)
   const initialX = width / 2 - centerX * initialScale
   const initialY = height * 0.36 - centerY * initialScale
+  const minimumSceneScale = Math.max(MIN_SCALE, width / YARD_SCENE.width, height / YARD_SCENE.height)
 
   const tx = useSharedValue(initialX)
   const ty = useSharedValue(initialY)
@@ -207,11 +186,15 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 
   const clampX = (value: number, s: number) => {
     'worklet'
-    return clampCameraValue(value, width * 0.3 - bounds.maxX * s, width * 0.7 - bounds.minX * s)
+    return clampCameraValue(value,
+      Math.max(width * 0.3 - bounds.maxX * s, width - (YARD_SCENE.x + YARD_SCENE.width) * s),
+      Math.min(width * 0.7 - bounds.minX * s, -YARD_SCENE.x * s))
   }
   const clampY = (value: number, s: number) => {
     'worklet'
-    return clampCameraValue(value, height * 0.3 - bounds.maxY * s, height * 0.7 - bounds.minY * s)
+    return clampCameraValue(value,
+      Math.max(height * 0.3 - bounds.maxY * s, height - (YARD_SCENE.y + YARD_SCENE.height) * s),
+      Math.min(height * 0.7 - bounds.minY * s, -YARD_SCENE.y * s))
   }
   const pan = Gesture.Pan().maxPointers(1).activeOffsetX([-10, 10]).activeOffsetY([-10, 10])
     .onStart(() => { 'worklet'; savedX.value = tx.value; savedY.value = ty.value })
@@ -224,7 +207,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     .onStart(() => { 'worklet'; savedScale.value = scale.value; savedX.value = tx.value; savedY.value = ty.value })
     .onUpdate((event) => {
       'worklet'
-      const next = clampCameraValue(savedScale.value * event.scale, MIN_SCALE, MAX_SCALE)
+      const next = clampCameraValue(savedScale.value * event.scale, minimumSceneScale, MAX_SCALE)
       const ratio = next / savedScale.value
       tx.value = clampX(event.focalX - (event.focalX - savedX.value) * ratio, next)
       ty.value = clampY(event.focalY - (event.focalY - savedY.value) * ratio, next)
@@ -246,19 +229,17 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 
   return (
     <View style={[styles.viewport, { width, height }]}>
-      <Image source={require('../../../assets/bg/refinery_factory_yard_v1.png')} style={styles.yardBackdrop} resizeMode="cover" />
       <GestureDetector gesture={gesture}>
         <Canvas style={{ width, height }}>
           <Group transform={transform}>
-            {yardEdges.map((face) => <Path key={face.key} path={face.path} color={face.color} />)}
-            {parcelPaths.map(({ parcel, path }) => (
+            {yardImage && <SkiaImage image={yardImage} {...YARD_SCENE} fit="fill" sampling={PIXEL} />}
+            {parcelPaths.filter(({ parcel }) => parcel.state !== 'owned').map(({ parcel, path }) => (
               <Path
                 key={parcel.id}
                 path={path}
-                color={parcel.state === 'owned' ? '#C8AF89' : parcel.state === 'available' ? '#B9A487' : '#AD9B80'}
+                color={parcel.state === 'available' ? 'rgba(255,212,71,0.12)' : 'rgba(30,40,42,0.24)'}
               />
             ))}
-            {yardEdges.map((face) => <Path key={`${face.key}:rim`} path={face.edge} color="#DBC39A" style="stroke" strokeWidth={1} />)}
             <Path path={concreteWear} color="rgba(115,83,56,0.30)" />
             <Path path={gridPath} color="rgba(54,64,68,0.16)" style="stroke" strokeWidth={0.7} />
             {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
@@ -320,6 +301,5 @@ export default memo(V3YardView)
 
 const styles = StyleSheet.create({
   viewport: { overflow: 'hidden', backgroundColor: '#C8AF89' },
-  yardBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
   webNote: { color: '#D5E2E9', padding: 16 },
 })
