@@ -370,7 +370,7 @@ export default function V3GameScreen() {
       </View>
 
       {tab && (
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, tab === 'build' && styles.sheetCompact]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{t(tabs.find((entry) => entry.key === tab)!.label)}</Text>
             <Pressable onPress={() => setTab(null)} hitSlop={12} accessibilityLabel={t({ en: 'Close', th: 'ปิด' })}><Text style={styles.sheetClose}>✕</Text></Pressable>
@@ -495,6 +495,7 @@ const styles = StyleSheet.create({
   overlayScroll: { flexGrow: 0 },
   overlayContent: { gap: 8 },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '62%', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderColor: pixelUi.border },
+  sheetCompact: { height: undefined, maxHeight: '62%' },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10 },
   sheetTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 20 },
   sheetClose: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 23 },
