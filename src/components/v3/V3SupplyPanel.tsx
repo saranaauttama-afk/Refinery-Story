@@ -6,7 +6,7 @@ import { V3_CRUDE_PRICE_CENTS } from '../../game/v3/data'
 import { getV3CrudeUnitPriceCents } from '../../game/v3/fame'
 import { getV3CrudeCapacity } from '../../game/v3/productInventory'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
-import { fonts, pixelUi } from '../../theme'
+import { fonts } from '../../theme'
 
 type Props = {
   state: V3GameState
@@ -59,14 +59,14 @@ export function V3SupplyPanel({ state, apply, t, describe }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 10 },
-  title: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
-  row: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13 },
+  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#6ACDB4', borderRadius: 10, padding: 12, gap: 8 },
+  title: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
+  row: { color: '#D5E2E9', fontSize: 13 },
   buttons: { flexDirection: 'row', gap: 6 },
-  gate: { flex: 1, minWidth: 0 },
-  button: { backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border, paddingVertical: 10, paddingHorizontal: 3, alignItems: 'center', minHeight: 56, justifyContent: 'center' },
-  buttonText: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 12, textAlign: 'center' },
-  price: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 12 },
-  reason: { color: pixelUi.warning, fontSize: 11, marginTop: 2 },
+  gate: { flex: 1 },
+  button: { backgroundColor: '#1D4F45', borderWidth: 1, borderColor: '#6ACDB4', borderRadius: 8, paddingVertical: 10, alignItems: 'center', minHeight: 52, justifyContent: 'center' },
+  buttonText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
+  price: { color: '#FFD447', fontSize: 11 },
+  reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
   disabled: { opacity: 0.45 },
 })

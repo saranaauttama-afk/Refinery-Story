@@ -426,23 +426,11 @@ export default function V3GameScreen() {
               </>
             )}
             {tab === 'production' && productionSection === 'market' && <V3MarketPanel state={state} t={t} />}
-            {tab === 'clients' && clientSection === 'job' && <V3ActiveJobCard {...cardProps} onOpenOffers={() => setClientSection('offers')} />}
+            {tab === 'clients' && clientSection === 'job' && <V3ActiveJobCard {...cardProps} />}
             {tab === 'clients' && clientSection === 'offers' && <V3OffersPanel {...cardProps} />}
             {tab === 'clients' && clientSection === 'expo' && <V3ExpoPanel {...cardProps} />}
             {tab === 'company' && companySection === 'overview' && (
               <>
-                <View style={styles.companyHero}>
-                  <Text style={styles.companyEyebrow}>{t({ en: 'REFINERY PROFILE', th: 'ข้อมูลโรงกลั่น' })}</Text>
-                  <View style={styles.companyHeroRow}>
-                    <Text style={styles.companyName}>SUNRISE REFINERY</Text>
-                    <Text style={styles.companyChapter}>C{state.campaignProgress.chapter}</Text>
-                  </View>
-                  <View style={styles.companyMetrics}>
-                    <View style={styles.companyMetric}><Text style={styles.companyMetricLabel}>{t({ en: 'CASH', th: 'เงินสด' })}</Text><Text style={styles.companyMetricValue}>{money(state.world.moneyCents)}</Text></View>
-                    <View style={styles.companyMetric}><Text style={styles.companyMetricLabel}>{t({ en: 'RANK', th: 'อันดับ' })}</Text><Text style={styles.companyMetricValue}>#{getV3PlayerRank(state)}</Text></View>
-                    <View style={styles.companyMetric}><Text style={styles.companyMetricLabel}>{t({ en: 'RESEARCH', th: 'วิจัย' })}</Text><Text style={styles.companyMetricValue}>{Math.floor(state.world.researchPoints)} RP</Text></View>
-                  </View>
-                </View>
                 <V3RecoveryCard {...cardProps} onReviewRemoval={confirmDemolish} />
                 <V3CampaignPanel state={state} t={t} />
                 <V3FamePanel state={state} t={t} />
@@ -510,15 +498,6 @@ const styles = StyleSheet.create({
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10 },
   sheetTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 20 },
   sheetClose: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 23 },
-  companyHero: { padding: 14, backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, gap: 10 },
-  companyEyebrow: { color: pixelUi.rp, fontFamily: fonts.brandHeading, fontSize: 11, letterSpacing: 2 },
-  companyHeroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderBottomWidth: 2, borderBottomColor: pixelUi.borderSoft, paddingBottom: 8 },
-  companyName: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 21, flexShrink: 1 },
-  companyChapter: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 20 },
-  companyMetrics: { flexDirection: 'row', gap: 6 },
-  companyMetric: { flex: 1, padding: 6, backgroundColor: pixelUi.canvas, borderWidth: 1, borderColor: pixelUi.borderSoft, minWidth: 0 },
-  companyMetricLabel: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 10 },
-  companyMetricValue: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 16 },
   tabBar: { flexDirection: 'row', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderTopColor: pixelUi.border, height: 64 },
   tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRightWidth: 1, borderRightColor: pixelUi.borderSoft },
   tabActive: { backgroundColor: pixelUi.surfaceRaised, borderBottomWidth: 3, borderBottomColor: pixelUi.accent },

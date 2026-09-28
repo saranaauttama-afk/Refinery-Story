@@ -6,7 +6,7 @@ import { V3_EXPO_MONTH, V3_EXPO_PRIZES, V3_EXPO_SAMPLE_QUANTITY, getV3ExpoScore,
 import { V3_RIVALS } from '../../game/v3/rivals'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
 import { getV3Calendar } from '../../game/v3/yardView'
-import { fonts, pixelUi } from '../../theme'
+import { fonts } from '../../theme'
 
 type Props = {
   state: V3GameState
@@ -26,7 +26,7 @@ export function V3ExpoPanel({ state, apply, t, describe }: Props) {
     .sort((a, b) => b.quality - a.quality)
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>★ {t({ en: 'Refinery Expo', th: 'งานแสดงโรงกลั่นประจำปี' })}</Text>
+      <Text style={styles.title}>🎪 {t({ en: 'Refinery Expo', th: 'งานแสดงโรงกลั่นประจำปี' })}</Text>
       <Text style={styles.row}>
         {calendar.month === V3_EXPO_MONTH
           ? t({ en: `Open now (year ${calendar.year}) — enter one recipe with ${V3_EXPO_SAMPLE_QUANTITY} units.`, th: `เปิดรับแล้ว (ปีที่ ${calendar.year}) ส่งสูตรได้ 1 สูตร ใช้ของ ${V3_EXPO_SAMPLE_QUANTITY} หน่วย` })
@@ -65,14 +65,14 @@ export function V3ExpoPanel({ state, apply, t, describe }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 9 },
-  title: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
-  row: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
-  sub: { color: pixelUi.rp, fontFamily: fonts.body, fontSize: 12, lineHeight: 17 },
-  result: { color: pixelUi.success, fontFamily: fonts.heading, fontSize: 13 },
-  muted: { color: pixelUi.textMuted, fontFamily: fonts.body, fontSize: 11, lineHeight: 17 },
-  button: { backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border, paddingVertical: 10, paddingHorizontal: 8, minHeight: 44, justifyContent: 'center' },
-  buttonText: { color: pixelUi.text, fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
-  reason: { color: pixelUi.warning, fontSize: 11, marginTop: 2 },
+  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 6 },
+  title: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
+  row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
+  sub: { color: '#A9C1CF', fontSize: 12, lineHeight: 17 },
+  result: { color: '#6ACDB4', fontFamily: fonts.heading, fontSize: 13 },
+  muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
+  button: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, minHeight: 44, justifyContent: 'center' },
+  buttonText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
+  reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
   disabled: { opacity: 0.45 },
 })

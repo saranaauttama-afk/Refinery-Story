@@ -12,7 +12,7 @@ import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, typ
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
 import type { V3Action, V3ActionEvent, V3GameState, V3ModuleKey, V3ProcessProfile, V3ProductFamily } from '../../game/v3/types'
 import { evaluateV3Maintenance, getV3EmergencyExitCents } from '../../game/v3/maintenance'
-import { fonts, pixelUi } from '../../theme'
+import { fonts } from '../../theme'
 import { getV3MarketMultiplier } from '../../game/v3/market'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
@@ -309,22 +309,22 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 10 },
-  cardTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
-  row: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
-  warning: { color: pixelUi.warning, fontSize: 13 },
-  reason: { color: pixelUi.warning, fontSize: 11, marginTop: 2 },
-  line: { borderTopWidth: 2, borderTopColor: pixelUi.borderSoft, paddingTop: 10, gap: 6 },
-  lineTitle: { color: pixelUi.rp, fontFamily: fonts.brandHeading, fontSize: 14 },
-  primary: { backgroundColor: pixelUi.accent, borderWidth: 2, borderBottomWidth: 4, borderColor: pixelUi.accentDark, paddingVertical: 10, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  primaryText: { color: pixelUi.canvas, fontFamily: fonts.brandHeading, fontSize: 13 },
-  secondary: { backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  secondaryText: { color: pixelUi.text, fontFamily: fonts.heading, fontSize: 13, textAlign: 'center' },
+  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 8 },
+  cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
+  row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
+  warning: { color: '#FFAD8A', fontSize: 13 },
+  reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
+  line: { borderTopWidth: 1, borderTopColor: '#274B63', paddingTop: 8, gap: 6 },
+  lineTitle: { color: '#A9F3D9', fontFamily: fonts.heading, fontSize: 13 },
+  primary: { backgroundColor: '#FFD447', borderRadius: 8, paddingVertical: 12, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  primaryText: { color: '#0A2943', fontFamily: fonts.heading, fontSize: 13 },
+  secondary: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  secondaryText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13, textAlign: 'center' },
   disabled: { opacity: 0.45 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chipWrap: { minWidth: '45%', flexGrow: 1 },
-  chip: { borderWidth: 1, borderColor: pixelUi.border, paddingVertical: 8, paddingHorizontal: 12, minHeight: 36 },
-  chipSelected: { backgroundColor: pixelUi.surfacePressed, borderColor: pixelUi.success },
-  chipText: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 12 },
-  chipActive: { color: pixelUi.success, fontSize: 12, paddingVertical: 8, paddingHorizontal: 6 },
+  chip: { borderWidth: 1, borderColor: '#3F6680', borderRadius: 16, paddingVertical: 8, paddingHorizontal: 12, minHeight: 36 },
+  chipSelected: { backgroundColor: '#2E6C63', borderColor: '#6ACDB4' },
+  chipText: { color: '#E8F0F4', fontSize: 12 },
+  chipActive: { color: '#6ACDB4', fontSize: 12, paddingVertical: 8, paddingHorizontal: 6 },
 })

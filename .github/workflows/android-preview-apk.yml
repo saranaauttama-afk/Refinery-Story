@@ -10,7 +10,7 @@ on:
     branches:
       - release/refinery-story-v1
       - devGraphic
-      - art/pixel-yard-scale
+      - art/yard-v2
 
 jobs:
   build-apk:
