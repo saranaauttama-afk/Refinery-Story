@@ -5,7 +5,7 @@ import { V3_SPOT_PRICE_CENTS } from '../../game/v3/data'
 import { getV3HotFamily, getV3MarketForecast } from '../../game/v3/market'
 import type { V3GameState, V3ProductFamily } from '../../game/v3/types'
 import { getV3Calendar } from '../../game/v3/yardView'
-import { fonts } from '../../theme'
+import { fonts, pixelUi } from '../../theme'
 
 const NAMES: Record<V3ProductFamily, BilingualTextValue> = {
   gasoline: { en: 'Gasoline', th: 'เบนซิน' },
@@ -21,7 +21,7 @@ export function V3MarketPanel({ state, t }: { state: V3GameState; t: (value: Bil
   const hot = getV3HotFamily(calendar.year)
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>📈 {t({ en: 'Spot market', th: 'ตลาดขายทันที' })}</Text>
+      <Text style={styles.title}>↗ {t({ en: 'Spot market', th: 'ตลาดขายทันที' })}</Text>
       <Text style={styles.muted}>{t({
         en: `Prices follow the seasons. Product of year ${calendar.year}: ${NAMES[hot].en} (+10%). Contract quotes are not affected.`,
         th: `ราคาขึ้นลงตามฤดู สินค้าแห่งปีที่ ${calendar.year}: ${NAMES[hot].th} (+10%) ราคางานลูกค้าไม่เปลี่ยนตามตลาด`,
@@ -46,14 +46,14 @@ export function V3MarketPanel({ state, t }: { state: V3GameState; t: (value: Bil
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 6 },
-  title: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { color: '#D5E2E9', fontSize: 13, flex: 1.2 },
-  hot: { color: '#FFAD8A', fontFamily: fonts.heading },
-  price: { color: '#E8F0F4', fontSize: 13, flex: 1.4, fontFamily: fonts.heading },
-  up: { color: '#6ACDB4' },
-  down: { color: '#FF8A7A' },
-  forecast: { color: '#8FA9BA', fontSize: 11, flex: 1 },
-  muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
+  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 10 },
+  title: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 5, borderTopWidth: 1, borderTopColor: pixelUi.borderSoft },
+  name: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13, flex: 1.2 },
+  hot: { color: pixelUi.warning, fontFamily: fonts.heading },
+  price: { color: pixelUi.text, fontSize: 13, flex: 1.4, fontFamily: fonts.heading },
+  up: { color: pixelUi.success },
+  down: { color: pixelUi.danger },
+  forecast: { color: pixelUi.textMuted, fontSize: 11, flex: 1 },
+  muted: { color: pixelUi.textMuted, fontFamily: fonts.body, fontSize: 11, lineHeight: 17 },
 })

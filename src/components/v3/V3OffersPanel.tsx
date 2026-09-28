@@ -5,7 +5,7 @@ import { reduceV3Action } from '../../game/v3/actions'
 import { V3_AUTO_REPEAT_CHAPTER, V3_JOB_TEMPLATES } from '../../game/v3/jobs'
 import { getV3OfferView, type V3OfferReason } from '../../game/v3/offers'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
-import { fonts } from '../../theme'
+import { fonts, pixelUi } from '../../theme'
 import { v3JobLabel } from './v3Labels'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
@@ -69,7 +69,7 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
               {view.completionBonusCents > 0 ? ` · +$${(view.completionBonusCents / 100).toFixed(0)} ${t({ en: 'on completion', th: 'เมื่อส่งครบ' })}` : ''}
               {template.researchReward > 0 ? ` · ${template.researchReward} RP` : ''}
             </Text>
-            <Text style={[styles.row, view.feasibility !== 'ready' && styles.warning]}>
+            <Text style={[styles.availability, view.feasibility !== 'ready' && styles.warning]}>
               {view.feasibility === 'ready'
                 ? t({ en: `Ready · ETA ${view.etaSeconds === null ? '—' : formatSeconds(view.etaSeconds)}`, th: `พร้อม · ETA ${view.etaSeconds === null ? '—' : formatSeconds(view.etaSeconds)}` })
                 : `${view.feasibility === 'planned' ? t({ en: 'Planned', th: 'ต้องเตรียม' }) : t({ en: 'Unavailable', th: 'ยังทำไม่ได้' })}: ${view.reasons.map((reason) => t(REASON[reason] ?? { en: reason, th: reason })).join(', ')}`}
@@ -81,9 +81,9 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
               accessibilityState={{ disabled: Boolean(blocked) }}
               disabled={Boolean(blocked)}
               onPress={() => run(accept)}
-              style={[styles.secondary, blocked && styles.disabled]}
+              style={[styles.accept, blocked && styles.disabled]}
             >
-              <Text style={styles.secondaryText}>{t({ en: 'Accept', th: 'รับงาน' })}</Text>
+              <Text style={styles.acceptText}>{t({ en: 'Accept offer', th: 'รับข้อเสนอ' })}</Text>
             </Pressable>
             {blocked && <Text style={styles.reason}>{describe(blocked)}</Text>}
             {template.kind === 'repeat' && !template.branches && chapter >= V3_AUTO_REPEAT_CHAPTER - 1 && (() => {
@@ -111,16 +111,19 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 8 },
-  cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
-  offer: { borderTopWidth: 1, borderTopColor: '#274B63', paddingTop: 8, gap: 4 },
-  offerTitle: { color: '#A9F3D9', fontFamily: fonts.heading, fontSize: 13 },
-  row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
-  muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
-  warning: { color: '#FFAD8A' },
-  reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
-  secondary: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  secondaryText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
-  active: { borderColor: '#6ACDB4', backgroundColor: '#2E6C63' },
+  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 10 },
+  cardTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
+  offer: { backgroundColor: pixelUi.canvas, borderWidth: 1, borderColor: pixelUi.borderSoft, padding: 10, gap: 6 },
+  offerTitle: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 15 },
+  row: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  availability: { color: pixelUi.success, fontFamily: fonts.brandHeading, fontSize: 12, lineHeight: 18 },
+  muted: { color: pixelUi.textMuted, fontFamily: fonts.body, fontSize: 11, lineHeight: 17 },
+  warning: { color: pixelUi.warning },
+  reason: { color: pixelUi.warning, fontSize: 11, marginTop: 2 },
+  accept: { backgroundColor: pixelUi.accent, borderWidth: 2, borderBottomWidth: 4, borderColor: pixelUi.accentDark, paddingVertical: 9, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  acceptText: { color: pixelUi.canvas, fontFamily: fonts.brandHeading, fontSize: 14 },
+  secondary: { backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  secondaryText: { color: pixelUi.text, fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
+  active: { borderColor: pixelUi.success, backgroundColor: pixelUi.surfacePressed },
   disabled: { opacity: 0.45 },
 })

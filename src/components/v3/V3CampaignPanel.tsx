@@ -4,7 +4,7 @@ import type { BilingualTextValue } from '../../game/types'
 import { V3_AWARD_PERIOD_TICKS, scoreV3AwardPeriod } from '../../game/v3/awards'
 import { evaluateV3ClearConditions } from '../../game/v3/campaign'
 import type { V3GameState } from '../../game/v3/types'
-import { fonts } from '../../theme'
+import { fonts, pixelUi } from '../../theme'
 
 type Translate = (value: BilingualTextValue) => string
 
@@ -74,8 +74,8 @@ export function V3CampaignPanel({ state, t }: { state: V3GameState; t: Translate
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 6 },
-  cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
-  row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
-  muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
+  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 8 },
+  cardTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
+  row: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 20 },
+  muted: { color: pixelUi.textMuted, fontFamily: fonts.body, fontSize: 11, lineHeight: 17 },
 })
