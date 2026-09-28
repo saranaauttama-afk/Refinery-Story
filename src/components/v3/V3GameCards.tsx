@@ -12,7 +12,7 @@ import { V3_DEFAULT_BLUEPRINT_ID } from '../../game/v3/state'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
 import { getV3LeadContribution } from '../../game/v3/workforce'
 import { listV3Buildings } from '../../game/v3/yard'
-import { fonts } from '../../theme'
+import { fonts, pixelUi } from '../../theme'
 import { v3JobLabel } from './v3Labels'
 
 type Translate = (value: BilingualTextValue) => string
@@ -39,7 +39,10 @@ export function V3GasolineLineCard({ state, apply, t }: CardProps) {
       <Text style={styles.cardTitle}>{blueprint
         ? `${t({ en: 'Gasoline line', th: 'ไลน์ Gasoline' })} · ${blueprint.name} Q${blueprint.quality}`
         : t({ en: 'Gasoline line · missing', th: 'ไลน์ Gasoline · ไม่มีอาคาร' })}</Text>
-      <Text style={styles.row}>{t({ en: 'Actual / max output', th: 'ผลิตจริง / สูงสุด' })}: {actual.toFixed(1)} / {potential.toFixed(1)} {t({ en: 'per min', th: 'ต่อนาที' })}</Text>
+      <View style={styles.metricRow}>
+        <View style={styles.metric}><Text style={styles.metricLabel}>{t({ en: 'ACTUAL / MIN', th: 'ผลิตจริง / นาที' })}</Text><Text style={styles.metricValue}>{actual.toFixed(1)}</Text></View>
+        <View style={styles.metric}><Text style={styles.metricLabel}>{t({ en: 'POTENTIAL / MIN', th: 'กำลังผลิต / นาที' })}</Text><Text style={styles.metricValue}>{potential.toFixed(1)}</Text></View>
+      </View>
       <View style={styles.bar}><View style={[styles.fill, { width: `${potential > 0 ? Math.round(Math.min(1, actual / potential) * 100) : 0}%` }]} /></View>
       <Text style={styles.row}>{t({ en: 'Feedstock', th: 'Feedstock (วัตถุดิบต่อ)' })}: {state.world.feedstock.toFixed(1)} · {t({ en: 'Waste', th: 'ของเสีย' })}: {state.world.waste.toFixed(1)}</Text>
       {distillationBuildingId && (
@@ -122,7 +125,7 @@ export function V3GasolineDevelopmentCard({ state, apply, t, describe }: CardPro
 }
 
 /** The accepted client job: progress, shipping, auto-dispatch and cancel. */
-export function V3ActiveJobCard({ state, apply, t }: CardProps) {
+export function V3ActiveJobCard({ state, apply, t, onOpenOffers }: CardProps & { onOpenOffers?: () => void }) {
   const job = state.acceptedJob
   if (!job) {
     return (
@@ -130,6 +133,9 @@ export function V3ActiveJobCard({ state, apply, t }: CardProps) {
         <Text style={styles.cardTitle}>{t({ en: 'Current job', th: 'งานปัจจุบัน' })}</Text>
         <Text style={styles.row}>{t({ en: 'No job yet. Pick one under Offers.', th: 'ยังไม่มีงาน เลือกได้ที่แท็บ "ข้อเสนอ"' })}</Text>
         <Text style={styles.muted}>{t({ en: 'Completed receipts', th: 'งานที่สำเร็จแล้ว' })}: {state.jobReceipts.receipts.filter((receipt) => receipt.status === 'completed').length}</Text>
+        {onOpenOffers && <Pressable style={styles.primary} onPress={onOpenOffers} accessibilityRole="button">
+          <Text style={styles.primaryText}>{t({ en: 'View customer offers', th: 'ดูข้อเสนอลูกค้า' })}</Text>
+        </Pressable>}
       </View>
     )
   }
@@ -143,7 +149,10 @@ export function V3ActiveJobCard({ state, apply, t }: CardProps) {
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{t(v3JobLabel(job.templateId))}</Text>
-      <Text style={styles.row}>Q{job.minimumQuality}+ · {t({ en: 'shipped', th: 'ส่งแล้ว' })} {job.deliveredQuantity}/{job.quantity}</Text>
+      <View style={styles.jobSummary}>
+        <Text style={styles.jobQuantity}>{job.deliveredQuantity}/{job.quantity}</Text>
+        <Text style={styles.jobRequirement}>{t({ en: 'SHIPPED', th: 'ส่งแล้ว' })} · Q{job.minimumQuality}+</Text>
+      </View>
       <View style={styles.bar}><View style={[styles.fill, { width: `${Math.round((job.deliveredQuantity / Math.max(1, job.quantity)) * 100)}%` }]} /></View>
       {job.deadlineTick !== null && (
         <Text style={styles.warning}>{t({
@@ -280,20 +289,27 @@ export function V3SpecializationCard({ state, apply, t, describe }: CardProps) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 8 },
-  cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
-  row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
+  card: { backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 14, gap: 9 },
+  cardTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 18 },
+  row: { color: pixelUi.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
   strong: { fontFamily: fonts.heading },
-  muted: { color: '#8FA9BA', fontSize: 11, lineHeight: 16 },
-  warning: { color: '#FFAD8A', fontSize: 12 },
-  bar: { height: 8, borderRadius: 4, backgroundColor: '#163A52', overflow: 'hidden' },
-  fill: { height: 8, backgroundColor: '#6ACDB4' },
-  primary: { backgroundColor: '#FFD447', borderRadius: 8, paddingVertical: 12, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  primaryText: { color: '#0A2943', fontFamily: fonts.heading, fontSize: 13 },
-  secondary: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
-  secondaryText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13, textAlign: 'center' },
-  buttonSub: { color: '#A9C1CF', fontSize: 11, marginTop: 2, textAlign: 'center' },
-  selected: { borderColor: '#6ACDB4', backgroundColor: '#2E6C63' },
+  muted: { color: pixelUi.textMuted, fontFamily: fonts.body, fontSize: 11, lineHeight: 17 },
+  warning: { color: pixelUi.warning, fontFamily: fonts.body, fontSize: 12 },
+  metricRow: { flexDirection: 'row', gap: 8 },
+  metric: { flex: 1, backgroundColor: pixelUi.canvas, borderWidth: 1, borderColor: pixelUi.borderSoft, padding: 8, gap: 2 },
+  metricLabel: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 11 },
+  metricValue: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 21 },
+  jobSummary: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  jobQuantity: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 25 },
+  jobRequirement: { color: pixelUi.rp, fontFamily: fonts.brandHeading, fontSize: 12 },
+  bar: { height: 9, backgroundColor: pixelUi.canvas, borderWidth: 1, borderColor: pixelUi.borderSoft, overflow: 'hidden' },
+  fill: { height: 9, backgroundColor: pixelUi.success },
+  primary: { backgroundColor: pixelUi.accent, borderWidth: 2, borderBottomWidth: 4, borderColor: pixelUi.accentDark, paddingVertical: 10, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  primaryText: { color: pixelUi.canvas, fontFamily: fonts.brandHeading, fontSize: 13 },
+  secondary: { backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  secondaryText: { color: pixelUi.text, fontFamily: fonts.heading, fontSize: 13, textAlign: 'center' },
+  buttonSub: { color: pixelUi.textMuted, fontSize: 11, marginTop: 2, textAlign: 'center' },
+  selected: { borderColor: pixelUi.success, backgroundColor: pixelUi.surfacePressed },
   disabled: { opacity: 0.5 },
   textButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   dangerText: { color: '#E89494', fontFamily: fonts.heading, fontSize: 13 },

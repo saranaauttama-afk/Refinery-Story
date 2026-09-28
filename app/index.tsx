@@ -426,7 +426,7 @@ export default function V3GameScreen() {
               </>
             )}
             {tab === 'production' && productionSection === 'market' && <V3MarketPanel state={state} t={t} />}
-            {tab === 'clients' && clientSection === 'job' && <V3ActiveJobCard {...cardProps} />}
+            {tab === 'clients' && clientSection === 'job' && <V3ActiveJobCard {...cardProps} onOpenOffers={() => setClientSection('offers')} />}
             {tab === 'clients' && clientSection === 'offers' && <V3OffersPanel {...cardProps} />}
             {tab === 'clients' && clientSection === 'expo' && <V3ExpoPanel {...cardProps} />}
             {tab === 'company' && companySection === 'overview' && (
