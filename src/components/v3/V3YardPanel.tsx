@@ -242,24 +242,25 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
         <Pressable style={styles.backdrop} onPress={() => setDetail(null)}>
           <Pressable style={styles.popup} onPress={() => undefined}>
             <View style={styles.popupHead}>
-              <Text style={styles.cardTitle}>{t(config.name)}</Text>
+              <Text style={styles.popupTitle}>{t(config.name)}</Text>
               <Pressable onPress={() => setDetail(null)} hitSlop={12} accessibilityLabel={t({ en: 'Close', th: 'ปิด' })}><Text style={styles.close}>✕</Text></Pressable>
             </View>
             <View style={styles.detailArt}>{art ? <Image source={art} style={styles.detailImage} resizeMode="contain" /> : <Text style={styles.placeholder}>🏭</Text>}</View>
-            <Text style={styles.row}>{t(config.description)}</Text>
-            <Text style={styles.row}>
-              {t({ en: 'Size', th: 'ขนาด' })} {footprint ? `${footprint.w}×${footprint.h}` : '-'} · {t({ en: 'Cost', th: 'ราคา' })} ${cost.toLocaleString()}
-              {limit !== null ? ` · ${t({ en: 'Built', th: 'สร้างแล้ว' })} ${count}/${limit}` : ''}
-            </Text>
+            <Text style={styles.detailDescription}>{t(config.description)}</Text>
+            <View style={styles.detailStats}>
+              <View style={styles.detailStat}><Text style={styles.detailStatLabel}>{t({ en: 'SIZE', th: 'ขนาด' })}</Text><Text style={styles.detailStatValue}>{footprint ? `${footprint.w}×${footprint.h}` : '-'}</Text></View>
+              <View style={styles.detailStat}><Text style={styles.detailStatLabel}>{t({ en: 'COST', th: 'ราคา' })}</Text><Text style={styles.detailStatValue}>${cost.toLocaleString()}</Text></View>
+              {limit !== null && <View style={styles.detailStat}><Text style={styles.detailStatLabel}>{t({ en: 'BUILT', th: 'สร้างแล้ว' })}</Text><Text style={styles.detailStatValue}>{count}/{limit}</Text></View>}
+            </View>
             {state.world.moneyCents < cost * 100 && !lock && <Text style={styles.reason}>{t({ en: 'Not enough cash yet.', th: 'เงินยังไม่พอ' })}</Text>}
             {lock && <Text style={styles.reason}>🔒 {lock}</Text>}
             <Pressable
               disabled={Boolean(lock)}
               accessibilityState={{ disabled: Boolean(lock) }}
-              style={[styles.button, lock && styles.disabled]}
+              style={[styles.button, styles.placeButton, lock && styles.disabled]}
               onPress={() => { setDetail(null); setSelectedId(null); setMode({ kind: 'build', building: detail, anchor: null }); onClose?.() }}
             >
-              <Text style={styles.buttonText}>{t({ en: 'Place on map', th: 'วางบนแผนที่' })}</Text>
+              <Text style={styles.placeText}>{t({ en: 'Place on map', th: 'วางบนแผนที่' })}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -389,7 +390,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   close: { color: '#D5E2E9', fontSize: 18, paddingHorizontal: 4 },
-  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 8 },
+  card: { backgroundColor: '#082A48', borderWidth: 2, borderColor: '#0E5E96', borderRadius: 4, padding: 12, gap: 8 },
   cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
   row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
   row2: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -406,19 +407,27 @@ const styles = StyleSheet.create({
   back: { color: '#8FD3FF', fontFamily: fonts.heading, fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   hRow: { gap: 8, paddingRight: 8 },
-  tile: { width: 108, backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, padding: 6, gap: 2, alignItems: 'center', justifyContent: 'center', minHeight: 96 },
+  tile: { width: 108, backgroundColor: '#0B365B', borderWidth: 2, borderColor: '#245F83', borderRadius: 4, padding: 6, gap: 2, alignItems: 'center', justifyContent: 'center', minHeight: 96 },
   tileLocked: { opacity: 0.4 },
-  tileSelected: { borderColor: '#FFD447', borderWidth: 2 },
+  tileSelected: { borderColor: '#FFD447', borderBottomWidth: 4 },
   tileArt: { width: '100%', height: 48, alignItems: 'center', justifyContent: 'center' },
   tileImage: { width: '100%', height: 48 },
   tileName: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
   lockBadge: { position: 'absolute', top: 4, right: 4, fontSize: 14, zIndex: 1 },
   placeholder: { fontSize: 32 },
   backdrop: { flex: 1, backgroundColor: 'rgba(3,10,18,0.72)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  popup: { width: '100%', maxWidth: 420, backgroundColor: '#0D2B40', borderWidth: 2, borderColor: '#3F6680', borderRadius: 10, padding: 14, gap: 8 },
+  popup: { width: '100%', maxWidth: 420, backgroundColor: '#082A48', borderWidth: 3, borderBottomWidth: 5, borderColor: '#0E5E96', borderRadius: 4, padding: 14, gap: 12 },
   popupHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  detailArt: { height: 150, alignItems: 'center', justifyContent: 'center' },
-  detailImage: { width: '100%', height: 150 },
+  popupTitle: { color: '#FFD447', fontFamily: fonts.brandHeading, fontSize: 19, flexShrink: 1 },
+  detailArt: { height: 138, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A3451', borderWidth: 1, borderColor: '#245F83' },
+  detailImage: { width: '100%', height: 132 },
+  detailDescription: { color: '#E8F0F4', fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  detailStats: { flexDirection: 'row', gap: 6 },
+  detailStat: { flex: 1, minWidth: 0, backgroundColor: '#061827', borderWidth: 1, borderColor: '#245F83', paddingHorizontal: 8, paddingVertical: 6 },
+  detailStatLabel: { color: '#8FA9BA', fontFamily: fonts.brandHeading, fontSize: 10 },
+  detailStatValue: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 14 },
+  placeButton: { backgroundColor: '#FFD447', borderColor: '#FFE27F', borderBottomColor: '#C98A0A', borderBottomWidth: 4, borderRadius: 3 },
+  placeText: { color: '#082A48', fontFamily: fonts.brandHeading, fontSize: 15, textAlign: 'center' },
   menuRow: { flexDirection: 'row', gap: 8 },
   menuTile: { flex: 1, backgroundColor: '#163A52', borderWidth: 2, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', gap: 2, minHeight: 78 },
   menuGlyph: { fontSize: 22 },

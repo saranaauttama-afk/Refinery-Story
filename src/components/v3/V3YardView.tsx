@@ -20,7 +20,6 @@ import { clampCameraValue } from '../../factoryCamera'
 import type { V3GameState } from '../../game/v3/types'
 import {
   V3_ISO,
-  deriveV3RoadNetwork,
   getV3IsoBounds,
   getV3ParcelViews,
   getV3SpritePlacements,
@@ -71,9 +70,8 @@ function diamond(points: Array<{ sx: number; sy: number }>) {
  * source image's own aspect ratio, and the art's bottom edge sits flush on the
  * footprint's bottom corner. Alert badge (if any) floats above the art's top.
  */
-// World-space backdrop (sea/coast/harbour): drawn inside the pan/zoom group so it
-// moves with the buildings. Art slot: assets/bg/yard_backdrop.png (see yardBackdrop.ts).
-const BACKDROP_ART = require('../../../assets/bg/yard_backdrop.png')
+// The paved yard and harbor stay in the same camera space as the buildings.
+const BACKDROP_ART = require('../../../assets/bg/yard_backdrop_pixel_v2.png')
 const Backdrop = memo(function Backdrop() {
   const image = useImage(BACKDROP_ART as DataSourceParam)
   if (!image) return null
@@ -113,8 +111,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const landKey = `${state.world.unlockedParcelIds.join(',')}|${state.campaignProgress.chapter}`
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
-  const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
-  // Ground detail is built once per land change as ONE path each (grid, roads),
+  // Ground detail is built once per land change as one path,
   // never per tile per frame: keeps a 48×48 yard smooth on phones.
   const gridPath = useMemo(() => {
     const path = Skia.Path.Make()
@@ -131,15 +128,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     }
     return path
   }, [parcels])
-  const roadPath = useMemo(() => {
-    const path = Skia.Path.Make()
-    for (const node of roads) {
-      const from = v3IsoPoint(node.x, node.y)
-      if (node.links.e) { const to = v3IsoPoint(node.x + 1, node.y); path.moveTo(from.sx, from.sy); path.lineTo(to.sx, to.sy) }
-      if (node.links.s) { const to = v3IsoPoint(node.x, node.y + 1); path.moveTo(from.sx, from.sy); path.lineTo(to.sx, to.sy) }
-    }
-    return path
-  }, [roads])
   // Decorations: one path per placeholder colour (≤15 draw calls for ≤150 items).
   const decorations = state.world.decorations
   const decorPaths = useMemo(() => {
@@ -221,18 +209,17 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
         <Canvas style={{ width, height }}>
           <Group transform={transform}>
             <Backdrop />
-            {parcelPaths.map(({ parcel, path }) => (
+            {parcelPaths.filter(({ parcel }) => parcel.state !== 'owned').map(({ parcel, path }) => (
               <Path
                 key={parcel.id}
                 path={path}
-                color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
+                color={parcel.state === 'available' ? 'rgba(255,211,61,0.12)' : 'rgba(6,24,39,0.22)'}
               />
             ))}
-            <Path path={gridPath} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
+            <Path path={gridPath} color="rgba(56,54,46,0.24)" style="stroke" strokeWidth={0.7} />
             {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
               <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
             ))}
-            <Path path={roadPath} color="#9A9386" style="stroke" strokeWidth={4} />
             {decorPaths.map(([color, path]) => <Path key={`decor-${color}`} path={path} color={color} />)}
             {selectedDecor && (() => {
               const { w, h } = getV3DecorFootprint(selectedDecor.kind, selectedDecor.rotated)
