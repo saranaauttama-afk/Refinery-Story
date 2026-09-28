@@ -286,7 +286,12 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
               {lock && <Text style={styles.lockBadge}>🔒</Text>}
               <View style={styles.tileArt}>{art ? <Image source={art} style={styles.tileImage} resizeMode="contain" /> : <Text style={styles.placeholder}>🏭</Text>}</View>
               <Text style={styles.tileName} numberOfLines={2}>{t(BUILDINGS[building].name)}</Text>
-              <Text style={styles.muted}>{lock ?? `${footprint ? `${footprint.w}×${footprint.h}` : ''} · $${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}`}</Text>
+              {lock ? <Text style={styles.tileLockText} numberOfLines={1}>{lock}</Text> : (
+                <View style={styles.tileMeta}>
+                  <Text style={styles.tileFootprint}>{footprint ? `${footprint.w}×${footprint.h}` : ''}</Text>
+                  <Text style={styles.tilePrice}>${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}</Text>
+                </View>
+              )}
             </Pressable>
           )
         })}
@@ -407,12 +412,16 @@ const styles = StyleSheet.create({
   back: { color: '#8FD3FF', fontFamily: fonts.heading, fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   hRow: { gap: 8, paddingRight: 8 },
-  tile: { width: 108, backgroundColor: '#0B365B', borderWidth: 2, borderColor: '#245F83', borderRadius: 4, padding: 6, gap: 2, alignItems: 'center', justifyContent: 'center', minHeight: 96 },
+  tile: { width: 124, backgroundColor: '#0B365B', borderWidth: 2, borderColor: '#245F83', borderRadius: 3, padding: 6, gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 126 },
   tileLocked: { opacity: 0.4 },
   tileSelected: { borderColor: '#FFD447', borderBottomWidth: 4 },
-  tileArt: { width: '100%', height: 48, alignItems: 'center', justifyContent: 'center' },
-  tileImage: { width: '100%', height: 48 },
-  tileName: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
+  tileArt: { width: '100%', height: 64, alignItems: 'center', justifyContent: 'center', backgroundColor: '#092B49', borderWidth: 1, borderColor: '#19496A' },
+  tileImage: { width: '100%', height: 62 },
+  tileName: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center', minHeight: 30, textAlignVertical: 'center' },
+  tileMeta: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#245F83', paddingTop: 4 },
+  tileFootprint: { color: '#9DBED2', fontFamily: fonts.body, fontSize: 11 },
+  tilePrice: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 11 },
+  tileLockText: { color: '#A9C0CD', fontSize: 10, textAlign: 'center' },
   lockBadge: { position: 'absolute', top: 4, right: 4, fontSize: 14, zIndex: 1 },
   placeholder: { fontSize: 32 },
   backdrop: { flex: 1, backgroundColor: 'rgba(3,10,18,0.72)', alignItems: 'center', justifyContent: 'center', padding: 20 },
@@ -429,7 +438,7 @@ const styles = StyleSheet.create({
   placeButton: { backgroundColor: '#FFD447', borderColor: '#FFE27F', borderBottomColor: '#C98A0A', borderBottomWidth: 4, borderRadius: 3 },
   placeText: { color: '#082A48', fontFamily: fonts.brandHeading, fontSize: 15, textAlign: 'center' },
   menuRow: { flexDirection: 'row', gap: 8 },
-  menuTile: { flex: 1, backgroundColor: '#163A52', borderWidth: 2, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', gap: 2, minHeight: 78 },
+  menuTile: { flex: 1, backgroundColor: '#0B365B', borderWidth: 2, borderColor: '#245F83', borderRadius: 3, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', gap: 2, minHeight: 78 },
   menuGlyph: { fontSize: 22 },
   menuTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 13, textAlign: 'center' },
 })
