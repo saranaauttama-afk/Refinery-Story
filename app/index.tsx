@@ -389,9 +389,9 @@ export default function V3GameScreen() {
           {tab === 'clients' && (
             <View style={styles.segments}>
               <V3Segments value={clientSection} onChange={setClientSection} items={[
-                { key: 'job', label: t({ en: 'Current job', th: 'งานปัจจุบัน' }) },
-                { key: 'offers', label: t({ en: 'Offers', th: 'ข้อเสนอ' }) },
-                { key: 'expo', label: t({ en: 'Expo', th: 'เอ็กซ์โป' }) },
+                { key: 'job', icon: '📋', label: t({ en: 'Current job', th: 'งานปัจจุบัน' }) },
+                { key: 'offers', icon: '🤝', label: t({ en: 'Offers', th: 'ข้อเสนอ' }) },
+                { key: 'expo', icon: '🏆', label: t({ en: 'Expo', th: 'เอ็กซ์โป' }) },
               ]} />
             </View>
           )}
