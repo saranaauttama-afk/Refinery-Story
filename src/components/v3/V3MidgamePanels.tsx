@@ -7,7 +7,7 @@ import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../
 import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
 import { getV3BuildingLevel, listV3Buildings } from '../../game/v3/yard'
-import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity } from '../../game/v3/productInventory'
+import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity, getV3StockAllocations, isV3JobEligibleVariant } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
 import type { V3Action, V3ActionEvent, V3GameState, V3ModuleKey, V3ProcessProfile, V3ProductFamily } from '../../game/v3/types'
@@ -112,12 +112,34 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
       {show('stock') && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t({ en: 'Products & storage', th: 'สินค้าและถังเก็บ' })}</Text>
-        {PORTED.map((family) => (
-          <Text key={family} style={styles.row}>
-            {t(FAMILY_LABEL[family])}: {getV3ProductQuantity(state, family).toFixed(1)}/{getV3ProductCapacity(state, family)}
-            {' · '}{t({ en: 'free', th: 'ขายได้' })} {getV3SellableQuantity(state, family).toFixed(1)}
-          </Text>
-        ))}
+        {PORTED.map((family) => {
+          const allocations = getV3StockAllocations(state, family).filter((allocation) => allocation.quantity > 0.05)
+          const job = state.acceptedJob?.family === family ? state.acceptedJob : null
+          return (
+          <View key={family} style={styles.variantGroup}>
+            <Text style={styles.row}>
+              {t(FAMILY_LABEL[family])}: {getV3ProductQuantity(state, family).toFixed(1)}/{getV3ProductCapacity(state, family)}
+              {' · '}{t({ en: 'free', th: 'ขายได้' })} {getV3SellableQuantity(state, family).toFixed(1)}
+            </Text>
+            {allocations.length > 0 && (
+              <View style={styles.variantRow}>
+                {allocations.map((allocation) => {
+                  const meetsJob = job ? isV3JobEligibleVariant(state, allocation.blueprintId, allocation.quality) : null
+                  const blueprint = state.productBlueprints[allocation.blueprintId]
+                  return (
+                    <View key={allocation.blueprintId} style={[styles.variantChip, meetsJob === false && styles.variantChipShort]}>
+                      <Text style={styles.variantChipText}>{blueprint?.name ?? '?'} Q{allocation.quality} · {allocation.quantity.toFixed(1)}</Text>
+                      {job && (
+                        <Text style={meetsJob ? styles.variantOk : styles.variantShort}>{meetsJob ? '✓' : `< Q${job.minimumQuality}`}</Text>
+                      )}
+                    </View>
+                  )
+                })}
+              </View>
+            )}
+          </View>
+          )
+        })}
         {COMMODITIES.map(({ key, label }) => (
           <Text key={key} style={styles.row}>{t(label)}: {getV3ProductQuantity(state, key).toFixed(1)}/{getV3ProductCapacity(state, key)} · ${V3_SPOT_PRICE_CENTS[key] / 100}/{t({ en: 'unit', th: 'หน่วย' })}</Text>
         ))}
@@ -313,6 +335,13 @@ const styles = StyleSheet.create({
   cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
   row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
   warning: { color: '#FFAD8A', fontSize: 13 },
+  variantGroup: { gap: 4 },
+  variantRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  variantChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
+  variantChipShort: { borderColor: '#8A4A3A' },
+  variantChipText: { color: '#D5E2E9', fontSize: 11 },
+  variantOk: { color: '#6ACDB4', fontSize: 11, fontFamily: fonts.heading },
+  variantShort: { color: '#FFAD8A', fontSize: 11, fontFamily: fonts.heading },
   reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
   line: { borderTopWidth: 1, borderTopColor: '#274B63', paddingTop: 8, gap: 6 },
   lineTitle: { color: '#A9F3D9', fontFamily: fonts.heading, fontSize: 13 },
