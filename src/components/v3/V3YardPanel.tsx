@@ -172,7 +172,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
   const decorBar = mode.kind === 'decor' ? (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{t({ en: `Placing ${V3_DECOR[mode.decor].label.en}`, th: `กำลังวาง${V3_DECOR[mode.decor].label.th}` })} · ${V3_DECOR[mode.decor].costDollars}</Text>
-      <Text style={styles.muted}>{t({ en: 'Tap tiles to place, one per tap. Tap a placed item later to remove it (full refund).', th: 'แตะช่องเพื่อวาง แตะหนึ่งครั้งได้หนึ่งชิ้น วางแล้วแตะที่ชิ้นนั้นเพื่อเก็บคืนได้ (คืนเงินเต็ม)' })}</Text>
+      <Text style={styles.muted}>{t({ en: 'Tap tiles to place. Tap a placed item to remove it (full refund).', th: 'แตะช่องเพื่อวาง แตะชิ้นที่วางแล้วเพื่อเก็บคืน (คืนเงินเต็ม)' })}</Text>
       <View style={styles.row2}>
         {V3_DECOR[mode.decor].w !== V3_DECOR[mode.decor].h && (
           <Pressable style={styles.button} onPress={() => setMode({ ...mode, rotated: !mode.rotated })}>
@@ -186,12 +186,12 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
     </View>
   ) : null
 
-  const backHeader = (title: string) => (
+  const backHeader = (title?: string) => (
     <View style={styles.titleRow}>
       <Pressable onPress={() => { setPage('menu'); setDetail(null); setParcelId(null) }} hitSlop={10} accessibilityRole="button" accessibilityLabel={t({ en: 'Back', th: 'กลับ' })}>
         <Text style={styles.back}>‹ {t({ en: 'Menu', th: 'เมนู' })}</Text>
       </Pressable>
-      <Text style={styles.cardTitle}>{title}</Text>
+      {title && <Text style={styles.cardTitle}>{title}</Text>}
     </View>
   )
 
@@ -270,7 +270,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
 
   const buildPage = (
     <View style={styles.card}>
-      {backHeader(t({ en: 'Build', th: 'สร้าง' }))}
+      {backHeader()}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
         {palette.map((building) => {
           const footprint = getV3Footprint(building, 1)
