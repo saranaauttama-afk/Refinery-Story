@@ -39,7 +39,8 @@ import { getV3PlayerRank } from '../src/game/v3/rivals'
 import { getV3Calendar } from '../src/game/v3/yardView'
 import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
-import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3GasolineLineCard, V3LedgerCard, V3RecoveryCard, V3SpecializationCard } from '../src/components/v3/V3GameCards'
+import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3LedgerCard, V3RecoveryCard, V3SpecializationCard } from '../src/components/v3/V3GameCards'
+import { V3ProductionFlow } from '../src/components/v3/V3ProductionFlow'
 import { V3Segments } from '../src/components/v3/V3Segments'
 import { getV3ClearChecklist, V3ClearChecklist } from '../src/components/v3/V3ClearChecklist'
 import { useLang } from '../src/hooks/SettingsContext'
@@ -378,10 +379,10 @@ export default function V3GameScreen() {
           {tab === 'production' && (
             <View style={styles.segments}>
               <V3Segments value={productionSection} onChange={setProductionSection} items={[
-                { key: 'lines', label: t({ en: 'Lines', th: 'ไลน์ผลิต' }) },
-                { key: 'stock', label: t({ en: 'Stock', th: 'สต็อก' }) },
-                { key: 'rnd', label: t({ en: 'Recipes & R&D', th: 'สูตร & R&D' }) },
-                { key: 'market', label: t({ en: 'Market', th: 'ตลาด' }) },
+                { key: 'lines', icon: '🏭', label: t({ en: 'Lines', th: 'ไลน์ผลิต' }) },
+                { key: 'stock', icon: '🛢️', label: t({ en: 'Stock', th: 'สต็อก' }) },
+                { key: 'rnd', icon: '🧪', label: t({ en: 'Recipes', th: 'สูตร' }) },
+                { key: 'market', icon: '📈', label: t({ en: 'Market', th: 'ตลาด' }) },
               ]} />
             </View>
           )}
@@ -409,7 +410,7 @@ export default function V3GameScreen() {
             {tab === 'staff' && <V3TeamPanel state={state} apply={applyPanel} t={t} describe={describe} />}
             {tab === 'production' && productionSection === 'lines' && (
               <>
-                <V3GasolineLineCard {...cardProps} />
+                <V3ProductionFlow {...cardProps} />
                 <V3MidgamePanels section="lines" {...cardProps} />
               </>
             )}
