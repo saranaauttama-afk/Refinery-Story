@@ -8,6 +8,7 @@ import { getV3ModuleQuote } from '../../game/v3/actions'
 import { evaluateV3Maintenance } from '../../game/v3/maintenance'
 import {
   getV3CrudeCapacity, getV3ConsumableQuantity, getV3ProductCapacity, getV3ProductQuantity,
+  getV3StockAllocations, isV3JobEligibleVariant,
 } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import type { BilingualTextValue } from '../../game/types'
@@ -86,6 +87,8 @@ function LineCard({ state, apply, t, describe, line }: Props & { line: V3LinePla
   const recipes = Object.values(state.productBlueprints)
     .filter((entry) => entry.family === line.family && !entry.archived)
     .sort((a, b) => a.quality - b.quality || a.id.localeCompare(b.id))
+  const stockVariants = getV3StockAllocations(state, line.family).filter((allocation) => allocation.quantity > 0.05)
+  const jobForFamily = state.acceptedJob?.family === line.family ? state.acceptedJob : null
 
   return (
     <View style={styles.card}>
@@ -96,6 +99,21 @@ function LineCard({ state, apply, t, describe, line }: Props & { line: V3LinePla
         <Arrow rate={actual} />
         <FlowBox art={outputArt} glyph="🛢️" label={t({ en: 'Output', th: 'ผลผลิต' })} sub={`${outputQty.toFixed(0)}/${Math.floor(outputCap)}`} />
       </View>
+
+      {stockVariants.length > 0 && (
+        <View style={styles.variantRow}>
+          {stockVariants.map((allocation) => {
+            const meetsJob = jobForFamily ? isV3JobEligibleVariant(state, allocation.blueprintId, allocation.quality) : null
+            const recipe = state.productBlueprints[allocation.blueprintId]
+            return (
+              <View key={allocation.blueprintId} style={[styles.variantChip, meetsJob === false && styles.variantChipShort]}>
+                <Text style={styles.variantChipText}>{recipe?.name ?? '?'} Q{allocation.quality} · {allocation.quantity.toFixed(1)}</Text>
+                {jobForFamily && <Text style={meetsJob ? styles.variantOk : styles.variantShort}>{meetsJob ? '✓' : `< Q${jobForFamily.minimumQuality}`}</Text>}
+              </View>
+            )
+          })}
+        </View>
+      )}
 
       <View style={styles.statusRow}>
         <View style={[styles.pill, paused ? styles.pillPaused : styles.pillLive]}>
@@ -228,6 +246,12 @@ const styles = StyleSheet.create({
   bar: { height: 8, borderRadius: 4, backgroundColor: '#163A52', overflow: 'hidden' },
   fill: { height: 8, backgroundColor: '#6ACDB4' },
   row2: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  variantRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  variantChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
+  variantChipShort: { borderColor: '#8A4A3A' },
+  variantChipText: { color: '#D5E2E9', fontSize: 11 },
+  variantOk: { color: '#6ACDB4', fontSize: 11, fontFamily: fonts.heading },
+  variantShort: { color: '#FFAD8A', fontSize: 11, fontFamily: fonts.heading },
   row: { color: '#D5E2E9', fontSize: 12, lineHeight: 17 },
   button: { flex: 1, backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
   primaryButton: { backgroundColor: '#2E6C63', borderColor: '#6ACDB4' },
