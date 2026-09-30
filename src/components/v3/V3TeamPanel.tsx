@@ -12,6 +12,7 @@ import { getV3LocalCrewRate, getV3StaffCap, getV3TrainingCost, getV3WageCents } 
 import { fonts } from '../../theme'
 import { V3_CAREER, getV3CareerRank, getV3RareCandidate } from '../../game/v3/careers'
 import { V3Segments } from './V3Segments'
+import StaffPortrait from '../StaffPortrait'
 
 type WithoutSequence<T> = T extends unknown ? Omit<T, 'sequence'> : never
 type ActionInput = WithoutSequence<V3Action>
@@ -57,9 +58,8 @@ function channelText(channel: V3CappedChannel): string {
   return channel.raw > channel.effective + 1e-9 ? `${fmt(channel.effective)} (cap ${fmt(channel.cap)})` : `${fmt(channel.effective)} / cap ${fmt(channel.cap)}`
 }
 
-/** Placeholder portrait: swap for real art later — this box is exactly where a face/icon image drops in. */
-function Portrait({ size = 56, tone }: { size?: number; tone?: string }) {
-  return <View style={[styles.portrait, { width: size, height: size, borderRadius: size / 4 }, tone ? { borderColor: tone } : null]}><Text style={{ fontSize: size * 0.5 }}>👷</Text></View>
+function Portrait({ type, size = 56, tone }: { type: WorkerType; size?: number; tone?: string }) {
+  return <View style={[styles.portrait, { width: size, height: size }, tone ? { borderColor: tone } : null]}><StaffPortrait type={type} size={size - 4} /></View>
 }
 
 export function V3TeamPanel({ state, apply, t, describe }: Props) {
@@ -91,7 +91,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
     const active = employee.id === selectedId
     return (
       <Pressable style={[styles.row, active && styles.rowActive]} onPress={() => { setSelectedId(active ? null : employee.id); setAssigning(false) }}>
-        <Portrait />
+        <Portrait type={employee.type} />
         <View style={styles.rowBody}>
           <Text style={styles.rowName} numberOfLines={1}>{employee.isAce ? '★ ' : ''}{employee.name}</Text>
           <Text style={styles.rowSub} numberOfLines={1}>{rank > 0 ? `${t(V3_CAREER.titles[rank])} ` : ''}{t(ROLE_LABEL[employee.type])} · Lv{employee.level}</Text>
@@ -135,7 +135,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
     return (
       <View style={styles.detailCard}>
         <View style={styles.detailHead}>
-          <Portrait size={84} />
+          <Portrait type={employee.type} size={84} />
           <View style={styles.detailHeadBody}>
             <Text style={styles.detailName}>{employee.isAce ? '★ ' : ''}{employee.name}</Text>
             <Text style={styles.detailRole}>{rank > 0 ? `${t(V3_CAREER.titles[rank])} ` : ''}{t(ROLE_LABEL[employee.type])} · Lv{employee.level}</Text>
@@ -252,7 +252,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
           </View>
           {rare && (
             <View style={[styles.row2, styles.rowCard, styles.rareRow]}>
-              <Portrait />
+              <Portrait type={rare.employee.type} />
               <View style={styles.rowBody}>
                 <Text style={styles.rowName}>★ {rare.employee.name}</Text>
                 <Text style={styles.rowSub}>{t(ROLE_LABEL[rare.employee.type])} · Lv{rare.employee.level}</Text>
@@ -270,7 +270,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
             const blocked = check({ type: 'hire_employee', role })
             return (
               <View key={role} style={[styles.row2, styles.rowCard]}>
-                <Portrait />
+                <Portrait type={role} />
                 <View style={styles.rowBody}>
                   <Text style={styles.rowName}>{t(ROLE_LABEL[role])}</Text>
                   <Text style={styles.rowSub}>{t({ en: `C${V3_ROLES[role].hireChapter}`, th: `บท C${V3_ROLES[role].hireChapter}` })}</Text>
