@@ -72,7 +72,7 @@ function diamond(points: Array<{ sx: number; sy: number }>) {
  * footprint's bottom corner. Alert badge (if any) floats above the art's top.
  */
 // World-space backdrop (sea/coast/harbour): drawn inside the pan/zoom group so it
-// moves with the buildings. Art slot: assets/bg/yard_backdrop.png (see yardBackdrop.ts).
+// moves with the buildings.
 const BACKDROP_ART = require('../../../assets/bg/yard_backdrop.png')
 const Backdrop = memo(function Backdrop() {
   const image = useImage(BACKDROP_ART as DataSourceParam)
@@ -225,7 +225,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
               <Path
                 key={parcel.id}
                 path={path}
-                color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
+                color={parcel.state === 'owned' ? 'rgba(0,0,0,0)' : parcel.state === 'available' ? 'rgba(124,154,86,0.25)' : 'rgba(70,80,66,0.45)'}
               />
             ))}
             <Path path={gridPath} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
