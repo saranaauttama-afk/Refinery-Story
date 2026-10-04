@@ -5,9 +5,10 @@
 > harbor backdrop, ground anchors, camera bounds covering the backdrop,
 > all 15 decorations and connected road/fence graphics, palette thumbnails,
 > customer portraits. Source/asset validation and full V3 checks pass.
-> Android export passed. Next: push the art commit and verify the resulting
-> Android Preview APK, then provide its artifact link. Device acceptance is
-> still pending; historical gameplay instructions below do not block the
+> Android export passed. Pushed as `3b74b62` on 2026-10-04; Android Preview
+> APK [#118](https://github.com/saranaauttama-afk/Refinery-Story/actions/runs/37164718952)
+> succeeded. APK archive integrity and embedded Android bundle verified.
+> Device acceptance is still pending; historical gameplay instructions below do not block the
 > user's explicitly authorized art work.
 
 > **Updated 2026-09-26.** Source of truth for the V3 backlog is

@@ -81,3 +81,13 @@ Static QA files are reproducible in `.build/yard-v2-qa/`. Native interaction,
 decoration-cap performance and actual APK installation require owner device
 validation. No device playtest is claimed. Economy and save schema were not
 changed by this art delivery.
+
+## Delivery — 2026-10-04
+
+Pushed to `art/yard-v2` at `3b74b62aac9b64d77df70addd67e3bfa51ba83d8`.
+[Android Preview APK #118](https://github.com/saranaauttama-afk/Refinery-Story/actions/runs/37164718952)
+succeeded. Artifact `refinery-story-bundled-release-apk` contains the verified
+68,585,835-byte APK, with Android manifest, arm64 libraries, DEX and embedded
+JavaScript bundle. ZIP/APK CRC checks pass. APK SHA-256:
+`2ac764cadb662d4d9e240cbb07b99c41e246c815e78ad719d2aebfcc4bf40df8`.
+Actual installation and device playtest remain pending.

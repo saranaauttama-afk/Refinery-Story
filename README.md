@@ -14,7 +14,10 @@
 > TypeScript, every `check:v3-*` script, factory-map-check and the full legal
 > campaign simulation pass. `render-yard-art-check.cjs` decodes all 51 sprites
 > and produces static projection/decoration QA (not device screenshots).
-> Android export succeeds. Native gestures/performance and installation still
+> Android export succeeds. Pushed as `3b74b62`; Android Preview APK
+> [#118](https://github.com/saranaauttama-afk/Refinery-Story/actions/runs/37164718952)
+> succeeded on 2026-10-04; APK integrity and embedded bundle verified.
+> Native gestures/performance and installation still
 > need the owner device check; do not claim a device playtest from static QA.
 > See `docs/ART_YARD_V2_HANDOFF.md`. Older handoffs below are historical.
 
