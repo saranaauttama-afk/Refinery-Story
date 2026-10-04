@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { getV3ClientArt } from '../../art/clientArt'
 
 import type { BilingualTextValue } from '../../game/types'
 import { reduceV3Action } from '../../game/v3/actions'
@@ -74,7 +75,7 @@ export function V3OffersPanel({ state, apply, t, describe }: Props) {
             </View>
             <View style={styles.body}>
               <View style={styles.itemRow}>
-                <View style={styles.portrait}><Text style={styles.portraitGlyph}>🤝</Text></View>
+                <View style={styles.portrait}><Image source={getV3ClientArt(template.id)} style={{ width: 44, height: 44 }} resizeMode="contain" /></View>
                 <View style={styles.itemBody}>
                   <Text style={styles.itemTitle}>{t(v3JobLabel(template.id))}{branch ? ` · ${branch === 'petrochemicals' ? 'Petro' : 'Pellets'}` : ''}</Text>
                   <Text style={styles.itemSub}>Q{view.minimumQuality}+ · {view.quantity} {t({ en: 'units', th: 'หน่วย' })}</Text>

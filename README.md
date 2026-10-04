@@ -1,5 +1,23 @@
 # Refinery Story — Mobile (Expo)
 
+> **CURRENT HANDOFF — 2026-10-03, art/yard-v2**
+>
+> The October 2 building-art completion report could not be recovered from
+> either the surviving workspace or remote branch (both were at `f18de37`).
+> The art pass has now actually been implemented: 51 new generated transparent
+> PNGs in `assets/plants/yard-v2/`, a smaller-prop harbor backdrop registered to
+> the 48×48 world yard, measured ground anchors for asymmetric building bases,
+> 15 native vector decoration designs with connected roads/fences and shared
+> depth ordering, decoration palette thumbnails, and three customer contacts
+> shared by Offers and Current job. All map/build/info/production surfaces use
+> `v3Art.ts`. Android version is 1.0.1/code 8, label `YARD-V2-20261003`.
+> TypeScript, every `check:v3-*` script, factory-map-check and the full legal
+> campaign simulation pass. `render-yard-art-check.cjs` decodes all 51 sprites
+> and produces static projection/decoration QA (not device screenshots).
+> Android export succeeds. Native gestures/performance and installation still
+> need the owner device check; do not claim a device playtest from static QA.
+> See `docs/ART_YARD_V2_HANDOFF.md`. Older handoffs below are historical.
+
 > **CURRENT HANDOFF — 2026-09-25 Gameplay V3 R1 foundation through V3-09**
 >
 > The user selected a new direction: develop product variants, assign a real

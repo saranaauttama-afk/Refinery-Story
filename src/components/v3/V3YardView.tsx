@@ -6,6 +6,7 @@ import {
   MipmapMode,
   Group,
   Image as SkiaImage,
+  ImageSVG,
   Path,
   Skia,
   Text as SkiaText,
@@ -29,8 +30,9 @@ import {
   type V3PlacementPreview,
 } from '../../game/v3/yardView'
 import { V3_YARD_BACKDROP } from '../../game/v3/yardBackdrop'
-import { getV3BuildingArt } from './v3Art'
-import { V3_DECOR_PLACEHOLDER_COLOR, getV3DecorFootprint } from '../../game/v3/decorData'
+import { getV3BuildingArt, getV3BuildingAnchor } from './v3Art'
+import { getV3DecorFootprint, type V3Decoration } from '../../game/v3/decorData'
+import { getV3DecorSvg } from '../../art/decorArt'
 
 const MIN_SCALE = 0.35
 const MAX_SCALE = 2.2
@@ -81,26 +83,41 @@ const Backdrop = memo(function Backdrop() {
   return <SkiaImage image={image} x={b.x} y={b.y} width={b.width} height={b.height} fit="fill" sampling={PIXEL} />
 })
 
+const DecorSprite = memo(function DecorSprite({ decoration, mask }: { decoration: V3Decoration; mask: number }) {
+  const svg = useMemo(() => Skia.SVG.MakeFromString(getV3DecorSvg(decoration.kind, decoration.rotated, mask)), [decoration.kind, decoration.rotated, mask])
+  if (!svg) return null
+  const footprint = getV3DecorFootprint(decoration.kind, decoration.rotated)
+  const [, right, bottom, left] = v3IsoRect({ ...decoration, ...footprint })
+  const width = right.sx - left.sx
+  const height = width * svg.height() / svg.width()
+  return <ImageSVG svg={svg} x={left.sx} y={bottom.sy - height} width={width} height={height} />
+})
+
 const Sprite = memo(function Sprite({
-  source, centerX, bottomY, footprintWidth, alert, font,
+  source, bottomX, bottomY, footprintWidth, padAnchor, anchor, alert, font,
 }: {
   source: ImageSourcePropType
-  centerX: number
+  bottomX: number
   bottomY: number
   footprintWidth: number
+  padAnchor: number
+  anchor: number
   alert?: string
   font: ReturnType<typeof matchFont> | null
 }) {
   const image = useImage(source as DataSourceParam)
   if (!image) return null
-  const width = footprintWidth
+  // Fit BOTH image edges inside the real lot even if generated pads have a
+  // slightly different aspect/handedness. The ground tip remains registered.
+  const width = Math.min(footprintWidth, footprintWidth * padAnchor / anchor,
+    footprintWidth * (1 - padAnchor) / (1 - anchor)) * 0.98
   const height = width * (image.height() / image.width())
-  const x = centerX - width / 2
+  const x = bottomX - width * anchor
   const y = bottomY - height
   return (
     <>
       <SkiaImage image={image} x={x} y={y} width={width} height={height} fit="fill" sampling={PIXEL} />
-      {alert && font && <SkiaText x={centerX - 4} y={y - 6} text="!" font={font} color="#FFD447" />}
+      {alert && font && <SkiaText x={x + width / 2 - 4} y={y - 6} text="!" font={font} color="#FFD447" />}
     </>
   )
 })
@@ -140,21 +157,19 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     }
     return path
   }, [roads])
-  // Decorations: one path per placeholder colour (≤15 draw calls for ≤150 items).
   const decorations = state.world.decorations
-  const decorPaths = useMemo(() => {
-    const byColor = new Map<string, ReturnType<typeof Skia.Path.Make>>()
-    for (const decoration of Object.values(decorations ?? {})) {
-      const color = V3_DECOR_PLACEHOLDER_COLOR[decoration.kind]
-      if (!byColor.has(color)) byColor.set(color, Skia.Path.Make())
+  const scene = useMemo(() => {
+    const items = Object.values(decorations ?? {})
+    const neighbours = new Set(items.map(item => `${item.kind}:${item.x},${item.y}`))
+    const props = items.map(decoration => {
       const { w, h } = getV3DecorFootprint(decoration.kind, decoration.rotated)
-      const inset = 0.12
-      const [a, b, c, d] = v3IsoRect({ x: decoration.x + inset, y: decoration.y + inset, w: w - inset * 2, h: h - inset * 2 })
-      const path = byColor.get(color)!
-      path.moveTo(a.sx, a.sy); path.lineTo(b.sx, b.sy); path.lineTo(c.sx, c.sy); path.lineTo(d.sx, d.sy); path.close()
-    }
-    return [...byColor.entries()]
-  }, [decorations])
+      const mask = [[0,-1],[1,0],[0,1],[-1,0]].reduce((bits, [dx,dy], index) =>
+        neighbours.has(`${decoration.kind}:${decoration.x+dx},${decoration.y+dy}`) ? bits | (1 << index) : bits, 0)
+      return { kind: 'decor' as const, decoration, mask, depth: decoration.x + w + decoration.y + h, id: decoration.id }
+    })
+    return [...sprites.map(sprite => ({ kind: 'building' as const, sprite, depth: sprite.depth, id: sprite.id })), ...props]
+      .sort((a,b) => a.depth-b.depth || a.id.localeCompare(b.id))
+  }, [decorations, sprites])
   const selectedDecor = selectedId ? decorations?.[selectedId] ?? null : null
   const parcelPaths = useMemo(() => parcels.map((parcel) => ({ parcel, path: diamond(v3IsoRect(parcel)) })), [parcels])
   const bounds = useMemo(() => getV3IsoBounds(state), [landKey])
@@ -164,9 +179,14 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 
   const worldW = bounds.maxX - bounds.minX
   const worldH = bounds.maxY - bounds.minY
-  const initialScale = clampCameraValue(Math.min(width / worldW, height / worldH) * 1.3, MIN_SCALE, MAX_SCALE)
-  const initialX = width / 2 - (bounds.minX + worldW / 2) * initialScale
-  const initialY = height / 2 - (bounds.minY + worldH / 2) * initialScale
+  const backdrop = V3_YARD_BACKDROP
+  // Always cover the viewport, including tall phones at minimum zoom.
+  const minScale = Math.max(MIN_SCALE, width / backdrop.width, height / backdrop.height)
+  const initialScale = clampCameraValue(Math.min(width / worldW, height / worldH) * 1.3, minScale, MAX_SCALE)
+  const initialX = clampCameraValue(width / 2 - (bounds.minX + worldW / 2) * initialScale,
+    width - (backdrop.x + backdrop.width) * initialScale, -backdrop.x * initialScale)
+  const initialY = clampCameraValue(height / 2 - (bounds.minY + worldH / 2) * initialScale,
+    height - (backdrop.y + backdrop.height) * initialScale, -backdrop.y * initialScale)
 
   const tx = useSharedValue(initialX)
   const ty = useSharedValue(initialY)
@@ -178,11 +198,15 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
 
   const clampX = (value: number, s: number) => {
     'worklet'
-    return clampCameraValue(value, width * 0.3 - bounds.maxX * s, width * 0.7 - bounds.minX * s)
+    return clampCameraValue(value,
+      Math.max(width * 0.3 - bounds.maxX * s, width - (backdrop.x + backdrop.width) * s),
+      Math.min(width * 0.7 - bounds.minX * s, -backdrop.x * s))
   }
   const clampY = (value: number, s: number) => {
     'worklet'
-    return clampCameraValue(value, height * 0.3 - bounds.maxY * s, height * 0.7 - bounds.minY * s)
+    return clampCameraValue(value,
+      Math.max(height * 0.3 - bounds.maxY * s, height - (backdrop.y + backdrop.height) * s),
+      Math.min(height * 0.7 - bounds.minY * s, -backdrop.y * s))
   }
   const pan = Gesture.Pan().maxPointers(1).activeOffsetX([-10, 10]).activeOffsetY([-10, 10])
     .onStart(() => { 'worklet'; savedX.value = tx.value; savedY.value = ty.value })
@@ -195,7 +219,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     .onStart(() => { 'worklet'; savedScale.value = scale.value; savedX.value = tx.value; savedY.value = ty.value })
     .onUpdate((event) => {
       'worklet'
-      const next = clampCameraValue(savedScale.value * event.scale, MIN_SCALE, MAX_SCALE)
+      const next = clampCameraValue(savedScale.value * event.scale, minScale, MAX_SCALE)
       const ratio = next / savedScale.value
       tx.value = clampX(event.focalX - (event.focalX - savedX.value) * ratio, next)
       ty.value = clampY(event.focalY - (event.focalY - savedY.value) * ratio, next)
@@ -233,7 +257,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
               <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
             ))}
             <Path path={roadPath} color="#9A9386" style="stroke" strokeWidth={4} />
-            {decorPaths.map(([color, path]) => <Path key={`decor-${color}`} path={path} color={color} />)}
             {selectedDecor && (() => {
               const { w, h } = getV3DecorFootprint(selectedDecor.kind, selectedDecor.rotated)
               return <Path path={diamond(v3IsoRect({ x: selectedDecor.x, y: selectedDecor.y, w, h }))} color="#FFFFFF" style="stroke" strokeWidth={2} />
@@ -241,18 +264,24 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
             {upgradeGrowth?.cells.map((cell) => (
               <Path key={`g${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={upgradeGrowth.ok ? 'rgba(106,205,180,0.6)' : 'rgba(255,99,99,0.6)'} />
             ))}
-            {sprites.map((sprite) => {
+            {scene.map((item) => {
+              if (item.kind === 'decor') return <DecorSprite key={item.id} decoration={item.decoration} mask={item.mask} />
+              const sprite = item.sprite
               const art = getV3BuildingArt(sprite.type, sprite.level)
               return (
                 <Group key={sprite.id}>
+                  <Path path={diamond(v3IsoRect(sprite))} color="#7D8585" />
+                  <Path path={diamond(v3IsoRect(sprite))} color="#485458" style="stroke" strokeWidth={1} />
                   {sprite.id === selectedId && <Path path={diamond(v3IsoRect(sprite))} color="rgba(255,255,255,0.45)" />}
                   {art
                     ? (
                       <Sprite
                         source={art}
-                        centerX={sprite.centerX}
+                        bottomX={v3IsoPoint(sprite.x + sprite.w, sprite.y + sprite.h).sx}
                         bottomY={sprite.bottomY}
                         footprintWidth={sprite.footprintWidth}
+                        padAnchor={sprite.w / (sprite.w + sprite.h)}
+                        anchor={getV3BuildingAnchor(sprite.type, sprite.level)}
                         alert={alerts[sprite.id]}
                         font={font}
                       />

@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { getV3ClientArt } from '../../art/clientArt'
 
 import type { BilingualTextValue } from '../../game/types'
 import { explainV3ProgramFit } from '../../game/v3/actions'
@@ -145,7 +146,7 @@ export function V3ActiveJobCard({ state, apply, t }: CardProps) {
       <View style={styles.ticketBanner}><Text style={styles.ticketBannerText}>{t(v3JobLabel(job.templateId))}</Text></View>
       <View style={styles.ticketBody}>
         <View style={styles.ticketRow}>
-          <View style={styles.ticketPortrait}><Text style={styles.portraitGlyph}>🤝</Text></View>
+          <View style={styles.ticketPortrait}><Image source={getV3ClientArt(job.templateId)} style={{ width: 44, height: 44 }} resizeMode="contain" /></View>
           <View style={styles.ticketItem}>
             <Text style={styles.ticketItemText}>Q{job.minimumQuality}+ · {job.quantity} {t({ en: 'units', th: 'หน่วย' })}</Text>
             <Text style={styles.muted}>{t({ en: 'Shipped', th: 'ส่งแล้ว' })} {job.deliveredQuantity}/{job.quantity}</Text>

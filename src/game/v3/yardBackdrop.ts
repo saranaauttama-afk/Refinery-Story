@@ -11,10 +11,12 @@
  * run parallel to the land edges.
  */
 export const V3_YARD_BACKDROP = {
-  x: -1536,
-  y: -256,
-  width: 3072,
-  height: 1696,
+  // Source yard corners (1688x932): (844,308), (1407,580),
+  // (844,852), (281,580), registered to the 48x48 world diamond.
+  x: -844 * 1536 / 1126,
+  y: 416 - 308 * 768 / 544,
+  width: 1688 * 1536 / 1126,
+  height: 932 * 768 / 544,
   // Current preview source size; the world rectangle remains unchanged.
   artWidth: 1688,
   artHeight: 932,

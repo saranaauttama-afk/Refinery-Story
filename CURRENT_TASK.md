@@ -1,5 +1,15 @@
 # CURRENT TASK — Refinery Story Gameplay V3
 
+> **Current owner task — 2026-10-03: finish the pending art pass.**
+> Implemented on `art/yard-v2`: 17 building families × 3 levels, registered
+> harbor backdrop, ground anchors, camera bounds covering the backdrop,
+> all 15 decorations and connected road/fence graphics, palette thumbnails,
+> customer portraits. Source/asset validation and full V3 checks pass.
+> Android export passed. Next: push the art commit and verify the resulting
+> Android Preview APK, then provide its artifact link. Device acceptance is
+> still pending; historical gameplay instructions below do not block the
+> user's explicitly authorized art work.
+
 > **Updated 2026-09-26.** Source of truth for the V3 backlog is
 > [GAMEPLAY_IMPLEMENTATION_V3.md](GAMEPLAY_IMPLEMENTATION_V3.md), with rules in
 > [GAMEPLAY_SYSTEMS_V3.md](GAMEPLAY_SYSTEMS_V3.md) and design in

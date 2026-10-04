@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { SvgXml } from 'react-native-svg'
+import { getV3DecorSvg } from '../../art/decorArt'
 
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, BuildingType } from '../../game/types'
@@ -217,6 +219,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
               onPress={() => { setSelectedId(null); setDecorId(null); setMode({ kind: 'decor', decor: kind, rotated: false }); onClose?.() }}
             >
               {lock && <Text style={styles.lockBadge}>🔒</Text>}
+              <SvgXml xml={getV3DecorSvg(kind)} width={64} height={64} />
               <Text style={styles.tileName} numberOfLines={2}>{t(spec.label)}</Text>
               <Text style={styles.muted}>{lock
                 ? (lock.blocker === 'locked' ? t({ en: `Unlocks C${lock.chapter}`, th: `ปลดล็อก C${lock.chapter}` }) : t({ en: 'Win the Expo', th: 'ชนะเอ็กซ์โป' }))
