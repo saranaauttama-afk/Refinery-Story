@@ -7,6 +7,7 @@
 import type { BuildingType, ProductKey } from '../types'
 import type { V3GameState } from './types'
 import { getV3Footprint, isV3LandUnlocked, listV3Buildings } from './yard'
+import { getV3DecorCells, type V3DecorKind } from './decorData'
 import { getV3ProductQuantity } from './productInventory'
 import type { V3RoadNode } from './yardView'
 
@@ -30,9 +31,15 @@ export type V3TruckTrip = {
   durationMs: number
   dwellMs: number
   driveMs: number
+  /** true when the whole trip runs on player-placed road tiles */
+  onRoad: boolean
 }
 
 export const V3_TRUCK_SPEED_TILES_PER_S = 4
+/** Trucks on player-built roads drive faster — a visible reward for laying roads. */
+export const V3_TRUCK_ROAD_SPEED_TILES_PER_S = 6
+/** Decoration kinds a truck may drive on. */
+export const V3_DRIVABLE_DECOR: ReadonlySet<V3DecorKind> = new Set<V3DecorKind>(['road', 'parkingLot'])
 export const V3_TRUCK_DWELL_MS = 1_800
 export const V3_TRUCK_LEAD_IN = 5
 
@@ -138,6 +145,8 @@ function simplify(points: Array<{ x: number; y: number }>): Array<{ x: number; y
  * building or the road network is missing.
  */
 export function planV3TruckTrip(state: V3GameState, roads: V3RoadNode[], request: V3TruckRequest): V3TruckTrip | null {
+  const byRoad = planV3RoadTrip(state, request)
+  if (byRoad) return byRoad
   const building = state.world.buildingsById[request.buildingId]
   if (!building) return null
   const footprint = getV3Footprint(building.type, building.level) ?? { w: 1, h: 1 }
@@ -155,13 +164,16 @@ export function planV3TruckTrip(state: V3GameState, roads: V3RoadNode[], request
   const lead = { x: gate.x + outward.dx * V3_TRUCK_LEAD_IN, y: gate.y + outward.dy * V3_TRUCK_LEAD_IN }
   // Spur into the yard along grid lines: across the edge first, then along it.
   const spur = outward.dx !== 0 ? [{ x: front.x, y: gate.y }, front] : [{ x: gate.x, y: front.y }, front]
-  const points = simplify([lead, { x: gate.x, y: gate.y }, ...spur])
+  return tripFromPoints(request, simplify([lead, { x: gate.x, y: gate.y }, ...spur]), V3_TRUCK_SPEED_TILES_PER_S, false)
+}
+
+function tripFromPoints(request: V3TruckRequest, points: Array<{ x: number; y: number }>, speed: number, onRoad: boolean): V3TruckTrip {
   const cum = [0]
   for (let index = 1; index < points.length; index++) {
     cum.push(cum[index - 1] + Math.abs(points[index].x - points[index - 1].x) + Math.abs(points[index].y - points[index - 1].y))
   }
   const length = cum[cum.length - 1]
-  const driveMs = (length / V3_TRUCK_SPEED_TILES_PER_S) * 1000
+  const driveMs = (length / speed) * 1000
   return {
     id: request.id,
     line: request.line,
@@ -172,7 +184,69 @@ export function planV3TruckTrip(state: V3GameState, roads: V3RoadNode[], request
     driveMs,
     dwellMs: V3_TRUCK_DWELL_MS,
     durationMs: driveMs * 2 + V3_TRUCK_DWELL_MS,
+    onRoad,
   }
+}
+
+const NEIGHBOURS = [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }] as const
+
+/** Tiles covered by drivable decorations (roads, parking). */
+export function getV3DrivableCells(state: V3GameState): Set<string> {
+  const cells = new Set<string>()
+  for (const decoration of Object.values(state.world.decorations ?? {})) {
+    if (!V3_DRIVABLE_DECOR.has(decoration.kind)) continue
+    for (const cell of getV3DecorCells(decoration.kind, decoration.rotated, decoration.x, decoration.y)) cells.add(key(cell.x, cell.y))
+  }
+  return cells
+}
+
+/**
+ * Trip along player-built road tiles (tile centres): from outside the land,
+ * through a road tile on the land edge, over connected road tiles to one that
+ * touches the building. Null when no such connected road exists.
+ */
+export function planV3RoadTrip(state: V3GameState, request: V3TruckRequest): V3TruckTrip | null {
+  const building = state.world.buildingsById[request.buildingId]
+  if (!building) return null
+  const drivable = getV3DrivableCells(state)
+  if (drivable.size === 0) return null
+  const footprint = getV3Footprint(building.type, building.level) ?? { w: 1, h: 1 }
+  const inBuilding = (x: number, y: number) => x >= building.x && x < building.x + footprint.w && y >= building.y && y < building.y + footprint.h
+  // Multi-source BFS from every edge road tile (a tile with an off-land neighbour).
+  const prev = new Map<string, string | null>()
+  const exitOf = new Map<string, { dx: number; dy: number }>()
+  const queue: Array<{ x: number; y: number }> = []
+  for (const cell of drivable) {
+    const [x, y] = cell.split(',').map(Number)
+    const out = NEIGHBOURS.find(({ dx, dy }) => !isV3LandUnlocked(state, x + dx, y + dy))
+    if (!out) continue
+    prev.set(cell, null); exitOf.set(cell, out); queue.push({ x, y })
+  }
+  let goal: string | null = null
+  while (queue.length && !goal) {
+    const at = queue.shift()!
+    if (NEIGHBOURS.some(({ dx, dy }) => inBuilding(at.x + dx, at.y + dy))) { goal = key(at.x, at.y); break }
+    for (const { dx, dy } of NEIGHBOURS) {
+      const next = key(at.x + dx, at.y + dy)
+      if (!drivable.has(next) || prev.has(next)) continue
+      prev.set(next, key(at.x, at.y))
+      queue.push({ x: at.x + dx, y: at.y + dy })
+    }
+  }
+  if (!goal) return null
+  const cells: Array<{ x: number; y: number }> = []
+  let edge = goal
+  for (let k: string | null = goal; k; k = prev.get(k) ?? null) {
+    const [x, y] = k.split(',').map(Number)
+    cells.unshift({ x, y })
+    edge = k
+  }
+  const out = exitOf.get(edge)!
+  const start = cells[0]
+  const lead = { x: start.x + 0.5 + out.dx * V3_TRUCK_LEAD_IN, y: start.y + 0.5 + out.dy * V3_TRUCK_LEAD_IN }
+  const points = simplify([lead, ...cells.map((cell) => ({ x: cell.x + 0.5, y: cell.y + 0.5 }))])
+  if (points.length < 2) return null
+  return tripFromPoints(request, points, V3_TRUCK_ROAD_SPEED_TILES_PER_S, true)
 }
 
 /**

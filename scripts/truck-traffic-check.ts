@@ -90,4 +90,26 @@ if (gasolineTank && sold.changed) {
 }
 assert.deepEqual(detectV3TruckRequests(state, stocked), [], 'production alone spawns no trucks')
 
-console.log(`truck traffic check ok — ${buildings.length} buildings routed, ${roads.length} road nodes`)
+// ---- Player-built roads: a connected road from the land edge is used (faster), a cut one is not ----
+const tank = crudeTank!
+let paved = { ...state, world: { ...state.world, moneyCents: 10_000_000 } }
+let edgeY = tank.y + 2
+while (isV3LandUnlocked(paved, tank.x, edgeY + 1)) edgeY++
+for (let y = tank.y + 2; y <= edgeY; y++) {
+  const placed = reduceV3Action(paved, { type: 'place_decoration', sequence: paved.nextActionSequence, kind: 'road', x: tank.x, y, rotated: false })
+  assert.ok(placed.changed, `road at ${tank.x},${y} placed`)
+  paved = placed.state
+}
+const roadTrip = planV3TruckTrip(paved, deriveV3RoadNetwork(paved), { id: 'r', line: 'crude', buildingId: tank.id, kind: 'delivery' })!
+assert.ok(roadTrip.onRoad, 'connected road is used')
+assert.deepEqual([roadTrip.xs.at(-1), roadTrip.ys.at(-1)], [tank.x + 0.5, tank.y + 2.5], 'parks on the road tile touching the tank')
+assert.ok(!isV3LandUnlocked(paved, Math.floor(roadTrip.xs[0]), Math.floor(roadTrip.ys[0])), 'arrives from off the land')
+const offRoad = planV3TruckTrip(state, roads, { id: 'o', line: 'crude', buildingId: tank.id, kind: 'delivery' })!
+assert.ok(roadTrip.length / roadTrip.driveMs > offRoad.length / offRoad.driveMs, 'road trucks drive faster')
+// cut the road in the middle → falls back to the off-road route
+const middle = Object.values(paved.world.decorations).find((decoration) => decoration.y === tank.y + 4)!
+const cut = reduceV3Action(paved, { type: 'remove_decoration', sequence: paved.nextActionSequence, decorationId: middle.id })
+assert.ok(cut.changed, "road tile removed")
+assert.equal(planV3TruckTrip(cut.state, deriveV3RoadNetwork(cut.state), { id: 'c', line: 'crude', buildingId: tank.id, kind: 'delivery' })!.onRoad, false, 'a broken road is not used')
+
+console.log(`truck traffic check ok — ${buildings.length} buildings routed, ${roads.length} road nodes, road trip ${roadTrip.length} tiles`)
