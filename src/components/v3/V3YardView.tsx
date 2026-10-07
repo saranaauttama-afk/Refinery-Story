@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native'
 import {
   Canvas,
@@ -14,7 +14,7 @@ import {
   type DataSourceParam,
 } from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import { runOnJS, useDerivedValue, useSharedValue } from 'react-native-reanimated'
+import { runOnJS, useAnimatedReaction, useDerivedValue, useFrameCallback, useSharedValue, type SharedValue } from 'react-native-reanimated'
 
 import { clampCameraValue } from '../../factoryCamera'
 import type { V3GameState } from '../../game/v3/types'
@@ -30,6 +30,8 @@ import {
 } from '../../game/v3/yardView'
 import { getV3BuildingArt } from './v3Art'
 import { V3_DECOR_PLACEHOLDER_COLOR, getV3DecorFootprint } from '../../game/v3/decorData'
+import { planV3TruckTrip, sampleV3TruckTrip, type V3TruckRequest, type V3TruckTrip } from '../../game/v3/traffic'
+import { TRUCK_ANCHOR_FROM_BOTTOM, TRUCK_ART, TRUCK_MASTER_WIDTH } from './v3Vehicles'
 
 const MIN_SCALE = 0.35
 const MAX_SCALE = 2.2
@@ -49,6 +51,11 @@ type Props = {
   /** Building IDs that need attention (idle/blocked line…). */
   alerts: Record<string, string>
   onTapTile: (x: number, y: number) => void
+  /** Visual-only truck trips (deliveries / pickups); see game/v3/traffic.ts. */
+  trucks: V3TruckRequest[]
+  /** Effective game speed (0 = paused); trucks move in simulated time like the economy. */
+  speed: number
+  onTruckDone: (id: string) => void
 }
 
 const PREVIEW_FILL: Record<string, string> = {
@@ -95,14 +102,84 @@ const Sprite = memo(function Sprite({
 })
 
 /**
+ * One tanker on its round trip. Position and facing are sampled on the UI
+ * thread from simulated time, so a paused game freezes traffic too.
+ */
+const Truck = memo(function Truck({ trip, startMs, simMs, onDone }: {
+  trip: V3TruckTrip
+  startMs: number
+  simMs: SharedValue<number>
+  onDone: (id: string) => void
+}) {
+  const art = TRUCK_ART[trip.line]
+  const se = useImage(art.se as DataSourceParam)
+  const sw = useImage(art.sw as DataSourceParam)
+  const nw = useImage(art.nw as DataSourceParam)
+  const ne = useImage(art.ne as DataSourceParam)
+  const { xs, ys, cum, driveMs, dwellMs, id } = trip
+  const sample = useDerivedValue(() => sampleV3TruckTrip(xs, ys, cum, driveMs, dwellMs, simMs.value - startMs))
+  useAnimatedReaction(() => sample.value.done, (done, previous) => {
+    if (done && !previous) runOnJS(onDone)(id)
+  })
+  const transform = useDerivedValue(() => {
+    const { x, y } = sample.value
+    return [{ translateX: (x - y) * V3_ISO.tw / 2 }, { translateY: (x + y) * V3_ISO.th / 2 }]
+  })
+  const opacitySe = useDerivedValue(() => (sample.value.done ? 0 : sample.value.dir === 0 ? 1 : 0))
+  const opacitySw = useDerivedValue(() => (sample.value.done ? 0 : sample.value.dir === 1 ? 1 : 0))
+  const opacityNw = useDerivedValue(() => (sample.value.done ? 0 : sample.value.dir === 2 ? 1 : 0))
+  const opacityNe = useDerivedValue(() => (sample.value.done ? 0 : sample.value.dir === 3 ? 1 : 0))
+  if (!se || !sw || !nw || !ne) return null
+  const scale = V3_ISO.tw / TRUCK_MASTER_WIDTH
+  const width = V3_ISO.tw
+  const height = se.height() * scale
+  const x = -width / 2
+  const y = -(height - TRUCK_ANCHOR_FROM_BOTTOM * scale)
+  return (
+    <Group transform={transform}>
+      <SkiaImage image={se} x={x} y={y} width={width} height={height} opacity={opacitySe} sampling={PIXEL} />
+      <SkiaImage image={sw} x={x} y={y} width={width} height={height} opacity={opacitySw} sampling={PIXEL} />
+      <SkiaImage image={nw} x={x} y={y} width={width} height={height} opacity={opacityNw} sampling={PIXEL} />
+      <SkiaImage image={ne} x={x} y={y} width={width} height={height} opacity={opacityNe} sampling={PIXEL} />
+    </Group>
+  )
+})
+
+/**
  * Full-screen isometric refinery. Draws only owned land plus adjacent ring
  * parcels; buildings use the existing pixel art placed on their real footprint.
  */
-function V3YardView({ state, width, height, selectedId, highlightParcelId, placement, upgradeGrowth, floaters, alerts, onTapTile }: Props) {
+function V3YardView({ state, width, height, selectedId, highlightParcelId, placement, upgradeGrowth, floaters, alerts, onTapTile, trucks, speed, onTruckDone }: Props) {
   const landKey = `${state.world.unlockedParcelIds.join(',')}|${state.campaignProgress.chapter}`
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
   const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
+  // Simulated clock for traffic: advances only while the game runs, scaled by speed.
+  const simMs = useSharedValue(0)
+  const speedValue = useSharedValue(speed)
+  useEffect(() => { speedValue.value = speed }, [speed])
+  const clock = useFrameCallback((frame) => {
+    'worklet'
+    simMs.value += (frame.timeSincePreviousFrame ?? 0) * speedValue.value
+  }, false)
+  // Plan each truck once, when first seen; its start is pinned to the sim clock then.
+  const tripsRef = useRef(new Map<string, { trip: V3TruckTrip; startMs: number }>())
+  const trips: Array<{ trip: V3TruckTrip; startMs: number }> = []
+  const unroutable: string[] = []
+  for (const request of trucks) {
+    let entry = tripsRef.current.get(request.id)
+    if (!entry) {
+      const trip = planV3TruckTrip(state, roads, request)
+      if (!trip) { unroutable.push(request.id); continue }
+      entry = { trip, startMs: simMs.value }
+      tripsRef.current.set(request.id, entry)
+    }
+    trips.push(entry)
+  }
+  for (const id of [...tripsRef.current.keys()]) if (!trucks.some((request) => request.id === id)) tripsRef.current.delete(id)
+  const unroutableKey = unroutable.join(',')
+  useEffect(() => { for (const id of unroutable) onTruckDone(id) }, [unroutableKey])
+  useEffect(() => { clock.setActive(trips.length > 0) }, [trips.length > 0])
   // Ground detail is built once per land change as ONE path each (grid, roads),
   // never per tile per frame: keeps a 48×48 yard smooth on phones.
   const gridPath = useMemo(() => {
@@ -249,6 +326,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
                 </Group>
               )
             })}
+            {trips.map(({ trip, startMs }) => <Truck key={trip.id} trip={trip} startMs={startMs} simMs={simMs} onDone={onTruckDone} />)}
             {placement?.cells.map((cell) => (
               <Path key={`p${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={PREVIEW_FILL[placement.status] ?? 'rgba(255,99,99,0.6)'} />
             ))}

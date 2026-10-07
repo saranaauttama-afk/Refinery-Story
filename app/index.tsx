@@ -37,6 +37,7 @@ import { V3ExpoPanel } from '../src/components/v3/V3ExpoPanel'
 import { getV3PlayerRank } from '../src/game/v3/rivals'
 import { getV3Fame } from '../src/game/v3/fame'
 import { getV3Calendar } from '../src/game/v3/yardView'
+import { detectV3TruckRequests, type V3TruckRequest } from '../src/game/v3/traffic'
 import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
 import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3GasolineLineCard, V3LedgerCard, V3RecoveryCard, V3SpecializationCard } from '../src/components/v3/V3GameCards'
@@ -51,6 +52,9 @@ type ClientSection = 'job' | 'offers' | 'expo'
 type CompanySection = 'overview' | 'ranking' | 'inbox' | 'finance'
 type TimedFloater = Omit<V3Floater, 'age'> & { born: number }
 const FLOATER_MS = 1_600
+/** Visual traffic caps: never more than this many trucks, and one new truck per line per gap. */
+const TRUCK_MAX_ACTIVE = 5
+const TRUCK_LINE_GAP_MS = 2_500
 
 export default function V3GameScreen() {
   const router = useRouter()
@@ -67,6 +71,22 @@ export default function V3GameScreen() {
   const [timedFloaters, setTimedFloaters] = useState<TimedFloater[]>([])
   const outputRef = useRef<Record<string, number>>({})
   const floaterSeq = useRef(0)
+  const [trucks, setTrucks] = useState<V3TruckRequest[]>([])
+  const truckSeq = useRef(0)
+  const truckLastByLine = useRef<Record<string, number>>({})
+  const spawnTrucks = (before: V3GameState, after: V3GameState) => {
+    const found = detectV3TruckRequests(before, after)
+    if (found.length === 0) return
+    const now = Date.now()
+    const fresh = found.filter((request) => now - (truckLastByLine.current[request.line] ?? 0) >= TRUCK_LINE_GAP_MS)
+    if (fresh.length === 0) return
+    for (const request of fresh) truckLastByLine.current[request.line] = now
+    setTrucks((current) => [
+      ...current,
+      ...fresh.map((request) => { truckSeq.current += 1; return { ...request, id: `t${truckSeq.current}` } }),
+    ].slice(-TRUCK_MAX_ACTIVE))
+  }
+  const removeTruck = (id: string) => setTrucks((current) => current.filter((truck) => truck.id !== id))
   const pushFloater = (floater: Omit<TimedFloater, 'id' | 'born'>) => {
     floaterSeq.current += 1
     const entry = { ...floater, id: `f${floaterSeq.current}`, born: Date.now() }
@@ -115,6 +135,7 @@ export default function V3GameScreen() {
       last = now
       let next = stateRef.current
       if (!next || step.ticks === 0) return
+      const before = next
       const cycleBefore = Math.floor(next.world.tickCount / 25)
       for (let remaining = step.ticks; remaining > 0; remaining -= 25) {
         const result = runV3ProductionTick(next, Math.min(25, remaining))
@@ -129,6 +150,7 @@ export default function V3GameScreen() {
         }
         outputRef.current = {}
       }
+      spawnTrucks(before, next)
       stateRef.current = next
       dirtyRef.current = true
       setState(next)
@@ -160,6 +182,7 @@ export default function V3GameScreen() {
         const anchor = Object.values(result.state.world.buildingsById).find((building) => building.type === 'gasolineTank') ?? Object.values(result.state.world.buildingsById)[0]
         if (anchor) pushFloater({ x: anchor.x, y: anchor.y, text: `+$${Math.floor(gained / 100).toLocaleString()}`, color: '#FFD447' })
       }
+      spawnTrucks(current, result.state)
       stateRef.current = result.state
       setState(result.state)
       dirtyRef.current = false
@@ -294,6 +317,9 @@ export default function V3GameScreen() {
             upgradeGrowth={yard.upgradeGrowth}
             floaters={floaters}
             alerts={alerts}
+            trucks={trucks}
+            speed={effectiveSpeed}
+            onTruckDone={removeTruck}
             onTapTile={(x, y) => {
               if (yard.mode.kind === 'decor') applyPanel({ type: 'place_decoration', sequence: state.nextActionSequence, kind: yard.mode.decor, x, y, rotated: yard.mode.rotated })
               else yard.onTapTile(x, y)
