@@ -7,7 +7,8 @@ import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../
 import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
 import { getV3BuildingLevel, listV3Buildings } from '../../game/v3/yard'
-import { v3BuildingNumber } from './v3Labels'
+import { RESEARCH_ITEMS } from '../../game/data/research'
+import { v3BuildingNumber, v3FamilyLabel, v3ModuleLabel, v3ProfileLabel } from './v3Labels'
 import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity, getV3StockAllocations, isV3JobEligibleVariant } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
@@ -68,6 +69,13 @@ function researchEffectText(effect: V3ResearchEffect): BilingualTextValue {
     case 'upkeep': return { en: `maintenance −${effect.value * 100}% (cap 25%)`, th: `ค่าบำรุง −${effect.value * 100}% (สูงสุด 25%)` }
     case 'jobRp': return { en: `job RP +${effect.value * 100}% (cap 50%)`, th: `RP จากงาน +${effect.value * 100}% (สูงสุด 50%)` }
   }
+}
+
+
+/** Player-facing research name (never the internal key). */
+function researchName(key: string, t: (value: BilingualTextValue) => string): string {
+  const item = RESEARCH_ITEMS.find((entry) => entry.key === key)
+  return item ? t(item.name) : key
 }
 
 export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
@@ -225,7 +233,7 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
           return (
             <View key={line.buildingId} style={styles.line}>
               <Text style={styles.lineTitle}>
-                {t(BUILDINGS[line.building].name)} {v3BuildingNumber(state, line.buildingId)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality}${program.installedModule !== 'none' ? ` · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : ''}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
+                {t(BUILDINGS[line.building].name)} {v3BuildingNumber(state, line.buildingId)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality}${program.installedModule !== 'none' ? ` · ${t(v3ModuleLabel(program.installedModule))}` : ''}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
               </Text>
               <Text style={styles.row}>{t(STATUS_TEXT[line.status])} · {t(LIMIT_TEXT[line.limitedBy])}</Text>
               <Text style={styles.row}>
@@ -247,11 +255,11 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
               {line.building !== 'wasteTreatmentPlant' && <View style={styles.chips}>
                 {MODULES.map((module) => {
                   const quote = getV3ModuleQuote(state, line.buildingId, module)
-                  if (quote.blocker === 'no_change') return <Text key={module} style={styles.chipActive}>✓ {module}</Text>
+                  if (quote.blocker === 'no_change') return <Text key={module} style={styles.chipActive}>✓ {t(v3ModuleLabel(module))}</Text>
                   return (
                     <View key={module} style={styles.chipWrap}>
                       <Gate
-                        label={`${module}${quote.costCents ? ` $${quote.costCents / 100}` : ''}`}
+                        label={`${t(v3ModuleLabel(module))}${quote.costCents ? ` $${quote.costCents / 100}` : ''}`}
                         action={{ type: 'set_module', buildingId: line.buildingId, module }}
                       />
                     </View>
@@ -262,8 +270,8 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
                 <Gate
                   key={recipe.id}
                   label={t({
-                    en: `Use ${recipe.name} Q${recipe.quality}${recipe.minPlantLevel > 1 ? ` · plant Lv${recipe.minPlantLevel}` : ''}${recipe.module !== 'none' ? ` · ${recipe.module} module` : ''}`,
-                    th: `ใช้ ${recipe.name} Q${recipe.quality}${recipe.minPlantLevel > 1 ? ` · โรงงาน Lv${recipe.minPlantLevel}` : ''}${recipe.module !== 'none' ? ` · โมดูล ${recipe.module}` : ''}`,
+                    en: `Use ${recipe.name} Q${recipe.quality}${recipe.minPlantLevel > 1 ? ` · plant Lv${recipe.minPlantLevel}` : ''}${recipe.module !== 'none' ? ` · ${t(v3ModuleLabel(recipe.module))}` : ''}`,
+                    th: `ใช้ ${recipe.name} Q${recipe.quality}${recipe.minPlantLevel > 1 ? ` · โรงงาน Lv${recipe.minPlantLevel}` : ''}${recipe.module !== 'none' ? ` · ${t(v3ModuleLabel(recipe.module))}` : ''}`,
                   })}
                   action={{ type: 'set_program', buildingId: line.buildingId, blueprintId: recipe.id }}
                 />
@@ -280,7 +288,7 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
         {(Object.keys(V3_RESEARCH) as Array<keyof typeof V3_RESEARCH>).map((researchId) => (
           <Gate
             key={researchId}
-            label={`${state.world.unlockedResearchIds.includes(researchId) ? '✓ ' : ''}${researchId} · ${V3_RESEARCH[researchId].rp} RP · ${t(researchEffectText(V3_RESEARCH[researchId].effect))}`}
+            label={`${state.world.unlockedResearchIds.includes(researchId) ? '✓ ' : ''}${researchName(researchId, t)} · ${V3_RESEARCH[researchId].rp} RP · ${t(researchEffectText(V3_RESEARCH[researchId].effect))}`}
             action={{ type: 'buy_research', researchId }}
           />
         ))}
@@ -301,7 +309,7 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
         <View style={styles.chips}>
           {MODULES.map((module) => (
             <Pressable key={module} onPress={() => setDevModule(module)} style={[styles.chip, devModule === module && styles.chipSelected]}>
-              <Text style={styles.chipText}>{module}</Text>
+              <Text style={styles.chipText}>{t(v3ModuleLabel(module))}</Text>
             </Pressable>
           ))}
         </View>
@@ -309,13 +317,13 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
           {t({ en: 'Fee', th: 'ค่าพัฒนา' })} ${V3_DEVELOPMENT_BY_FAMILY[devFamily].feeCents / 100} · {V3_DEVELOPMENT_BY_FAMILY[devFamily].ticks / 5}s · 10 {t({ en: 'samples', th: 'ตัวอย่าง' })} · {t({ en: 'knowledge rank', th: 'ระดับความรู้' })} {rank}
         </Text>
         {state.developmentProject ? (
-          <Text style={styles.row}>{state.developmentProject.family} {state.developmentProject.profile}/{state.developmentProject.module} Q{state.developmentProject.quality} · {(state.developmentProject.remainingTicks / 5).toFixed(0)}s</Text>
+          <Text style={styles.row}>{t(v3FamilyLabel(state.developmentProject.family))} · {t(v3ProfileLabel(state.developmentProject.profile))}{state.developmentProject.module !== 'none' ? ` · ${t(v3ModuleLabel(state.developmentProject.module))}` : ''} Q{state.developmentProject.quality} · {(state.developmentProject.remainingTicks / 5).toFixed(0)}s</Text>
         ) : PROFILES.map((profile) => (
           <Gate
             key={profile}
             label={t({
-              en: `Develop ${profile} → Q${getV3BlueprintQuality(profile, devModule, rank, 0)} (no lead)`,
-              th: `พัฒนา ${profile} → Q${getV3BlueprintQuality(profile, devModule, rank, 0)} (ไม่มีหัวหน้า)`,
+              en: `Develop ${v3ProfileLabel(profile).en} → Q${getV3BlueprintQuality(profile, devModule, rank, 0)} (no lead)`,
+              th: `พัฒนา ${v3ProfileLabel(profile).th} → Q${getV3BlueprintQuality(profile, devModule, rank, 0)} (ไม่มีหัวหน้า)`,
             })}
             action={{
               type: 'start_development', family: devFamily, profile, module: devModule,

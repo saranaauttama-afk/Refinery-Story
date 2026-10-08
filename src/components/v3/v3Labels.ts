@@ -69,3 +69,35 @@ export function v3BuildingNumber(state: V3GameState, buildingId: string): string
   const same = Object.values(state.world.buildingsById).filter((entry) => entry.type === building.type).map((entry) => entry.id).sort()
   return `#${same.indexOf(buildingId) + 1}`
 }
+
+const MODULE: Record<string, BilingualTextValue> = {
+  none: { en: 'Standard', th: 'มาตรฐาน' },
+  throughput: { en: 'Speed', th: 'เร่งผลิต' },
+  economy: { en: 'Economy', th: 'ประหยัด' },
+  precision: { en: 'Precision', th: 'แม่นยำ' },
+}
+/** Plant module / development module name (internal keys stay internal). */
+export function v3ModuleLabel(module: string): BilingualTextValue {
+  return MODULE[module] ?? { en: module, th: module }
+}
+
+const PROFILE: Record<string, BilingualTextValue> = {
+  volume: { en: 'Volume', th: 'เน้นปริมาณ' },
+  standard: { en: 'Standard', th: 'มาตรฐาน' },
+  precision: { en: 'Premium', th: 'พรีเมียม' },
+}
+/** Development approach name. */
+export function v3ProfileLabel(profile: string): BilingualTextValue {
+  return PROFILE[profile] ?? { en: profile, th: profile }
+}
+
+const FAMILY: Record<string, BilingualTextValue> = {
+  gasoline: { en: 'Gasoline', th: 'น้ำมันเบนซิน' },
+  lubricants: { en: 'Lubricants', th: 'น้ำมันหล่อลื่น' },
+  jetFuel: { en: 'Jet Fuel', th: 'น้ำมันเครื่องบิน' },
+  petrochemicals: { en: 'Petrochemicals', th: 'ปิโตรเคมี' },
+  plasticPellets: { en: 'Plastic Pellets', th: 'เม็ดพลาสติก' },
+}
+export function v3FamilyLabel(family: string): BilingualTextValue {
+  return FAMILY[family] ?? { en: family, th: family }
+}

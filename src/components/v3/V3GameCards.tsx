@@ -15,7 +15,7 @@ import { getV3LeadContribution } from '../../game/v3/workforce'
 import { listV3Buildings } from '../../game/v3/yard'
 import { BUILDINGS } from '../../game/data/buildings'
 import { fonts } from '../../theme'
-import { v3BuildingNumber, v3JobLabel } from './v3Labels'
+import { v3BuildingNumber, v3JobLabel, v3ModuleLabel } from './v3Labels'
 
 type Translate = (value: BilingualTextValue) => string
 type CardProps = {
@@ -79,7 +79,7 @@ export function V3GasolineDevelopmentCard({ state, apply, t, describe }: CardPro
         const active = state.plantPrograms[distillationBuildingId]?.blueprintId === blueprint.id
         const needs = [
           blueprint.minPlantLevel > 1 ? t({ en: `plant Lv${blueprint.minPlantLevel}`, th: `โรงงาน Lv${blueprint.minPlantLevel}` }) : null,
-          blueprint.module !== 'none' ? t({ en: `${blueprint.module} module`, th: `โมดูล ${blueprint.module}` }) : null,
+          blueprint.module !== 'none' ? t(v3ModuleLabel(blueprint.module)) : null,
         ].filter(Boolean).join(' + ')
         return (
           <View key={blueprint.id}>
