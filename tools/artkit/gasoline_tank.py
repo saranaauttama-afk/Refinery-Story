@@ -1,0 +1,4 @@
+"""Gasoline Tank — orange band (ART_ASSET_LIST §3)."""
+import storage_tank as T
+FOOTPRINT = T.FOOTPRINT
+LEVELS = T.levels('gasoline')

@@ -59,7 +59,8 @@ def render(scene, w, h, out_path=None, steps=260, crop=True):
 
     im = Image.fromarray(img, 'RGBA')
     top = (max(0, im.getbbox()[1] - 2) if im.getbbox() else 0) if crop else 0
-    im = im.crop((0, top, W, H)).resize((W * S.PIXEL, (H - top) * S.PIXEL), Image.NEAREST)
+    bottom = (im.getbbox()[3] if im.getbbox() else H) if crop else H   # §2: bottom edge = diamond's bottom corner
+    im = im.crop((0, top, W, bottom)).resize((W * S.PIXEL, (bottom - top) * S.PIXEL), Image.NEAREST)
     if out_path:
         im.save(out_path)
     return im

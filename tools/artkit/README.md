@@ -20,3 +20,13 @@ python3 build_trucks.py       # out/trucks/truck_<line>_<se|sw|nw|ne>.png  → a
 Trucks: 1×1 tile canvas, uncropped sideways, all facings trimmed by the same
 amount, so the tile centre is always 16 master px above the bottom edge
 (`TRUCK_ANCHOR_FROM_BOTTOM` in `src/components/v3/v3Vehicles.ts`).
+
+Starter buildings (replace `assets/plants/starter/*` by filename):
+
+```
+python3 build.py distillation_unit   # 3x3, 4x4, 5x4 — columns, drum, pipe runs, catwalks
+python3 build.py crude_tank          # 2x2, 3x2, 3x3 — dark brown band
+python3 build.py gasoline_tank       # 2x2, 3x2, 3x3 — orange band
+cp out/<name>_lv*.png ../../assets/plants/starter/
+python3 build_ground.py              # yard ground atlas → assets/ground/ground_atlas.png
+```
