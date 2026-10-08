@@ -105,6 +105,9 @@ AO = True               # ambient occlusion: darker in corners, under platforms,
 AO_STRENGTH = 0.9
 DITHER = True           # 4x4 ordered dither between ramp steps (classic pixel-art gradient)
 DITHER_AMOUNT = 0.55
+OUTLINE_PX = 1          # silhouette thickness at master scale (2 = a full pixel in game, which draws at 1/2)
+INNER_DARKEN = 0.8      # inner line colour = material's darkest tone x this (lower = stronger lines)
+RIM = False             # 1px highlight on edges facing the light (top-left)
 SELOUT = True           # inner lines use the material's own darkest tone; only the silhouette is ink
 
 # --- outline ---------------------------------------------------------------

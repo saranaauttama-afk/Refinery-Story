@@ -68,12 +68,14 @@ def render(scene, w, h, out_path=None, steps=260, crop=True, points=None):
     dither = np.tile(bayer, (H // 4 + 1, W // 4 + 1))[:H, :W] * (S.DITHER_AMOUNT if getattr(S, 'DITHER', False) else 0)
     img = np.zeros((H, W, 4), np.uint8)
     darkest = {}
+    lightest = {}
     for i, name in enumerate(names):
         sel = hit & (mat == i)
         ramp = np.array(S.ACCENTS[name[7:]] if name.startswith('accent:') else S.RAMPS[name])
         k = np.clip(np.floor((1 - shade[sel]) * len(ramp) * 1.05 + dither[sel] + 0.5 * bool(getattr(S, 'DITHER', False))).astype(int), 0, len(ramp) - 1)
         img[sel, :3] = ramp[k]; img[sel, 3] = 255
         darkest[i] = ramp[-1]
+        lightest[i] = ramp[0]
 
     edge = np.zeros_like(hit)
     for dy, dx in ((0, 1), (1, 0), (0, -1), (-1, 0)):
@@ -85,9 +87,21 @@ def render(scene, w, h, out_path=None, steps=260, crop=True, points=None):
         sil = np.zeros_like(hit)
         for dy, dx in ((0, 1), (1, 0), (0, -1), (-1, 0)):
             sil |= hit & ~np.roll(np.roll(hit, dy, 0), dx, 1)
+        for _ in range(getattr(S, 'OUTLINE_PX', 1) - 1):      # thicken the silhouette inward
+            grow = np.zeros_like(sil)
+            for dy, dx in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+                grow |= np.roll(np.roll(sil, dy, 0), dx, 1)
+            sil = sil | (grow & hit)
         inner = edge & ~sil
+        if getattr(S, 'RIM', False):
+            # light-facing rim: surface pixels whose up-left neighbour is empty or far behind
+            ul_hit = np.roll(np.roll(hit, 1, 0), 1, 1)
+            ul_t = np.roll(np.roll(t, 1, 0), 1, 1)
+            rim = hit & ~sil & ~inner & (~ul_hit | (ul_t > t + S.OUTLINE_DEPTH_BREAK))
+            for i, col in lightest.items():
+                img[rim & (mat == i), :3] = col
         for i, col in darkest.items():
-            img[inner & (mat == i), :3] = (np.array(col) * 0.8).astype(np.uint8)
+            img[inner & (mat == i), :3] = (np.array(col) * getattr(S, 'INNER_DARKEN', 0.8)).astype(np.uint8)
         img[sil, :3] = S.INK; img[sil, 3] = 255
     else:
         img[edge, :3] = S.INK; img[edge, 3] = 255
