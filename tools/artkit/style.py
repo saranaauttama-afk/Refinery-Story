@@ -47,5 +47,15 @@ ACCENTS = {
     'polymer':       [(150, 230, 110), (99, 199, 77), (62, 137, 72), (38, 92, 56)],
 }
 
+# --- render quality v2 (set False to get the v1 look) ------------------------
+SHADOWS = True          # soft cast shadows (buildings shade their own pad, pipes shade walls)
+SHADOW_SOFTNESS = 10.0  # higher = harder edge
+SHADOW_STRENGTH = 0.55
+AO = True               # ambient occlusion: darker in corners, under platforms, where parts meet
+AO_STRENGTH = 0.9
+DITHER = True           # 4x4 ordered dither between ramp steps (classic pixel-art gradient)
+DITHER_AMOUNT = 0.55
+SELOUT = True           # inner lines use the material's own darkest tone; only the silhouette is ink
+
 # --- outline ---------------------------------------------------------------
 OUTLINE_DEPTH_BREAK = 0.25     # world units of depth jump that gets an ink line

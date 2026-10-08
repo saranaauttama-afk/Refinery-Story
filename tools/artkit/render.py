@@ -40,14 +40,40 @@ def render(scene, w, h, out_path=None, steps=260, crop=True):
     L = S.LIGHT_SCREEN[0] * right + S.LIGHT_SCREEN[1] * up - S.LIGHT_SCREEN[2] * fwd
     L /= np.linalg.norm(L)
     Hh = (L - fwd) / np.linalg.norm(L - fwd)
-    shade = np.clip(n @ L, 0, 1) * S.DIFFUSE + S.AMBIENT + np.clip(n @ Hh, 0, 1) ** S.SPEC_POWER * S.SPECULAR
+    lam = np.clip(n @ L, 0, 1)
+    shadow = np.ones(a.shape)
+    occl = np.ones(a.shape)
+    Ph, nh = P[hit], n[hit]
+    if getattr(S, 'SHADOWS', False) and len(Ph):
+        # soft shadow: march from the surface toward the light, keep the closest miss
+        res = np.ones(len(Ph)); tt = np.full(len(Ph), 0.03)
+        base = Ph + nh * 0.01
+        for _ in range(48):
+            d, _m = _eval(scene, base + L * tt[:, None])
+            res = np.minimum(res, S.SHADOW_SOFTNESS * d / tt)
+            tt += np.clip(d, 0.02, 0.25)
+            if (tt > 6).all():
+                break
+        shadow[hit] = 1 - S.SHADOW_STRENGTH * (1 - np.clip(res, 0, 1))
+    if getattr(S, 'AO', False) and len(Ph):
+        acc = np.zeros(len(Ph)); w8 = 1.0
+        for i in range(1, 6):
+            h_ = 0.04 * i
+            d, _m = _eval(scene, Ph + nh * h_)
+            acc += w8 * (h_ - d); w8 *= 0.6
+        occl[hit] = np.clip(1 - S.AO_STRENGTH * 3 * acc, 0.35, 1)
+    shade = (lam * shadow * S.DIFFUSE + S.AMBIENT) * occl + np.clip(n @ Hh, 0, 1) ** S.SPEC_POWER * S.SPECULAR * shadow
 
+    bayer = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16 - 0.5
+    dither = np.tile(bayer, (H // 4 + 1, W // 4 + 1))[:H, :W] * (S.DITHER_AMOUNT if getattr(S, 'DITHER', False) else 0)
     img = np.zeros((H, W, 4), np.uint8)
+    darkest = {}
     for i, name in enumerate(names):
         sel = hit & (mat == i)
         ramp = np.array(S.ACCENTS[name[7:]] if name.startswith('accent:') else S.RAMPS[name])
-        k = np.clip(((1 - shade[sel]) * len(ramp) * 1.05).astype(int), 0, len(ramp) - 1)
+        k = np.clip(np.floor((1 - shade[sel]) * len(ramp) * 1.05 + dither[sel] + 0.5 * bool(getattr(S, 'DITHER', False))).astype(int), 0, len(ramp) - 1)
         img[sel, :3] = ramp[k]; img[sel, 3] = 255
+        darkest[i] = ramp[-1]
 
     edge = np.zeros_like(hit)
     for dy, dx in ((0, 1), (1, 0), (0, -1), (-1, 0)):
@@ -55,7 +81,16 @@ def render(scene, w, h, out_path=None, steps=260, crop=True):
         m2 = np.roll(np.roll(mat, dy, 0), dx, 1)
         t2 = np.roll(np.roll(t, dy, 0), dx, 1)
         edge |= hit & (~h2 | ((m2 != mat) & (t2 < t - 0.06)) | (t2 < t - S.OUTLINE_DEPTH_BREAK))
-    img[edge, :3] = S.INK; img[edge, 3] = 255
+    if getattr(S, 'SELOUT', False):
+        sil = np.zeros_like(hit)
+        for dy, dx in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+            sil |= hit & ~np.roll(np.roll(hit, dy, 0), dx, 1)
+        inner = edge & ~sil
+        for i, col in darkest.items():
+            img[inner & (mat == i), :3] = (np.array(col) * 0.8).astype(np.uint8)
+        img[sil, :3] = S.INK; img[sil, 3] = 255
+    else:
+        img[edge, :3] = S.INK; img[edge, 3] = 255
 
     im = Image.fromarray(img, 'RGBA')
     top = (max(0, im.getbbox()[1] - 2) if im.getbbox() else 0) if crop else 0
