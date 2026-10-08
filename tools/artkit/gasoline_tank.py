@@ -2,3 +2,4 @@
 import storage_tank as T
 FOOTPRINT = T.FOOTPRINT
 LEVELS = T.levels('gasoline')
+EMITTERS = T.EMITTERS

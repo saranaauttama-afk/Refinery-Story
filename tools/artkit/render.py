@@ -11,7 +11,7 @@ def _camera():
     up = np.cross(right, fwd)
     return fwd, right, up
 
-def render(scene, w, h, out_path=None, steps=260, crop=True):
+def render(scene, w, h, out_path=None, steps=260, crop=True, points=None):
     fwd, right, up = _camera()
     s = S.TILE_W / np.sqrt(2)                      # px per world unit
     W = (w + h) * S.TILE_W // 2                    # §2: image width = (w+h) x 32 master
@@ -98,7 +98,16 @@ def render(scene, w, h, out_path=None, steps=260, crop=True):
     im = im.crop((0, top, W, bottom)).resize((W * S.PIXEL, (bottom - top) * S.PIXEL), Image.NEAREST)
     if out_path:
         im.save(out_path)
-    return im
+    if points is None:
+        return im
+    # world points -> final image pixels (same mapping as the rays, then crop/scale)
+    coords = []
+    for pt in points:
+        pt = np.asarray(pt, float)
+        px_ = (pt @ right) * s + h * S.TILE_W / 2
+        py_ = H - sy_b - (pt @ up) * s
+        coords.append(((px_) * S.PIXEL, (py_ - top) * S.PIXEL))
+    return im, coords
 
 # scenes return [(dist, name), ...]; materials are indexed by first appearance
 def _names(scene, P):

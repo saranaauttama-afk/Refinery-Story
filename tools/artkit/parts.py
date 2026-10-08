@@ -181,3 +181,66 @@ def valve(p, center, axis='y', r=0.08):
     else:
         d = np.hypot(np.hypot(q[..., 1], q[..., 2]) - r, q[..., 0]) - 0.02
     return [(d, 'valve')]
+
+
+# ---------------- detail parts (v2) ----------------
+def pad_details(p, w, h, extinguisher=(None, None)):
+    """Hazard stripes along the two front edges, yellow bollards at the front corner,
+    and a red fire extinguisher on a post."""
+    y = PAD_H + 0.012
+    yel, blk = [], []
+    seg = 0.16
+    # south edge (z = h - 0.2) and east edge (x = w - 0.2), skipping the rim blocks
+    k = 0
+    for x in np.arange(0.25, w - 0.25, seg):
+        (yel if k % 2 == 0 else blk).append(box(p, V(x + seg / 2, y, h - 0.2), V(seg / 2, 0.006, 0.035))); k += 1
+    k = 0
+    for z in np.arange(0.25, h - 0.25, seg):
+        (yel if k % 2 == 0 else blk).append(box(p, V(w - 0.2, y, z + seg / 2), V(0.035, 0.006, seg / 2))); k += 1
+    out = [(umin(yel), 'hazard'), (umin(blk), 'hazard_k')]
+    bol = [cyl_y(p, V(x, PAD_H + 0.09, z), 0.035, 0.09) - 0.008 for x, z in ((w - 0.3, h - 0.55), (w - 0.55, h - 0.3))]
+    out.append((umin(bol), 'hazard'))
+    ex, ez = extinguisher
+    if ex is not None:
+        out.append((cyl_y(p, V(ex, PAD_H + 0.11, ez), 0.045, 0.1) - 0.01, 'extinguisher'))
+        out.append((cyl_y(p, V(ex, PAD_H + 0.24, ez), 0.015, 0.03), 'steel_dk'))
+    return out
+
+def nozzle(p, at, normal, r=0.05, length=0.12, flange=True):
+    """Short pipe stub sticking out of a vessel, with a flange at its end."""
+    a = V(*at); n = np.asarray(normal, float); n /= np.linalg.norm(n)
+    out = [(capsule(p, a, a + n * length, r), 'pipe')]
+    if flange:
+        out.append((disc(p, a + n * length, n, r * 1.7, 0.016), 'steel_dk'))
+    return out
+
+def manway(p, center, normal, r=0.11):
+    """Bolted round hatch on a vessel wall."""
+    n = np.asarray(normal, float); n /= np.linalg.norm(n)
+    c = V(*center)
+    return [(disc(p, c, n, r, 0.025), 'steel_dk'), (disc(p, c + n * 0.03, n, r * 0.6, 0.01), 'steel')]
+
+def gauge(p, center, normal, r=0.05):
+    n = np.asarray(normal, float); n /= np.linalg.norm(n)
+    c = V(*center)
+    return [(disc(p, c, n, r, 0.012), 'plate'), (disc(p, c - n * 0.015, n, r * 1.25, 0.012), 'steel_dk')]
+
+def plate(p, center, normal, w=0.24, h=0.12, accent='gasoline'):
+    """Name plate on a cylindrical wall: white panel with an accent stripe."""
+    n = np.asarray(normal, float); n /= np.linalg.norm(n)
+    t = np.array([-n[2], 0, n[0]])
+    c = V(*center)
+    q = p - c
+    u, v, d = q @ t, q[..., 1], q @ n
+    body = np.maximum.reduce([np.abs(u) - w / 2, np.abs(v) - h / 2, np.abs(d) - 0.01])
+    stripe = np.maximum.reduce([np.abs(u) - w / 2, np.abs(v + h * 0.3) - h * 0.12, np.abs(d - 0.006) - 0.01])
+    return [(body, 'plate'), (stripe, 'accent:' + accent)]
+
+def weld_lines(p, cx, cz, r, y0, y1, count=6, offset=0.3):
+    """Thin vertical weld seams around a tank wall."""
+    return [(umin([capsule(p, V(cx + (r + 0.004) * np.cos(a), y0, cz + (r + 0.004) * np.sin(a)),
+                           V(cx + (r + 0.004) * np.cos(a), y1, cz + (r + 0.004) * np.sin(a)), 0.008)
+                   for a in np.linspace(0, 2 * np.pi, count, endpoint=False) + offset]), 'steel_dk')]
+
+def lamp(p, at, r=0.035):
+    return [(sphere(p, V(*at), r), 'valve'), (cyl_y(p, V(*at) - V(0, r * 1.4, 0), r * 0.6, r * 0.6), 'steel_dk')]

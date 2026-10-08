@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'reac
 import {
   Atlas,
   Canvas,
+  Circle,
   DashPathEffect,
   FilterMode,
   MipmapMode,
@@ -32,7 +33,7 @@ import {
   type V3PlacementPreview,
 } from '../../game/v3/yardView'
 import { V3_YARD_BACKDROP } from '../../game/v3/yardBackdrop'
-import { getV3BuildingArt, getV3BuildingAnchor, isV3CodeArt } from './v3Art'
+import { getV3BuildingArt, getV3BuildingAnchor, getV3BuildingEffects, isV3CodeArt, type V3ArtEmitter } from './v3Art'
 import { getV3DecorFootprint, type V3Decoration } from '../../game/v3/decorData'
 import { getV3DecorSvg } from '../../art/decorArt'
 import { planV3TruckTrip, sampleV3TruckTrip, type V3TruckRequest, type V3TruckTrip } from '../../game/v3/traffic'
@@ -119,8 +120,53 @@ const DecorSprite = memo(function DecorSprite({ decoration, mask }: { decoration
   return <ImageSVG svg={svg} x={left.sx} y={bottom.sy - height} width={width} height={height} />
 })
 
+/** Steam rising from a stack: three puffs on a loop, drifting right as they fade. */
+function Smoke({ cx, cy, scale, simMs, seed }: { cx: number; cy: number; scale: number; simMs: SharedValue<number>; seed: number }) {
+  const t0 = useDerivedValue(() => (simMs.value / 2600 + seed * 0.37) % 1)
+  const t1 = useDerivedValue(() => (simMs.value / 2600 + seed * 0.37 + 1 / 3) % 1)
+  const t2 = useDerivedValue(() => (simMs.value / 2600 + seed * 0.37 + 2 / 3) % 1)
+  return (
+    <>
+      {[t0, t1, t2].map((t, index) => <Puff key={index} t={t} cx={cx} cy={cy} scale={scale} />)}
+    </>
+  )
+}
+
+function Puff({ t, cx, cy, scale }: { t: SharedValue<number>; cx: number; cy: number; scale: number }) {
+  const x = useDerivedValue(() => cx + t.value * 7 * scale)
+  const y = useDerivedValue(() => cy - t.value * 26 * scale)
+  const r = useDerivedValue(() => (2.5 + t.value * 5) * scale)
+  const opacity = useDerivedValue(() => 0.6 * (1 - t.value))
+  return <Circle cx={x} cy={y} r={r} color="#EEF1F4" opacity={opacity} />
+}
+
+/** Red aviation lamp: short flash every 1.4 s (offset per lamp so they don't sync). */
+function Lamp({ cx, cy, scale, simMs, seed }: { cx: number; cy: number; scale: number; simMs: SharedValue<number>; seed: number }) {
+  const on = useDerivedValue(() => (((simMs.value + seed * 467) % 1400) < 450 ? 1 : 0.12))
+  const glow = useDerivedValue(() => on.value * 0.35)
+  return (
+    <>
+      <Circle cx={cx} cy={cy} r={4.5 * scale} color="#FF5A4E" opacity={glow} />
+      <Circle cx={cx} cy={cy} r={1.8 * scale} color="#FF3B30" opacity={on} />
+    </>
+  )
+}
+
+function Effects({ emitters, x, y, width, height, simMs, seed }: {
+  emitters: V3ArtEmitter[]; x: number; y: number; width: number; height: number; simMs: SharedValue<number>; seed: number
+}) {
+  const scale = width / 96
+  return (
+    <>
+      {emitters.map((emitter, index) => emitter.kind === 'smoke'
+        ? <Smoke key={index} cx={x + emitter.x * width} cy={y + emitter.y * height} scale={scale} simMs={simMs} seed={seed + index} />
+        : <Lamp key={index} cx={x + emitter.x * width} cy={y + emitter.y * height} scale={scale} simMs={simMs} seed={seed + index} />)}
+    </>
+  )
+}
+
 const Sprite = memo(function Sprite({
-  source, bottomX, bottomY, footprintWidth, padAnchor, anchor, alert, font,
+  source, bottomX, bottomY, footprintWidth, padAnchor, anchor, alert, font, emitters, simMs, seed,
 }: {
   source: ImageSourcePropType
   bottomX: number
@@ -130,6 +176,9 @@ const Sprite = memo(function Sprite({
   anchor: number
   alert?: string
   font: ReturnType<typeof matchFont> | null
+  emitters: V3ArtEmitter[]
+  simMs: SharedValue<number>
+  seed: number
 }) {
   const image = useImage(source as DataSourceParam)
   if (!image) return null
@@ -145,6 +194,7 @@ const Sprite = memo(function Sprite({
   return (
     <>
       <SkiaImage image={image} x={x} y={y} width={width} height={height} fit="fill" sampling={PIXEL} />
+      {emitters.length > 0 && <Effects emitters={emitters} x={x} y={y} width={width} height={height} simMs={simMs} seed={seed} />}
       {alert && font && <SkiaText x={x + width / 2 - 4} y={y - 6} text="!" font={font} color="#FFD447" />}
     </>
   )
@@ -243,7 +293,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   for (const id of [...tripsRef.current.keys()]) if (!trucks.some((request) => request.id === id)) tripsRef.current.delete(id)
   const unroutableKey = unroutable.join(',')
   useEffect(() => { for (const id of unroutable) onTruckDone(id) }, [unroutableKey])
-  useEffect(() => { clock.setActive(trips.length > 0) }, [trips.length > 0])
+  useEffect(() => { clock.setActive(speed > 0) }, [speed > 0])   // traffic + building effects follow game time
   // Ground detail is built once per land change as ONE path each (grid, roads),
   // never per tile per frame: keeps a 48×48 yard smooth on phones.
   const gridPath = useMemo(() => {
@@ -410,6 +460,9 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
                         anchor={getV3BuildingAnchor(sprite.type, sprite.level)}
                         alert={alerts[sprite.id]}
                         font={font}
+                        emitters={getV3BuildingEffects(sprite.type, sprite.level)}
+                        simMs={simMs}
+                        seed={sprite.x * 7 + sprite.y * 13}
                       />
                     )
                     : <Path path={diamond(v3IsoRect(sprite))} color="#888" />}

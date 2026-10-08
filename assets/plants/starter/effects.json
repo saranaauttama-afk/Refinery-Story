@@ -1,0 +1,149 @@
+{
+ "crude_tank_lv1": {
+  "size": [
+   128,
+   106
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6589,
+    "y": 0.2627
+   }
+  ]
+ },
+ "crude_tank_lv2": {
+  "size": [
+   160,
+   124
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5271,
+    "y": 0.2249
+   }
+  ]
+ },
+ "crude_tank_lv3": {
+  "size": [
+   192,
+   144
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6091,
+    "y": 0.1966
+   }
+  ]
+ },
+ "gasoline_tank_lv1": {
+  "size": [
+   128,
+   106
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6589,
+    "y": 0.2627
+   }
+  ]
+ },
+ "gasoline_tank_lv2": {
+  "size": [
+   160,
+   124
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5271,
+    "y": 0.2249
+   }
+  ]
+ },
+ "gasoline_tank_lv3": {
+  "size": [
+   192,
+   144
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6091,
+    "y": 0.1966
+   }
+  ]
+ },
+ "distillation_unit_lv1": {
+  "size": [
+   192,
+   186
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.5,
+    "y": 0.0207
+   },
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.0165
+   }
+  ]
+ },
+ "distillation_unit_lv2": {
+  "size": [
+   256,
+   234
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.4875,
+    "y": 0.0197
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4875,
+    "y": 0.0163
+   },
+   {
+    "kind": "lamp",
+    "x": 0.725,
+    "y": 0.258
+   }
+  ]
+ },
+ "distillation_unit_lv3": {
+  "size": [
+   288,
+   243
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.6111,
+    "y": 0.0159
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4278,
+    "y": 0.0515
+   },
+   {
+    "kind": "lamp",
+    "x": 0.6111,
+    "y": 0.0127
+   },
+   {
+    "kind": "lamp",
+    "x": 0.7722,
+    "y": 0.2907
+   }
+  ]
+ }
+}

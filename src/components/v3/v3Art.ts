@@ -2,6 +2,9 @@ import type { ImageSourcePropType } from 'react-native'
 import type { BuildingType } from '../../game/types'
 import groundAnchors from '../../../assets/plants/yard-v2/anchors.json'
 import { getV3Footprint } from '../../game/v3/yard'
+import codeArtEffects from '../../../assets/plants/starter/effects.json'
+
+export type V3ArtEmitter = { kind: 'smoke' | 'lamp'; x: number; y: number }
 
 /**
  * Code-drawn art (tools/artkit) — exact to Doc/ART_ASSET_LIST_V3.md §2, so the
@@ -12,6 +15,14 @@ const CODE_ART: Partial<Record<BuildingType, Record<1 | 2 | 3, ImageSourcePropTy
   distillationUnit: { 1: require('../../../assets/plants/starter/distillation_unit_lv1.png'), 2: require('../../../assets/plants/starter/distillation_unit_lv2.png'), 3: require('../../../assets/plants/starter/distillation_unit_lv3.png') },
   crudeTank: { 1: require('../../../assets/plants/starter/crude_tank_lv1.png'), 2: require('../../../assets/plants/starter/crude_tank_lv2.png'), 3: require('../../../assets/plants/starter/crude_tank_lv3.png') },
   gasolineTank: { 1: require('../../../assets/plants/starter/gasoline_tank_lv1.png'), 2: require('../../../assets/plants/starter/gasoline_tank_lv2.png'), 3: require('../../../assets/plants/starter/gasoline_tank_lv3.png') },
+}
+
+/** Animated effect anchors for code-drawn art, as fractions of the sprite (exported by tools/artkit/build.py). */
+export function getV3BuildingEffects(type: BuildingType, level: number): V3ArtEmitter[] {
+  if (!isV3CodeArt(type)) return []
+  const name = ART_NAMES[type]
+  const entry = name ? (codeArtEffects as Record<string, { emitters: V3ArtEmitter[] }>)[`${name}_lv${Math.min(3, Math.max(1, level))}`] : undefined
+  return entry?.emitters ?? []
 }
 
 export function isV3CodeArt(type: BuildingType): boolean {
