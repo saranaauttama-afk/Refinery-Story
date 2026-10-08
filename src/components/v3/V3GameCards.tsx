@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { getV3ClientArt } from '../../art/clientArt'
 
 import type { BilingualTextValue } from '../../game/types'
 import { explainV3ProgramFit } from '../../game/v3/actions'
@@ -141,22 +142,30 @@ export function V3ActiveJobCard({ state, apply, t }: CardProps) {
   const remaining = job.quantity - job.deliveredQuantity
   const defaultName = state.productBlueprints[defaultId]?.name ?? ''
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{t(v3JobLabel(job.templateId))}</Text>
-      <Text style={styles.row}>Q{job.minimumQuality}+ · {t({ en: 'shipped', th: 'ส่งแล้ว' })} {job.deliveredQuantity}/{job.quantity}</Text>
-      <View style={styles.bar}><View style={[styles.fill, { width: `${Math.round((job.deliveredQuantity / Math.max(1, job.quantity)) * 100)}%` }]} /></View>
-      {job.deadlineTick !== null && (
-        <Text style={styles.warning}>{t({
-          en: `Rush: ${Math.max(0, Math.ceil((job.deadlineTick - state.world.tickCount) / 5))}s left · only the bonus is lost on expiry`,
-          th: `งานด่วน: เหลือ ${Math.max(0, Math.ceil((job.deadlineTick - state.world.tickCount) / 5))} วินาที · หมดเวลาเสียแค่โบนัส`,
-        })}</Text>
-      )}
-      <Text style={styles.row}>{t({ en: 'Reserved qualified stock', th: 'สต็อกผ่านสเปกที่จองไว้' })}: {reserved.toFixed(1)}</Text>
+    <View style={styles.ticket}>
+      <View style={styles.ticketBanner}><Text style={styles.ticketBannerText}>{t(v3JobLabel(job.templateId))}</Text></View>
+      <View style={styles.ticketBody}>
+        <View style={styles.ticketRow}>
+          <View style={styles.ticketPortrait}><Image source={getV3ClientArt(job.templateId)} style={{ width: 44, height: 44 }} resizeMode="contain" /></View>
+          <View style={styles.ticketItem}>
+            <Text style={styles.ticketItemText}>Q{job.minimumQuality}+ · {job.quantity} {t({ en: 'units', th: 'หน่วย' })}</Text>
+            <Text style={styles.muted}>{t({ en: 'Shipped', th: 'ส่งแล้ว' })} {job.deliveredQuantity}/{job.quantity}</Text>
+          </View>
+        </View>
+        <View style={styles.bar}><View style={[styles.fill, { width: `${Math.round((job.deliveredQuantity / Math.max(1, job.quantity)) * 100)}%` }]} /></View>
+        {job.deadlineTick !== null && (
+          <Text style={styles.warning}>{t({
+            en: `Rush: ${Math.max(0, Math.ceil((job.deadlineTick - state.world.tickCount) / 5))}s left · only the bonus is lost on expiry`,
+            th: `งานด่วน: เหลือ ${Math.max(0, Math.ceil((job.deadlineTick - state.world.tickCount) / 5))} วินาที · หมดเวลาเสียแค่โบนัส`,
+          })}</Text>
+        )}
+        <Text style={styles.row}>{t({ en: 'Reserved qualified stock', th: 'สต็อกผ่านสเปกที่จองไว้' })}: {reserved.toFixed(1)}</Text>
+      </View>
       <Pressable style={styles.primary} onPress={() => apply({
         type: 'dispatch_job', sequence: state.nextActionSequence,
         quantity: Math.max(1, Math.min(10, Math.floor(reserved), remaining)),
       })}>
-        <Text style={styles.primaryText}>{t({ en: 'Ship up to 10 units', th: 'ส่งสินค้าไม่เกิน 10 หน่วย' })}</Text>
+        <Text style={styles.primaryText}>🚚 {t({ en: 'Ship up to 10 units', th: 'ส่งสินค้าไม่เกิน 10 หน่วย' })}</Text>
       </Pressable>
       {eligible.map((allocation) => (
         <Pressable key={`ship-${allocation.blueprintId}`} style={styles.secondary} onPress={() => apply({
@@ -168,14 +177,12 @@ export function V3ActiveJobCard({ state, apply, t }: CardProps) {
         </Pressable>
       ))}
       <Pressable
-        style={[styles.secondary, policy.autoDispatch && styles.selected]}
+        style={[styles.toggleRow, policy.autoDispatch && styles.toggleOn]}
         accessibilityState={{ checked: policy.autoDispatch }}
         onPress={() => apply({ type: 'set_stock_policy', sequence: state.nextActionSequence, blueprintId: defaultId, autoDispatch: !policy.autoDispatch })}
       >
-        <Text style={styles.secondaryText}>{t({
-          en: `Auto-ship ${defaultName}: ${policy.autoDispatch ? 'ON' : 'OFF'}`,
-          th: `ส่งอัตโนมัติ ${defaultName}: ${policy.autoDispatch ? 'เปิด' : 'ปิด'}`,
-        })}</Text>
+        <Text style={styles.toggleLabel}>⚙️ {t({ en: `Auto-ship ${defaultName}`, th: `ส่งอัตโนมัติ ${defaultName}` })}</Text>
+        <View style={[styles.switch, policy.autoDispatch && styles.switchOn]}><View style={[styles.switchKnob, policy.autoDispatch && styles.switchKnobOn]} /></View>
       </Pressable>
       <Pressable style={styles.textButton} onPress={() => apply({ type: 'cancel_job', sequence: state.nextActionSequence })}>
         <Text style={styles.dangerText}>{t({ en: 'Cancel job', th: 'ยกเลิกงาน' })}</Text>
@@ -297,4 +304,20 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   textButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   dangerText: { color: '#E89494', fontFamily: fonts.heading, fontSize: 13 },
+  ticket: { backgroundColor: '#12324A', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, overflow: 'hidden', gap: 8, paddingBottom: 12 },
+  ticketBanner: { backgroundColor: '#1E5B45', paddingVertical: 6, paddingHorizontal: 12 },
+  ticketBannerText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
+  ticketBody: { paddingHorizontal: 12, gap: 6 },
+  ticketRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ticketPortrait: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', alignItems: 'center', justifyContent: 'center' },
+  portraitGlyph: { fontSize: 24 },
+  ticketItem: { flex: 1, gap: 1 },
+  ticketItemText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 14 },
+  toggleRow: { marginHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 10 },
+  toggleOn: { borderColor: '#6ACDB4' },
+  toggleLabel: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12 },
+  switch: { width: 40, height: 22, borderRadius: 11, backgroundColor: '#0A2943', padding: 2, justifyContent: 'center' },
+  switchOn: { backgroundColor: '#2E6C63' },
+  switchKnob: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#8FA9BA' },
+  switchKnobOn: { backgroundColor: '#6ACDB4', alignSelf: 'flex-end' },
 })

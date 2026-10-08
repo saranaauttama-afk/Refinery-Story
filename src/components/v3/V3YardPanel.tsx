@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { SvgXml } from 'react-native-svg'
+import { getV3DecorSvg } from '../../art/decorArt'
 
 import { BUILDINGS } from '../../game/data/buildings'
 import type { BilingualTextValue, BuildingType } from '../../game/types'
@@ -11,6 +13,7 @@ import { getV3Building, getV3BuildingAt, getV3BuildingLimit, countV3Buildings, g
 import { getV3ParcelViews, getV3PlacementPreview, getV3UpgradePreview } from '../../game/v3/yardView'
 import { fonts } from '../../theme'
 import { v3ParcelLabel } from './v3Labels'
+import { getV3BuildingArt } from './v3Art'
 import { getV3AdjacencyPreview, getV3LineAdjacency } from '../../game/v3/adjacency'
 import { getV3Appeal, getV3DecorAt, getV3DecorLock, listV3Decorations } from '../../game/v3/decor'
 import { V3_DECOR, V3_DECOR_CAP, V3_DECOR_KINDS, type V3DecorKind } from '../../game/v3/decorData'
@@ -75,6 +78,8 @@ type Props = {
 export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish, onClose, section }: Props) {
   const { mode, setMode, selectedId, setSelectedId, parcelId, setParcelId, upgrade, decorId, setDecorId } = yard
   const selected = getV3Building(state, selectedId)
+  const [page, setPage] = useState<'menu' | 'build' | 'decor' | 'land'>('menu')
+  const [detail, setDetail] = useState<BuildingType | null>(null)
 
   const check = (action: ActionInput): V3ActionEvent | null => {
     const result = reduceV3Action(state, { ...action, sequence: state.nextActionSequence } as V3Action)
@@ -101,7 +106,14 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
 
   const plan = evaluateV3Production(state, 25)
   const chapter = state.campaignProgress.chapter
-  const palette = [...V3_SUPPORTED_BUILDINGS].filter((building) => V3_BUILDINGS[building].buildChapter <= chapter)
+  // Every supported building is listed; ones not buildable yet are faded with a lock.
+  const palette = [...V3_SUPPORTED_BUILDINGS].sort((a, b) => V3_BUILDINGS[a].buildChapter - V3_BUILDINGS[b].buildChapter || V3_BUILDINGS[a].buildCostDollars - V3_BUILDINGS[b].buildCostDollars)
+  const buildLock = (building: BuildingType): string | null => {
+    if (V3_BUILDINGS[building].buildChapter > chapter) return t({ en: `Unlocks C${V3_BUILDINGS[building].buildChapter}`, th: `ปลดล็อก C${V3_BUILDINGS[building].buildChapter}` })
+    const limit = getV3BuildingLimit(state, building)
+    if (limit !== null && countV3Buildings(state, building) >= limit) return t({ en: `Limit ${limit}/${limit}`, th: `ครบจำนวน ${limit}/${limit}` })
+    return null
+  }
   const parcels = getV3ParcelViews(state).filter((parcel) => parcel.state !== 'owned')
 
   const info = selected ? (() => {
@@ -162,7 +174,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
   const decorBar = mode.kind === 'decor' ? (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{t({ en: `Placing ${V3_DECOR[mode.decor].label.en}`, th: `กำลังวาง${V3_DECOR[mode.decor].label.th}` })} · ${V3_DECOR[mode.decor].costDollars}</Text>
-      <Text style={styles.muted}>{t({ en: 'Tap tiles to place, one per tap. Tap a placed item later to remove it (full refund).', th: 'แตะช่องเพื่อวาง แตะหนึ่งครั้งได้หนึ่งชิ้น วางแล้วแตะที่ชิ้นนั้นเพื่อเก็บคืนได้ (คืนเงินเต็ม)' })}</Text>
+      <Text style={styles.muted}>{t({ en: 'Tap tiles to place. Tap a placed item to remove it (full refund).', th: 'แตะช่องเพื่อวาง แตะชิ้นที่วางแล้วเพื่อเก็บคืน (คืนเงินเต็ม)' })}</Text>
       <View style={styles.row2}>
         {V3_DECOR[mode.decor].w !== V3_DECOR[mode.decor].h && (
           <Pressable style={styles.button} onPress={() => setMode({ ...mode, rotated: !mode.rotated })}>
@@ -176,17 +188,25 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
     </View>
   ) : null
 
+  const backHeader = (title?: string) => (
+    <View style={styles.titleRow}>
+      <Pressable onPress={() => { setPage('menu'); setDetail(null); setParcelId(null) }} hitSlop={10} accessibilityRole="button" accessibilityLabel={t({ en: 'Back', th: 'กลับ' })}>
+        <Text style={styles.back}>‹ {t({ en: 'Menu', th: 'เมนู' })}</Text>
+      </Pressable>
+      {title && <Text style={styles.cardTitle}>{title}</Text>}
+    </View>
+  )
+
   const appeal = getV3Appeal(state)
   const decorCount = listV3Decorations(state).length
   const decorPalette = (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{t({ en: 'Decorations', th: 'ของแต่ง' })}</Text>
+      {backHeader(t({ en: 'Decorations', th: 'ของแต่ง' }))}
       <Text style={styles.row}>{t({
         en: `Appeal ${appeal.points.toFixed(0)} → fame gain +${(appeal.bonus * 100).toFixed(1)}% (max 10%) · ${decorCount}/${V3_DECOR_CAP}`,
         th: `ความน่าอยู่ ${appeal.points.toFixed(0)} → ชื่อเสียงเพิ่มเร็วขึ้น +${(appeal.bonus * 100).toFixed(1)}% (สูงสุด 10%) · ${decorCount}/${V3_DECOR_CAP} ชิ้น`,
       })}</Text>
-      <Text style={styles.muted}>{t({ en: 'Variety counts: repeats of the same item give less.', th: 'ของหลากหลายได้ค่ามากกว่า ชิ้นซ้ำชนิดเดิมได้น้อยลงเรื่อย ๆ' })}</Text>
-      <View style={styles.row2}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
         {V3_DECOR_KINDS.map((kind) => {
           const spec = V3_DECOR[kind]
           const lock = getV3DecorLock(state, kind)
@@ -195,19 +215,139 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
               key={kind}
               disabled={Boolean(lock)}
               accessibilityState={{ disabled: Boolean(lock) }}
-              style={[styles.chip, lock && styles.disabled]}
+              style={[styles.tile, lock && styles.tileLocked]}
               onPress={() => { setSelectedId(null); setDecorId(null); setMode({ kind: 'decor', decor: kind, rotated: false }); onClose?.() }}
             >
-              <Text style={styles.buttonText}>{t(spec.label)}</Text>
+              {lock && <Text style={styles.lockBadge}>🔒</Text>}
+              <SvgXml xml={getV3DecorSvg(kind)} width={64} height={64} />
+              <Text style={styles.tileName} numberOfLines={2}>{t(spec.label)}</Text>
               <Text style={styles.muted}>{lock
                 ? (lock.blocker === 'locked' ? t({ en: `Unlocks C${lock.chapter}`, th: `ปลดล็อก C${lock.chapter}` }) : t({ en: 'Win the Expo', th: 'ชนะเอ็กซ์โป' }))
                 : `${spec.w}×${spec.h} · $${spec.costDollars} · +${spec.appeal}`}</Text>
             </Pressable>
           )
         })}
+      </ScrollView>
+    </View>
+  )
+
+
+  const detailModal = detail ? (() => {
+    const config = BUILDINGS[detail]
+    const footprint = getV3Footprint(detail, 1)
+    const limit = getV3BuildingLimit(state, detail)
+    const count = countV3Buildings(state, detail)
+    const lock = buildLock(detail)
+    const cost = V3_BUILDINGS[detail].buildCostDollars
+    const art = getV3BuildingArt(detail, 1)
+    return (
+      <Modal transparent animationType="fade" visible onRequestClose={() => setDetail(null)}>
+        <Pressable style={styles.backdrop} onPress={() => setDetail(null)}>
+          <Pressable style={styles.popup} onPress={() => undefined}>
+            <View style={styles.popupHead}>
+              <Text style={styles.popupTitle}>{t(config.name)}</Text>
+              <Pressable onPress={() => setDetail(null)} hitSlop={12} accessibilityLabel={t({ en: 'Close', th: 'ปิด' })}><Text style={styles.close}>✕</Text></Pressable>
+            </View>
+            <View style={styles.detailArt}>{art ? <Image source={art} style={styles.detailImage} resizeMode="contain" /> : <Text style={styles.placeholder}>🏭</Text>}</View>
+            <Text style={styles.detailDescription}>{t(config.description)}</Text>
+            <View style={styles.detailStats}>
+              <View style={styles.detailStat}><Text style={styles.detailStatLabel}>{t({ en: 'SIZE', th: 'ขนาด' })}</Text><Text style={styles.detailStatValue}>{footprint ? `${footprint.w}×${footprint.h}` : '-'}</Text></View>
+              <View style={styles.detailStat}><Text style={styles.detailStatLabel}>{t({ en: 'COST', th: 'ราคา' })}</Text><Text style={styles.detailStatValue}>${cost.toLocaleString()}</Text></View>
+              {limit !== null && <View style={styles.detailStat}><Text style={styles.detailStatLabel}>{t({ en: 'BUILT', th: 'สร้างแล้ว' })}</Text><Text style={styles.detailStatValue}>{count}/{limit}</Text></View>}
+            </View>
+            {state.world.moneyCents < cost * 100 && !lock && <Text style={styles.reason}>{t({ en: 'Not enough cash yet.', th: 'เงินยังไม่พอ' })}</Text>}
+            {lock && <Text style={styles.reason}>🔒 {lock}</Text>}
+            <Pressable
+              disabled={Boolean(lock)}
+              accessibilityState={{ disabled: Boolean(lock) }}
+              style={[styles.button, styles.placeButton, lock && styles.disabled]}
+              onPress={() => { setDetail(null); setSelectedId(null); setMode({ kind: 'build', building: detail, anchor: null }); onClose?.() }}
+            >
+              <Text style={styles.placeText}>{t({ en: 'Place on map', th: 'วางบนแผนที่' })}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    )
+  })() : null
+
+  const buildPage = (
+    <View style={styles.card}>
+      {backHeader()}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
+        {palette.map((building) => {
+          const footprint = getV3Footprint(building, 1)
+          const lock = buildLock(building)
+          const art = getV3BuildingArt(building, 1)
+          return (
+            <Pressable
+              key={building}
+              accessibilityState={{ selected: detail === building }}
+              style={[styles.tile, lock && styles.tileLocked, detail === building && styles.tileSelected]}
+              onPress={() => setDetail(detail === building ? null : building)}
+            >
+              {lock && <Text style={styles.lockBadge}>🔒</Text>}
+              <View style={styles.tileArt}>{art ? <Image source={art} style={styles.tileImage} resizeMode="contain" /> : <Text style={styles.placeholder}>🏭</Text>}</View>
+              <Text style={styles.tileName} numberOfLines={2}>{t(BUILDINGS[building].name)}</Text>
+              {lock ? <Text style={styles.tileLockText} numberOfLines={1}>{lock}</Text> : (
+                <View style={styles.tileMeta}>
+                  <Text style={styles.tileFootprint}>{footprint ? `${footprint.w}×${footprint.h}` : ''}</Text>
+                  <Text style={styles.tilePrice}>${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}</Text>
+                </View>
+              )}
+            </Pressable>
+          )
+        })}
+      </ScrollView>
+      {detailModal}
+    </View>
+  )
+
+  const landPage = (
+    <View style={styles.card}>
+      {backHeader(t({ en: 'Land', th: 'ที่ดิน' }))}
+      {parcels.length === 0 && <Text style={styles.muted}>{t({ en: 'All land is unlocked.', th: 'ปลดที่ดินครบแล้ว' })}</Text>}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
+        {parcels.map((parcel) => (
+          <Pressable
+            key={parcel.id}
+            style={[styles.tile, parcel.state === 'locked' && styles.tileLocked, parcel.id === parcelId && styles.tileSelected]}
+            onPress={() => setParcelId(parcel.id === parcelId ? null : parcel.id)}
+          >
+            {parcel.state === 'locked' && <Text style={styles.lockBadge}>🔒</Text>}
+            <Text style={styles.tileName} numberOfLines={2}>{t(v3ParcelLabel(parcel.id))}</Text>
+            <Text style={styles.muted}>{parcel.w}×{parcel.h} · ${parcel.costDollars.toLocaleString()} · C{parcel.chapter}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      {parcels.filter((parcel) => parcel.id === parcelId).map((parcel) => (
+        <Gate key={parcel.id} label={t({ en: 'Unlock this land', th: 'ปลดที่ดินแปลงนี้' })} action={{ type: 'unlock_land_parcel', parcelId: parcel.id }} onDone={() => setParcelId(null)} />
+      ))}
+    </View>
+  )
+
+  const decorPage = decorPalette
+
+  const buildableCount = palette.filter((building) => !buildLock(building)).length
+  const menuItems: Array<{ key: 'build' | 'decor' | 'land'; title: string; sub: string; glyph: string }> = [
+    { key: 'build', glyph: '🏗️', title: t({ en: 'Build', th: 'สร้าง' }), sub: t({ en: `${buildableCount}/${palette.length} ready`, th: `สร้างได้ ${buildableCount}/${palette.length}` }) },
+    { key: 'decor', glyph: '🌳', title: t({ en: 'Decorations', th: 'ของแต่ง' }), sub: t({ en: `Appeal ${appeal.points.toFixed(0)} · ${decorCount}/${V3_DECOR_CAP}`, th: `ความน่าอยู่ ${appeal.points.toFixed(0)} · ${decorCount}/${V3_DECOR_CAP}` }) },
+    { key: 'land', glyph: '🗺️', title: t({ en: 'Land', th: 'ที่ดิน' }), sub: parcels.length ? t({ en: `${parcels.length} to unlock`, th: `ปลดได้ ${parcels.length}` }) : t({ en: 'All unlocked', th: 'ปลดครบแล้ว' }) },
+  ]
+  const menuPage = (
+    <View style={styles.card}>
+      <View style={styles.menuRow}>
+        {menuItems.map((item) => (
+          <Pressable key={item.key} accessibilityRole="button" style={styles.menuTile} onPress={() => setPage(item.key)}>
+            <Text style={styles.menuGlyph}>{item.glyph}</Text>
+            <Text style={styles.menuTitle}>{item.title}</Text>
+            <Text style={styles.muted} numberOfLines={1}>{item.sub}</Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   )
+  const sheetPage = page === 'build' ? buildPage : page === 'decor' ? decorPage : page === 'land' ? landPage : menuPage
 
   const modeBar = mode.kind === 'inspect' || mode.kind === 'decor' ? null : (() => {
     const anchor = mode.anchor
@@ -250,40 +390,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
       {section === 'overlay' && decorBar}
       {section === 'overlay' && mode.kind === 'inspect' && info}
       {section === 'overlay' && mode.kind === 'inspect' && !info && decorInfo}
-      {section === 'sheet' && mode.kind === 'inspect' && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Build', th: 'สร้าง' })}</Text>
-          <View style={styles.row2}>
-            {palette.map((building) => {
-              const footprint = getV3Footprint(building, 1)
-              const limit = getV3BuildingLimit(state, building)
-              const count = countV3Buildings(state, building)
-              return (
-                <Pressable key={building} style={styles.chip} onPress={() => { setSelectedId(null); setMode({ kind: 'build', building, anchor: null }); onClose?.() }}>
-                  <Text style={styles.buttonText}>{t(BUILDINGS[building].name)}</Text>
-                  <Text style={styles.muted}>{footprint ? `${footprint.w}×${footprint.h}` : ''} · ${V3_BUILDINGS[building].buildCostDollars.toLocaleString()}{limit !== null ? ` · ${count}/${limit}` : ''}</Text>
-                </Pressable>
-              )
-            })}
-          </View>
-        </View>
-      )}
-      {section === 'sheet' && mode.kind === 'inspect' && decorPalette}
-      {section === 'sheet' && mode.kind === 'inspect' && parcels.length > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t({ en: 'Land', th: 'ที่ดิน' })}</Text>
-          {parcels.map((parcel) => (
-            <View key={parcel.id}>
-              <Pressable onPress={() => setParcelId(parcel.id === parcelId ? null : parcel.id)}>
-                <Text style={[styles.row, parcel.id === parcelId && styles.highlight]}>
-                  {t(v3ParcelLabel(parcel.id))} · {parcel.w}×{parcel.h} · ${parcel.costDollars.toLocaleString()} · C{parcel.chapter}
-                </Text>
-              </Pressable>
-              {parcel.id === parcelId && <Gate label={t({ en: 'Unlock this land', th: 'ปลดที่ดินแปลงนี้' })} action={{ type: 'unlock_land_parcel', parcelId: parcel.id }} onDone={() => setParcelId(null)} />}
-            </View>
-          ))}
-        </View>
-      )}
+      {section === 'sheet' && mode.kind === 'inspect' && sheetPage}
     </>
   )
 }
@@ -291,7 +398,7 @@ export function V3YardPanel({ state, yard, apply, t, describe, onRequestDemolish
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   close: { color: '#D5E2E9', fontSize: 18, paddingHorizontal: 4 },
-  card: { backgroundColor: '#0D2B40', borderWidth: 1, borderColor: '#274B63', borderRadius: 10, padding: 12, gap: 8 },
+  card: { backgroundColor: '#082A48', borderWidth: 2, borderColor: '#0E5E96', borderRadius: 4, padding: 12, gap: 8 },
   cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
   row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
   row2: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -305,4 +412,36 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, padding: 8, minWidth: '30%', flexGrow: 1 },
   buttonText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center' },
   disabled: { opacity: 0.45 },
+  back: { color: '#8FD3FF', fontFamily: fonts.heading, fontSize: 13 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  hRow: { gap: 8, paddingRight: 8 },
+  tile: { width: 124, backgroundColor: '#0B365B', borderWidth: 2, borderColor: '#245F83', borderRadius: 3, padding: 6, gap: 4, alignItems: 'center', justifyContent: 'center', minHeight: 126 },
+  tileLocked: { opacity: 0.4 },
+  tileSelected: { borderColor: '#FFD447', borderBottomWidth: 4 },
+  tileArt: { width: '100%', height: 64, alignItems: 'center', justifyContent: 'center', backgroundColor: '#092B49', borderWidth: 1, borderColor: '#19496A' },
+  tileImage: { width: '100%', height: 62 },
+  tileName: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12, textAlign: 'center', minHeight: 30, textAlignVertical: 'center' },
+  tileMeta: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#245F83', paddingTop: 4 },
+  tileFootprint: { color: '#9DBED2', fontFamily: fonts.body, fontSize: 11 },
+  tilePrice: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 11 },
+  tileLockText: { color: '#A9C0CD', fontSize: 10, textAlign: 'center' },
+  lockBadge: { position: 'absolute', top: 4, right: 4, fontSize: 14, zIndex: 1 },
+  placeholder: { fontSize: 32 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(3,10,18,0.72)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  popup: { width: '100%', maxWidth: 420, backgroundColor: '#082A48', borderWidth: 3, borderBottomWidth: 5, borderColor: '#0E5E96', borderRadius: 4, padding: 14, gap: 12 },
+  popupHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  popupTitle: { color: '#FFD447', fontFamily: fonts.brandHeading, fontSize: 19, flexShrink: 1 },
+  detailArt: { height: 138, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A3451', borderWidth: 1, borderColor: '#245F83' },
+  detailImage: { width: '100%', height: 132 },
+  detailDescription: { color: '#E8F0F4', fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  detailStats: { flexDirection: 'row', gap: 6 },
+  detailStat: { flex: 1, minWidth: 0, backgroundColor: '#061827', borderWidth: 1, borderColor: '#245F83', paddingHorizontal: 8, paddingVertical: 6 },
+  detailStatLabel: { color: '#8FA9BA', fontFamily: fonts.brandHeading, fontSize: 10 },
+  detailStatValue: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 14 },
+  placeButton: { backgroundColor: '#FFD447', borderColor: '#FFE27F', borderBottomColor: '#C98A0A', borderBottomWidth: 4, borderRadius: 3 },
+  placeText: { color: '#082A48', fontFamily: fonts.brandHeading, fontSize: 15, textAlign: 'center' },
+  menuRow: { flexDirection: 'row', gap: 8 },
+  menuTile: { flex: 1, backgroundColor: '#0B365B', borderWidth: 2, borderColor: '#245F83', borderRadius: 3, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', gap: 2, minHeight: 78 },
+  menuGlyph: { fontSize: 22 },
+  menuTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 13, textAlign: 'center' },
 })

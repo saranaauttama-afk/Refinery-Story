@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -26,6 +26,7 @@ import { V3MidgamePanels } from '../src/components/v3/V3MidgamePanels'
 import { V3TeamPanel } from '../src/components/v3/V3TeamPanel'
 import { findV3PlacementSpot, getV3BuildingType } from '../src/game/v3/yard'
 import { V3CampaignPanel } from '../src/components/v3/V3CampaignPanel'
+import { V3TitleScreen } from '../src/components/v3/V3TitleScreen'
 import { V3YardPanel, useV3YardController } from '../src/components/v3/V3YardPanel'
 import V3YardView, { type V3Floater } from '../src/components/v3/V3YardView'
 import { V3OffersPanel } from '../src/components/v3/V3OffersPanel'
@@ -35,16 +36,26 @@ import { V3MarketPanel } from '../src/components/v3/V3MarketPanel'
 import { V3RankingPanel } from '../src/components/v3/V3RankingPanel'
 import { V3ExpoPanel } from '../src/components/v3/V3ExpoPanel'
 import { getV3PlayerRank } from '../src/game/v3/rivals'
-import { getV3Fame } from '../src/game/v3/fame'
 import { getV3Calendar } from '../src/game/v3/yardView'
 import { detectV3TruckRequests, type V3TruckRequest } from '../src/game/v3/traffic'
 import { evaluateV3Production } from '../src/game/v3/production'
 import { V3InboxPanel } from '../src/components/v3/V3InboxPanel'
-import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3GasolineLineCard, V3LedgerCard, V3RecoveryCard, V3SpecializationCard } from '../src/components/v3/V3GameCards'
+import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3LedgerCard, V3RecoveryCard, V3SpecializationCard } from '../src/components/v3/V3GameCards'
+import { V3ProductionFlow } from '../src/components/v3/V3ProductionFlow'
 import { V3Segments } from '../src/components/v3/V3Segments'
-import { V3ClearChecklist } from '../src/components/v3/V3ClearChecklist'
+import { getV3ClearChecklist, V3ClearChecklist } from '../src/components/v3/V3ClearChecklist'
 import { useLang } from '../src/hooks/SettingsContext'
-import { colors, fonts, spacing } from '../src/theme'
+import { colors, fonts, pixelUi, spacing } from '../src/theme'
+import { getStarterPlantArt } from '../src/starterPlantArt'
+
+function V3NavGlyph({ kind }: { kind: 'build' | 'production' | 'staff' | 'clients' | 'company' }) {
+  if (kind === 'build' || kind === 'production') {
+    return <Image source={getStarterPlantArt(kind === 'build' ? 'distillationUnit' : 'gasolineTank', 1)} style={styles.tabPlantGlyph} resizeMode="contain" />
+  }
+  if (kind === 'staff') return <Image source={require('../assets/staff/portraits/operator.png')} style={styles.tabStaffGlyph} resizeMode="cover" />
+  if (kind === 'clients') return <Text style={styles.tabSymbol}>✉</Text>
+  return <View style={styles.tabChart}>{[9, 16, 23].map((height) => <View key={height} style={[styles.tabChartBar, { height }]} />)}</View>
+}
 
 type V3Tab = 'build' | 'production' | 'staff' | 'clients' | 'company'
 type ProductionSection = 'lines' | 'stock' | 'rnd' | 'market'
@@ -60,6 +71,8 @@ export default function V3GameScreen() {
   const router = useRouter()
   const { t } = useLang()
   const [loadResult, setLoadResult] = useState<V3LoadResult | null>(null)
+  const [showTitle, setShowTitle] = useState(true)
+  const [showGoal, setShowGoal] = useState(false)
   const [state, setState] = useState<V3GameState | null>(null)
   const [lastEvent, setLastEvent] = useState<V3ActionEvent | null>(null)
   const [pauseState, setPauseState] = useState(V3_INITIAL_PAUSE_STATE)
@@ -124,7 +137,7 @@ export default function V3GameScreen() {
   // Real-time simulation: whole ticks from elapsed time × speed; nothing runs while paused.
   const speed = getV3EffectiveSpeed(pauseState)
   useEffect(() => {
-    if (speed === 0) return
+    if (speed === 0 || showTitle) return
     let clock: V3Clock = { carryMs: 0 }
     let last = Date.now()
     let lastSave = last
@@ -167,7 +180,7 @@ export default function V3GameScreen() {
         void saveV3GameState(stateRef.current)
       }
     }
-  }, [speed])
+  }, [speed, showTitle])
 
   useEffect(() => onV3ResetRequested(() => { void startFresh() }), [])
 
@@ -250,6 +263,27 @@ export default function V3GameScreen() {
     )
   }
 
+  if (showTitle) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <V3TitleScreen
+          hasSave={loadResult.status === 'loaded'}
+          t={t}
+          onContinue={() => setShowTitle(false)}
+          onNew={() => Alert.alert(
+            t({ en: 'Start a new game?', th: 'เริ่มเกมใหม่?' }),
+            t({ en: 'This replaces your current refinery.', th: 'เซฟโรงกลั่นปัจจุบันจะถูกแทนที่' }),
+            [
+              { text: t({ en: 'Cancel', th: 'ยกเลิก' }), style: 'cancel' },
+              { text: t({ en: 'Start new', th: 'เริ่มใหม่' }), style: 'destructive', onPress: () => { void startFresh().then(() => setShowTitle(false)) } },
+            ],
+          )}
+          onSettings={() => router.push('/settings')}
+        />
+      </SafeAreaView>
+    )
+  }
+
   const labSpot = findV3PlacementSpot(state, 'laboratory')
   const crudeCapacity = getV3CrudeCapacity(state)
   const gasoline = getV3ProductQuantity(state, 'gasoline')
@@ -270,38 +304,51 @@ export default function V3GameScreen() {
   }
   const calendar = getV3Calendar(state.world.tickCount)
   const money = (cents: number) => `$${Math.floor(cents / 100).toLocaleString()}`
-  const tabs: Array<{ key: V3Tab; label: BilingualTextValue; icon: string }> = [
-    { key: 'build', label: { en: 'Build', th: 'สร้าง' }, icon: '🏗️' },
-    { key: 'production', label: { en: 'Production', th: 'ผลิต' }, icon: '🛢️' },
-    { key: 'staff', label: { en: 'Staff', th: 'พนักงาน' }, icon: '👷' },
-    { key: 'clients', label: { en: 'Clients', th: 'ลูกค้า' }, icon: '🤝' },
-    { key: 'company', label: { en: 'Company', th: 'บริษัท' }, icon: '📊' },
+  const hasGoalWarning = lastEvent !== null && lastEvent.tone !== 'success'
+  const pendingGoalCount = guidance === 'chapter_four' ? getV3ClearChecklist(state, t).filter((item) => !item.done).length : 1
+  const goalNoticeCount = pendingGoalCount + Number(hasGoalWarning)
+  const tabs: Array<{ key: V3Tab; label: BilingualTextValue }> = [
+    { key: 'build', label: { en: 'Build', th: 'สร้าง' } },
+    { key: 'production', label: { en: 'Production', th: 'ผลิต' } },
+    { key: 'staff', label: { en: 'Staff', th: 'พนักงาน' } },
+    { key: 'clients', label: { en: 'Clients', th: 'ลูกค้า' } },
+    { key: 'company', label: { en: 'Company', th: 'บริษัท' } },
   ]
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.hud}>
         <View style={styles.hudRow}>
-          <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
-          <Text style={styles.hudItem}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} เดือน ${calendar.month} สัปดาห์ ${calendar.week}` })}</Text>
-          <Text style={styles.hudItem}>🔬 {Math.floor(state.world.researchPoints)}</Text>
-          <Pressable onPress={() => { setCompanySection('ranking'); setTab('company') }} hitSlop={8}><Text style={styles.hudItem}>⭐{getV3Fame(state).level} · 🏆#{getV3PlayerRank(state)} · C{state.campaignProgress.chapter}</Text></Pressable>
-          <Pressable onPress={() => router.push('/settings')} hitSlop={10}><Text style={styles.hudItem}>⚙️</Text></Pressable>
+          <Text style={styles.hudBrand} numberOfLines={1}>Sunrise Refinery</Text>
+          <View style={styles.chapterBadge}><Text style={styles.chapterText}>C{state.campaignProgress.chapter}</Text></View>
+          <Text style={styles.hudDate}>{t({ en: `Y${calendar.year} M${calendar.month} W${calendar.week}`, th: `ปี ${calendar.year} ด.${calendar.month} ส.${calendar.week}` })}</Text>
+          <Pressable onPress={() => { setTab(null); setShowTitle(true) }} hitSlop={10} style={styles.hudSettings}><Text style={styles.hudSettingsText}>☰</Text></Pressable>
         </View>
         <View style={styles.hudRow}>
-          <Pressable onPress={() => { setProductionSection('stock'); setTab('production') }} hitSlop={8} style={styles.hudPress}><Text style={styles.hudSmall}>🛢️ {state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} · ⛽ {gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} · ⚡ {state.world.electricity.toFixed(0)} ＋</Text></Pressable>
-          <View style={styles.speedRow}>
-            {([0, 1, 2, 3] as const).map((value) => (
-              <Pressable
-                key={value}
-                accessibilityState={{ selected: pauseState.selectedSpeed === value }}
-                style={[styles.speedChip, pauseState.selectedSpeed === value && styles.speedActive]}
-                onPress={() => setPauseState((current) => setV3SelectedSpeed(current, value))}
-              >
-                <Text style={styles.speedText}>{value === 0 ? '⏸' : `${value}×`}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <Pressable onPress={() => { setCompanySection('overview'); setTab('company') }} hitSlop={6}>
+            <Text style={styles.hudMoney}>{money(state.world.moneyCents)}</Text>
+          </Pressable>
+          <Pressable onPress={() => { setProductionSection('stock'); setTab('production') }} hitSlop={6} style={styles.hudPress}>
+            <Text style={styles.hudSmall} numberOfLines={1} adjustsFontSizeToFit>🛢{state.world.crudeOil.toFixed(0)}/{Math.floor(crudeCapacity)} ⛽{gasoline.toFixed(0)}/{Math.floor(gasolineCapacity)} ⚡{state.world.electricity.toFixed(0)} 🔬{Math.floor(state.world.researchPoints)}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t({ en: `Speed ${pauseState.selectedSpeed === 0 ? 'paused' : `${pauseState.selectedSpeed} times`}. Tap to change speed`, th: `ความเร็ว ${pauseState.selectedSpeed === 0 ? 'หยุด' : `${pauseState.selectedSpeed} เท่า`} แตะเพื่อเปลี่ยน` })}
+            style={styles.speedChip}
+            onPress={() => setPauseState((current) => setV3SelectedSpeed(current, ((current.selectedSpeed + 1) % 4) as 0 | 1 | 2 | 3))}
+          >
+            <Text style={styles.speedText}>{pauseState.selectedSpeed === 0 ? 'Ⅱ' : `${pauseState.selectedSpeed}×`}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t({ en: `Goals, ${goalNoticeCount} notice${goalNoticeCount > 1 ? 's' : ''}`, th: `เป้าหมาย มีแจ้งเตือน ${goalNoticeCount} รายการ` })}
+            accessibilityState={{ expanded: showGoal }}
+            style={[styles.goalButton, showGoal && styles.goalButtonOpen]}
+            onPress={() => { if (showGoal) setLastEvent(null); setShowGoal((current) => !current) }}
+          >
+            <Text style={styles.goalIcon}>◎</Text>
+            <View style={[styles.goalBadge, goalNoticeCount === 0 && styles.goalBadgeDone, hasGoalWarning && styles.goalBadgeWarning]}><Text style={styles.goalBadgeText}>{goalNoticeCount}</Text></View>
+          </Pressable>
         </View>
       </View>
 
@@ -326,8 +373,12 @@ export default function V3GameScreen() {
             }}
           />
         )}
-        <View style={styles.goalBanner} pointerEvents="box-none">
-          <Text style={styles.goalTitle}>{t({ en: 'Goal', th: 'เป้าหมาย' })}</Text>
+        {showGoal && <View style={styles.goalBanner}>
+          <Pressable style={styles.goalHeader} onPress={() => { setShowGoal(false); setLastEvent(null) }} accessibilityRole="button" accessibilityLabel={t({ en: 'Close goals', th: 'ปิดเป้าหมาย' })}>
+            <Text style={styles.goalTitle}>{t({ en: 'Goal', th: 'เป้าหมาย' })}</Text>
+            <Text style={styles.goalClose}>✕</Text>
+          </Pressable>
+          <ScrollView contentContainerStyle={styles.goalScrollContent}>
           {guidance === 'chapter_four' ? <V3ClearChecklist state={state} t={t} compact /> : <Text style={styles.goalText}>{guidanceText(guidance, t)}</Text>}
           {guidance === 'build_laboratory' && labSpot && (
             <Pressable style={styles.primary} onPress={() => apply({ type: 'build', sequence: state.nextActionSequence, ...labSpot, building: 'laboratory' })}>
@@ -336,7 +387,8 @@ export default function V3GameScreen() {
           )}
           {effectiveSpeed === 0 && pauseState.selectedSpeed !== 0 && <Text style={styles.goalText}>{t({ en: 'Paused while a dialog is open', th: 'หยุดชั่วคราวระหว่างเปิดหน้าต่าง' })}</Text>}
           {lastEvent && lastEvent.tone !== 'success' && <Text style={styles.goalWarning}>{eventText(lastEvent, t)}</Text>}
-        </View>
+          </ScrollView>
+        </View>}
         <View style={styles.overlayBottom} pointerEvents="box-none">
           <ScrollView style={styles.overlayScroll} contentContainerStyle={styles.overlayContent} keyboardShouldPersistTaps="handled">
             <V3YardPanel section="overlay" state={state} yard={yard} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
@@ -353,19 +405,19 @@ export default function V3GameScreen() {
           {tab === 'production' && (
             <View style={styles.segments}>
               <V3Segments value={productionSection} onChange={setProductionSection} items={[
-                { key: 'lines', label: t({ en: 'Lines', th: 'ไลน์ผลิต' }) },
-                { key: 'stock', label: t({ en: 'Stock', th: 'สต็อก' }) },
-                { key: 'rnd', label: t({ en: 'Recipes & R&D', th: 'สูตร & R&D' }) },
-                { key: 'market', label: t({ en: 'Market', th: 'ตลาด' }) },
+                { key: 'lines', icon: '🏭', label: t({ en: 'Lines', th: 'ไลน์ผลิต' }) },
+                { key: 'stock', icon: '🛢️', label: t({ en: 'Stock', th: 'สต็อก' }) },
+                { key: 'rnd', icon: '🧪', label: t({ en: 'Recipes', th: 'สูตร' }) },
+                { key: 'market', icon: '📈', label: t({ en: 'Market', th: 'ตลาด' }) },
               ]} />
             </View>
           )}
           {tab === 'clients' && (
             <View style={styles.segments}>
               <V3Segments value={clientSection} onChange={setClientSection} items={[
-                { key: 'job', label: t({ en: 'Current job', th: 'งานปัจจุบัน' }) },
-                { key: 'offers', label: t({ en: 'Offers', th: 'ข้อเสนอ' }) },
-                { key: 'expo', label: t({ en: 'Expo', th: 'เอ็กซ์โป' }) },
+                { key: 'job', icon: '📋', label: t({ en: 'Current job', th: 'งานปัจจุบัน' }) },
+                { key: 'offers', icon: '🤝', label: t({ en: 'Offers', th: 'ข้อเสนอ' }) },
+                { key: 'expo', icon: '🏆', label: t({ en: 'Expo', th: 'เอ็กซ์โป' }) },
               ]} />
             </View>
           )}
@@ -384,7 +436,7 @@ export default function V3GameScreen() {
             {tab === 'staff' && <V3TeamPanel state={state} apply={applyPanel} t={t} describe={describe} />}
             {tab === 'production' && productionSection === 'lines' && (
               <>
-                <V3GasolineLineCard {...cardProps} />
+                <V3ProductionFlow {...cardProps} />
                 <V3MidgamePanels section="lines" {...cardProps} />
               </>
             )}
@@ -422,7 +474,7 @@ export default function V3GameScreen() {
       <View style={styles.tabBar}>
         {tabs.map((entry) => (
           <Pressable key={entry.key} style={[styles.tabButton, tab === entry.key && styles.tabActive]} onPress={() => setTab(tab === entry.key ? null : entry.key)}>
-            <Text style={styles.tabIcon}>{entry.icon}</Text>
+            <V3NavGlyph kind={entry.key} />
             <Text style={styles.tabLabel}>{t(entry.label)}</Text>
             {entry.key === 'company' && state.inbox.items.length > 0 && <View style={styles.badge} />}
           </Pressable>
@@ -433,36 +485,53 @@ export default function V3GameScreen() {
 }
 
 const styles = StyleSheet.create({
-  hud: { backgroundColor: '#10222F', paddingHorizontal: 12, paddingVertical: 6, gap: 4, borderBottomWidth: 2, borderBottomColor: '#274B63' },
-  hudRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  hudMoney: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 20 },
-  hudItem: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
-  hudPress: { flexShrink: 1 },
-  hudSmall: { color: '#A9C1CF', fontSize: 12, flexShrink: 1 },
-  speedChip: { minWidth: 38, minHeight: 32, borderRadius: 6, borderWidth: 1, borderColor: '#3F6680', alignItems: 'center', justifyContent: 'center', backgroundColor: '#163A52' },
-  speedText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 12 },
+  hudBrand: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 14, flex: 1 },
+  chapterBadge: { paddingHorizontal: 5, backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border },
+  chapterText: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 11 },
+  hudDate: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 10 },
+  hudSettings: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfaceRaised, borderWidth: 2, borderColor: pixelUi.border },
+  hudSettingsText: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 18 },
+  tabPlantGlyph: { width: 33, height: 29 },
+  tabStaffGlyph: { width: 28, height: 28, borderWidth: 1, borderColor: pixelUi.border },
+  tabSymbol: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 23, height: 29 },
+  tabChart: { width: 30, height: 29, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
+  tabChartBar: { width: 6, backgroundColor: pixelUi.accent },
+  hud: { backgroundColor: pixelUi.canvas, paddingHorizontal: 8, paddingVertical: 3, borderBottomWidth: 3, borderBottomColor: pixelUi.border },
+  hudRow: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 35, borderBottomWidth: 1, borderBottomColor: pixelUi.borderSoft },
+  hudMoney: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 11 },
+  hudPress: { flex: 1, minWidth: 0 },
+  hudSmall: { color: pixelUi.textMuted, fontFamily: fonts.brandHeading, fontSize: 11 },
+  speedChip: { width: 36, height: 30, borderWidth: 2, borderColor: pixelUi.border, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfaceRaised },
+  speedText: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 12 },
+  goalButton: { width: 36, height: 30, borderWidth: 2, borderColor: pixelUi.border, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.surfaceRaised },
+  goalButtonOpen: { borderColor: pixelUi.accent },
+  goalIcon: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 24, lineHeight: 26 },
+  goalBadge: { position: 'absolute', top: -6, right: -5, minWidth: 15, height: 15, paddingHorizontal: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: pixelUi.accent, borderWidth: 1, borderColor: pixelUi.canvas },
+  goalBadgeDone: { backgroundColor: pixelUi.success },
+  goalBadgeWarning: { backgroundColor: pixelUi.warning },
+  goalBadgeText: { color: pixelUi.canvas, fontFamily: fonts.brandHeading, fontSize: 10, lineHeight: 12 },
   mapArea: { flex: 1 },
-  goalBanner: { position: 'absolute', top: 8, left: 8, right: 8, backgroundColor: 'rgba(13,43,64,0.88)', borderRadius: 10, borderWidth: 1, borderColor: '#6ACDB4', padding: 8, gap: 4 },
-  goalTitle: { color: '#A9F3D9', fontFamily: fonts.heading, fontSize: 12 },
+  goalBanner: { position: 'absolute', top: 8, left: 8, right: 8, maxHeight: '65%', backgroundColor: pixelUi.surface, borderWidth: 2, borderColor: pixelUi.border, padding: 8, gap: 3 },
+  goalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
+  goalClose: { color: pixelUi.text, fontFamily: fonts.brandHeading, fontSize: 16 },
+  goalScrollContent: { gap: 5 },
+  goalTitle: { color: pixelUi.accent, fontFamily: fonts.brandHeading, fontSize: 12 },
   goalText: { color: '#E8F0F4', fontSize: 13, lineHeight: 18 },
   goalWarning: { color: '#FFAD8A', fontSize: 12 },
   overlayBottom: { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: '55%' },
   overlayScroll: { flexGrow: 0 },
   overlayContent: { gap: 8 },
-  sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '62%', backgroundColor: '#0B1D29', borderTopLeftRadius: 16, borderTopRightRadius: 16, borderTopWidth: 2, borderColor: '#274B63' },
+  sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '54%', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderColor: pixelUi.border },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10 },
-  sheetTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 18 },
-  sheetClose: { color: '#D5E2E9', fontSize: 20 },
-  tabBar: { flexDirection: 'row', backgroundColor: '#10222F', borderTopWidth: 2, borderTopColor: '#274B63', height: 64 },
-  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabActive: { backgroundColor: '#1D4460' },
+  sheetTitle: { color: pixelUi.accent, fontFamily: fonts.brandDisplay, fontSize: 20 },
+  sheetClose: { color: pixelUi.text, fontFamily: fonts.brandDisplay, fontSize: 23 },
+  tabBar: { flexDirection: 'row', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderTopColor: pixelUi.border, height: 64 },
+  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRightWidth: 1, borderRightColor: pixelUi.borderSoft },
+  tabActive: { backgroundColor: pixelUi.surfaceRaised, borderBottomWidth: 3, borderBottomColor: pixelUi.accent },
   tabIcon: { fontSize: 20 },
-  tabLabel: { color: '#E8F0F4', fontSize: 11, fontFamily: fonts.heading },
+  tabLabel: { color: pixelUi.textMuted, fontSize: 11, fontFamily: fonts.brandHeading },
   badge: { position: 'absolute', top: 8, right: '28%', width: 9, height: 9, borderRadius: 5, backgroundColor: '#FF6B5B' },
-  speedRow: { flexDirection: 'row', gap: 6 },
-  speedButton: { flex: 1 },
-  speedActive: { borderColor: '#6ACDB4', backgroundColor: '#2E6C63' },
-  safe: { flex: 1, backgroundColor: '#071C2D' },
+  safe: { flex: 1, backgroundColor: pixelUi.canvas },
   loading: { flex: 1, backgroundColor: '#071C2D', alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: '#244A63', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   kicker: { color: '#6ACDB4', fontFamily: fonts.heading, fontSize: 9, letterSpacing: 1.5 },
@@ -481,7 +550,7 @@ const styles = StyleSheet.create({
   cardTitle: { color: '#FFD447', fontFamily: fonts.heading, fontSize: 16 },
   row: { color: '#D5E2E9', fontSize: 13, lineHeight: 19 },
   warning: { color: '#FFAD8A' },
-  primary: { backgroundColor: '#FFD447', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  primary: { backgroundColor: pixelUi.accent, borderRadius: 2, borderWidth: 2, borderColor: '#FFE77C', paddingVertical: 12, alignItems: 'center', marginTop: 4 },
   primaryText: { color: '#0A2943', fontFamily: fonts.heading, fontSize: 13 },
   secondary: { backgroundColor: '#163A52', borderWidth: 1, borderColor: '#3F6680', borderRadius: 8, paddingVertical: 11, alignItems: 'center' },
   secondaryText: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
