@@ -11,6 +11,7 @@ import { V3_INITIAL_PAUSE_STATE, acquireV3Pause, getV3EffectiveSpeed, releaseV3P
 import { V3_AUTOSAVE_MS, stepV3Clock, type V3Clock } from '../src/game/v3/realtime'
 import { onV3ResetRequested } from '../src/game/v3/session'
 import { getV3CrudeCapacity, getV3ProductCapacity, getV3ProductQuantity } from '../src/game/v3/productInventory'
+import { getV3CrudeUnitPriceCents } from '../src/game/v3/fame'
 import { runV3ProductionTick } from '../src/game/v3/production'
 import { isV3LoanerBuilding } from '../src/game/v3/recovery'
 import { createInitialV3GameState } from '../src/game/v3/state'
@@ -44,7 +45,7 @@ import { V3ActiveJobCard, V3GasolineDevelopmentCard, V3LedgerCard, V3RecoveryCar
 import { V3ProductionFlow } from '../src/components/v3/V3ProductionFlow'
 import { V3Segments } from '../src/components/v3/V3Segments'
 import { getV3ClearChecklist, V3ClearChecklist } from '../src/components/v3/V3ClearChecklist'
-import { useLang } from '../src/hooks/SettingsContext'
+import { useLang, useSettingsContext } from '../src/hooks/SettingsContext'
 import { colors, fonts, pixelUi, spacing } from '../src/theme'
 import { getStarterPlantArt } from '../src/starterPlantArt'
 
@@ -56,6 +57,12 @@ function V3NavGlyph({ kind }: { kind: 'build' | 'production' | 'staff' | 'client
   if (kind === 'clients') return <Text style={styles.tabSymbol}>✉</Text>
   return <View style={styles.tabChart}>{[9, 16, 23].map((height) => <View key={height} style={[styles.tabChartBar, { height }]} />)}</View>
 }
+
+/** Crude bought by the one-tap restock button on the yard. */
+const QUICK_CRUDE_BATCH = 20
+/** Auto crude reorders below this share of tank capacity, never fewer than AUTO_CRUDE_MIN units. */
+const AUTO_CRUDE_LOW = 0.35
+const AUTO_CRUDE_MIN = 5
 
 type V3Tab = 'build' | 'production' | 'staff' | 'clients' | 'company'
 type ProductionSection = 'lines' | 'stock' | 'rnd' | 'market'
@@ -70,6 +77,9 @@ const TRUCK_LINE_GAP_MS = 2_500
 export default function V3GameScreen() {
   const router = useRouter()
   const { t } = useLang()
+  const { settings } = useSettingsContext()
+  const autoCrudeRef = useRef(settings.autoCrude)
+  autoCrudeRef.current = settings.autoCrude
   const [loadResult, setLoadResult] = useState<V3LoadResult | null>(null)
   const [showTitle, setShowTitle] = useState(true)
   const [showGoal, setShowGoal] = useState(false)
@@ -154,6 +164,20 @@ export default function V3GameScreen() {
         const result = runV3ProductionTick(next, Math.min(25, remaining))
         for (const line of result.lines) outputRef.current[line.buildingId] = (outputRef.current[line.buildingId] ?? 0) + line.outputQuantity
         next = result.state
+      }
+      // Auto crude: when the tank runs low, order a refill through the normal trade action
+      // (same price and ledger as a manual buy). Spends at most half the cash on hand per order,
+      // so it never strands the player; spawnTrucks below shows the tanker delivering it.
+      if (autoCrudeRef.current) {
+        const capacity = getV3CrudeCapacity(next)
+        if (next.world.crudeOil < capacity * AUTO_CRUDE_LOW) {
+          const unit = getV3CrudeUnitPriceCents(next)
+          const quantity = Math.min(Math.floor(capacity - next.world.crudeOil + 1e-8), Math.floor(next.world.moneyCents * 0.5 / unit))
+          if (quantity >= AUTO_CRUDE_MIN) {
+            const bought = reduceV3Action(next, { type: 'trade', direction: 'buy', product: 'crude', quantity, sequence: next.nextActionSequence })
+            if (bought.changed) next = bought.state
+          }
+        }
       }
       // Kairosoft-style "+N" over each producing line once per 5 s cycle.
       if (Math.floor(next.world.tickCount / 25) > cycleBefore) {
@@ -299,9 +323,19 @@ export default function V3GameScreen() {
     .filter((floater) => now - floater.born < FLOATER_MS)
     .map((floater) => ({ ...floater, age: (now - floater.born) / FLOATER_MS }))
   const alerts: Record<string, string> = {}
+  let crudeStarved = false
   for (const line of evaluateV3Production(state, 25).lines) {
     if (line.status === 'invalid' || line.status === 'paused' || line.limitedBy !== 'none') alerts[line.buildingId] = line.limitedBy !== 'none' ? line.limitedBy : line.status
+    if (line.limitedBy === 'input' && line.input === 'crude') crudeStarved = true
   }
+  // One-tap restock right on the yard when a line runs dry: a sensible batch, never more than
+  // the tank holds or the player can pay for (bigger orders stay in Production → Stock).
+  const crudeUnitCents = getV3CrudeUnitPriceCents(state)
+  const crudeRestock = Math.min(
+    QUICK_CRUDE_BATCH,
+    Math.max(0, Math.floor(getV3CrudeCapacity(state) - state.world.crudeOil + 1e-8)),
+    Math.floor(state.world.moneyCents / crudeUnitCents),
+  )
   const calendar = getV3Calendar(state.world.tickCount)
   const money = (cents: number) => `$${Math.floor(cents / 100).toLocaleString()}`
   const hasGoalWarning = lastEvent !== null && lastEvent.tone !== 'success'
@@ -390,6 +424,15 @@ export default function V3GameScreen() {
           </ScrollView>
         </View>}
         <View style={styles.overlayBottom} pointerEvents="box-none">
+          {crudeStarved && !tab && crudeRestock > 0 && (
+            <Pressable
+              style={styles.restock}
+              onPress={() => apply({ type: 'trade', direction: 'buy', product: 'crude', quantity: crudeRestock, sequence: state.nextActionSequence })}
+              accessibilityRole="button"
+            >
+              <Text style={styles.restockText}>🛢 {t({ en: 'Out of crude — buy', th: 'น้ำมันดิบหมด — ซื้อ' })} {crudeRestock} · {money(crudeRestock * crudeUnitCents)}</Text>
+            </Pressable>
+          )}
           <ScrollView style={styles.overlayScroll} contentContainerStyle={styles.overlayContent} keyboardShouldPersistTaps="handled">
             <V3YardPanel section="overlay" state={state} yard={yard} apply={(action) => { void apply(action) }} t={t} describe={(message) => eventText(message, t)} onRequestDemolish={confirmDemolish} />
           </ScrollView>
@@ -519,6 +562,8 @@ const styles = StyleSheet.create({
   goalText: { color: '#E8F0F4', fontSize: 13, lineHeight: 18 },
   goalWarning: { color: '#FFAD8A', fontSize: 12 },
   overlayBottom: { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: '55%' },
+  restock: { alignSelf: 'center', backgroundColor: '#E8562A', borderWidth: 2, borderColor: '#FFC27A', paddingVertical: 10, paddingHorizontal: 16, marginBottom: 6 },
+  restockText: { color: '#FFFFFF', fontFamily: fonts.heading, fontSize: 14 },
   overlayScroll: { flexGrow: 0 },
   overlayContent: { gap: 8 },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 64, height: '54%', backgroundColor: pixelUi.canvas, borderTopWidth: 3, borderColor: pixelUi.border },

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 
 import type { BilingualTextValue } from '../../game/types'
 import { reduceV3Action } from '../../game/v3/actions'
@@ -7,6 +7,7 @@ import { getV3CrudeUnitPriceCents } from '../../game/v3/fame'
 import { getV3CrudeCapacity } from '../../game/v3/productInventory'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
 import { fonts } from '../../theme'
+import { useSettingsContext } from '../../hooks/SettingsContext'
 
 type Props = {
   state: V3GameState
@@ -17,6 +18,7 @@ type Props = {
 
 /** Crude purchasing: the only raw-material input, always reachable from the Supply sheet. */
 export function V3SupplyPanel({ state, apply, t, describe }: Props) {
+  const { settings, update } = useSettingsContext()
   const capacity = getV3CrudeCapacity(state)
   const room = Math.max(0, Math.floor(capacity - state.world.crudeOil + 1e-8))
   const unitCents = getV3CrudeUnitPriceCents(state)
@@ -33,6 +35,13 @@ export function V3SupplyPanel({ state, apply, t, describe }: Props) {
       <Text style={styles.row}>
         {t({ en: 'Stock', th: 'คงเหลือ' })}: {state.world.crudeOil.toFixed(1)}/{Math.floor(capacity)} · ${(unitCents / 100).toFixed(2)}/{t({ en: 'unit', th: 'หน่วย' })}{unitCents < V3_CRUDE_PRICE_CENTS ? ` (${t({ en: 'fame discount', th: 'ส่วนลดชื่อเสียง' })} −${Math.round((1 - unitCents / V3_CRUDE_PRICE_CENTS) * 100)}%)` : ''}
       </Text>
+      <View style={styles.autoRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.autoTitle}>{t({ en: 'Auto-buy crude', th: 'ซื้อน้ำมันดิบอัตโนมัติ' })}</Text>
+          <Text style={styles.reason}>{t({ en: 'Refills the tank when it runs low (uses up to half your cash per order).', th: 'เติมถังให้เองเมื่อเหลือน้อย (ใช้เงินไม่เกินครึ่งหนึ่งต่อครั้ง)' })}</Text>
+        </View>
+        <Switch value={settings.autoCrude} onValueChange={(value) => update('autoCrude', value)} />
+      </View>
       <View style={styles.buttons}>
         {options.map((option) => {
           const action = { type: 'trade', direction: 'buy', product: 'crude', quantity: option.quantity, sequence: state.nextActionSequence } as V3Action
@@ -69,4 +78,6 @@ const styles = StyleSheet.create({
   price: { color: '#FFD447', fontSize: 11 },
   reason: { color: '#FFAD8A', fontSize: 11, marginTop: 2 },
   disabled: { opacity: 0.45 },
+  autoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  autoTitle: { color: '#E8F0F4', fontFamily: fonts.heading, fontSize: 13 },
 })

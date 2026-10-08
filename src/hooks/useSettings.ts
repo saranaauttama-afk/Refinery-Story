@@ -8,6 +8,8 @@ export type Settings = {
   soundEnabled: boolean
   musicEnabled: boolean
   adsRemoved: boolean
+  /** Keep the crude tank topped up automatically (trucks deliver it); on by default. */
+  autoCrude: boolean
 }
 
 const SETTINGS_KEY = 'refinery-story-settings'
@@ -26,6 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
   soundEnabled: true,
   musicEnabled: true,
   adsRemoved: false,
+  autoCrude: true,
 }
 
 function sanitize(value: unknown): Settings {
@@ -36,6 +39,7 @@ function sanitize(value: unknown): Settings {
     soundEnabled: typeof v.soundEnabled === 'boolean' ? v.soundEnabled : true,
     musicEnabled: typeof v.musicEnabled === 'boolean' ? v.musicEnabled : true,
     adsRemoved: typeof v.adsRemoved === 'boolean' ? v.adsRemoved : false,
+    autoCrude: typeof v.autoCrude === 'boolean' ? v.autoCrude : true,
   }
 }
 
