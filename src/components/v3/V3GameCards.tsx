@@ -13,8 +13,9 @@ import { V3_DEFAULT_BLUEPRINT_ID } from '../../game/v3/state'
 import type { V3Action, V3ActionEvent, V3GameState } from '../../game/v3/types'
 import { getV3LeadContribution } from '../../game/v3/workforce'
 import { listV3Buildings } from '../../game/v3/yard'
+import { BUILDINGS } from '../../game/data/buildings'
 import { fonts } from '../../theme'
-import { v3JobLabel } from './v3Labels'
+import { v3BuildingNumber, v3JobLabel } from './v3Labels'
 
 type Translate = (value: BilingualTextValue) => string
 type CardProps = {
@@ -213,7 +214,7 @@ export function V3RecoveryCard({ state, apply, t, onReviewRemoval }: CardProps &
               <Text style={styles.warning}>{t({ en: 'Not enough free land for the loaners. Nothing is removed automatically.', th: 'ที่ดินว่างไม่พอสำหรับอาคารยืม ระบบจะไม่รื้อให้อัตโนมัติ' })}</Text>
               {listV3Buildings(state).map((building) => building ? (
                 <Pressable key={`clear-${building.id}`} style={styles.secondary} onPress={() => onReviewRemoval(building.id)}>
-                  <Text style={styles.secondaryText}>{t({ en: `Review removal · ${building.type} @(${building.x},${building.y})`, th: `ตรวจสอบการรื้อ · ${building.type} @(${building.x},${building.y})` })}</Text>
+                  <Text style={styles.secondaryText}>{t({ en: 'Review removal', th: 'ตรวจสอบการรื้อ' })} · {t(BUILDINGS[building.type].name)} {v3BuildingNumber(state, building.id)}</Text>
                 </Pressable>
               ) : null)}
             </>

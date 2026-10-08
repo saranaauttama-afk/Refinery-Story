@@ -43,7 +43,8 @@
     "check:v3-rivals": "node --import tsx scripts/rivals-check.ts",
     "check:v3-expo": "node --import tsx scripts/expo-check.ts",
     "check:v3-careers": "node --import tsx scripts/careers-check.ts",
-    "check:v3-grade-names": "node --import tsx scripts/grade-names-check.ts"
+    "check:v3-grade-names": "node --import tsx scripts/grade-names-check.ts",
+    "export:web": "mkdir -p public && cp node_modules/canvaskit-wasm/bin/full/canvaskit.wasm public/ && expo export --platform web"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",

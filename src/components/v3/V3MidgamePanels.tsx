@@ -7,6 +7,7 @@ import { V3_SUPPORTED_BUILDINGS, getV3ModuleQuote, reduceV3Action } from '../../
 import { V3_BUILDINGS, V3_DEVELOPMENT_BY_FAMILY, V3_RESEARCH, type V3ResearchEffect, V3_SPOT_PRICE_CENTS, isV3ProcessBuilding } from '../../game/v3/data'
 import { getV3BlueprintQuality } from '../../game/v3/development'
 import { getV3BuildingLevel, listV3Buildings } from '../../game/v3/yard'
+import { v3BuildingNumber } from './v3Labels'
 import { getV3ProductCapacity, getV3ProductQuantity, getV3SellableQuantity, getV3StockAllocations, isV3JobEligibleVariant } from '../../game/v3/productInventory'
 import { evaluateV3Production, getV3BatteryCapacity, getV3FeedstockCapacity, type V3LinePlan } from '../../game/v3/production'
 import { getV3AvailableKnowledgeRank } from '../../game/v3/research'
@@ -204,9 +205,7 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
         <Text style={styles.cardTitle}>{t({ en: 'Power', th: 'ระบบไฟฟ้า' })}</Text>
         <Text style={styles.row}>{t({ en: 'Battery', th: 'แบตเตอรี่' })}: {state.world.electricity.toFixed(1)}/{getV3BatteryCapacity(state)}</Text>
         <Text style={styles.row}>{t({ en: 'Max supply', th: 'กำลังจ่ายสูงสุด' })}: {power.potentialSupplyPerMinute.toFixed(0)}/min</Text>
-        <Text style={styles.row}>{t({ en: 'Demand requested / actual', th: 'ความต้องการ / ใช้จริง' })}: {power.requestedDemandPerMinute.toFixed(1)} / {power.actualDemandPerMinute.toFixed(1)} per min</Text>
-        <Text style={styles.row}>{t({ en: 'Crude reserved for active distillation', th: 'crude ที่สำรองให้ Distillation' })}: {power.crudeReservedForDistillation.toFixed(1)}</Text>
-        <Text style={styles.row}>{t({ en: 'Generator fuel next cycle', th: 'เชื้อเพลิงโรงไฟฟ้ารอบถัดไป' })}: {power.generatorFuel.toFixed(2)} crude</Text>
+        <Text style={styles.row}>{t({ en: 'In use', th: 'ใช้อยู่' })}: {power.actualDemandPerMinute.toFixed(0)}/min</Text>
         {power.requestedDemandPerMinute > power.potentialSupplyPerMinute + 1e-6 && (
           <Text style={styles.warning}>{t({ en: 'Demand exceeds supply: build or upgrade a Power Plant.', th: 'ใช้ไฟเกินกำลังจ่าย: สร้างหรืออัปเกรดโรงไฟฟ้า' })}</Text>
         )}
@@ -226,7 +225,7 @@ export function V3MidgamePanels({ state, apply, t, describe, section }: Props) {
           return (
             <View key={line.buildingId} style={styles.line}>
               <Text style={styles.lineTitle}>
-                {t(BUILDINGS[line.building].name)} @({state.world.buildingsById[line.buildingId].x},{state.world.buildingsById[line.buildingId].y}) Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality} · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
+                {t(BUILDINGS[line.building].name)} {v3BuildingNumber(state, line.buildingId)} Lv{level} · {blueprint ? `${blueprint.name} Q${blueprint.quality}${program.installedModule !== 'none' ? ` · ${t({ en: 'module', th: 'โมดูล' })} ${program.installedModule}` : ''}` : t({ en: 'waste 4 → recycled 2', th: 'ของเสีย 4 → รีไซเคิล 2' })}
               </Text>
               <Text style={styles.row}>{t(STATUS_TEXT[line.status])} · {t(LIMIT_TEXT[line.limitedBy])}</Text>
               <Text style={styles.row}>

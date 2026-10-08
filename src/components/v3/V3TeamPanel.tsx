@@ -8,6 +8,7 @@ import { V3_ROLES, V3_STAFF_LEVELS, isV3ProcessBuilding } from '../../game/v3/da
 import { getV3Modifiers, type V3CappedChannel } from '../../game/v3/modifiers'
 import type { V3Action, V3ActionEvent, V3EmployeeDuty, V3GameState } from '../../game/v3/types'
 import { listV3Buildings } from '../../game/v3/yard'
+import { v3BuildingNumber } from './v3Labels'
 import { getV3LocalCrewRate, getV3StaffCap, getV3TrainingCost, getV3WageCents } from '../../game/v3/workforce'
 import { fonts } from '../../theme'
 import { V3_CAREER, getV3CareerRank, getV3RareCandidate } from '../../game/v3/careers'
@@ -79,7 +80,7 @@ export function V3TeamPanel({ state, apply, t, describe }: Props) {
   const cap = getV3StaffCap(state)
   const lineCells = listV3Buildings(state)
     .filter((building) => isV3ProcessBuilding(building.type) && state.plantPrograms[building.id])
-    .map((building) => ({ cell: building.type, id: building.id, label: `@(${building.x},${building.y})` }))
+    .map((building) => ({ cell: building.type, id: building.id, label: v3BuildingNumber(state, building.id) }))
   const totalWageCentsPerMin = state.world.employees.reduce((sum, employee) => sum + getV3WageCents(employee, state.employeeDuties[employee.id] ?? { kind: 'reserve' }, 300), 0)
   const selected = state.world.employees.find((employee) => employee.id === selectedId) ?? null
 

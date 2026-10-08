@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -18,6 +18,7 @@ import {
 import ErrorBoundary from '../src/components/ErrorBoundary'
 import { setBgmEnabled } from '../src/audio/soundManager'
 import { SettingsProvider, useSettingsContext } from '../src/hooks/SettingsContext'
+import { loadSkiaWeb } from '../src/skiaWeb'
 
 /**
  * V3 is the only game. The old engine's provider, tick loop, save writer and
@@ -51,7 +52,12 @@ export default function RootLayout() {
     PixelifySans_600SemiBold,
     PixelifySans_700Bold,
   })
-  if (!fontsLoaded && !fontError) return null
+  // Web only: the yard is a Skia canvas, so CanvasKit must finish loading first (no-op on native).
+  const [skiaReady, setSkiaReady] = useState(false)
+  useEffect(() => {
+    loadSkiaWeb().catch(() => undefined).finally(() => setSkiaReady(true))
+  }, [])
+  if ((!fontsLoaded && !fontError) || !skiaReady) return null
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

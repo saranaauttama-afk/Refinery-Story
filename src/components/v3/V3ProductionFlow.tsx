@@ -144,7 +144,7 @@ function LineCard({ state, apply, t, describe, line }: Props & { line: V3LinePla
 
       {open && (
         <View style={styles.details}>
-          <Text style={styles.row}>@({building.x},{building.y}) · {t(LIMIT_LABEL[line.limitedBy])}{line.energyPerWork > 0 ? ` · ${t({ en: 'power', th: 'ไฟ' })} ${line.potentialEnergyPerMinute.toFixed(1)}/min` : ''}{line.crewRate > 0 ? ` · crew +${(line.crewRate * 100).toFixed(0)}%` : ''}</Text>
+          <Text style={styles.row}>{t(LIMIT_LABEL[line.limitedBy])}{line.energyPerWork > 0 ? ` · ${t({ en: 'power', th: 'ไฟ' })} ${line.potentialEnergyPerMinute.toFixed(1)}/min` : ''}{line.crewRate > 0 ? ` · crew +${(line.crewRate * 100).toFixed(0)}%` : ''}</Text>
           {upgradeCost !== null && (
             <Pressable
               style={styles.secondary}

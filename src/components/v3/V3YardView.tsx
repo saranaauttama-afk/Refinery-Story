@@ -10,7 +10,9 @@ import {
   Group,
   Image as SkiaImage,
   ImageSVG,
+  Oval,
   Path,
+  Rect,
   Skia,
   Text as SkiaText,
   matchFont,
@@ -37,11 +39,14 @@ import { getV3BuildingArt, getV3BuildingAnchor, getV3BuildingEffects, isV3CodeAr
 import { getV3DecorFootprint, type V3Decoration } from '../../game/v3/decorData'
 import { getV3DecorSvg } from '../../art/decorArt'
 import { planV3TruckTrip, sampleV3TruckTrip, type V3TruckRequest, type V3TruckTrip } from '../../game/v3/traffic'
+import { planV3Walkers, sampleV3Walker, type V3Walker } from '../../game/v3/walkers'
 import { TRUCK_ANCHOR_FROM_BOTTOM, TRUCK_ART, TRUCK_MASTER_WIDTH } from './v3Vehicles'
 import { V3_GROUND_CELL, V3_GROUND_DECOR, getV3DecorGroundTiles, getV3GroundModel, type V3GroundTile } from '../../game/v3/groundView'
 import { GROUND_ATLAS } from './v3Ground'
 
 const MIN_SCALE = 0.35
+/** Opening camera frames the buildings with at least this many tiles across. */
+const FOCUS_TILES = 11
 const MAX_SCALE = 2.2
 const PIXEL = { filter: FilterMode.Nearest, mipmap: MipmapMode.None } as const // nearest-neighbour, same as the legacy map
 
@@ -244,6 +249,43 @@ const Truck = memo(function Truck({ trip, startMs, simMs, onDone }: {
   )
 })
 
+/** Shirt colour per role, so the crew reads at a glance (hard hats stay yellow). */
+const WALKER_SHIRT: Partial<Record<string, string>> = {
+  operator: '#3D7FD6', mechanic: '#F08A24', salesAgent: '#4DB35E', chemist: '#F2F2F2',
+  logisticsCoordinator: '#8A5BD6', safetyOfficer: '#E04848',
+}
+
+/**
+ * One staff member walking their loop. Drawn in world pixels (tile = 32x16):
+ * shadow, two legs that swing while walking, shirt, head and a yellow hard hat.
+ */
+const Walker = memo(function Walker({ walker, simMs }: { walker: V3Walker; simMs: SharedValue<number> }) {
+  const { xs, ys, cum, walkMs, dwellMs, phaseMs } = walker
+  const sample = useDerivedValue(() => sampleV3Walker(xs, ys, cum, walkMs, dwellMs, simMs.value + phaseMs))
+  const transform = useDerivedValue(() => {
+    const { x, y } = sample.value
+    return [{ translateX: (x - y) * V3_ISO.tw / 2 }, { translateY: (x + y) * V3_ISO.th / 2 }]
+  })
+  const legA = useDerivedValue(() => (sample.value.step ? -4.2 : -3.4))
+  const legB = useDerivedValue(() => (sample.value.step ? -3.4 : -4.2))
+  const bob = useDerivedValue(() => [{ translateY: sample.value.moving && sample.value.step ? -0.5 : 0 }])
+  const shirt = WALKER_SHIRT[walker.role] ?? '#2FA59A'
+  return (
+    <Group transform={transform}>
+      <Oval x={-3} y={-1.2} width={6} height={2.4} color="rgba(20,24,30,0.35)" />
+      <Rect x={-1.9} y={legA} width={1.6} height={3.6} color="#2B2F3C" />
+      <Rect x={0.3} y={legB} width={1.6} height={3.6} color="#2B2F3C" />
+      <Group transform={bob}>
+        <Rect x={-2.4} y={-8.2} width={4.8} height={4.6} color={shirt} />
+        <Rect x={-2.4} y={-8.2} width={4.8} height={1} color="rgba(0,0,0,0.18)" />
+        <Circle cx={0} cy={-9.8} r={1.9} color="#F2C9A0" />
+        <Rect x={-2.3} y={-12.2} width={4.6} height={1.6} color="#FFD23F" />
+        <Rect x={-2.9} y={-10.9} width={5.8} height={0.8} color="#E0A800" />
+      </Group>
+    </Group>
+  )
+})
+
 /**
  * Full-screen isometric refinery. Draws only owned land plus adjacent ring
  * parcels; buildings use the existing pixel art placed on their real footprint.
@@ -252,6 +294,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const landKey = `${state.world.unlockedParcelIds.join(',')}|${state.campaignProgress.chapter}`
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
+  const walkers = useMemo(() => planV3Walkers(state), [state.world.buildingsById, state.world.employees, state.employeeDuties, state.world.decorations, landKey])
   const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
   const groundImage = useImage(GROUND_ATLAS as DataSourceParam)
   const ground = useMemo(() => {
@@ -347,10 +390,21 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const backdrop = V3_YARD_BACKDROP
   // Always cover the viewport, including tall phones at minimum zoom.
   const minScale = Math.max(MIN_SCALE, width / backdrop.width, height / backdrop.height)
-  const initialScale = clampCameraValue(Math.min(width / worldW, height / worldH) * 1.3, minScale, MAX_SCALE)
-  const initialX = clampCameraValue(width / 2 - (bounds.minX + worldW / 2) * initialScale,
+  // Open close-up on the buildings (Kairosoft-style), not on the whole parcel map:
+  // frame the built area with at least FOCUS_TILES tiles across, the player can pinch out.
+  const focus = useMemo(() => {
+    if (!sprites.length) return { cx: bounds.minX + worldW / 2, cy: bounds.minY + worldH / 2, w: worldW, h: worldH }
+    const minX = Math.min(...sprites.map((s) => s.centerX - s.footprintWidth / 2))
+    const maxX = Math.max(...sprites.map((s) => s.centerX + s.footprintWidth / 2))
+    const maxY = Math.max(...sprites.map((s) => s.bottomY))
+    const minY = Math.min(...sprites.map((s) => s.bottomY - s.footprintWidth * 1.1))
+    const w = Math.max(maxX - minX + V3_ISO.tw * 2, V3_ISO.tw * FOCUS_TILES)
+    return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, w, h: Math.max(maxY - minY + V3_ISO.th * 4, w * 0.6) }
+  }, [sprites.length === 0, landKey])
+  const initialScale = clampCameraValue(Math.min(width / focus.w, height / focus.h), minScale, MAX_SCALE)
+  const initialX = clampCameraValue(width / 2 - focus.cx * initialScale,
     width - (backdrop.x + backdrop.width) * initialScale, -backdrop.x * initialScale)
-  const initialY = clampCameraValue(height / 2 - (bounds.minY + worldH / 2) * initialScale,
+  const initialY = clampCameraValue(height / 2 - focus.cy * initialScale,
     height - (backdrop.y + backdrop.height) * initialScale, -backdrop.y * initialScale)
 
   const tx = useSharedValue(initialX)
@@ -399,10 +453,6 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
     runOnJS(onTapTile)(Math.floor((a + b) / 2), Math.floor((b - a) / 2))
   })
   const gesture = Gesture.Exclusive(Gesture.Simultaneous(pan, pinch), tap)
-
-  if (Platform.OS === 'web') {
-    return <View style={[styles.viewport, { width, height }]}><Text style={styles.webNote}>The refinery map runs in the Android/iOS build.</Text></View>
-  }
 
   return (
     <View style={[styles.viewport, { width, height }]}>
@@ -469,6 +519,7 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
                 </Group>
               )
             })}
+            {walkers.map((walker) => <Walker key={walker.id} walker={walker} simMs={simMs} />)}
             {trips.map(({ trip, startMs }) => <Truck key={trip.id} trip={trip} startMs={startMs} simMs={simMs} onDone={onTruckDone} />)}
             {placement?.cells.map((cell) => (
               <Path key={`p${cell.x},${cell.y}`} path={diamond(v3IsoRect({ ...cell, w: 1, h: 1 }))} color={PREVIEW_FILL[placement.status] ?? 'rgba(255,99,99,0.6)'} />

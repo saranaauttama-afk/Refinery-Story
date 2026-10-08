@@ -1,5 +1,5 @@
 import type { BilingualTextValue } from '../../game/types'
-import type { V3InboxItem } from '../../game/v3/types'
+import type { V3GameState, V3InboxItem } from '../../game/v3/types'
 
 /** Player-facing names; internal template/parcel IDs are never shown (Master UX rule). */
 const CLIENT: Record<string, BilingualTextValue> = {
@@ -60,4 +60,12 @@ export function v3InboxText(item: V3InboxItem): BilingualTextValue {
     en: 'The lab has an idea for a small experiment using what you learned. Accept for research points (no cost).',
     th: 'ห้องแล็บมีไอเดียทดลองเล็ก ๆ จากความรู้ที่มี รับเพื่อรับแต้มวิจัย (ไม่มีค่าใช้จ่าย)',
   }
+}
+
+/** "#2" — the building's number among its own kind (stable: by id). Replaces raw grid coordinates in the UI. */
+export function v3BuildingNumber(state: V3GameState, buildingId: string): string {
+  const building = state.world.buildingsById[buildingId]
+  if (!building) return ''
+  const same = Object.values(state.world.buildingsById).filter((entry) => entry.type === building.type).map((entry) => entry.id).sort()
+  return `#${same.indexOf(buildingId) + 1}`
 }

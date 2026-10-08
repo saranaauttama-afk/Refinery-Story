@@ -12,8 +12,17 @@ export type Settings = {
 
 const SETTINGS_KEY = 'refinery-story-settings'
 
+/** First launch follows the phone's language (Thai phone → Thai UI); the player can still switch. */
+function deviceLanguage(): Language {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().locale.toLowerCase().startsWith('th') ? 'th' : 'en'
+  } catch {
+    return 'en'
+  }
+}
+
 const DEFAULT_SETTINGS: Settings = {
-  language: 'en',
+  language: deviceLanguage(),
   soundEnabled: true,
   musicEnabled: true,
   adsRemoved: false,
@@ -23,7 +32,7 @@ function sanitize(value: unknown): Settings {
   if (typeof value !== 'object' || value === null) return DEFAULT_SETTINGS
   const v = value as Partial<Settings>
   return {
-    language: v.language === 'th' ? 'th' : 'en',
+    language: v.language === 'th' || v.language === 'en' ? v.language : DEFAULT_SETTINGS.language,
     soundEnabled: typeof v.soundEnabled === 'boolean' ? v.soundEnabled : true,
     musicEnabled: typeof v.musicEnabled === 'boolean' ? v.musicEnabled : true,
     adsRemoved: typeof v.adsRemoved === 'boolean' ? v.adsRemoved : false,
