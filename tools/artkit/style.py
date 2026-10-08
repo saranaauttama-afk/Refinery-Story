@@ -85,6 +85,12 @@ if WARM_COOL:
         'extinguisher': hue_ramp((214, 52, 48), 3, spread=0.2),
         'lamp':     hue_ramp((110, 220, 110), 4, spread=0.22),
         'plate':    hue_ramp((232, 230, 222), 3, spread=0.12),
+        'wall':     hue_ramp((214, 210, 198), 5, spread=0.2),     # painted building walls
+        'brick':    hue_ramp((176, 110, 84), 4, spread=0.22),
+        'water':    hue_ramp((70, 140, 160), 4, spread=0.18),
+        'sludge':   hue_ramp((118, 112, 70), 4, spread=0.16),
+        'heap':     hue_ramp((120, 108, 96), 4, spread=0.22),     # scrap / bales
+        'door':     hue_ramp((150, 156, 166), 4, spread=0.2),
     })
 
 # accent per product line (§3)
@@ -95,6 +101,12 @@ ACCENTS = {
     'jet':           [(140, 214, 255), (70, 170, 235), (36, 120, 190), (24, 80, 140)],
     'petrochemical': [(200, 150, 240), (156, 96, 210), (110, 60, 160), (72, 40, 110)],
     'polymer':       [(150, 230, 110), (99, 199, 77), (62, 137, 72), (38, 92, 56)],
+    # support / utility lines (ART_ASSET_LIST §3)
+    'power':         hue_ramp((246, 196, 40), 4, spread=0.24),
+    'teal':          hue_ramp((40, 170, 160), 4, spread=0.24),
+    'olive':         hue_ramp((140, 140, 56), 4, spread=0.22),
+    'lime':          hue_ramp((150, 206, 50), 4, spread=0.24),
+    'support':       hue_ramp((246, 130, 30), 4, spread=0.26),
 }
 
 # --- render quality v2 (set False to get the v1 look) ------------------------

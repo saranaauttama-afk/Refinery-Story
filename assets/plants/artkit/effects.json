@@ -1,0 +1,721 @@
+{
+ "crude_tank_lv1": {
+  "size": [
+   128,
+   106
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6589,
+    "y": 0.2627
+   }
+  ]
+ },
+ "crude_tank_lv2": {
+  "size": [
+   160,
+   124
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5271,
+    "y": 0.2249
+   }
+  ]
+ },
+ "crude_tank_lv3": {
+  "size": [
+   192,
+   144
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6091,
+    "y": 0.1966
+   }
+  ]
+ },
+ "distillation_unit_lv1": {
+  "size": [
+   192,
+   186
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.5,
+    "y": 0.0207
+   },
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.0165
+   }
+  ]
+ },
+ "distillation_unit_lv2": {
+  "size": [
+   256,
+   234
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.4875,
+    "y": 0.0197
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4875,
+    "y": 0.0163
+   },
+   {
+    "kind": "lamp",
+    "x": 0.725,
+    "y": 0.258
+   }
+  ]
+ },
+ "distillation_unit_lv3": {
+  "size": [
+   288,
+   243
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.6111,
+    "y": 0.0159
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4278,
+    "y": 0.0515
+   },
+   {
+    "kind": "lamp",
+    "x": 0.6111,
+    "y": 0.0127
+   },
+   {
+    "kind": "lamp",
+    "x": 0.7722,
+    "y": 0.2907
+   }
+  ]
+ },
+ "gasoline_tank_lv1": {
+  "size": [
+   128,
+   106
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6589,
+    "y": 0.2627
+   }
+  ]
+ },
+ "gasoline_tank_lv2": {
+  "size": [
+   160,
+   124
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5271,
+    "y": 0.2249
+   }
+  ]
+ },
+ "gasoline_tank_lv3": {
+  "size": [
+   192,
+   144
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6091,
+    "y": 0.1966
+   }
+  ]
+ },
+ "jet_fuel_plant_lv1": {
+  "size": [
+   192,
+   157
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.7083,
+    "y": 0.0615
+   }
+  ]
+ },
+ "jet_fuel_plant_lv2": {
+  "size": [
+   256,
+   200
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.7812,
+    "y": 0.0974
+   },
+   {
+    "kind": "lamp",
+    "x": 0.7812,
+    "y": 0.0934
+   }
+  ]
+ },
+ "jet_fuel_plant_lv3": {
+  "size": [
+   288,
+   224
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.7,
+    "y": 0.0702
+   },
+   {
+    "kind": "lamp",
+    "x": 0.7,
+    "y": 0.0667
+   },
+   {
+    "kind": "lamp",
+    "x": 0.8056,
+    "y": 0.3203
+   }
+  ]
+ },
+ "jet_fuel_tank_lv1": {
+  "size": [
+   128,
+   106
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6589,
+    "y": 0.2627
+   }
+  ]
+ },
+ "jet_fuel_tank_lv2": {
+  "size": [
+   160,
+   124
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5271,
+    "y": 0.2249
+   }
+  ]
+ },
+ "jet_fuel_tank_lv3": {
+  "size": [
+   192,
+   144
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6091,
+    "y": 0.1966
+   }
+  ]
+ },
+ "laboratory_lv1": {
+  "size": [
+   128,
+   92
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6875,
+    "y": 0.1002
+   }
+  ]
+ },
+ "laboratory_lv2": {
+  "size": [
+   192,
+   140
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.7,
+    "y": 0.0916
+   }
+  ]
+ },
+ "laboratory_lv3": {
+  "size": [
+   192,
+   156
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.7167,
+    "y": 0.0843
+   }
+  ]
+ },
+ "lubricant_plant_lv1": {
+  "size": [
+   192,
+   148
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.5,
+    "y": 0.0229
+   }
+  ]
+ },
+ "lubricant_plant_lv2": {
+  "size": [
+   256,
+   184
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.6438,
+    "y": 0.1146
+   }
+  ]
+ },
+ "lubricant_plant_lv3": {
+  "size": [
+   288,
+   204
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.8056,
+    "y": 0.1959
+   },
+   {
+    "kind": "lamp",
+    "x": 0.8056,
+    "y": 0.1921
+   }
+  ]
+ },
+ "lubricant_tank_lv1": {
+  "size": [
+   128,
+   106
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6589,
+    "y": 0.2627
+   }
+  ]
+ },
+ "lubricant_tank_lv2": {
+  "size": [
+   160,
+   124
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5271,
+    "y": 0.2249
+   }
+  ]
+ },
+ "lubricant_tank_lv3": {
+  "size": [
+   192,
+   144
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6091,
+    "y": 0.1966
+   }
+  ]
+ },
+ "maintenance_workshop_lv1": {
+  "size": [
+   128,
+   91
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5475,
+    "y": 0.5093
+   }
+  ]
+ },
+ "maintenance_workshop_lv2": {
+  "size": [
+   160,
+   109
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.568,
+    "y": 0.5209
+   }
+  ]
+ },
+ "maintenance_workshop_lv3": {
+  "size": [
+   192,
+   128
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.85,
+    "y": 0.244
+   }
+  ]
+ },
+ "pellet_silo_lv1": {
+  "size": [
+   128,
+   135
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.0531
+   }
+  ]
+ },
+ "pellet_silo_lv2": {
+  "size": [
+   160,
+   156
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.38,
+    "y": 0.0426
+   }
+  ]
+ },
+ "pellet_silo_lv3": {
+  "size": [
+   192,
+   180
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.0398
+   }
+  ]
+ },
+ "petrochemical_plant_lv1": {
+  "size": [
+   192,
+   185
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.4917,
+    "y": 0.0235
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4917,
+    "y": 0.0192
+   }
+  ]
+ },
+ "petrochemical_plant_lv2": {
+  "size": [
+   256,
+   233
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.5813,
+    "y": 0.4151
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4938,
+    "y": 0.0168
+   }
+  ]
+ },
+ "petrochemical_plant_lv3": {
+  "size": [
+   288,
+   263
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.6167,
+    "y": 0.4283
+   },
+   {
+    "kind": "lamp",
+    "x": 0.4389,
+    "y": 0.0204
+   }
+  ]
+ },
+ "petrochemical_tank_lv1": {
+  "size": [
+   128,
+   111
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.046
+   }
+  ]
+ },
+ "petrochemical_tank_lv2": {
+  "size": [
+   160,
+   126
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.39,
+    "y": 0.0387
+   }
+  ]
+ },
+ "petrochemical_tank_lv3": {
+  "size": [
+   192,
+   143
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.0355
+   }
+  ]
+ },
+ "polymer_plant_lv1": {
+  "size": [
+   192,
+   160
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.6833,
+    "y": 0.2649
+   }
+  ]
+ },
+ "polymer_plant_lv2": {
+  "size": [
+   256,
+   200
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.7625,
+    "y": 0.2714
+   }
+  ]
+ },
+ "polymer_plant_lv3": {
+  "size": [
+   288,
+   220
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.7833,
+    "y": 0.2789
+   }
+  ]
+ },
+ "power_plant_lv1": {
+  "size": [
+   192,
+   181
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.5167,
+    "y": 0.0316
+   }
+  ]
+ },
+ "power_plant_lv2": {
+  "size": [
+   192,
+   194
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.5167,
+    "y": 0.0276
+   },
+   {
+    "kind": "smoke",
+    "x": 0.625,
+    "y": 0.2346
+   }
+  ]
+ },
+ "power_plant_lv3": {
+  "size": [
+   224,
+   218
+  ],
+  "emitters": [
+   {
+    "kind": "smoke",
+    "x": 0.4429,
+    "y": 0.0253
+   },
+   {
+    "kind": "smoke",
+    "x": 0.5357,
+    "y": 0.1736
+   },
+   {
+    "kind": "smoke",
+    "x": 0.7714,
+    "y": 0.5691
+   }
+  ]
+ },
+ "recycling_bunker_lv1": {
+  "size": [
+   128,
+   78
+  ],
+  "emitters": []
+ },
+ "recycling_bunker_lv2": {
+  "size": [
+   160,
+   94
+  ],
+  "emitters": []
+ },
+ "recycling_bunker_lv3": {
+  "size": [
+   192,
+   110
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.3133,
+    "y": 0.4791
+   }
+  ]
+ },
+ "sales_office_lv1": {
+  "size": [
+   128,
+   85
+  ],
+  "emitters": []
+ },
+ "sales_office_lv2": {
+  "size": [
+   128,
+   100
+  ],
+  "emitters": []
+ },
+ "sales_office_lv3": {
+  "size": [
+   160,
+   130
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.69,
+    "y": 0.1454
+   }
+  ]
+ },
+ "waste_treatment_plant_lv1": {
+  "size": [
+   128,
+   71
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.5,
+    "y": 0.4527
+   }
+  ]
+ },
+ "waste_treatment_plant_lv2": {
+  "size": [
+   160,
+   87
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.455,
+    "y": 0.42
+   }
+  ]
+ },
+ "waste_treatment_plant_lv3": {
+  "size": [
+   192,
+   103
+  ],
+  "emitters": [
+   {
+    "kind": "lamp",
+    "x": 0.6333,
+    "y": 0.4752
+   }
+  ]
+ }
+}

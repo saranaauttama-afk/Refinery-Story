@@ -24,11 +24,17 @@ def render(scene, w, h, out_path=None, steps=260, crop=True, points=None, tile_w
     b = -(py - H + sy_b) / s
     orig = a[..., None] * right + b[..., None] * up - fwd * 30
     t = np.zeros(a.shape); hit = np.zeros(a.shape, bool)
+    # march only the rays still in flight (same result, far fewer SDF evaluations)
+    o_f, t_f = orig.reshape(-1, 3), t.reshape(-1)
+    h_f = hit.reshape(-1)
+    act = np.arange(t_f.size)
     for _ in range(steps):
-        d, _ = _eval(scene, orig + fwd * t[..., None])
-        hit |= d < 1e-3
-        t = np.where(hit, t, t + d * 0.9)
-        if (hit | (t > 80)).all():
+        d, _ = _eval(scene, o_f[act] + fwd * t_f[act, None])
+        done = d < 1e-3
+        h_f[act[done]] = True
+        t_f[act[~done]] += d[~done] * 0.9
+        act = act[~done & (t_f[act] <= 80)]
+        if not act.size:
             break
     hit &= t < 80
     P = orig + fwd * t[..., None]

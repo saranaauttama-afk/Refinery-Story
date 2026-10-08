@@ -9,19 +9,19 @@ export const STARTER_PLANT_ART_BY_LEVEL: Partial<
   Record<BuildingType, Record<number, ImageSourcePropType>>
 > = {
   crudeTank: {
-    1: require('../assets/plants/starter/crude_tank_lv1.png'),
-    2: require('../assets/plants/starter/crude_tank_lv2.png'),
-    3: require('../assets/plants/starter/crude_tank_lv3.png'),
+    1: require('../assets/plants/artkit/crude_tank_lv1.png'),
+    2: require('../assets/plants/artkit/crude_tank_lv2.png'),
+    3: require('../assets/plants/artkit/crude_tank_lv3.png'),
   },
   distillationUnit: {
-    1: require('../assets/plants/starter/distillation_unit_lv1.png'),
-    2: require('../assets/plants/starter/distillation_unit_lv2.png'),
-    3: require('../assets/plants/starter/distillation_unit_lv3.png'),
+    1: require('../assets/plants/artkit/distillation_unit_lv1.png'),
+    2: require('../assets/plants/artkit/distillation_unit_lv2.png'),
+    3: require('../assets/plants/artkit/distillation_unit_lv3.png'),
   },
   gasolineTank: {
-    1: require('../assets/plants/starter/gasoline_tank_lv1.png'),
-    2: require('../assets/plants/starter/gasoline_tank_lv2.png'),
-    3: require('../assets/plants/starter/gasoline_tank_lv3.png'),
+    1: require('../assets/plants/artkit/gasoline_tank_lv1.png'),
+    2: require('../assets/plants/artkit/gasoline_tank_lv2.png'),
+    3: require('../assets/plants/artkit/gasoline_tank_lv3.png'),
   },
 }
 

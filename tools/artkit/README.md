@@ -21,15 +21,19 @@ Trucks: 1×1 tile canvas, uncropped sideways, all facings trimmed by the same
 amount, so the tile centre is always 16 master px above the bottom edge
 (`TRUCK_ANCHOR_FROM_BOTTOM` in `src/components/v3/v3Vehicles.ts`).
 
-Starter buildings (replace `assets/plants/starter/*` by filename):
+All 17 buildings (lv1–3) are code-drawn and installed straight into the game:
 
 ```
-python3 build.py distillation_unit   # 3x3, 4x4, 5x4 — columns, drum, pipe runs, catwalks
-python3 build.py crude_tank          # 2x2, 3x2, 3x3 — dark brown band
-python3 build.py gasoline_tank       # 2x2, 3x2, 3x3 — orange band
-cp out/<name>_lv*.png ../../assets/plants/starter/
-python3 build_ground.py              # yard ground atlas → assets/ground/ground_atlas.png
+python3 build_all.py                 # every building -> assets/plants/artkit/ + effects.json
+python3 build_all.py power_plant     # just one (merges its effects into effects.json)
+python3 preview.py /tmp/x.png laboratory:1 sales_office   # quick look, no install
+python3 build_ground.py              # yard ground atlas -> assets/ground/ground_atlas.png
 ```
+
+Modules: one file per building (`<name>.py`, LEVELS/FOOTPRINT/EMITTERS). Shared kits:
+`parts.py` (primitives, tanks, columns, pipes), `storage_tank.py` (tank layouts by accent),
+`bparts.py` (walls/windows/roofs/doors, stacks, basins, spheres, silos, conveyors),
+`process.py` (blending vessels, reactors, air coolers, extruders).
 
 ## Normalizing AI art (normalize.py)
 
@@ -45,12 +49,3 @@ python3 normalize.py ../../assets/plants/yard-v2 out/normalized --colors 48
 `out/normalized/report.json` lists size, height ratio and anchor shift per
 sprite and flags the ones over the 1.25 height limit or far off-anchor.
 
-## Blender experiment (2026-10-08) — not adopted
-
-`blender/distillation_unit_bpy.py` models Distillation Unit lv1 in Blender
-(`pip install bpy`, Cycles CPU, same ortho 2:1 camera / top-left light),
-`blender/compare_du.py` runs it and the yard-v2 sprite through normalize.py
-side by side. Result: the camera/anchor match the spec, but the sprite reads
-no better than the SDF version and clearly worse than the yard-v2 AI art —
-the gap is composition/design, not the renderer. Decision pending: hybrid
-(code for tanks/trucks/ground/effects, AI + normalize.py for complex plants).
