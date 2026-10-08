@@ -30,3 +30,17 @@ python3 build.py gasoline_tank       # 2x2, 3x2, 3x3 — orange band
 cp out/<name>_lv*.png ../../assets/plants/starter/
 python3 build_ground.py              # yard ground atlas → assets/ground/ground_atlas.png
 ```
+
+## Normalizing AI art (normalize.py)
+
+AI sprites (e.g. `assets/plants/yard-v2/`) are soft: thousands of colours and
+semi-transparent edges, so they never match code-drawn pixel art. This turns any
+set into one consistent pixel-art set — hard alpha, in-game pixel grid, one
+shared palette, black 2px silhouette, bottom tip moved onto the spec anchor:
+
+```
+python3 normalize.py ../../assets/plants/yard-v2 out/normalized --colors 48
+```
+
+`out/normalized/report.json` lists size, height ratio and anchor shift per
+sprite and flags the ones over the 1.25 height limit or far off-anchor.
