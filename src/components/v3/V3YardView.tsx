@@ -1,7 +1,9 @@
 import { memo, useEffect, useMemo, useRef } from 'react'
 import { Platform, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native'
 import {
+  Atlas,
   Canvas,
+  DashPathEffect,
   FilterMode,
   MipmapMode,
   Group,
@@ -32,6 +34,8 @@ import { getV3BuildingArt } from './v3Art'
 import { V3_DECOR_PLACEHOLDER_COLOR, getV3DecorFootprint } from '../../game/v3/decorData'
 import { planV3TruckTrip, sampleV3TruckTrip, type V3TruckRequest, type V3TruckTrip } from '../../game/v3/traffic'
 import { TRUCK_ANCHOR_FROM_BOTTOM, TRUCK_ART, TRUCK_MASTER_WIDTH } from './v3Vehicles'
+import { V3_GROUND_CELL, V3_GROUND_DECOR, getV3DecorGroundTiles, getV3GroundModel, type V3GroundTile } from '../../game/v3/groundView'
+import { GROUND_ATLAS } from './v3Ground'
 
 const MIN_SCALE = 0.35
 const MAX_SCALE = 2.2
@@ -61,6 +65,21 @@ type Props = {
 const PREVIEW_FILL: Record<string, string> = {
   valid: 'rgba(106,205,180,0.6)',
   locked_land: 'rgba(255,173,138,0.6)',
+}
+
+/** Island-edge soil depth in world px (scale 1). */
+const EDGE_DEPTH = 7
+
+/** Atlas sprites/transforms for ground tiles: each 64×32 cell drawn at tile size with its top corner on the tile. */
+function groundAtlas(tiles: V3GroundTile[]) {
+  const scale = V3_ISO.tw / V3_GROUND_CELL.w
+  return {
+    sprites: tiles.map((tile) => Skia.XYWHRect(tile.cell * V3_GROUND_CELL.w, 0, V3_GROUND_CELL.w, V3_GROUND_CELL.h)),
+    transforms: tiles.map((tile) => {
+      const top = v3IsoPoint(tile.x, tile.y)
+      return Skia.RSXform(scale, 0, top.sx - V3_ISO.tw / 2, top.sy)
+    }),
+  }
 }
 
 function diamond(points: Array<{ sx: number; sy: number }>) {
@@ -154,6 +173,21 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   const parcels = useMemo(() => getV3ParcelViews(state), [landKey])
   const sprites = useMemo(() => getV3SpritePlacements(state), [state.world.buildingsById])
   const roads = useMemo(() => deriveV3RoadNetwork(state), [landKey])
+  const groundImage = useImage(GROUND_ATLAS as DataSourceParam)
+  const ground = useMemo(() => {
+    const model = getV3GroundModel(state)
+    const south = Skia.Path.Make()
+    const east = Skia.Path.Make()
+    for (const tile of model.edges.south) {
+      const a = v3IsoPoint(tile.x, tile.y + 1); const b = v3IsoPoint(tile.x + 1, tile.y + 1)
+      south.moveTo(a.sx, a.sy); south.lineTo(b.sx, b.sy); south.lineTo(b.sx, b.sy + EDGE_DEPTH); south.lineTo(a.sx, a.sy + EDGE_DEPTH); south.close()
+    }
+    for (const tile of model.edges.east) {
+      const a = v3IsoPoint(tile.x + 1, tile.y); const b = v3IsoPoint(tile.x + 1, tile.y + 1)
+      east.moveTo(a.sx, a.sy); east.lineTo(b.sx, b.sy); east.lineTo(b.sx, b.sy + EDGE_DEPTH); east.lineTo(a.sx, a.sy + EDGE_DEPTH); east.close()
+    }
+    return { atlas: groundAtlas(model.land), south, east }
+  }, [landKey])
   // Simulated clock for traffic: advances only while the game runs, scaled by speed.
   const simMs = useSharedValue(0)
   const speedValue = useSharedValue(speed)
@@ -208,9 +242,11 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
   }, [roads])
   // Decorations: one path per placeholder colour (≤15 draw calls for ≤150 items).
   const decorations = state.world.decorations
+  const decorGround = useMemo(() => groundAtlas(getV3DecorGroundTiles(state)), [decorations])
   const decorPaths = useMemo(() => {
     const byColor = new Map<string, ReturnType<typeof Skia.Path.Make>>()
     for (const decoration of Object.values(decorations ?? {})) {
+      if (V3_GROUND_DECOR.has(decoration.kind)) continue
       const color = V3_DECOR_PLACEHOLDER_COLOR[decoration.kind]
       if (!byColor.has(color)) byColor.set(color, Skia.Path.Make())
       const { w, h } = getV3DecorFootprint(decoration.kind, decoration.rotated)
@@ -286,18 +322,30 @@ function V3YardView({ state, width, height, selectedId, highlightParcelId, place
       <GestureDetector gesture={gesture}>
         <Canvas style={{ width, height }}>
           <Group transform={transform}>
+            <Path path={ground.south} color="#8A5A3B" />
+            <Path path={ground.east} color="#6B442D" />
             {parcelPaths.map(({ parcel, path }) => (
               <Path
                 key={parcel.id}
                 path={path}
-                color={parcel.state === 'owned' ? '#7C9A56' : parcel.state === 'available' ? 'rgba(124,154,86,0.45)' : 'rgba(70,80,66,0.55)'}
+                color={parcel.state === 'locked' ? 'rgba(70,80,66,0.55)' : '#7EB24A'}
               />
             ))}
-            <Path path={gridPath} color="rgba(0,0,0,0.10)" style="stroke" strokeWidth={1} />
+            {groundImage && <Atlas image={groundImage} sprites={ground.atlas.sprites} transforms={ground.atlas.transforms} sampling={PIXEL} />}
+            {parcelPaths.filter(({ parcel }) => parcel.state === 'available').map(({ parcel, path }) => (
+              <Path key={`dim-${parcel.id}`} path={path} color="rgba(30,45,40,0.42)" />
+            ))}
+            <Path path={gridPath} color="rgba(0,0,0,0.06)" style="stroke" strokeWidth={1} />
             {parcelPaths.filter(({ parcel }) => parcel.id === highlightParcelId).map(({ parcel, path }) => (
               <Path key={`hl-${parcel.id}`} path={path} color="#FFD447" style="stroke" strokeWidth={3} />
             ))}
-            <Path path={roadPath} color="#9A9386" style="stroke" strokeWidth={4} />
+            <Path path={roadPath} color="#585C64" style="stroke" strokeWidth={5} strokeCap="round" />
+            <Path path={roadPath} color="rgba(246,206,72,0.85)" style="stroke" strokeWidth={0.8}>
+              <DashPathEffect intervals={[3, 4]} />
+            </Path>
+            {groundImage && decorGround.sprites.length > 0 && (
+              <Atlas image={groundImage} sprites={decorGround.sprites} transforms={decorGround.transforms} sampling={PIXEL} />
+            )}
             {decorPaths.map(([color, path]) => <Path key={`decor-${color}`} path={path} color={color} />)}
             {selectedDecor && (() => {
               const { w, h } = getV3DecorFootprint(selectedDecor.kind, selectedDecor.rotated)
