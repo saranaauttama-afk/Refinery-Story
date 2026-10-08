@@ -244,3 +244,20 @@ def weld_lines(p, cx, cz, r, y0, y1, count=6, offset=0.3):
 
 def lamp(p, at, r=0.035):
     return [(sphere(p, V(*at), r), 'valve'), (cyl_y(p, V(*at) - V(0, r * 1.4, 0), r * 0.6, r * 0.6), 'steel_dk')]
+
+
+def pump(p, cx, cz, along='x'):
+    """Centrifugal pump on a skid: base plate, pump casing, motor."""
+    y0 = PAD_H
+    out = [(rbox(p, V(cx, y0 + 0.03, cz), (0.2, 0.03, 0.12) if along == 'x' else (0.12, 0.03, 0.2), 0.01), 'steel_dk')]
+    if along == 'x':
+        out.append((capsule(p, V(cx - 0.12, y0 + 0.13, cz), V(cx + 0.02, y0 + 0.13, cz), 0.075), 'valve'))   # motor (red)
+        out.append((cyl_y(p, V(cx + 0.11, y0 + 0.12, cz), 0.07, 0.06) - 0.01, 'pipe'))                     # casing
+    else:
+        out.append((capsule(p, V(cx, y0 + 0.13, cz - 0.12), V(cx, y0 + 0.13, cz + 0.02), 0.075), 'valve'))
+        out.append((cyl_y(p, V(cx, y0 + 0.12, cz + 0.11), 0.07, 0.06) - 0.01, 'pipe'))
+    return out
+
+def elbows(p, points, r):
+    """Fittings at every bend of a pipe run."""
+    return [(umin([sphere(p, V(*pt), r * 1.35) for pt in points[1:-1]]), 'steel_dk')] if len(points) > 2 else []

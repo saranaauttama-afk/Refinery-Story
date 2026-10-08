@@ -20,7 +20,7 @@ DIFFUSE = 1.15
 SPECULAR, SPEC_POWER = 0.8, 24
 
 # --- palette: ramps light -> dark ------------------------------------------
-INK = (46, 47, 57)
+INK = (34, 32, 44)   # 'black, sharp' outline (owner pick 2026-10-08)
 RAMPS = {
     'steel':    [(232, 233, 236), (208, 209, 212), (174, 178, 187), (137, 143, 156), (104, 109, 124)],
     'steel_dk': [(190, 192, 198), (160, 164, 174), (124, 129, 142), (96, 100, 114)],
@@ -105,9 +105,9 @@ AO = True               # ambient occlusion: darker in corners, under platforms,
 AO_STRENGTH = 0.9
 DITHER = True           # 4x4 ordered dither between ramp steps (classic pixel-art gradient)
 DITHER_AMOUNT = 0.55
-OUTLINE_PX = 1          # silhouette thickness at master scale (2 = a full pixel in game, which draws at 1/2)
-INNER_DARKEN = 0.8      # inner line colour = material's darkest tone x this (lower = stronger lines)
-RIM = False             # 1px highlight on edges facing the light (top-left)
+OUTLINE_PX = 2          # silhouette thickness at master scale (2 = a full pixel in game, which draws at 1/2)
+INNER_DARKEN = 0.6      # inner line colour = material's darkest tone x this (lower = stronger lines)
+RIM = True              # 1px highlight on edges facing the light (top-left)
 SELOUT = True           # inner lines use the material's own darkest tone; only the silhouette is ink
 
 # --- outline ---------------------------------------------------------------

@@ -23,25 +23,49 @@ def dress(p, cx, cz, r, height):
 def top_of(cx, cz, r, height, extra=0.22):
     return (cx, Y + height + r + extra, cz)
 
-def pipes(p, runs, r=0.055):
+def pipes(p, runs, r=0.055, fittings=True):
     out = []
     for pts in runs:
         out += K.pipe(p, pts, r=r, mat='accent:' + ACC)
+        if fittings:
+            out += K.elbows(p, pts, r)
+    return out
+
+def small_pipes(p, runs, r=0.03):
+    out = []
+    for pts in runs:
+        out += K.pipe(p, pts, r=r, mat='pipe') + K.elbows(p, pts, r)
     return out
 
 def lv1(p):
-    return (K.pad(p, 3, 3) + K.pad_details(p, 3, 3, extinguisher=(2.75, 1.7))
+    return (K.pad(p, 3, 3) + K.pad_details(p, 3, 3, extinguisher=(2.75, 1.25))
             + K.column(p, 1.0, 1.0, 0.42, 2.3, platforms=(0.9, 1.75), ladder_angle=0.35)
             + dress(p, 1.0, 1.0, 0.42, 2.3)
-            + K.drum(p, (0.85, Y + 0.42, 2.25), (2.35, Y + 0.42, 2.25), 0.3)
-            + K.control_box(p, 2.45, 1.05)
+            # pipe rack behind-right with a run of process lines on top
+            + K.frame(p, 1.85, 0.35, 2.75, 0.85, 1.05)
+            + pipes(p, [[(1.95, Y + 1.2, 0.3), (1.95, Y + 1.2, 0.9)], [(2.6, Y + 1.2, 0.3), (2.6, Y + 1.2, 0.9)]], r=0.045, fittings=False)
+            # reboiler (small vertical vessel) feeding the column
+            + K.column(p, 2.35, 1.55, 0.2, 0.75, platforms=(), nozzle=True, seams=1)
+            + K.drum(p, (0.85, Y + 0.42, 2.25), (2.2, Y + 0.42, 2.25), 0.3)
+            + K.nozzle(p, (1.3, Y + 0.72, 2.25), (0, 1, 0), r=0.04, length=0.12)
+            + K.nozzle(p, (1.8, Y + 0.72, 2.25), (0, 1, 0), r=0.04, length=0.12)
+            + K.pump(p, 1.25, 2.78) + K.pump(p, 1.85, 2.78)
+            + K.control_box(p, 2.62, 2.35)
             + pipes(p, [
-                [(1.0, Y + 2.55, 1.0), (1.0, Y + 2.75, 1.0), (1.75, Y + 2.75, 1.0), (1.75, Y + 0.6, 1.0), (1.75, Y + 0.6, 1.95)],
+                [(1.0, Y + 2.55, 1.0), (1.0, Y + 2.75, 1.0), (1.75, Y + 2.75, 1.0), (1.75, Y + 1.2, 1.0), (1.95, Y + 1.2, 1.0)],
                 [(1.42, Y + 0.35, 1.25), (1.42, Y + 0.35, 1.95)],
-                [(2.6, Y + 0.25, 2.25), (2.8, Y + 0.25, 2.25), (2.8, Y + 0.25, 1.6)],
+                [(2.35, Y + 0.95, 1.55), (2.35, Y + 1.2, 1.55), (2.35, Y + 1.2, 1.0), (1.42, Y + 1.2, 1.0)],
+                [(1.96, Y + 0.12, 2.78), (2.35, Y + 0.12, 2.78), (2.35, Y + 0.12, 1.78)],
             ])
-            + K.valve(p, (1.75, Y + 1.2, 1.0), axis='x')
-            + K.valve(p, (2.8, Y + 0.45, 1.9)))
+            + small_pipes(p, [
+                [(1.36, Y + 0.12, 2.78), (1.36, Y + 0.12, 2.6), (1.36, Y + 0.3, 2.6)],
+                [(1.3, Y + 0.84, 2.25), (1.3, Y + 1.0, 2.25), (0.55, Y + 1.0, 2.25), (0.55, Y + 0.3, 2.25)],
+                [(1.8, Y + 0.84, 2.25), (1.8, Y + 1.05, 2.25), (1.8, Y + 1.05, 1.45)],
+                [(0.6, Y + 0.6, 1.0), (0.4, Y + 0.6, 1.0), (0.4, Y + 0.05, 1.0)],
+            ])
+            + K.valve(p, (1.75, Y + 1.6, 1.0), axis='x')
+            + K.valve(p, (2.35, Y + 0.4, 2.3))
+            + K.valve(p, (0.55, Y + 0.7, 2.25), axis='x'))
 
 def lv2(p):
     return (K.pad(p, 4, 4) + K.pad_details(p, 4, 4, extinguisher=(3.75, 3.2))
