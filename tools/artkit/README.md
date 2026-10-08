@@ -44,3 +44,13 @@ python3 normalize.py ../../assets/plants/yard-v2 out/normalized --colors 48
 
 `out/normalized/report.json` lists size, height ratio and anchor shift per
 sprite and flags the ones over the 1.25 height limit or far off-anchor.
+
+## Blender experiment (2026-10-08) — not adopted
+
+`blender/distillation_unit_bpy.py` models Distillation Unit lv1 in Blender
+(`pip install bpy`, Cycles CPU, same ortho 2:1 camera / top-left light),
+`blender/compare_du.py` runs it and the yard-v2 sprite through normalize.py
+side by side. Result: the camera/anchor match the spec, but the sprite reads
+no better than the SDF version and clearly worse than the yard-v2 AI art —
+the gap is composition/design, not the renderer. Decision pending: hybrid
+(code for tanks/trucks/ground/effects, AI + normalize.py for complex plants).
