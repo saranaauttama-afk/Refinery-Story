@@ -110,5 +110,8 @@ INNER_DARKEN = 0.6      # inner line colour = material's darkest tone x this (lo
 RIM = True              # 1px highlight on edges facing the light (top-left)
 SELOUT = True           # inner lines use the material's own darkest tone; only the silhouette is ink
 
+METAL_BAND = 0.0        # bright vertical highlight streak on cylinders (polished-metal look)
+METALLIC = ('steel', 'pipe', 'roof', 'steel_dk', 'accent:gasoline', 'accent:crude')
+
 # --- outline ---------------------------------------------------------------
 OUTLINE_DEPTH_BREAK = 0.25     # world units of depth jump that gets an ink line
