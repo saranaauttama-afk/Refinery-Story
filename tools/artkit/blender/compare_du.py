@@ -14,6 +14,7 @@ import normalize as N  # noqa: E402
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 w, h = 3, 3
 raw, out = sys.argv[1], sys.argv[2]
+smooth = sys.argv[sys.argv.index('--smooth') + 1] if '--smooth' in sys.argv else None
 ai = os.path.join(ROOT, 'assets/plants/yard-v2/distillation_unit_lv1.png')
 sdf = os.path.join(ROOT, 'assets/plants/starter/distillation_unit_lv1.png')
 
@@ -23,8 +24,13 @@ norm = []
 for s in smalls:
     g, _ = N.fit(N.outline(N.quantize(s, pal)), w, h)
     norm.append(g.resize((g.width * 2, g.height * 2), Image.NEAREST))
-norm.append(Image.open(sdf).convert('RGBA'))
-labels = ['Blender + normalize', 'yard-v2 AI + normalize', 'artkit SDF (now)']
+labels = ['Blender + normalize', 'yard-v2 AI + normalize']
+if smooth:   # no pixel step: crop, smooth-scale to spec width (what a non-pixel game would ship)
+    im = Image.open(smooth).convert('RGBA'); im = im.crop(im.getbbox())
+    norm.insert(0, im.resize(((w + h) * 32, round(im.height * (w + h) * 32 / im.width)), Image.LANCZOS))
+    labels.insert(0, 'Blender smooth (no pixel)')
+else:
+    norm.append(Image.open(sdf).convert('RGBA')); labels.append('artkit SDF (now)')
 
 Z = 2                                               # preview zoom
 W = (w + h) * 32
@@ -37,7 +43,11 @@ for i, im in enumerate(norm):
     by = 36 + Hmax * Z
     d.polygon([(x0, by - w * 16 * Z), (x0 + h * 32 * Z, by - (w + h) * 16 * Z), (x0 + W * Z, by - h * 16 * Z), (x0 + w * 32 * Z, by)],
               outline=(255, 255, 255, 160))
-    sheet.alpha_composite(im.resize((im.width * Z, im.height * Z), Image.NEAREST), (x0, y0))
+    if labels[i].startswith('Blender smooth'):   # scale straight from the big render, no double resample
+        big = Image.open(smooth).convert('RGBA'); big = big.crop(big.getbbox())
+        sheet.alpha_composite(big.resize((im.width * Z, im.height * Z), Image.LANCZOS), (x0, y0))
+    else:
+        sheet.alpha_composite(im.resize((im.width * Z, im.height * Z), Image.NEAREST), (x0, y0))
     d.text((x0, 10), labels[i], fill=(255, 255, 255, 255))
 sheet.save(out)
 print('->', out, [im.size for im in norm])

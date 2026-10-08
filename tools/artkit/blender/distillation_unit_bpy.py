@@ -91,50 +91,84 @@ for i in range(6):                          # paving slabs like the reference pa
         box((0.25 + i * 0.5, 0.25 + j * 0.5, PAD + 0.008), (0.46, 0.46, 0.016), 'tile')
 Z0 = PAD + 0.016
 
-# main column (back-left), dome top, three orange rings / platforms
-CX, CY, CR, CH = 1.0, 1.9, 0.38, 3.5
-cyl((CX, CY, Z0 + 0.1), CR + 0.06, 0.2, 'steel_dk')           # skirt
-cyl((CX, CY, Z0 + CH / 2), CR, CH, 'steel')
-sphere((CX, CY, Z0 + CH), CR, 'steel', scale=(1, 1, 0.6))
-cyl((CX, CY, Z0 + CH + 0.3), 0.07, 0.25, 'steel_dk')          # top nozzle
-for z in (1.1, 2.15, 3.1):
-    cyl((CX, CY, Z0 + z), CR + 0.04, 0.14, 'orange')           # ring band
-    cyl((CX, CY, Z0 + z - 0.05), CR + 0.2, 0.03, 'grate')     # platform deck
-    torus((CX, CY, Z0 + z + 0.18), CR + 0.19, 0.03, 'orange')  # handrail
-for z in (0.6, 1.6, 2.6):                                      # shell seams
-    torus((CX, CY, Z0 + z), CR, 0.012, 'steel_dk')
-# ladder on the lit (left) side
-LX, LY = CX - 0.06, CY - CR - 0.07
-for dx in (-0.08, 0.08):
-    cyl((LX + dx * 0.7, LY + dx * 0.7, Z0 + 1.45), 0.012, 2.9, 'steel_dk')
-for k in range(24):
-    cyl((LX, LY, Z0 + 0.1 + k * 0.12), 0.008, 0.2, 'steel_dk', axis='x').rotation_euler[2] = math.radians(45)
-# orange overhead line climbing the column's left side and over the top
-pipe([(0.45, 1.35, Z0 + 0.05), (0.45, 1.35, Z0 + CH + 0.15), (CX, CY, Z0 + CH + 0.45)], 0.075)
+if os.environ.get('MODEL') == 'chunky':
+    # pixel-art proportions: few, big parts; pipes 2-3x real size; no hairline details
+    CX, CY, CR, CH = 1.0, 1.85, 0.5, 3.3
+    cyl((CX, CY, Z0 + 0.12), CR + 0.08, 0.24, 'steel_dk')
+    cyl((CX, CY, Z0 + CH / 2), CR, CH, 'steel')
+    sphere((CX, CY, Z0 + CH), CR, 'steel', scale=(1, 1, 0.55))
+    cyl((CX, CY, Z0 + CH + 0.35), 0.12, 0.3, 'steel_dk')
+    for z in (1.0, 2.05, 3.0):
+        cyl((CX, CY, Z0 + z), CR + 0.06, 0.22, 'orange')              # fat orange band
+        torus((CX, CY, Z0 + z + 0.28), CR + 0.2, 0.06, 'orange')       # chunky rail
+        cyl((CX, CY, Z0 + z - 0.08), CR + 0.22, 0.06, 'steel_dk')      # deck
+    LX, LY = CX - 0.1, CY - CR - 0.1
+    for dx in (-0.12, 0.12):
+        cyl((LX + dx * 0.7, LY + dx * 0.7, Z0 + 1.6), 0.035, 3.2, 'orange')
+    for k in range(9):
+        cyl((LX, LY, Z0 + 0.3 + k * 0.35), 0.03, 0.3, 'orange', axis='x').rotation_euler[2] = math.radians(45)
+    pipe([(0.35, 1.25, Z0 + 0.05), (0.35, 1.25, Z0 + CH + 0.25), (CX, CY, Z0 + CH + 0.55)], 0.13)
 
-# horizontal reflux drum (front-right), saddles, nozzles
-DX, DY0, DY1, DZ, DR = 2.15, 0.55, 2.45, Z0 + 0.52, 0.42
-cyl((DX, (DY0 + DY1) / 2, DZ), DR, DY1 - DY0, 'steel', axis='y')
-for y in (DY0, DY1):
-    sphere((DX, y, DZ), DR, 'steel', scale=(1, 0.45, 1))
-for y in (DY0 + 0.35, DY1 - 0.35):
-    box((DX, y, Z0 + 0.12), (0.6, 0.12, 0.24), 'steel_dk')     # saddle
-    torus((DX, y, DZ), DR, 0.016, 'steel_dk') .rotation_euler[0] = math.pi / 2
-cyl((DX, DY1 - 0.4, DZ + DR + 0.06), 0.05, 0.12, 'steel_dk')
-# drum top -> up and across to the column (the big orange loop in the reference)
-pipe([(DX, DY1 - 0.4, DZ + DR + 0.1), (DX, DY1 - 0.4, Z0 + 1.55), (DX, CY, Z0 + 1.55), (CX + CR, CY, Z0 + 1.55)], 0.08)
-flange((DX, DY1 - 0.4, Z0 + 1.2), 0.06)
-# column bottom -> drum front cap
-pipe([(CX + 0.3, CY - 0.3, Z0 + 0.35), (CX + 0.3, 0.75, Z0 + 0.35), (DX - 0.6, 0.75, Z0 + 0.35), (DX - 0.6, 0.35, Z0 + 0.35)], 0.06, 'orange')
+    DX, DY0, DY1, DZ, DR = 2.2, 0.55, 2.45, Z0 + 0.62, 0.52
+    cyl((DX, (DY0 + DY1) / 2, DZ), DR, DY1 - DY0, 'steel', axis='y')
+    for y in (DY0, DY1):
+        sphere((DX, y, DZ), DR, 'steel', scale=(1, 0.5, 1))
+    for y in (DY0 + 0.4, DY1 - 0.4):
+        box((DX, y, Z0 + 0.15), (0.75, 0.2, 0.3), 'orange')             # orange saddle
+        torus((DX, y, DZ), DR + 0.02, 0.06, 'orange').rotation_euler[0] = math.pi / 2
+    pipe([(DX, DY1 - 0.45, DZ + DR), (DX, DY1 - 0.45, Z0 + 1.7), (DX, CY + 0.2, Z0 + 1.7), (CX + CR, CY + 0.2, Z0 + 1.7)], 0.14)
+    pipe([(CX + 0.35, CY - 0.4, Z0 + 0.4), (CX + 0.35, 0.4, Z0 + 0.4), (DX - 0.7, 0.4, Z0 + 0.4)], 0.11)
+    for px, py in ((0.45, 0.45),):
+        box((px, py, Z0 + 0.12), (0.4, 0.32, 0.24), 'steel_dk')
+        cyl((px, py, Z0 + 0.38), 0.13, 0.28, 'orange')
+        cyl((px, py, Z0 + 0.56), 0.08, 0.1, 'valve')
+    pipe([(0.45, 0.45, Z0 + 0.5), (0.45, 1.25, Z0 + 0.5)], 0.09, 'steel_dk')
 
-# pumps + valves on the front-left of the pad
-for px, py in ((0.45, 0.5), (0.95, 0.4)):
-    box((px, py, Z0 + 0.08), (0.28, 0.2, 0.16), 'steel_dk')
-    cyl((px, py, Z0 + 0.25), 0.08, 0.18, 'orange')
-    cyl((px, py, Z0 + 0.37), 0.05, 0.06, 'valve')
-pipe([(0.45, 0.5, Z0 + 0.34), (0.45, 1.3, Z0 + 0.34), (CX - 0.2, 1.3, Z0 + 0.34), (CX - 0.2, CY - CR, Z0 + 0.34)], 0.05, 'steel_dk')
-pipe([(0.95, 0.4, Z0 + 0.34), (1.4, 0.4, Z0 + 0.34)], 0.05, 'steel_dk')
-cyl((1.0, 1.25, Z0 + 0.34), 0.06, 0.05, 'valve', axis='y')
+else:
+    # main column (back-left), dome top, three orange rings / platforms
+    CX, CY, CR, CH = 1.0, 1.9, 0.38, 3.5
+    cyl((CX, CY, Z0 + 0.1), CR + 0.06, 0.2, 'steel_dk')           # skirt
+    cyl((CX, CY, Z0 + CH / 2), CR, CH, 'steel')
+    sphere((CX, CY, Z0 + CH), CR, 'steel', scale=(1, 1, 0.6))
+    cyl((CX, CY, Z0 + CH + 0.3), 0.07, 0.25, 'steel_dk')          # top nozzle
+    for z in (1.1, 2.15, 3.1):
+        cyl((CX, CY, Z0 + z), CR + 0.04, 0.14, 'orange')           # ring band
+        cyl((CX, CY, Z0 + z - 0.05), CR + 0.2, 0.03, 'grate')     # platform deck
+        torus((CX, CY, Z0 + z + 0.18), CR + 0.19, 0.03, 'orange')  # handrail
+    for z in (0.6, 1.6, 2.6):                                      # shell seams
+        torus((CX, CY, Z0 + z), CR, 0.012, 'steel_dk')
+    # ladder on the lit (left) side
+    LX, LY = CX - 0.06, CY - CR - 0.07
+    for dx in (-0.08, 0.08):
+        cyl((LX + dx * 0.7, LY + dx * 0.7, Z0 + 1.45), 0.012, 2.9, 'steel_dk')
+    for k in range(24):
+        cyl((LX, LY, Z0 + 0.1 + k * 0.12), 0.008, 0.2, 'steel_dk', axis='x').rotation_euler[2] = math.radians(45)
+    # orange overhead line climbing the column's left side and over the top
+    pipe([(0.45, 1.35, Z0 + 0.05), (0.45, 1.35, Z0 + CH + 0.15), (CX, CY, Z0 + CH + 0.45)], 0.075)
+
+    # horizontal reflux drum (front-right), saddles, nozzles
+    DX, DY0, DY1, DZ, DR = 2.15, 0.55, 2.45, Z0 + 0.52, 0.42
+    cyl((DX, (DY0 + DY1) / 2, DZ), DR, DY1 - DY0, 'steel', axis='y')
+    for y in (DY0, DY1):
+        sphere((DX, y, DZ), DR, 'steel', scale=(1, 0.45, 1))
+    for y in (DY0 + 0.35, DY1 - 0.35):
+        box((DX, y, Z0 + 0.12), (0.6, 0.12, 0.24), 'steel_dk')     # saddle
+        torus((DX, y, DZ), DR, 0.016, 'steel_dk') .rotation_euler[0] = math.pi / 2
+    cyl((DX, DY1 - 0.4, DZ + DR + 0.06), 0.05, 0.12, 'steel_dk')
+    # drum top -> up and across to the column (the big orange loop in the reference)
+    pipe([(DX, DY1 - 0.4, DZ + DR + 0.1), (DX, DY1 - 0.4, Z0 + 1.55), (DX, CY, Z0 + 1.55), (CX + CR, CY, Z0 + 1.55)], 0.08)
+    flange((DX, DY1 - 0.4, Z0 + 1.2), 0.06)
+    # column bottom -> drum front cap
+    pipe([(CX + 0.3, CY - 0.3, Z0 + 0.35), (CX + 0.3, 0.75, Z0 + 0.35), (DX - 0.6, 0.75, Z0 + 0.35), (DX - 0.6, 0.35, Z0 + 0.35)], 0.06, 'orange')
+
+    # pumps + valves on the front-left of the pad
+    for px, py in ((0.45, 0.5), (0.95, 0.4)):
+        box((px, py, Z0 + 0.08), (0.28, 0.2, 0.16), 'steel_dk')
+        cyl((px, py, Z0 + 0.25), 0.08, 0.18, 'orange')
+        cyl((px, py, Z0 + 0.37), 0.05, 0.06, 'valve')
+    pipe([(0.45, 0.5, Z0 + 0.34), (0.45, 1.3, Z0 + 0.34), (CX - 0.2, 1.3, Z0 + 0.34), (CX - 0.2, CY - CR, Z0 + 0.34)], 0.05, 'steel_dk')
+    pipe([(0.95, 0.4, Z0 + 0.34), (1.4, 0.4, Z0 + 0.34)], 0.05, 'steel_dk')
+    cyl((1.0, 1.25, Z0 + 0.34), 0.06, 0.05, 'valve', axis='y')
 
 # ---------------------------------------------------------------- camera + light
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam'))
@@ -163,7 +197,7 @@ world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.35
 
 sc.render.engine = 'CYCLES'
 sc.cycles.device = 'CPU'
-sc.cycles.samples = 48
+sc.cycles.samples = int(os.environ.get('SAMPLES', 48))
 sc.cycles.use_denoising = False
 sc.render.film_transparent = True
 sc.render.resolution_x = RES_W
