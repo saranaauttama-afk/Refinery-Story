@@ -299,7 +299,7 @@ the owner checks on the APK.
 | M4 Customers & contracts | done; automated checks passed | feat(v4): M4 customers and contracts | automatic CI | deferred |
 | M5 Combos | done; automated checks passed | feat(v4): M5 combos and auras | automatic CI | deferred |
 | M6 Staff | done; automated checks passed | feat(v4): M6 staff | automatic CI | deferred |
-| M7 Progression | not started | | | |
+| M7 Progression | done; automated checks passed | feat(v4): M7 progression | automatic CI | deferred |
 | M8 Balance & polish | not started | | | |
 
 ### M0 validation
@@ -336,3 +336,9 @@ the owner checks on the APK.
 - M6: hiring fee buys one interview pool of three; choosing one closes the pool. Multiple workers can be assigned to one building, bounded by the company hire cap.
 - M6: active staff stats add directly to lot stats along production/blending buildings. Exhausted workers rest until full; Canteen accelerates weekly recovery. Worker travel is visual only.
 - M6: changing jobs consumes one Career Manual and preserves stats/job history. Director additionally requires rank 8 and the same worker at Manager 5 + Chemist 5. Fired workers rehire for the basic $5k fee.
+
+- M7: annual rival curves, award growth ($/Fame-independent, 100–500 per win), event odds and investment middle steps use balance/content defaults. Year 15 evaluation occurs after completing year 15; play continues.
+- M7: ranks never decrease when Fame is lost. Investment Stimulus/Shelter mitigation applies company-wide once; terminal Port/Airport bonuses apply to eligible sales. Buyers with eligible stock are preferred when generating demand.
+- M7: unused cut buffers overflow to disposal so an unused byproduct cannot permanently stop the starter refinery. CDU/conversion/blending levels now scale real throughput by +25% per level; additional lines increase capacity.
+- M7: NG+ carries one free, unplaced copy of every unlocked building. Placing consumes the copy; normal upkeep starts only after placement. This avoids forcing unaffordable upkeep onto a new run.
+- M7 checks: seeds 1–3 complete 16 years through normal guarded UI actions: rank 5 at 3.90–3.98 elapsed years, rank 10 at 15.98, >=5 new unlocks by week 40, longest negative balance 0.28 months. Income tuning remains M8.

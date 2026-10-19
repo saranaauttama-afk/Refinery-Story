@@ -1,0 +1,1 @@
+export const events=[{id:'inspector',name:{en:'Government inspector',th:'ผู้ตรวจราชการ'}},{id:'storm',name:{en:'Storm',th:'พายุ'}},{id:'merchant',name:{en:'Travelling merchant',th:'พ่อค้าเร่'}},{id:'celebrity',name:{en:'Celebrity visit',th:'คนดังเยี่ยมชม'}},{id:'spill',name:{en:'Oil spill risk',th:'ความเสี่ยงน้ำมันรั่ว'}}] as const

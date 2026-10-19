@@ -15,5 +15,5 @@ export function deliverContract(s:GameState,uid:string):GameState {
  let next=s,remaining=c.units-c.delivered,paid=0
  while(remaining>0){const l=eligibleLot(next,c.base,c.minGrade);if(!l)break;const qty=Math.min(l.units,remaining);paid+=qty*salePrice(next,l)*C.reward;remaining-=qty;next={...next,tanks:next.tanks.map(t=>t.uid===l.uid?{...t,units:t.units-qty}:t).filter(t=>t.units>0)}}
  if(next===s)return s
- return {...next,money:next.money+paid,fame:next.fame+(remaining===0?C.contractFame:0),rd:next.rd+Math.floor((c.units-c.delivered-remaining)/C.rdUnits),contracts:{...next.contracts,active:remaining===0?next.contracts.active.filter(v=>v.uid!==uid):next.contracts.active.map(v=>v.uid===uid?{...v,delivered:c.units-remaining}:v)}}
+ return {...next,money:next.money+paid,year:{...next.year,income:next.year.income+paid,contracts:next.year.contracts+(remaining===0?1:0)},monthProfit:next.monthProfit+paid,fame:next.fame+(remaining===0?C.contractFame:0),rd:next.rd+Math.floor((c.units-c.delivered-remaining)/C.rdUnits),contracts:{...next.contracts,active:remaining===0?next.contracts.active.filter(v=>v.uid!==uid):next.contracts.active.map(v=>v.uid===uid?{...v,delivered:c.units-remaining}:v)}}
 }

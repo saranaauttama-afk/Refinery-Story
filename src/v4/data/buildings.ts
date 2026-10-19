@@ -20,6 +20,11 @@ export const buildings:BuildingDef[] = [
  def('tree','Tree','ต้นไม้','deco',1,1,24,500,1,'#5E8C3A'),
  def('lamp','Lamp','โคมไฟ','deco',1,1,24,500,1,'#F2C230'),
  def('sign','Company Sign','ป้ายบริษัท','deco',1,1,24,1000,1,'#4FA3D9'),
+ ...['product','safety','eco','refinery'].map(id=>def(`award${id}`,`Award ${id}`,`ถ้วยรางวัล ${id}`,'deco',1,1,24,0,99,'#F2C230')),
+ def('flag','Company Flag','ธงบริษัท','deco',1,1,24,2000,8,'#E2483D'),
+ def('goldTree','Golden Tree','ต้นไม้ทอง','deco',1,1,24,5000,9,'#F2C230'),
+ def('goldSign','Golden Sign','ป้ายทอง','deco',1,1,24,5000,9,'#F2C230'),
+ def('legend','Legend Statue','รูปปั้นตำนาน','deco',1,1,32,10000,10,'#9C5BD6'),
  def('tower','Mega Refinery Tower','เมกะรีไฟเนอรี','process',3,3,80,3000000,9,'#E36BB0'),
 ]
 export const buildingDef = (id:string):BuildingDef => { const d=buildings.find(b=>b.id===id); if(!d) throw new Error(`Unknown building ${id}`); return d }

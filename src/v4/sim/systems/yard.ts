@@ -13,9 +13,9 @@ export function canPlace(s:GameState,id:string,x:number,y:number,ignore?:string)
  return true
 }
 export function place(s:GameState,id:string,x:number,y:number):GameState {
- const d=buildingDef(id);if((s.rank<d.rank&&!s.blueprints.includes(id)&&!s.decos.includes(id))||s.money<d.cost||!canPlace(s,id,x,y))return s
+ const d=buildingDef(id);if((s.rank<d.rank&&!s.blueprints.includes(id)&&!s.decos.includes(id)&&!s.carriedBuildings[id])||(!s.carriedBuildings[id]&&s.money<d.cost)||!canPlace(s,id,x,y))return s
  const b:Building={uid:`b${s.nextId}`,defId:id,x,y,level:1,staff:[],cost:d.cost}
- return refreshCombos({...s,nextId:s.nextId+1,money:s.money-d.cost,yard:{...s.yard,buildings:[...s.yard.buildings,b]}})
+ return refreshCombos({...s,nextId:s.nextId+1,money:s.money-(s.carriedBuildings[id]?0:d.cost),carriedBuildings:{...s.carriedBuildings,[id]:Math.max(0,(s.carriedBuildings[id]??0)-1)},yard:{...s.yard,buildings:[...s.yard.buildings,b]}})
 }
 export function move(s:GameState,uid:string,x:number,y:number):GameState {
  const b=s.yard.buildings.find(b=>b.uid===uid);if(!b||s.money<YARD.moveCost||!canPlace(s,b.defId,x,y,uid)||(b.x===x&&b.y===y))return s
@@ -32,6 +32,6 @@ export function upgrade(s:GameState,uid:string):GameState {
 }
 export function buyLand(s:GameState,px:number,py:number):GameState {
  const key=`${px},${py}`;const adjacent=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>s.yard.ownedParcels.includes(`${px+dx},${py+dy}`))
- if(!Number.isInteger(px)||!Number.isInteger(py)||px<0||py<0||px>=YARD.maxSize/YARD.parcel||py>=YARD.maxSize/YARD.parcel||s.yard.ownedParcels.includes(key)||!adjacent||s.money<YARD.landCost||s.rank<2)return s
+ if(!Number.isInteger(px)||!Number.isInteger(py)||px<0||py<0||px>=YARD.maxSize/YARD.parcel||py>=YARD.maxSize/YARD.parcel||s.yard.ownedParcels.includes(key)||!adjacent||s.money<YARD.landCost||(s.rank<2||s.yard.ownedParcels.length>=(s.rank>=8?25:s.rank>=6?16:s.rank>=4?9:5)))return s
  return refreshCombos({...s,money:s.money-YARD.landCost,yard:{...s.yard,size:Math.max(s.yard.size,(px+1)*YARD.parcel,(py+1)*YARD.parcel),ownedParcels:[...s.yard.ownedParcels,key]}})
 }

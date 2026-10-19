@@ -15,6 +15,8 @@ export interface GameState {
   investments:Record<string,number>;market:{phase:'normal'|'boom'|'bust';nextChangeTick:number}
   activeCombos:ActiveCombo[];discoveredCombos:string[];comboHints:string[]
   firedStaff:Staff[];candidates:Staff[];careerManuals:number;merchantUntil:number
+  year:YearStats;history:{awards:AwardResult[];profits:{tick:number;profit:number}[]};monthProfit:number
+  unlockHistory:{tick:number;key:string}[];notices:Notice[];stormUntil:number;evaluation:number|null;carriedBuildings:Record<string,number>
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]
@@ -27,3 +29,6 @@ export interface Popup { uid:string; tick:number; x:number; y:number; en:string;
 export interface Truck { uid:string;customer:string|null;kind:'crude'|'product';path:{x:number;y:number}[];step:number;phase:'in'|'dwell'|'out';nextTick:number }
 export interface Contract { uid:string;base:import('../data/bases').BaseId;minGrade:Grade;units:number;delivered:number;deadline:number }
 export interface ActiveCombo {id:string;members:string[]}
+export interface YearStats { income:number;expenses:number;sold:number;bestScore:number;ecoTotal:number;lots:number;incidents:number;contracts:number }
+export interface AwardResult {year:number;wins:string[];fame:number;rivals:{name:string;product:number;eco:number;profit:number;safety:number}[]}
+export interface Notice {uid:string;kind:'rank'|'awards'|'ending'|'market';en:string;th:string}
