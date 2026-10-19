@@ -296,7 +296,7 @@ the owner checks on the APK.
 | M2 Yard | done; automated checks passed | feat(v4): M2 yard | automatic CI | deferred |
 | M2b Art pass 1 | not started | | | |
 | M3 Production & blending | done; automated checks passed | feat(v4): M3 production and blending | automatic CI | deferred |
-| M4 Customers & contracts | not started | | | |
+| M4 Customers & contracts | done; automated checks passed | feat(v4): M4 customers and contracts | automatic CI | deferred |
 | M5 Combos | not started | | | |
 | M6 Staff | not started | | | |
 | M7 Progression | not started | | | |
@@ -324,3 +324,7 @@ the owner checks on the APK.
 - M3: starter layout is a one-tap purchase costing exactly $50k, with no free buildings. Crude deliveries use up to $5k working credit so this start cannot deadlock before the first sale.
 - M3: one global recipe drives all stations. Familiarity uses the mean Base/Additive level (Base alone without additive). Predicted range is exact because no score noise is specified.
 - M3: unspecified base conversions, additive unlocks, 160 compatibility cells and cycle/buffer sizes are explicit content/balance defaults. Light/Heavy/Shale alter initial stat quality. Tuning is deferred to M8.
+
+- M4: two local gas buyers are available before Highway investment; remaining buyers require their chain (government buyers rank 6). Each of five groups has eight named buyers.
+- M4: starter includes a road tile and a $100 lower Loading Bay price, preserving the $50k total. Trucks use a breadth-first path through gate/road/loading footprints; blocked roads prevent customer arrivals.
+- M4: contract deliveries may be partial and paid per delivered unit at current market price ×1.5; completion awards Fame once. Offers refresh monthly; deadlines count from the offer. Crude is received at the gate with a visual delivery truck.

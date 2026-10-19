@@ -3,7 +3,7 @@ export interface BuildingDef { id:string; name:LocalizedText; category:'process'
 const def = (id:string,en:string,th:string,category:BuildingDef['category'],w:number,h:number,height:number,cost:number,rank:number,accent:string):BuildingDef => ({id,name:{en,th},category,w,h,height,cost,rank,accent})
 export const buildings:BuildingDef[] = [
  def('gate','Truck Gate','ประตูรถบรรทุก','logistics',1,2,16,5000,1,'#F2C230'),
- def('loading','Loading Bay','ลานจ่ายสินค้า','logistics',2,2,24,5000,1,'#F08A24'),
+ def('loading','Loading Bay','ลานจ่ายสินค้า','logistics',2,2,24,4900,1,'#F08A24'),
  def('crudeTank','Crude Tank','ถังน้ำมันดิบ','storage',2,2,24,5000,1,'#3C3C46'),
  def('tank','Product Tank','ถังผลิตภัณฑ์','storage',1,1,24,5000,1,'#E2483D'),
  def('cdu','CDU','หอกลั่น','process',2,2,48,20000,1,'#3C3C46'),

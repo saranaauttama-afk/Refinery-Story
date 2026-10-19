@@ -12,7 +12,7 @@ export function canPlace(s:GameState,id:string,x:number,y:number,ignore?:string)
  return true
 }
 export function place(s:GameState,id:string,x:number,y:number):GameState {
- const d=buildingDef(id);if(s.rank<d.rank||s.money<d.cost||!canPlace(s,id,x,y))return s
+ const d=buildingDef(id);if((s.rank<d.rank&&!s.blueprints.includes(id)&&!s.decos.includes(id))||s.money<d.cost||!canPlace(s,id,x,y))return s
  const b:Building={uid:`b${s.nextId}`,defId:id,x,y,level:1,staff:[],cost:d.cost}
  return {...s,nextId:s.nextId+1,money:s.money-d.cost,yard:{...s.yard,buildings:[...s.yard.buildings,b]}}
 }
