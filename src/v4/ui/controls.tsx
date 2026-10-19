@@ -8,6 +8,7 @@ export function Button({
   icon,
   selected = false,
   badge,
+  color,
 }: {
   label: LocalizedText
   onPress: () => void
@@ -15,6 +16,7 @@ export function Button({
   icon?: React.ReactNode
   selected?: boolean
   badge?: { label: string; color: string }
+  color?: string
 }) {
   const feedback = useFeedback()
   return (
@@ -28,6 +30,7 @@ export function Button({
       }}
       style={({ pressed }) => [
         styles.button,
+        color ? { backgroundColor: color } : null,
         selected && styles.selected,
         disabled && { opacity: 0.4 },
         pressed && { backgroundColor: '#F08A24' },
@@ -47,7 +50,9 @@ const headerColors: Record<string, string> = {
   Build: '#F08A24',
   Staff: '#3D8FE0',
   Customers: '#2FB38E',
-  Company: '#9C5BD6',
+  Company: '#B184E3',
+  'Buy land': '#8ED9C1',
+  'Recipe Book': '#F2C230',
   Blend: '#E2483D',
 }
 export function Sheet({
@@ -92,8 +97,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: { fontFamily: 'PixelifySans_700Bold', fontSize: 14, color: '#14110F' },
-  text: { fontFamily: 'Baloo2_400Regular', fontSize: 16, color: '#14110F' },
-  heading: { fontFamily: 'Baloo2_700Bold', fontSize: 20, color: '#14110F' },
+  text: { fontFamily: 'Kanit_400Regular', fontSize: 16, color: '#14110F' },
+  heading: { fontFamily: 'Kanit_600SemiBold', fontSize: 20, color: '#14110F' },
   sheet: {
     position: 'absolute',
     bottom: 0,

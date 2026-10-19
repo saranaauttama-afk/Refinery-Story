@@ -140,6 +140,8 @@ export interface AwardResult {
   wins: string[]
   fame: number
   rivals: { name: string; product: number; eco: number; profit: number; safety: number }[]
+  // The player's own figures for the same categories (added after the first builds).
+  you?: { product: number; eco: number; profit: number }
 }
 export interface Notice {
   uid: string

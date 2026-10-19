@@ -70,5 +70,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 12,
   },
-  buttonText: { fontFamily: 'Baloo2_700Bold', fontSize: 22, color: '#14110F' },
+  buttonText: { fontFamily: 'Kanit_600SemiBold', fontSize: 22, color: '#14110F' },
 })

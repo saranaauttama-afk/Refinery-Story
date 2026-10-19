@@ -32,7 +32,12 @@ export function awards(s: GameState): GameState {
     if (s.year.income - s.year.expenses > Math.max(...rivals.map(r => r.profit)))
       wins.push('refinery')
     const fame = wins.length * Math.min(P.awardMax, P.awardMin + (year - 1) * P.awardYearStep)
-    const result = { year, wins, fame, rivals }
+    const you = {
+      product: s.year.bestScore,
+      eco: Math.round(s.year.ecoTotal / Math.max(1, s.year.lots)),
+      profit: s.year.income - s.year.expenses,
+    }
+    const result = { year, wins, fame, rivals, you }
     next = {
       ...next,
       fame: next.fame + fame + getModifiers(s).yearlyFame,

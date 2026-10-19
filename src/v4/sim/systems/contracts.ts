@@ -10,6 +10,9 @@ export function contractSystem(s: GameState): GameState {
     fame: Math.max(0, s.fame - expired.length * C.failedFame),
     contracts: { ...s.contracts, active: s.contracts.active.filter(c => s.tick <= c.deadline) },
   }
+  // Deliver eligible lots automatically once a week, so accepted contracts just work.
+  if (s.tick % B.ticksPerWeek === 0)
+    for (const c of next.contracts.active) next = deliverContract(next, c.uid)
   if (isMonthStart(s.tick)) {
     const pool = bases.filter(b => b.rank <= s.rank)
     const offers = Array.from({ length: C.offers }, (_, i) => ({

@@ -2,50 +2,131 @@ import { Text } from 'react-native'
 import { useGame } from '../store/useGame'
 import { customers } from '../data/customers'
 import { bases } from '../data/bases'
-import { customerUnlocked, roadPath } from '../sim/systems/customers'
-import { acceptContract, deliverContract } from '../sim/actions'
-import { Button, styles } from './controls'
+import { customerUnlocked, roadPath, salePrice } from '../sim/systems/customers'
+import { acceptContract } from '../sim/actions'
+import { SALES, B } from '../data/balance'
+import { styles } from './controls'
+import { Card, Section, Row, ProductChip, GradeChip, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
+import type { Contract, GameState } from '../sim/types'
+
+const baseName = (id: string) => text(bases.find(b => b.id === id)!.name)
+const weeksLeft = (s: GameState, c: Contract) =>
+  Math.max(0, Math.ceil((c.deadline - s.tick) / B.ticksPerWeek))
+const reward = (s: GameState, c: Contract) =>
+  Math.round(salePrice(s, { base: c.base, grade: c.minGrade }) * c.units * SALES.reward)
+
 export function CustomersPanel() {
   const { state: s, dispatch } = useGame()
+  const regulars = customers
+    .filter(c => customerUnlocked(s, c))
+    .map(c => ({ c, rec: s.customers[c.id] ?? { hearts: 0, giftGiven: false } }))
+    .sort(
+      (a, b) => Number(a.rec.giftGiven) - Number(b.rec.giftGiven) || b.rec.hearts - a.rec.hearts,
+    )
   return (
     <>
-      <Text style={styles.text}>
-        {text({
-          en: roadPath(s).length ? 'Road connected' : 'Connect gate to loading bay with roads',
-          th: roadPath(s).length ? 'ถนนเชื่อมต่อแล้ว' : 'เชื่อมถนนจากประตูถึงลานจ่ายสินค้า',
-        })}
-      </Text>
-      <Text style={styles.heading}>{text({ en: 'Contracts', th: 'สัญญา' })}</Text>
-      {s.contracts.offers.map(c => (
-        <Button
-          key={c.uid}
-          label={{
-            en: `Accept ${c.base} ${c.units} ${c.minGrade}`,
-            th: `รับสัญญา ${text(bases.find(b => b.id === c.base)!.name)} ${c.units} หน่วย เกรด ${c.minGrade}`,
-          }}
-          onPress={() => dispatch(s => acceptContract(s, c.uid))}
-        />
-      ))}
-      {s.contracts.active.map(c => (
-        <Button
-          key={c.uid}
-          label={{
-            en: `Deliver ${c.base} (${c.delivered}/${c.units})`,
-            th: `ส่งมอบ ${text(bases.find(b => b.id === c.base)!.name)} (${c.delivered}/${c.units}) · เหลือ ${Math.max(0, c.deadline - s.tick)} ticks`,
-          }}
-          onPress={() => dispatch(s => deliverContract(s, c.uid))}
-        />
-      ))}
-      {customers
-        .filter(c => customerUnlocked(s, c))
-        .map(c => (
-          <Text style={styles.text} key={c.id}>
-            {text(c.name)} · {text(bases.find(b => b.id === c.base)!.name)} ≥{c.minGrade} · ♥
-            {s.customers[c.id]?.hearts ?? 0}
-            {s.customers[c.id]?.giftGiven ? ' 🎁' : ''}
+      {!roadPath(s).length && (
+        <Card tone="warn">
+          <Text style={styles.text}>
+            {text({
+              en: 'No road from the gate to the loading bay. Trucks cannot come in.',
+              th: 'ยังไม่มีถนนจากประตูถึงลานจ่ายสินค้า รถลูกค้าเข้ามาไม่ได้',
+            })}
           </Text>
-        ))}
+        </Card>
+      )}
+      <Section>
+        {text({ en: 'Active contracts', th: 'สัญญาที่รับไว้' })} ({s.contracts.active.length}/
+        {SALES.maxContracts})
+      </Section>
+      {!s.contracts.active.length && (
+        <Muted>
+          {text({
+            en: 'None yet. Accept an offer below.',
+            th: 'ยังไม่มี รับจากข้อเสนอด้านล่างได้',
+          })}
+        </Muted>
+      )}
+      {s.contracts.active.map(c => (
+        <Card key={c.uid}>
+          <Row>
+            <ProductChip base={c.base} label={baseName(c.base)} />
+            <GradeChip grade={c.minGrade} suffix="+" />
+            <Text
+              style={[
+                styles.text,
+                { marginLeft: 'auto', color: weeksLeft(s, c) <= 2 ? '#B42318' : '#14110F' },
+              ]}
+            >
+              {text({
+                en: `${weeksLeft(s, c)} weeks left`,
+                th: `เหลือ ${weeksLeft(s, c)} สัปดาห์`,
+              })}
+            </Text>
+          </Row>
+          <Row>
+            <Bar value={c.delivered / c.units} />
+            <Text style={styles.text}>
+              {c.delivered}/{c.units}
+            </Text>
+          </Row>
+          <Muted>
+            {text({
+              en: `Reward ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★ · lots that qualify are sent automatically every week`,
+              th: `รางวัล ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★ · ล็อตที่ผ่านเกณฑ์ส่งให้อัตโนมัติทุกสัปดาห์`,
+            })}
+          </Muted>
+        </Card>
+      ))}
+      <Section>{text({ en: 'Offers this month', th: 'ข้อเสนอเดือนนี้' })}</Section>
+      {s.contracts.offers.map(c => (
+        <Card key={c.uid} dashed>
+          <Row>
+            <ProductChip base={c.base} label={baseName(c.base)} />
+            <GradeChip grade={c.minGrade} suffix="+" />
+            <Text style={styles.text}>
+              {text({ en: `${c.units} units`, th: `${c.units} หน่วย` })}
+            </Text>
+          </Row>
+          <Row>
+            <Muted>
+              {text({
+                en: `${SALES.deadlineWeeks} weeks · ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★`,
+                th: `${SALES.deadlineWeeks} สัปดาห์ · ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★`,
+              })}
+            </Muted>
+            <SmallButton
+              label={text({ en: 'Accept', th: 'รับ' })}
+              color="#2FB38E"
+              disabled={s.contracts.active.length >= SALES.maxContracts}
+              onPress={() => dispatch(s => acceptContract(s, c.uid))}
+            />
+          </Row>
+        </Card>
+      ))}
+      <Section>{text({ en: 'Regular customers', th: 'ลูกค้าประจำ' })}</Section>
+      {regulars.map(({ c, rec }) => (
+        <Card key={c.id}>
+          <Row>
+            <ProductChip base={c.base} label={baseName(c.base)} />
+            <Text style={[styles.text, { flex: 1 }]}>{text(c.name)}</Text>
+            <GradeChip grade={c.minGrade} suffix="+" />
+          </Row>
+          {rec.giftGiven ? (
+            <Muted>
+              {text({ en: 'Gift received · loyal customer', th: 'ให้ของขวัญแล้ว · ลูกค้าประจำ' })}
+            </Muted>
+          ) : (
+            <Row>
+              <Bar value={rec.hearts / SALES.giftHearts} color="#E2483D" />
+              <Text style={styles.text}>
+                ♥ {rec.hearts}/{SALES.giftHearts}
+              </Text>
+            </Row>
+          )}
+        </Card>
+      ))}
     </>
   )
 }

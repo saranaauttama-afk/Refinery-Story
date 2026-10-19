@@ -112,3 +112,28 @@ export function buyHint(s: GameState, id: string): GameState {
   if (!d || d.hidden || s.comboHints.includes(id) || s.money < COMBO.hintCost) return s
   return { ...s, money: s.money - COMBO.hintCost, comboHints: [...s.comboHints, id] }
 }
+// Free placement hints: combos that include this building and whose other members
+// are already in the yard, so the player knows what to put it next to.
+export function comboLeads(s: GameState, id: string) {
+  const isProcess = buildingDef(id).category === 'process'
+  const owned = new Set(s.yard.buildings.map(b => b.defId))
+  const hasMember = (m: string) =>
+    m === 'process'
+      ? s.yard.buildings.some(b => buildingDef(b.defId).category === 'process')
+      : owned.has(m)
+  return combos
+    .filter(
+      c => !c.hidden && (c.members.includes(id) || (isProcess && c.members.includes('process'))),
+    )
+    .map(c => {
+      const others = [...c.members]
+      others.splice(others.indexOf(others.includes(id) ? id : 'process'), 1)
+      return {
+        combo: c,
+        known: s.discoveredCombos.includes(c.id) || s.comboHints.includes(c.id),
+        partners: others,
+        ready: others.every(hasMember),
+      }
+    })
+    .filter(l => l.partners.some(hasMember))
+}

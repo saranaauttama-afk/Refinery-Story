@@ -349,7 +349,7 @@ export const BUILDING_BALANCE: Record<
 
 // The foreman the player starts with, so people walk the yard from minute one.
 export const STARTING_STAFF = {
-  name: 'Somchai',
+  name: 'สมชาย',
   stat: 2,
   salary: 1000,
   power: 12,

@@ -1,4 +1,7 @@
 import { Onboarding } from './Onboarding'
+import { BuildPanel } from './BuildPanel'
+import { LandPanel } from './LandPanel'
+import { BuildingInfo } from './BuildingInfo'
 import { Building2, FlaskConical, Users, Truck, Landmark } from 'lucide-react-native'
 import { CompanyPanel } from './CompanyPanel'
 import { Notices } from './Notices'
@@ -17,8 +20,15 @@ import { YARD } from '../data/balance'
 import { place, move, demolish, upgrade, buyLand } from '../sim/actions'
 import { buildingAt, canPlace, upgradeCost } from '../sim/systems/yard'
 import { HUD } from './HUD'
+import type { GameState } from '../sim/types'
 import { Button, Sheet, styles } from './controls'
 import { text } from '../i18n'
+// Start the placement preview somewhere it already fits.
+function firstFreeSpot(s: GameState, id: string) {
+  for (let y = 0; y < s.yard.size; y++)
+    for (let x = 0; x < s.yard.size; x++) if (canPlace(s, id, x, y)) return { x, y }
+  return { x: 0, y: 0 }
+}
 export function YardScreen() {
   const { state: s, dispatch } = useGame()
   const [panel, setPanel] = useState('')
@@ -105,11 +115,11 @@ export function YardScreen() {
         style={{ flexDirection: 'row', backgroundColor: '#FFF6E3', justifyContent: 'space-around' }}
       >
         {[
-          { id: 'build', en: 'Build', th: 'สร้าง' },
-          { id: 'blend', en: 'Blend', th: 'ผสม' },
-          { id: 'staff', en: 'Staff', th: 'คน' },
-          { id: 'customers', en: 'Customers', th: 'ลูกค้า' },
-          { id: 'company', en: 'Company', th: 'บริษัท' },
+          { id: 'build', en: 'Build', th: 'สร้าง', color: '#F08A24' },
+          { id: 'blend', en: 'Blend', th: 'ผสม', color: '#E2483D' },
+          { id: 'staff', en: 'Staff', th: 'คน', color: '#3D8FE0' },
+          { id: 'customers', en: 'Customers', th: 'ลูกค้า', color: '#2FB38E' },
+          { id: 'company', en: 'Company', th: 'บริษัท', color: '#B184E3' },
         ].map(tab => (
           <Button
             key={tab.id}
@@ -127,6 +137,7 @@ export function YardScreen() {
               )
             }
             label={tab}
+            color={tab.color}
             onPress={() => setPanel(tab.id)}
           />
         ))}
@@ -135,8 +146,7 @@ export function YardScreen() {
 
       {panel === 'company' && (
         <Sheet title={{ en: 'Company', th: 'บริษัท' }} onClose={() => setPanel('')}>
-          <CompanyPanel />
-          <Button label={{ en: 'Buy land', th: 'ซื้อที่ดิน' }} onPress={() => setPanel('land')} />
+          <CompanyPanel onLand={() => setPanel('land')} onCombos={() => setPanel('combos')} />
         </Sheet>
       )}
       {panel === 'staff' && (
@@ -161,78 +171,29 @@ export function YardScreen() {
       )}
       {panel === 'build' && (
         <Sheet title={{ en: 'Build', th: 'สร้างอาคาร' }} onClose={() => setPanel('')}>
-          {buildings
-            .filter(
-              b =>
-                b.rank <= s.rank ||
-                s.blueprints.includes(b.id) ||
-                s.decos.includes(b.id) ||
-                s.carriedBuildings[b.id],
-            )
-            .map(d => (
-              <Button
-                key={d.id}
-                disabled={!s.carriedBuildings[d.id] && s.money < d.cost}
-                label={{
-                  en: `${d.name.en} · ${s.carriedBuildings[d.id] ? 'NG+ Free' : `$${d.cost}`}`,
-                  th: `${d.name.th} · ${s.carriedBuildings[d.id] ? 'NG+ ฟรี' : `$${d.cost.toLocaleString()}`}`,
-                }}
-                onPress={() => {
-                  setGhost({ id: d.id, x: 0, y: 0 })
-                  setPanel('')
-                }}
-              />
-            ))}
+          <BuildPanel
+            onPick={id => {
+              setGhost({ id, ...firstFreeSpot(s, id) })
+              setPanel('')
+            }}
+          />
         </Sheet>
       )}
       {panel === 'info' && b && (
         <Sheet title={buildingDef(b.defId).name} onClose={() => setPanel('')}>
-          <Text style={styles.text}>Lv {b.level}</Text>
-          <Button
-            label={{ en: 'Move $2k', th: 'ย้าย $2,000' }}
-            onPress={() => {
+          <BuildingInfo
+            uid={b.uid}
+            onMove={() => {
               setGhost({ id: b.defId, x: b.x, y: b.y, uid: b.uid })
               setPanel('')
             }}
-          />
-          <Button
-            disabled={b.level >= YARD.maxLevel || s.money < upgradeCost(b)}
-            label={{
-              en: `Upgrade $${upgradeCost(b).toFixed(0)}`,
-              th: `อัปเกรด $${upgradeCost(b).toLocaleString()}`,
-            }}
-            onPress={() => dispatch(s => upgrade(s, b.uid))}
-          />
-          <Button
-            label={{ en: 'Demolish (50% refund)', th: 'รื้อถอน (คืน 50%)' }}
-            onPress={() => {
-              dispatch(s => demolish(s, b.uid))
-              setPanel('')
-            }}
+            onClose={() => setPanel('')}
           />
         </Sheet>
       )}
       {panel === 'land' && (
-        <Sheet
-          title={{ en: 'Buy an 8×8 parcel', th: 'ซื้อที่ดิน 8×8' }}
-          onClose={() => setPanel('')}
-        >
-          <Text style={styles.text}>
-            {text({
-              en: 'Rank 2 required. $20,000 per parcel.',
-              th: 'ต้องแรงก์ 2 ราคาแปลงละ $20,000',
-            })}
-          </Text>
-          {Array.from({ length: 25 }, (_, i) => ({ x: i % 5, y: Math.floor(i / 5) }))
-            .filter(p => !s.yard.ownedParcels.includes(`${p.x},${p.y}`))
-            .map(p => (
-              <Button
-                key={`${p.x},${p.y}`}
-                label={{ en: `Parcel ${p.x},${p.y}`, th: `แปลง ${p.x},${p.y}` }}
-                disabled={buyLand(s, p.x, p.y) === s}
-                onPress={() => dispatch(s => buyLand(s, p.x, p.y))}
-              />
-            ))}
+        <Sheet title={{ en: 'Buy land', th: 'ซื้อที่ดิน' }} onClose={() => setPanel('company')}>
+          <LandPanel />
         </Sheet>
       )}
     </View>
