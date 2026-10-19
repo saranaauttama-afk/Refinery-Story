@@ -5,3 +5,4 @@ export const B = {
 }
 export const MONTH = B.ticksPerWeek * B.weeksPerMonth
 export const YEAR = MONTH * B.monthsPerYear
+export const YARD = { startSize:16, parcel:8, maxSize:40, landCost:20000, moveCost:2000, refund:.5, maxLevel:5, upgradeBase:.6, upgradeGrowth:1.5, outputPerLevel:.25, tileW:32, tileH:16, defaultZoom:2, minZoom:1, maxZoom:4 }

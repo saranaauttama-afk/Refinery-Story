@@ -293,7 +293,7 @@ the owner checks on the APK.
 | --- | --- | --- | --- | --- |
 | M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | pending |
 | M1 Sim core | done; automated checks passed | feat(v4): M1 sim core | automatic CI | deferred |
-| M2 Yard | not started | | | |
+| M2 Yard | done; automated checks passed | feat(v4): M2 yard | automatic CI | deferred |
 | M2b Art pass 1 | not started | | | |
 | M3 Production & blending | not started | | | |
 | M4 Customers & contracts | not started | | | |
@@ -317,3 +317,6 @@ the owner checks on the APK.
 - M1: month expenses are charged at ticks 1, 241, 481 (first tick of each month); week/year labels use completed ticks.
 - M1: seeded New Game uses the reproducible default seed 42. No offline catch-up; background pauses ticks.
 - M1: `v4:check` uses `node --import tsx` to avoid host IPC restrictions while running the same TypeScript checks, locally and in CI.
+
+- M2: land purchases add one adjacent 8×8 parcel, not a free entire row/column. Bounding size grows while unowned tiles remain blocked. Land starts unlocking at rank 2.
+- M2: unspecified building prices use content-table defaults; the six basic production/logistics buildings total $50k.
