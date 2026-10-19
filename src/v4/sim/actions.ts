@@ -1,9 +1,19 @@
 export { place, move, demolish, buyLand, upgrade } from './systems/yard'
 export { selectBlend } from './systems/blending'
 export { buildStarter } from './systems/starter'
-export { acceptContract,deliverContract } from './systems/contracts'
+export { acceptContract, deliverContract } from './systems/contracts'
 export { buyHint } from './systems/combos'
-export { recruit,hire,assign,fire,rehire,train,levelUp,buyManual,changeJob } from './systems/staff'
+export {
+  recruit,
+  hire,
+  assign,
+  fire,
+  rehire,
+  train,
+  levelUp,
+  buyManual,
+  changeJob,
+} from './systems/staff'
 export { invest } from './systems/investments'
-export { newGamePlus,dismissNotice } from './systems/progression'
+export { newGamePlus, dismissNotice } from './systems/progression'
 export { discardLot } from './systems/blending'

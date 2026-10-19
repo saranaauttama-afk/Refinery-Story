@@ -1,1 +1,1 @@
-export const loadSkia = async ():Promise<void> => {}
+export const loadSkia = async (): Promise<void> => {}

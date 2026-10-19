@@ -10,7 +10,9 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "export:web": "mkdir -p public && cp node_modules/canvaskit-wasm/bin/full/canvaskit.wasm public/ && expo export --platform web",
-    "v4:check": "node --import tsx scripts/v4/check-all.ts"
+    "v4:check": "node --import tsx scripts/v4/check-all.ts",
+    "format": "prettier --write \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
+    "format:check": "prettier --check \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\""
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
@@ -41,6 +43,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@types/react": "~19.2.0",
+    "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "~5.9.0"
   },

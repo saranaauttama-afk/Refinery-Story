@@ -11,13 +11,23 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ Baloo2_400Regular, Baloo2_700Bold, PixelifySans_700Bold })
-  const [skiaReady,setSkiaReady]=useState(false)
-  useEffect(()=>{loadSkia().then(()=>setSkiaReady(true)).catch(console.error)},[])
-  if ((!loaded && !error)||!skiaReady) return null
+  const [skiaReady, setSkiaReady] = useState(false)
+  useEffect(() => {
+    loadSkia()
+      .then(() => setSkiaReady(true))
+      .catch(console.error)
+  }, [])
+  if ((!loaded && !error) || !skiaReady) return null
   return (
-    <GestureHandlerRootView style={{flex:1}}><SafeAreaProvider><GameProvider><FeedbackProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </FeedbackProvider></GameProvider></SafeAreaProvider></GestureHandlerRootView>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <GameProvider>
+          <FeedbackProvider>
+            <StatusBar style="dark" />
+            <Stack screenOptions={{ headerShown: false }} />
+          </FeedbackProvider>
+        </GameProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }

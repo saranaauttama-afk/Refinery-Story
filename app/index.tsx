@@ -9,25 +9,61 @@ export default function TitleScreen() {
   const { ready, hasSave, newGame, saveError } = useGame()
   return (
     <SafeAreaView style={styles.screen}>
-      <TitleScene/><View style={styles.panel}>
+      <TitleScene />
+      <View style={styles.panel}>
         <Text style={styles.title}>{text(copy.title)}</Text>
-        {saveError&&<Text style={styles.buttonText}>{text(saveError)}</Text>}
+        {saveError && <Text style={styles.buttonText}>{text(saveError)}</Text>}
         <Text style={styles.version}>V4-M0</Text>
         <Link href="/game" asChild>
-          <Pressable disabled={!ready} onPress={newGame} accessibilityRole="button" style={styles.button}>
+          <Pressable
+            disabled={!ready}
+            onPress={newGame}
+            accessibilityRole="button"
+            style={styles.button}
+          >
             <Text style={styles.buttonText}>{text(copy.newGame)}</Text>
           </Pressable>
         </Link>
-        {ready && hasSave && <Link href="/game" style={styles.buttonText}>{text({en:"Continue", th:"เล่นต่อ"})}</Link>}
+        {ready && hasSave && (
+          <Link href="/game" style={styles.buttonText}>
+            {text({ en: 'Continue', th: 'เล่นต่อ' })}
+          </Link>
+        )}
       </View>
     </SafeAreaView>
   )
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#8DBF5A', justifyContent: 'flex-end', padding: 24, paddingBottom: 48 },
-  panel: { backgroundColor: '#FFF6E3', borderColor: '#14110F', borderWidth: 2, borderRadius: 6, padding: 24, alignItems: 'center', gap: 16 },
-  title: { fontFamily: 'PixelifySans_700Bold', fontSize: 36, color: '#14110F', textAlign: 'center' },
+  screen: {
+    flex: 1,
+    backgroundColor: '#8DBF5A',
+    justifyContent: 'flex-end',
+    padding: 24,
+    paddingBottom: 48,
+  },
+  panel: {
+    backgroundColor: '#FFF6E3',
+    borderColor: '#14110F',
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 24,
+    alignItems: 'center',
+    gap: 16,
+  },
+  title: {
+    fontFamily: 'PixelifySans_700Bold',
+    fontSize: 36,
+    color: '#14110F',
+    textAlign: 'center',
+  },
   version: { fontFamily: 'PixelifySans_700Bold', color: '#73818F', fontSize: 18 },
-  button: { backgroundColor: '#F08A24', borderWidth: 2, borderColor: '#14110F', borderRadius: 6, paddingHorizontal: 32, paddingVertical: 12 },
+  button: {
+    backgroundColor: '#F08A24',
+    borderWidth: 2,
+    borderColor: '#14110F',
+    borderRadius: 6,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
   buttonText: { fontFamily: 'Baloo2_700Bold', fontSize: 22, color: '#14110F' },
 })

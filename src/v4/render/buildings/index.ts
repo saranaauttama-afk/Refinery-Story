@@ -19,4 +19,32 @@ import { draw as sign } from './sign'
 import { draw as tower } from './tower'
 import { draw as road } from './road'
 import { draw as trophy } from './trophy'
-export const sprites:Record<string,Sprite>={gate,loading,crudeTank,tank:productTank,cdu,hydro,reformer,cracker,blend,pipe,lab,control,canteen,flare,tree,lamp,sign,tower,road,goldTree:tree,goldSign:sign,flag:sign,legend:trophy,awardproduct:trophy,awardsafety:trophy,awardeco:trophy,awardrefinery:trophy}
+export const sprites: Record<string, Sprite> = {
+  gate,
+  loading,
+  crudeTank,
+  tank: productTank,
+  cdu,
+  hydro,
+  reformer,
+  cracker,
+  blend,
+  pipe,
+  lab,
+  control,
+  canteen,
+  flare,
+  tree,
+  lamp,
+  sign,
+  tower,
+  road,
+  goldTree: tree,
+  goldSign: sign,
+  flag: sign,
+  legend: trophy,
+  awardproduct: trophy,
+  awardsafety: trophy,
+  awardeco: trophy,
+  awardrefinery: trophy,
+}
