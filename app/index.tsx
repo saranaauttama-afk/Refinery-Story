@@ -1,19 +1,22 @@
+import { useGame } from '../src/v4/store/useGame'
 import { Link } from 'expo-router'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { copy, text } from '../src/v4/i18n'
 
 export default function TitleScreen() {
+  const { ready, hasSave, newGame } = useGame()
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.panel}>
         <Text style={styles.title}>{text(copy.title)}</Text>
         <Text style={styles.version}>V4-M0</Text>
         <Link href="/game" asChild>
-          <Pressable accessibilityRole="button" style={styles.button}>
+          <Pressable disabled={!ready} onPress={newGame} accessibilityRole="button" style={styles.button}>
             <Text style={styles.buttonText}>{text(copy.newGame)}</Text>
           </Pressable>
         </Link>
+        {ready && hasSave && <Link href="/game" style={styles.buttonText}>{text({en:"Continue", th:"เล่นต่อ"})}</Link>}
       </View>
     </SafeAreaView>
   )

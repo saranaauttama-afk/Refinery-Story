@@ -1,3 +1,4 @@
+import { HUD } from '../src/v4/ui/HUD'
 import { Link } from 'expo-router'
 import { StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -6,7 +7,7 @@ import { copy, text } from '../src/v4/i18n'
 export default function GameScreen() {
   return (
     <SafeAreaView style={styles.screen}>
-      <Text style={styles.title}>{text(copy.placeholder)}</Text>
+      <HUD /><Text style={styles.title}>{text(copy.placeholder)}</Text>
       <Link href="/" style={styles.link}>{text(copy.back)}</Link>
     </SafeAreaView>
   )

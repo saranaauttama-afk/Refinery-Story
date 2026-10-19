@@ -292,7 +292,7 @@ the owner checks on the APK.
 | Milestone | Status | Commit | APK run | Owner verdict |
 | --- | --- | --- | --- | --- |
 | M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | pending |
-| M1 Sim core | not started | | | |
+| M1 Sim core | done; automated checks passed | feat(v4): M1 sim core | automatic CI | deferred |
 | M2 Yard | not started | | | |
 | M2b Art pass 1 | not started | | | |
 | M3 Production & blending | not started | | | |
@@ -311,3 +311,9 @@ the owner checks on the APK.
   passed. M0 has no sim checks; the runner is ready for M1.
 - Android versionCode 11, version 4.0.0, build label V4-M0.
 - APK install / New Game verification and owner verdict remain pending.
+
+## Assumptions
+
+- M1: month expenses are charged at ticks 1, 241, 481 (first tick of each month); week/year labels use completed ticks.
+- M1: seeded New Game uses the reproducible default seed 42. No offline catch-up; background pauses ticks.
+- M1: `v4:check` uses `node --import tsx` to avoid host IPC restrictions while running the same TypeScript checks, locally and in CI.

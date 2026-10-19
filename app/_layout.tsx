@@ -1,3 +1,4 @@
+import { GameProvider } from '../src/v4/store/GameProvider'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useFonts, Baloo2_400Regular, Baloo2_700Bold } from '@expo-google-fonts/baloo-2'
@@ -8,9 +9,9 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({ Baloo2_400Regular, Baloo2_700Bold, PixelifySans_700Bold })
   if (!loaded && !error) return null
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider><GameProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
-    </SafeAreaProvider>
+    </GameProvider></SafeAreaProvider>
   )
 }

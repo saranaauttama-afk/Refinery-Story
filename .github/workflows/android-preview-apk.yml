@@ -40,6 +40,9 @@ jobs:
       - name: Verify TypeScript
         run: npm run typecheck
 
+      - name: Verify v4 milestones
+        run: npm run v4:check
+
       - name: Materialize pixel refinery launcher icon
         run: node scripts/refresh-app-icon.cjs
 
