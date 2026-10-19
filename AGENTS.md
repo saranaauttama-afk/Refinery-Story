@@ -1,32 +1,33 @@
-# Refinery Story — AI Development Rules
+# Refinery Story — AI Development Rules (v4 rewrite)
 
-This repo contains a single codebase: an Expo/React Native app (this is
-its root). An earlier web app (Vite/React) used to live here too, with
-its own `Doc/` folder of design docs -- both were removed in the
-2026-06-15 cleanup that made this the only project in the repo. That old
-documentation is archived at `docs-archive/web-app-docs-2026-06-13/` for
-historical reference only; it describes code that no longer exists here
-and should not be treated as current.
+You are on branch **`rewrite/v4`**: a from-scratch rewrite of Refinery Story,
+a Kairosoft-style refinery management game (Expo / React Native / TypeScript,
+Skia for the yard).
 
-**Before doing anything else, read `README.md` in this directory.** It
-has a "👋 START HERE — Session Handoff" section at the top with the
-current state, what shipped most recently, and what's next. That section
-is kept up to date after every session and is the actual entry point --
-this file just exists so agent tooling that looks for `AGENTS.md`/
-`CLAUDE.md` first finds a pointer to it.
+## Read first, in this order
+
+1. [`docs/v4/PLAN.md`](docs/v4/PLAN.md) — milestones, folder layout, rules,
+   status table. Find the first milestone that is not done and work on it.
+2. [`docs/v4/GDD.md`](docs/v4/GDD.md) — game rules and all starting numbers.
+3. [`docs/v4/ART.md`](docs/v4/ART.md) — code-drawn graphics and UI style.
+
+Everything from V1–V3 (old `src/game`, old docs, `GAMEPLAY_*_V3.md`, …) is
+retired. Do not port its logic or read its docs for rules. Milestone M0
+deletes it.
 
 ## Working agreements
 
-- Keep the app runnable at all times; verify with `npx tsc --noEmit`
-  after changes (this repo has no automated test suite -- isolated
-  `node -e "..."` simulations are used instead to verify new game-logic
-  math before committing; see recent git log for examples).
-- Avoid overengineering and large refactors unless requested. Prefer
-  simple, explicit code over generic frameworks/abstractions.
-- Gameplay first: prioritize fun, simplicity, readability, maintainability
-  over architectural purity.
-- New ideas that aren't the current task go into `README.md`'s backlog
-  sections ("What's NOT done / known gaps" or a new "## DESIGN (not
-  started)" section), not implemented immediately.
-- The user communicates in Thai and prefers a single short Thai summary
-  at the end of a task, not step-by-step narration while working.
+- New code goes under `src/v4/` and `app/`. The sim core `src/v4/sim/` must not
+  import React, React Native, Expo or Skia.
+- All tunable numbers in `src/v4/data/balance.ts`; content tables in
+  `src/v4/data/*.ts`.
+- No `Date.now()` or `Math.random()` in sim code — tick count + seeded RNG.
+- Gates before every commit: `npx tsc --noEmit` and `npm run v4:check`
+  (once it exists, from M0/M1).
+- Keep it simple and explicit; no generic frameworks. Gameplay fun first.
+- Work one milestone at a time; commit to `rewrite/v4`. Never push to `main`.
+- After finishing a milestone, update the Status table in `docs/v4/PLAN.md`.
+- The owner speaks Thai and wants **one short Thai summary at the end of a
+  task**, not step-by-step narration.
+- Ideas outside the current milestone go into a "Backlog" section at the end of
+  `docs/v4/PLAN.md`, not into code.

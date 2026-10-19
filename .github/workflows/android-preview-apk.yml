@@ -11,6 +11,7 @@ on:
       - release/refinery-story-v1
       - devGraphic
       - art/yard-v2
+      - rewrite/v4
 
 jobs:
   build-apk:

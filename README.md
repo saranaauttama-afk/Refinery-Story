@@ -1,3 +1,10 @@
+# Refinery Story — v4 rewrite
+
+> **Branch `rewrite/v4`** — from-scratch rewrite. Start with
+> [`AGENTS.md`](AGENTS.md) → [`docs/v4/PLAN.md`](docs/v4/PLAN.md),
+> [`docs/v4/GDD.md`](docs/v4/GDD.md), [`docs/v4/ART.md`](docs/v4/ART.md).
+> Everything below this block is the retired V1–V3 handoff, kept until M0.
+
 # Refinery Story — Mobile (Expo)
 
 > **CURRENT HANDOFF — 2026-10-03, art/yard-v2**
