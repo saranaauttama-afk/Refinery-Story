@@ -23,7 +23,7 @@ export function move(s:GameState,uid:string,x:number,y:number):GameState {
 }
 export function demolish(s:GameState,uid:string):GameState {
  const b=s.yard.buildings.find(b=>b.uid===uid);if(!b)return s
- return refreshCombos({...s,money:s.money+b.cost*YARD.refund,yard:{...s.yard,buildings:s.yard.buildings.filter(b=>b.uid!==uid)}})
+ return refreshCombos({...s,money:s.money+b.cost*YARD.refund,staff:s.staff.map(p=>p.assignedTo===uid?{...p,assignedTo:null}:p),yard:{...s.yard,buildings:s.yard.buildings.filter(b=>b.uid!==uid)}})
 }
 export const upgradeCost=(b:Building)=>buildingDef(b.defId).cost*YARD.upgradeBase*YARD.upgradeGrowth**(b.level-1)
 export function upgrade(s:GameState,uid:string):GameState {

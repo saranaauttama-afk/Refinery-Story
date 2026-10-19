@@ -7,5 +7,6 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     crude:0, crudeType:'light', cuts:{naphtha:0,kerosene:0,gasoil:0,residue:0}, baseStock:{lpg:0,gasoline:0,jet:0,diesel:0,lube:0,asphalt:0,wax:0,pellet:0}, tanks:[], blend:{base:'gasoline',additive:null}, familiarity:{},useCounts:{},triedPairs:[],unlockedAdditives:[],popups:[],
     customers:{}, trucks:[], contracts:{offers:[],active:[]},blueprints:[],decos:[],investments:{highway:0,port:0,industrial:0,airport:0},market:{phase:'normal',nextChangeTick:0},
     activeCombos:[],discoveredCombos:[],comboHints:[],
+    firedStaff:[],candidates:[],careerManuals:0,merchantUntil:0,
     staff: [], ledger: [], log: [] }
 }

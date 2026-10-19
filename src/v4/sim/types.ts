@@ -1,6 +1,6 @@
 export type Speed = 0 | 1 | 2 | 4
 export interface Building { uid: string; defId: string; x: number; y: number; level: number; staff: string[]; cost: number }
-export interface Staff { uid: string; salary: number }
+export interface Staff { uid:string;name:string;job:import('../data/staff').JobId;jobLevels:Record<import('../data/staff').JobId,number>;stats:{op:number;chem:number;mech:number;safe:number};power:number;maxPower:number;salary:number;trainingCounts:Partial<Record<import('../data/staff').TrainingId,number>>;assignedTo:string|null;resting:boolean }
 export interface GameState {
   version: 4; seed: number; rng: number; tick: number; speed: Speed; nextId: number
   money: number; fame: number; rd: number; rank: number
@@ -14,6 +14,7 @@ export interface GameState {
   contracts:{offers:Contract[];active:Contract[]};blueprints:string[];decos:string[]
   investments:Record<string,number>;market:{phase:'normal'|'boom'|'bust';nextChangeTick:number}
   activeCombos:ActiveCombo[];discoveredCombos:string[];comboHints:string[]
+  firedStaff:Staff[];candidates:Staff[];careerManuals:number;merchantUntil:number
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]

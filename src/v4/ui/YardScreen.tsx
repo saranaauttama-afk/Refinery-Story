@@ -1,3 +1,4 @@
+import { StaffPanel } from './StaffPanel'
 import { RecipeBook } from './RecipeBook'
 import { detectCombos } from '../sim/systems/combos'
 import { combos } from '../data/combos'
@@ -20,8 +21,9 @@ export function YardScreen(){
  const b=s.yard.buildings.find(b=>b.uid===selected)
  return <View style={{flex:1}}><HUD/><YardCanvas state={s} ghost={ghost} onTile={(x,y)=>{if(ghost)setGhost({...ghost,x,y});else{const b=buildingAt(s,x,y);if(b){setSelected(b.uid);setPanel('info')}}}}/>
  {!s.yard.buildings.length&&<Button label={{en:'Build starter refinery $50k',th:'สร้างโรงกลั่นเริ่มต้น $50,000'}} onPress={()=>dispatch(buildStarter)}/>}
- <View style={{flexDirection:'row',backgroundColor:'#FFF6E3',justifyContent:'space-around'}}><Button label={{en:'Build',th:'สร้าง'}} onPress={()=>setPanel('build')}/><Button label={{en:'Blend',th:'ผสม'}} onPress={()=>setPanel('blend')}/><Button label={{en:'Customers',th:'ลูกค้า'}} onPress={()=>setPanel('customers')}/><Button label={{en:'Combos',th:'คอมโบ'}} onPress={()=>setPanel('combos')}/><Button label={{en:'Land',th:'ที่ดิน'}} onPress={()=>setPanel('land')}/></View>
+ <View style={{flexDirection:'row',backgroundColor:'#FFF6E3',justifyContent:'space-around'}}><Button label={{en:'Build',th:'สร้าง'}} onPress={()=>setPanel('build')}/><Button label={{en:'Blend',th:'ผสม'}} onPress={()=>setPanel('blend')}/><Button label={{en:'Customers',th:'ลูกค้า'}} onPress={()=>setPanel('customers')}/><Button label={{en:'Staff',th:'พนักงาน'}} onPress={()=>setPanel('staff')}/><Button label={{en:'Combos',th:'คอมโบ'}} onPress={()=>setPanel('combos')}/><Button label={{en:'Land',th:'ที่ดิน'}} onPress={()=>setPanel('land')}/></View>
  {ghost&&<View style={{position:'absolute',bottom:70,left:12,right:12,backgroundColor:'#FFF6E3',padding:8}}><Text style={styles.text}>{detectCombos([...s.yard.buildings.filter(b=>b.uid!==ghost.uid),{uid:'preview',defId:ghost.id,x:ghost.x,y:ghost.y,level:1,staff:[],cost:0}]).filter(c=>c.members.includes('preview')).map(c=>text(combos.find(d=>d.id===c.id)!.name)).join(' · ')}</Text><Text style={styles.text}>{text({en:'Tap a tile, then confirm',th:'แตะพื้นที่ แล้วกดยืนยัน'})}</Text><Button disabled={!canPlace(s,ghost.id,ghost.x,ghost.y,ghost.uid)||s.money<(ghost.uid?YARD.moveCost:buildingDef(ghost.id).cost)} label={{en:'Confirm',th:'ยืนยัน'}} onPress={()=>{dispatch(s=>ghost.uid?move(s,ghost.uid,ghost.x,ghost.y):place(s,ghost.id,ghost.x,ghost.y));setGhost(undefined)}}/><Button label={{en:'Cancel',th:'ยกเลิก'}} onPress={()=>setGhost(undefined)}/></View>}
+ {panel==='staff'&&<Sheet title={{en:'Staff',th:'พนักงาน'}} onClose={()=>setPanel('')}><StaffPanel/></Sheet>}
  {panel==='combos'&&<Sheet title={{en:'Recipe Book',th:'ตำราคอมโบ'}} onClose={()=>setPanel('')}><RecipeBook/></Sheet>}
  {panel==='customers'&&<Sheet title={{en:'Customers',th:'ลูกค้าและสัญญา'}} onClose={()=>setPanel('')}><CustomersPanel/></Sheet>}
  {panel==='blend'&&<Sheet title={{en:'Blend',th:'ผสมผลิตภัณฑ์'}} onClose={()=>setPanel('')}><BlendPanel/></Sheet>}

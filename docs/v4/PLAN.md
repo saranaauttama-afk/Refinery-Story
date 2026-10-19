@@ -298,7 +298,7 @@ the owner checks on the APK.
 | M3 Production & blending | done; automated checks passed | feat(v4): M3 production and blending | automatic CI | deferred |
 | M4 Customers & contracts | done; automated checks passed | feat(v4): M4 customers and contracts | automatic CI | deferred |
 | M5 Combos | done; automated checks passed | feat(v4): M5 combos and auras | automatic CI | deferred |
-| M6 Staff | not started | | | |
+| M6 Staff | done; automated checks passed | feat(v4): M6 staff | automatic CI | deferred |
 | M7 Progression | not started | | | |
 | M8 Balance & polish | not started | | | |
 
@@ -332,3 +332,7 @@ the owner checks on the APK.
 - M5: the 20 additional combos are explicit new content; one effect per combo definition (multiple copies do not stack). Set order may be reversed/permuted while footprints stay contiguous in one row.
 - M5: unspecified aura strength is 10 stat points times the exact GDD grid. Emitters stack; their contributions are averaged across production/blending buildings for global lot stats. Emitter itself receives no aura.
 - M5: hints cost $500. Hidden recipes stay unknown until discovered; discovery Fame is awarded once even after demolishing and rebuilding.
+
+- M6: hiring fee buys one interview pool of three; choosing one closes the pool. Multiple workers can be assigned to one building, bounded by the company hire cap.
+- M6: active staff stats add directly to lot stats along production/blending buildings. Exhausted workers rest until full; Canteen accelerates weekly recovery. Worker travel is visual only.
+- M6: changing jobs consumes one Career Manual and preserves stats/job history. Director additionally requires rank 8 and the same worker at Manager 5 + Chemist 5. Fired workers rehire for the basic $5k fee.
