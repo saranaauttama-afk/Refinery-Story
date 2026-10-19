@@ -1,7 +1,7 @@
 import { PROGRESSION as P } from '../../data/balance'
 import { hasStimulus } from './investments'
 import { getModifiers } from './combos'
-import { GRADES, SALES as C, B } from '../../data/balance'
+import { GRADES, SALES as C, CUSTOMER_BALANCE, B } from '../../data/balance'
 import { baseDef } from '../../data/bases'
 import { customers, type CustomerDef } from '../../data/customers'
 import type { GameState, Grade, Lot, Truck } from '../types'
@@ -9,9 +9,9 @@ import { buildingDef } from '../../data/buildings'
 import { random } from '../rng'
 export const gradeRank=(g:Grade)=>GRADES.findIndex(v=>v.id===g)
 export const eligibleLot=(s:GameState,base:string,min:Grade):Lot|undefined=>s.tanks.filter(l=>l.base===base&&l.units>0&&gradeRank(l.grade)<=gradeRank(min)).sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||b.score-a.score)[0]
-export const marketMultiplier=(s:GameState)=>s.market.phase==='boom'?1.3:s.market.phase==='bust'?1-.3*(hasStimulus(s)?P.stimulus:1):1
+export const marketMultiplier=(s:GameState)=>s.market.phase==='boom'?1+P.marketBonus:s.market.phase==='bust'?1-P.marketBonus*(hasStimulus(s)?P.stimulus:1):1
 export const salePrice=(s:GameState,l:Pick<Lot,'base'|'grade'>)=>baseDef(l.base).price*GRADES.find(g=>g.id===l.grade)!.price*marketMultiplier(s)*(1+getModifiers(s).price)*(s.investments.port>=4?P.exportBonus:1)*(l.base==='jet'&&['S','SS'].includes(l.grade)&&s.investments.airport>=4?P.airportBonus:1)
-export const customerUnlocked=(s:GameState,c:CustomerDef)=>c.group==='gas'?(Number(c.id.slice(3))<2||s.investments.highway>0):c.group==='air'?s.investments.airport>0:c.group==='shipping'?s.investments.port>0:c.group==='industrial'?s.investments.industrial>0:s.rank>=6
+export const customerUnlocked=(s:GameState,c:CustomerDef)=>c.group==='gas'?(Number(c.id.slice(3))<CUSTOMER_BALANCE.starterBuyers||s.investments.highway>0):c.group==='air'?s.investments.airport>0:c.group==='shipping'?s.investments.port>0:c.group==='industrial'?s.investments.industrial>0:s.rank>=CUSTOMER_BALANCE.governmentRank
 export function roadPath(s:GameState):{x:number;y:number}[] {
  const gate=s.yard.buildings.find(b=>b.defId==='gate'),bay=s.yard.buildings.find(b=>b.defId==='loading');if(!gate||!bay)return []
  const allowed=new Set<string>()

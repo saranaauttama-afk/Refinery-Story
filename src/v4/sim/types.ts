@@ -17,6 +17,7 @@ export interface GameState {
   firedStaff:Staff[];candidates:Staff[];careerManuals:number;merchantUntil:number
   year:YearStats;history:{awards:AwardResult[];profits:{tick:number;profit:number}[]};monthProfit:number
   unlockHistory:{tick:number;key:string}[];notices:Notice[];stormUntil:number;evaluation:number|null;carriedBuildings:Record<string,number>
+  hintIndex:number;settings:{sound:boolean;haptics:boolean}
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]

@@ -1,3 +1,4 @@
+import { FeedbackProvider } from '../src/v4/ui/Feedback'
 import { useEffect, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { loadSkia } from '../src/v4/render/loadSkia'
@@ -14,9 +15,9 @@ export default function RootLayout() {
   useEffect(()=>{loadSkia().then(()=>setSkiaReady(true)).catch(console.error)},[])
   if ((!loaded && !error)||!skiaReady) return null
   return (
-    <GestureHandlerRootView style={{flex:1}}><SafeAreaProvider><GameProvider>
+    <GestureHandlerRootView style={{flex:1}}><SafeAreaProvider><GameProvider><FeedbackProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
-    </GameProvider></SafeAreaProvider></GestureHandlerRootView>
+    </FeedbackProvider></GameProvider></SafeAreaProvider></GestureHandlerRootView>
   )
 }

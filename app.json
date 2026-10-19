@@ -2,7 +2,7 @@
   "expo": {
     "name": "Refinery Story",
     "slug": "refinery-story",
-    "version": "4.0.0",
+    "version": "4.0.8",
     "icon": "./assets/branding/app-icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.refinerystory.u2",
-      "versionCode": 11,
+      "versionCode": 20,
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/app-icon.png",
         "backgroundColor": "#061827"
@@ -36,7 +36,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "buildLabel": "V4-M0",
+      "buildLabel": "V4-M8",
       "router": {},
       "eas": {
         "projectId": "e41dff26-bfd6-486d-86a9-fb9b3b74ae7c"

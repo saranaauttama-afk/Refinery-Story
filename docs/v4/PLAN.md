@@ -291,7 +291,7 @@ the owner checks on the APK.
 
 | Milestone | Status | Commit | APK run | Owner verdict |
 | --- | --- | --- | --- | --- |
-| M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | pending |
+| M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | deferred |
 | M1 Sim core | done; automated checks passed | feat(v4): M1 sim core | automatic CI | deferred |
 | M2 Yard | done; automated checks passed | feat(v4): M2 yard | automatic CI | deferred |
 | M2b Art pass 1 | done; automated art checks and web export passed | feat(v4): M2b code-drawn art | automatic CI | deferred |
@@ -300,7 +300,7 @@ the owner checks on the APK.
 | M5 Combos | done; automated checks passed | feat(v4): M5 combos and auras | automatic CI | deferred |
 | M6 Staff | done; automated checks passed | feat(v4): M6 staff | automatic CI | deferred |
 | M7 Progression | done; automated checks passed | feat(v4): M7 progression | automatic CI | deferred |
-| M8 Balance & polish | not started | | | |
+| M8 Balance & polish | done; 20-seed checks passed | feat(v4): M8 balance and polish | automatic CI | deferred |
 
 ### M0 validation
 
@@ -346,3 +346,11 @@ the owner checks on the APK.
 - M2b: implemented after M7 as requested. All 27 building/deco definitions have code-drawn sprites; L1/L3/L5 differ (road stays flat). `ART-GALLERY.svg` previews the exact shared shape commands.
 - M2b: Skia caches ground per parcel change and each building picture per yard change; a dynamic picture interleaves cached buildings with trucks/workers by depth. Integer zoom and non-antialiased drawing preserve crisp pixels.
 - M2b: `check-art.ts` validates sprite coverage, level differences, finite geometry, truck/worker variants. Web export passed. Native device 60 fps measurement remains deferred, not claimed by headless checks.
+
+- M8: user explicitly deferred owner/device approval for every milestone. The execution order is M1, M2, M3, M4, M5, M6, M7, M2b, M8; each has one checked commit/push.
+- M8: tuned production cycle to 48 ticks and crude deliveries to the same cadence; kept 60 ticks/week. Tuned base prices first (all prices, building/hiring/training/investment values and combo effects are centralized in balance.ts). GDD values are starting values; these tested values supersede them for playtesting.
+- M8: 20 seeds × 16 years: average monthly operating profit Y1 $53,615; Y5 $487,094; Y10 $3,059,287. Range and per-year records are in BALANCE-REPORT.md/json. Operating profit excludes optional capital/hiring/training spend; cash/debt checks include all spend.
+- M8: onboarding is six dismissible tips. Small original synthesized click/chime WAVs, optional haptics and reduced-motion-aware confetti are included. Title pauses simulation, background saves are serialized, invalid/incomplete development saves are rejected with a visible message. No V1–V3 save migration.
+- M8: plain tanks may be emptied without revenue to recover from an experimental low-grade recipe. Native performance, APK installation, audio/haptics feel and subjective fun remain deferred; no device validation is claimed.
+
+- M8 validation: final TypeScript, every milestone check, web static export and Android Hermes bundle export passed. APK compilation is handled by the existing workflow and device verdict remains deferred.

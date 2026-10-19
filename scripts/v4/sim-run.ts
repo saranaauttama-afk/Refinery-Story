@@ -1,3 +1,5 @@
+import { salePrice } from '../../src/v4/sim/systems/customers'
+import { gradeFor } from '../../src/v4/sim/systems/blending'
 import { createNewGame } from '../../src/v4/sim/state'
 import { tick } from '../../src/v4/sim/tick'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
@@ -22,7 +24,7 @@ export function autoplay(s:GameState):GameState {
  buildOnce('canteen',8000);buildOnce('lab',15000)
  if(year>=3){buildOnce('hydro',25000);buildOnce('pipe',1000);buildOnce('reformer',120000)}
  if(year>=6){buildOnce('control',80000);buildOnce('cracker',300000)}
- const lines=year>=8?3:year>=6?2:1
+ const lines=s.tick/YEAR>=7?3:s.tick/YEAR>=4.6?2:1
  if(s.money>500000+reserve)for(const id of ['crudeTank','cdu','hydro','tank','blend'])if(s.yard.buildings.filter(b=>b.defId===id).length<lines)s=buildFirstFree(s,id)
  const desiredStaff=year<5?1:year<7?3:Math.min(8,s.rank+2)
  if(year>=4&&s.staff.length<desiredStaff&&s.money>100000+reserve){const method=[...hiring].reverse().find(h=>h.rank<=s.rank&&h.cost<s.money/5)!;s=recruit(s,method.id);const p=[...s.candidates].sort((a,b)=>Object.values(b.stats).reduce((n,x)=>n+x,0)-Object.values(a.stats).reduce((n,x)=>n+x,0))[0];if(p)s=hire(s,p.uid)}
@@ -34,7 +36,7 @@ export function autoplay(s:GameState):GameState {
  if(year>=5&&s.tick%MONTH===0)for(const b of s.yard.buildings.filter(b=>['cdu','blend','hydro'].includes(b.defId)))if(s.money>500000+reserve)s=upgrade(s,b.uid)
  const options=bases.filter(b=>baseAvailable(s,b.id)&&s.yard.buildings.some(v=>v.defId===b.unit)&&(!['lube'].includes(b.id)||s.investments.port>0)&&(!['jet'].includes(b.id)||s.investments.airport>0)&&(!['wax','pellet'].includes(b.id)||s.investments.industrial>0))
  let best:{base:typeof s.blend.base;additive:typeof s.blend.additive;value:number}|undefined
- for(const b of options)for(const additive of [null,...s.unlockedAdditives]){const score=predictedScore(s,b.id,additive);const value=(score>=400?2.5:score>=300?1.8:score>=200?1.3:score>=120?1:.8)*b.price;if(!best||value>best.value)best={base:b.id,additive,value}}
+ for(const b of options)for(const additive of [null,...s.unlockedAdditives]){const score=predictedScore(s,b.id,additive);const value=salePrice(s,{base:b.id,grade:gradeFor(score)});if(!best||value>best.value)best={base:b.id,additive,value}}
  if(best)s=selectBlend(s,best.base,best.additive)
  for(const c of s.contracts.offers)if(c.base===s.blend.base&&s.contracts.active.length<3)s=acceptContract(s,c.uid)
  return s

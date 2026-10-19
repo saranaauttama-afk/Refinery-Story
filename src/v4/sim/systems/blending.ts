@@ -17,7 +17,7 @@ export function selectBlend(s:GameState,base:BaseId,additive:AdditiveId|null):Ga
 export function blending(s:GameState):GameState {
  if(s.tick%P.cycle!==0||s.tick<s.stormUntil)return s
  const stations=s.yard.buildings.filter(b=>b.defId==='blend');if(!stations.length)return s
- const capacity=s.yard.buildings.filter(b=>b.defId==='tank').length*P.tankCapacity*(1+getModifiers(s).capacity)
+ const capacity=s.yard.buildings.filter(b=>b.defId==='tank').reduce((n,b)=>n+P.tankCapacity*(1+YARD.outputPerLevel*(b.level-1)),0)*(1+getModifiers(s).capacity)
  let next=s
  for(const station of stations){
   const {base,additive}=next.blend
@@ -30,3 +30,4 @@ export function blending(s:GameState):GameState {
  }
  return next
 }
+export function discardLot(s:GameState,uid:string):GameState {if(!s.tanks.some(l=>l.uid===uid))return s;return {...s,tanks:s.tanks.filter(l=>l.uid!==uid)}}

@@ -11,7 +11,7 @@ export function production(s:GameState):GameState {
  const has=(id:string)=>s.yard.buildings.some(b=>b.defId===id)
  let {crude,money,nextId}=s;let trucks=s.trucks;const cuts={...s.cuts},baseStock={...s.baseStock}
  const delivery=P.crudeDelivery*s.yard.buildings.filter(b=>b.defId==='cdu').reduce((n,b)=>n+1+YARD.outputPerLevel*(b.level-1),0)
- const capacity=s.yard.buildings.filter(b=>b.defId==='crudeTank').length*P.crudeCapacity
+ const capacity=s.yard.buildings.filter(b=>b.defId==='crudeTank').reduce((n,b)=>n+P.crudeCapacity*(1+YARD.outputPerLevel*(b.level-1)),0)
  if(has('gate')&&crude+delivery<=capacity&&money-delivery*P.crudeUnitPrice>=-P.creditLimit&&s.tick%P.crudeInterval===0){crude+=delivery;money-=delivery*P.crudeUnitPrice;const path=roadPath(s);if(path.length&&trucks.length<SALES.maxTrucks){trucks=[...trucks,{uid:`raw${nextId}`,kind:'crude',customer:null,path,step:0,phase:'in',nextTick:s.tick+SALES.roadTicks}];nextId++}}
  for(const b of s.yard.buildings.filter(b=>b.defId==='cdu')){
   const qty=Math.min(crude,P.crudeDelivery*(1+YARD.outputPerLevel*(b.level-1))*(1+getModifiers(s).production))
