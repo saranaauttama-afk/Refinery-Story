@@ -294,7 +294,7 @@ the owner checks on the APK.
 | M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | pending |
 | M1 Sim core | done; automated checks passed | feat(v4): M1 sim core | automatic CI | deferred |
 | M2 Yard | done; automated checks passed | feat(v4): M2 yard | automatic CI | deferred |
-| M2b Art pass 1 | not started | | | |
+| M2b Art pass 1 | done; automated art checks and web export passed | feat(v4): M2b code-drawn art | automatic CI | deferred |
 | M3 Production & blending | done; automated checks passed | feat(v4): M3 production and blending | automatic CI | deferred |
 | M4 Customers & contracts | done; automated checks passed | feat(v4): M4 customers and contracts | automatic CI | deferred |
 | M5 Combos | done; automated checks passed | feat(v4): M5 combos and auras | automatic CI | deferred |
@@ -342,3 +342,7 @@ the owner checks on the APK.
 - M7: unused cut buffers overflow to disposal so an unused byproduct cannot permanently stop the starter refinery. CDU/conversion/blending levels now scale real throughput by +25% per level; additional lines increase capacity.
 - M7: NG+ carries one free, unplaced copy of every unlocked building. Placing consumes the copy; normal upkeep starts only after placement. This avoids forcing unaffordable upkeep onto a new run.
 - M7 checks: seeds 1–3 complete 16 years through normal guarded UI actions: rank 5 at 3.90–3.98 elapsed years, rank 10 at 15.98, >=5 new unlocks by week 40, longest negative balance 0.28 months. Income tuning remains M8.
+
+- M2b: implemented after M7 as requested. All 27 building/deco definitions have code-drawn sprites; L1/L3/L5 differ (road stays flat). `ART-GALLERY.svg` previews the exact shared shape commands.
+- M2b: Skia caches ground per parcel change and each building picture per yard change; a dynamic picture interleaves cached buildings with trucks/workers by depth. Integer zoom and non-antialiased drawing preserve crisp pixels.
+- M2b: `check-art.ts` validates sprite coverage, level differences, finite geometry, truck/worker variants. Web export passed. Native device 60 fps measurement remains deferred, not claimed by headless checks.

@@ -1,3 +1,4 @@
+import { TitleScene } from '../src/v4/render/TitleScene'
 import { useGame } from '../src/v4/store/useGame'
 import { Link } from 'expo-router'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
@@ -8,7 +9,7 @@ export default function TitleScreen() {
   const { ready, hasSave, newGame } = useGame()
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.panel}>
+      <TitleScene/><View style={styles.panel}>
         <Text style={styles.title}>{text(copy.title)}</Text>
         <Text style={styles.version}>V4-M0</Text>
         <Link href="/game" asChild>
@@ -22,7 +23,7 @@ export default function TitleScreen() {
   )
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#8DBF5A', justifyContent: 'center', padding: 24 },
+  screen: { flex: 1, backgroundColor: '#8DBF5A', justifyContent: 'flex-end', padding: 24, paddingBottom: 48 },
   panel: { backgroundColor: '#FFF6E3', borderColor: '#14110F', borderWidth: 2, borderRadius: 6, padding: 24, alignItems: 'center', gap: 16 },
   title: { fontFamily: 'PixelifySans_700Bold', fontSize: 36, color: '#14110F', textAlign: 'center' },
   version: { fontFamily: 'PixelifySans_700Bold', color: '#73818F', fontSize: 18 },
