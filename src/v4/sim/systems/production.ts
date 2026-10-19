@@ -1,6 +1,6 @@
 import { baseAvailable } from './investments'
 import { getModifiers } from './combos'
-import { roadPath } from './customers'
+import { truckRoute } from './customers'
 import { SALES } from '../../data/balance'
 import { PRODUCTION as P, YARD } from '../../data/balance'
 import { bases, type CutId } from '../../data/bases'
@@ -30,7 +30,7 @@ export function production(s: GameState): GameState {
   ) {
     crude += delivery
     money -= delivery * P.crudeUnitPrice
-    const path = roadPath(s)
+    const path = truckRoute(s)
     if (path.length && trucks.length < SALES.maxTrucks) {
       trucks = [
         ...trucks,

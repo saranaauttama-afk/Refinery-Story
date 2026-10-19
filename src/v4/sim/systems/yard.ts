@@ -19,6 +19,8 @@ export function canPlace(s: GameState, id: string, x: number, y: number, ignore?
     y + d.h > YARD.maxSize
   )
     return false
+  // Trucks drive in from outside the yard, so the gate must sit on the outer edge.
+  if (id === 'gate' && x !== 0 && y !== 0) return false
   for (let tx = x; tx < x + d.w; tx++)
     for (let ty = y; ty < y + d.h; ty++) {
       if (
@@ -53,7 +55,7 @@ export function place(s: GameState, id: string, x: number, y: number): GameState
   )
     return s
   const b: Building = { uid: `b${s.nextId}`, defId: id, x, y, level: 1, staff: [], cost: d.cost }
-  return refreshCombos({
+  const placed = refreshCombos({
     ...s,
     nextId: s.nextId + 1,
     money: s.money - (s.carriedBuildings[id] ? 0 : d.cost),
@@ -63,6 +65,23 @@ export function place(s: GameState, id: string, x: number, y: number): GameState
     },
     yard: { ...s.yard, buildings: [...s.yard.buildings, b] },
   })
+  return assignIdleStaff(placed, b)
+}
+// New hires and the starting operator walk to the first work building that appears.
+function assignIdleStaff(s: GameState, b: Building): GameState {
+  if (!['process', 'blend'].includes(buildingDef(b.defId).category)) return s
+  const idle = s.staff.filter(p => !p.assignedTo).map(p => p.uid)
+  if (!idle.length) return s
+  return {
+    ...s,
+    staff: s.staff.map(p => (idle.includes(p.uid) ? { ...p, assignedTo: b.uid } : p)),
+    yard: {
+      ...s.yard,
+      buildings: s.yard.buildings.map(v =>
+        v.uid === b.uid ? { ...v, staff: [...v.staff, ...idle] } : v,
+      ),
+    },
+  }
 }
 export function move(s: GameState, uid: string, x: number, y: number): GameState {
   const b = s.yard.buildings.find(b => b.uid === uid)

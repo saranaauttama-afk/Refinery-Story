@@ -1,5 +1,18 @@
-import { B, YARD, YEAR, PROGRESSION } from '../data/balance'
-import type { GameState } from './types'
+import { B, YARD, YEAR, PROGRESSION, STARTING_STAFF as F } from '../data/balance'
+import type { GameState, Staff } from './types'
+const foreman = (): Staff => ({
+  uid: 's0',
+  name: F.name,
+  job: 'operator',
+  jobLevels: { operator: 1, chemist: 0, engineer: 0, safety: 0, manager: 0, director: 0 },
+  stats: { op: F.stat, chem: F.stat, mech: F.stat, safe: F.stat },
+  power: F.power,
+  maxPower: F.power,
+  salary: F.salary,
+  trainingCounts: {},
+  assignedTo: null,
+  resting: false,
+})
 export const emptyYear = () => ({
   income: 0,
   expenses: 0,
@@ -58,7 +71,7 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     carriedBuildings: {},
     hintIndex: 0,
     settings: { sound: true, haptics: true },
-    staff: [],
+    staff: [foreman()],
     ledger: [],
     log: [],
   }

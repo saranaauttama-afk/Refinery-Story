@@ -38,24 +38,41 @@ export function selectBlend(s: GameState, base: BaseId, additive: AdditiveId | n
   if (!baseAvailable(s, base) || (additive && !s.unlockedAdditives.includes(additive))) return s
   return { ...s, blend: { base, additive } }
 }
+export const tankCapacity = (s: GameState) =>
+  s.yard.buildings
+    .filter(b => b.defId === 'tank')
+    .reduce((n, b) => n + P.tankCapacity * (1 + YARD.outputPerLevel * (b.level - 1)), 0) *
+  (1 + getModifiers(s).capacity)
+export const tankUnits = (s: GameState) => s.tanks.reduce((n, l) => n + l.units, 0)
 export function blending(s: GameState): GameState {
   if (s.tick % P.cycle !== 0 || s.tick < s.stormUntil) return s
   const stations = s.yard.buildings.filter(b => b.defId === 'blend')
   if (!stations.length) return s
-  const capacity =
-    s.yard.buildings
-      .filter(b => b.defId === 'tank')
-      .reduce((n, b) => n + P.tankCapacity * (1 + YARD.outputPerLevel * (b.level - 1)), 0) *
-    (1 + getModifiers(s).capacity)
+  const capacity = tankCapacity(s)
   let next = s
   for (const station of stations) {
     const { base, additive } = next.blend
     const units = P.lotUnits * (1 + YARD.outputPerLevel * (station.level - 1))
-    if (
-      next.baseStock[base] < units ||
-      next.tanks.reduce((n, l) => n + l.units, 0) + units > capacity
-    )
+    if (next.baseStock[base] < units) continue
+    if (tankUnits(next) + units > capacity) {
+      // Tell the player why the station stopped.
+      next = {
+        ...next,
+        nextId: next.nextId + 1,
+        popups: [
+          ...next.popups,
+          {
+            uid: `full${next.nextId}`,
+            tick: next.tick,
+            x: station.x,
+            y: station.y,
+            en: 'Tanks full!',
+            th: 'ถังเต็ม!',
+          },
+        ],
+      }
       continue
+    }
     const stats = lotStats(next),
       score = predictedScore(next),
       grade = gradeFor(score),

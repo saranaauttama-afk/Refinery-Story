@@ -13,23 +13,61 @@ import { hiring, trainings } from '../../src/v4/data/staff'
 import { investments } from '../../src/v4/data/investments'
 import { B, MONTH, YEAR } from '../../src/v4/data/balance'
 import type { GameState } from '../../src/v4/sim/types'
+import { random } from '../../src/v4/sim/rng'
+
+// Each seed plays with its own style so balance is not tuned to one fixed bot.
+export interface Bot {
+  rng: number
+  pace: number // >1 builds and hires later, <1 earlier
+  reserveScale: number // how much cash the bot keeps aside
+  staffBias: number // extra or fewer staff than the default plan
+  explore: number // chance per week to try a non-optimal recipe
+  supportOrder: string[]
+  investOrder: string[]
+}
+export function makeBot(seed: number): Bot {
+  let rng = (seed * 2654435761) >>> 0
+  const draw = () => {
+    const [value, next] = random(rng)
+    rng = next
+    return value
+  }
+  const shuffle = <T>(items: T[]) =>
+    items
+      .map(item => ({ item, key: draw() }))
+      .sort((a, b) => a.key - b.key)
+      .map(v => v.item)
+  return {
+    pace: 0.8 + draw() * 0.45,
+    reserveScale: 0.6 + draw() * 1.2,
+    staffBias: Math.floor(draw() * 3) - 1,
+    explore: draw() * 0.3,
+    supportOrder: shuffle(['canteen', 'lab']),
+    investOrder: shuffle(investments.map(d => d.id)),
+    rng,
+  }
+}
+function roll(bot: Bot): number {
+  const [value, next] = random(bot.rng)
+  bot.rng = next
+  return value
+}
 export function buildFirstFree(s: GameState, id: string): GameState {
   for (let y = 3; y < s.yard.size; y++)
     for (let x = 0; x < s.yard.size; x++) if (canPlace(s, id, x, y)) return place(s, id, x, y)
   return s
 }
-export function autoplay(s: GameState): GameState {
+export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
   // Decisions use the same guarded actions as the UI. No grants, rank forcing or direct resource edits.
   for (const c of s.contracts.active) s = deliverContract(s, c.uid)
   if (s.tick % B.ticksPerWeek !== 0) return s
-  const year = Math.floor(s.tick / YEAR) + 1
-  const reserve = 15000 + s.staff.reduce((n, p) => n + p.salary, 0)
+  const year = (Math.floor(s.tick / YEAR) + 1) / bot.pace
+  const reserve = (15000 + s.staff.reduce((n, p) => n + p.salary, 0)) * bot.reserveScale
   const buildOnce = (id: string, budget: number) => {
     if (!s.yard.buildings.some(b => b.defId === id) && s.money > budget + reserve)
       s = buildFirstFree(s, id)
   }
-  buildOnce('canteen', 8000)
-  buildOnce('lab', 15000)
+  for (const id of bot.supportOrder) buildOnce(id, id === 'lab' ? 15000 : 8000)
   if (year >= 3) {
     buildOnce('hydro', 25000)
     buildOnce('pipe', 1000)
@@ -39,11 +77,14 @@ export function autoplay(s: GameState): GameState {
     buildOnce('control', 80000)
     buildOnce('cracker', 300000)
   }
-  const lines = s.tick / YEAR >= 7 ? 3 : s.tick / YEAR >= 4.6 ? 2 : 1
+  const lines = year >= 7 ? 3 : year >= 4.6 ? 2 : 1
   if (s.money > 500000 + reserve)
     for (const id of ['crudeTank', 'cdu', 'hydro', 'tank', 'blend'])
       if (s.yard.buildings.filter(b => b.defId === id).length < lines) s = buildFirstFree(s, id)
-  const desiredStaff = year < 5 ? 1 : year < 7 ? 3 : Math.min(8, s.rank + 2)
+  const desiredStaff = Math.max(
+    1,
+    (year < 5 ? 1 : year < 7 ? 3 : Math.min(8, s.rank + 2)) + (year < 5 ? 0 : bot.staffBias),
+  )
   if (year >= 4 && s.staff.length < desiredStaff && s.money > 100000 + reserve) {
     const method = [...hiring].reverse().find(h => h.rank <= s.rank && h.cost < s.money / 5)!
     s = recruit(s, method.id)
@@ -71,7 +112,7 @@ export function autoplay(s: GameState): GameState {
       }
       s = levelUp(s, p.uid)
     }
-    for (const d of investments) {
+    for (const d of bot.investOrder.map(id => investments.find(v => v.id === id)!)) {
       const step = d.steps[s.investments[d.id] ?? 0]
       if (step && s.rank >= d.rank && s.money > step.cost * 3 + reserve) s = invest(s, d.id)
     }
@@ -96,19 +137,30 @@ export function autoplay(s: GameState): GameState {
       const value = salePrice(s, { base: b.id, grade: gradeFor(score) })
       if (!best || value > best.value) best = { base: b.id, additive, value }
     }
+  if (best && roll(bot) < bot.explore) {
+    // Curious player: try something else this week.
+    const pick = options[Math.floor(roll(bot) * options.length)]
+    const additives = [null, ...s.unlockedAdditives]
+    best = {
+      base: pick.id,
+      additive: additives[Math.floor(roll(bot) * additives.length)],
+      value: 0,
+    }
+  }
   if (best) s = selectBlend(s, best.base, best.additive)
   for (const c of s.contracts.offers)
     if (c.base === s.blend.base && s.contracts.active.length < 3) s = acceptContract(s, c.uid)
   return s
 }
 export function simulate(seed: number, years = 16) {
+  const bot = makeBot(seed)
   let s = buildStarter(createNewGame(seed)),
     negative = 0,
     maxNegative = 0
   const reached: Record<number, number> = { 1: 1 }
   const annual: { year: number; rank: number; fame: number; money: number; profit: number }[] = []
   for (let i = 0; i < years * YEAR; i++) {
-    s = autoplay(tick(s))
+    s = autoplay(tick(s), bot)
     for (let rank = 2; rank <= s.rank; rank++) if (!(rank in reached)) reached[rank] = s.tick / YEAR
     negative = s.money < 0 ? negative + 1 : 0
     maxNegative = Math.max(maxNegative, negative)

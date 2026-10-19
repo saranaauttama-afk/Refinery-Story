@@ -301,6 +301,7 @@ the owner checks on the APK.
 | M6 Staff | done; automated checks passed | feat(v4): M6 staff | automatic CI | deferred |
 | M7 Progression | done; automated checks passed | feat(v4): M7 progression | automatic CI | deferred |
 | M8 Balance & polish | done; 20-seed checks passed | feat(v4): M8 balance and polish | automatic CI | deferred |
+| M9 Cleanup (Claude) | done | see git log | pending | pending |
 
 ### M0 validation
 
@@ -354,3 +355,25 @@ the owner checks on the APK.
 - M8: plain tanks may be emptied without revenue to recover from an experimental low-grade recipe. Native performance, APK installation, audio/haptics feel and subjective fun remain deferred; no device validation is claimed.
 
 - M8 validation: final TypeScript, every milestone check, web static export and Android Hermes bundle export passed. APK compilation is handled by the existing workflow and device verdict remains deferred.
+
+## M9 — Cleanup after the first full pass (done by Claude)
+
+- Prettier (`npm run format`, printWidth 100) — the M1–M8 code was squeezed onto
+  very long lines; keep it formatted.
+- Guided start: the 6 onboarding steps advance on their own and offer a
+  "Place" button with a suggested tile, replacing the one-tap $50k starter.
+- Gate must be on the yard edge; trucks drive in on a public road outside.
+- One starting Operator foreman, auto-assigned to the first work building, so
+  people walk the yard from minute one. Workers stand in front of buildings.
+- Product trucks use their product colour.
+- Blend panel: selected base/additive highlighted, compatibility letter or NEW.
+- Title shows the real app version; "fi" ligature fixed.
+- Placement bar moved into the layout flow (the floating one blanked the top of
+  the yard canvas on web).
+- Gameplay fixes found by the varied bot: LPG had no buyers, and grade-C lots
+  could fill the tanks forever. Gas stations now buy LPG; clearance sales empty
+  nearly full tanks. A "Tanks full!" pop-up shows above a stalled station.
+- `sim-run.ts` bot now plays a different style per seed (pace, cash reserve,
+  staff, curiosity, build and investment order). Rank thresholds and base prices
+  re-tuned to that spread: all 20 seeds reach rank 5 at ~4 years and rank 10 at
+  13–15 years with no debt lock.

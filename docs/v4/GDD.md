@@ -41,6 +41,8 @@ up to S grade**, with something new unlocking every 2–3 in-game months.
 
 ## 2. Yard & combos
 
+- The **Truck Gate must sit on the yard edge**; trucks drive in on a public road
+  from outside the fence.
 - Yard starts **16×16**; buy land in **8×8 parcels** up to **40×40**.
 - Footprints 1×1 to 3×3. Moving a building costs **$2k** (cheap on purpose so
   players experiment with layout).
@@ -136,11 +138,14 @@ Customers come to you by truck or ship. New customer groups appear only after
 investing in the matching investment chain (Mega Mall). Each customer has a
 favourite product and a minimum grade; satisfied repeat buyers give gifts.
 
-- **~40 customers in 5 groups:** Gas stations (Gasoline/Diesel), Airlines
+- **~40 customers in 5 groups:** Gas stations (Gasoline/Diesel/LPG), Airlines
   (Jet), Shipping (Diesel/Lube), Industrial park (Pellet/Wax), Government
   (Asphalt).
 - **Hearts ♥:** +1 per satisfied purchase. At 10 ♥ the customer gives a gift
   (building blueprint, deco, or Additive).
+- **Clearance:** when tanks are ≥ 80% full, a buyer takes the worst lot of its
+  product even below its minimum grade, at 50% price, with no heart or Fame, so
+  unsellable lots never stall the refinery.
 - **Contracts:** 2–3 offers at the start of each month, e.g. "30 units of Jet,
   grade ≥ A, within 6 weeks". Success: `$` = 1.5 × market price, Fame +15.
   Failure: Fame −10. Max 3 active.
@@ -213,15 +218,15 @@ real minutes**, then something new every 2–3 in-game months.
 | Rank | Fame | Unlocks | Target year |
 | --- | --- | --- | --- |
 | 1 | 0 | CDU, Tank, Truck Gate, Blending, Bases Gasoline/Diesel | 1 |
-| 2 | 100 | Hydrotreater, Lab, 2nd land parcel, Lab Study training | 1 |
-| 3 | 300 | Reformer, University hiring, Highway chain | 2 |
-| 4 | 700 | Cracker, Bases LPG/Jet, Airport chain | 3 |
-| 5 | 1,500 | Control Room, Job Fair, Port chain | 4 |
-| 6 | 3,000 | Bases Lube/Asphalt, 4th parcel | 5–6 |
-| 7 | 6,000 | Headhunter, Industrial Park chain, Bases Wax/Pellet | 7 |
-| 8 | 12,000 | Plant Director, full 40×40 yard | 9 |
-| 9 | 25,000 | Special building "Mega Refinery Tower" | 11–12 |
-| 10 | 50,000 | Special ending, secret mascot applies for a job | 14–15 |
+| 2 | 150 | Hydrotreater, Lab, 2nd land parcel, Lab Study training | 1 |
+| 3 | 1,000 | Reformer, University hiring, Highway chain | 2 |
+| 4 | 1,900 | Cracker, Bases LPG/Jet, Airport chain | 3 |
+| 5 | 3,000 | Control Room, Job Fair, Port chain | 4 |
+| 6 | 6,000 | Bases Lube/Asphalt, 4th parcel | 5–6 |
+| 7 | 11,000 | Headhunter, Industrial Park chain, Bases Wax/Pellet | 7 |
+| 8 | 20,000 | Plant Director, full 40×40 yard | 9 |
+| 9 | 33,000 | Special building "Mega Refinery Tower" | 11–12 |
+| 10 | 47,000 | Special ending, secret mascot applies for a job | 14–15 |
 
 **Year-end awards** (last week of month 12): Best Product (highest-grade lot of
 the year), Safety (zero incidents), Eco, Refinery of the Year (total score).
@@ -244,7 +249,7 @@ monthly upkeep ≈ 3% of build cost, price-side combo bonus +10–25%.
 
 | Constant | Value | Note |
 | --- | --- | --- |
-| Starting money | $50k | Enough for CDU + 2 tanks + Blending + gate |
+| Starting money | $55k | Guided first layout costs $50k; one Operator foreman starts on staff |
 | 1 week | 15 s | 1 year = 12 min |
 | Early building cost | $5k–$25k | Tank $5k, CDU $20k |
 | Mid building cost | $80k–$400k | Reformer $120k, Cracker $300k |
@@ -253,7 +258,7 @@ monthly upkeep ≈ 3% of build cost, price-side combo bonus +10–25%.
 | Max building level | 5 | |
 | Upgrade cost | buildCost × 0.6 × 1.5^(lv−1) | Lv2 = 0.6×, Lv5 ≈ 3× |
 | Output per building level | +25% | |
-| Base price, grade B, per unit | $40 (Gasoline) – $300 (Lube) | |
+| Base price, grade B, per unit | $26 (Gasoline) – $110 (Lube) | see `BASE_PRICES` |
 | Pair combo | +5–15 stat or +10–20% | |
 | Set combo | +15–30 stat or +20–30% | |
 | Fame per sale | 1 (B), 2 (A), 5 (S), 10 (SS) | C gives 0 |

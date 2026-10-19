@@ -7,6 +7,7 @@ import { customers, type CustomerDef } from '../../data/customers'
 import type { GameState, Grade, Lot, Truck } from '../types'
 import { buildingDef } from '../../data/buildings'
 import { random } from '../rng'
+import { tankCapacity, tankUnits } from './blending'
 export const gradeRank = (g: Grade) => GRADES.findIndex(v => v.id === g)
 export const eligibleLot = (s: GameState, base: string, min: Grade): Lot | undefined =>
   s.tanks
@@ -78,15 +79,35 @@ export function roadPath(s: GameState): { x: number; y: number }[] {
   }
   return path
 }
+// Full truck route: an approach road from outside the yard, then the in-yard road to the bay.
+export function truckRoute(s: GameState): { x: number; y: number }[] {
+  const inner = roadPath(s)
+  if (!inner.length) return inner
+  const gate = inner[0]
+  const lead = Array.from({ length: C.approachTiles }, (_, i) => {
+    const offset = i - C.approachTiles
+    return gate.x === 0 ? { x: offset, y: gate.y } : { x: gate.x, y: offset }
+  })
+  return [...lead, ...inner]
+}
+// With nearly full tanks, a buyer takes the worst lot of its product at a discount,
+// so below-standard lots never clog the refinery for good.
+function clearanceLot(s: GameState, base: string): Lot | undefined {
+  if (tankUnits(s) < tankCapacity(s) * C.clearanceFill) return undefined
+  return s.tanks
+    .filter(l => l.base === base && l.units > 0)
+    .sort((a, b) => gradeRank(b.grade) - gradeRank(a.grade) || a.score - b.score)[0]
+}
 export function sellTo(s: GameState, customerId: string): GameState {
   const c = customers.find(c => c.id === customerId)
   if (!c || !customerUnlocked(s, c)) return s
-  const lot = eligibleLot(s, c.base, c.minGrade)
+  const standard = eligibleLot(s, c.base, c.minGrade)
+  const lot = standard ?? clearanceLot(s, c.base)
   if (!lot) return s
   const units = Math.min(lot.units, C.units),
-    income = salePrice(s, lot) * units,
+    income = salePrice(s, lot) * units * (standard ? 1 : C.clearancePrice),
     prev = s.customers[c.id] ?? { hearts: 0, giftGiven: false },
-    hearts = prev.hearts + 1,
+    hearts = prev.hearts + (standard ? 1 : 0),
     gift = !prev.giftGiven && hearts >= C.giftHearts
   const p = s.yard.buildings.find(b => b.defId === 'loading')
   let next: GameState = {
@@ -94,7 +115,7 @@ export function sellTo(s: GameState, customerId: string): GameState {
     money: s.money + income,
     year: { ...s.year, income: s.year.income + income, sold: s.year.sold + units },
     monthProfit: s.monthProfit + income,
-    fame: s.fame + GRADES.find(g => g.id === lot.grade)!.fame,
+    fame: s.fame + (standard ? GRADES.find(g => g.id === lot.grade)!.fame : 0),
     rd: s.rd + Math.floor(units / C.rdUnits),
     tanks: s.tanks
       .map(l => (l.uid === lot.uid ? { ...l, units: l.units - units } : l))
@@ -179,7 +200,7 @@ export function customerSystem(s: GameState): GameState {
       0 &&
     trucks.length < C.maxTrucks
   ) {
-    const path = roadPath(next),
+    const path = truckRoute(next),
       pool = customers.filter(c => customerUnlocked(next, c))
     if (path.length && pool.length) {
       const [r, rng] = random(next.rng)

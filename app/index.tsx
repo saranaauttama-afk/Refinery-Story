@@ -3,7 +3,12 @@ import { useGame } from '../src/v4/store/useGame'
 import { Link } from 'expo-router'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Constants from 'expo-constants'
 import { copy, text } from '../src/v4/i18n'
+
+// Pixelify Sans draws a broken glyph for the "fi" ligature; a zero-width non-joiner splits it.
+const noLigature = (value: string) => value.replace(/fi/g, 'f\u200Ci')
+const versionLabel = `v${Constants.expoConfig?.version ?? '4'}`
 
 export default function TitleScreen() {
   const { ready, hasSave, newGame, saveError } = useGame()
@@ -11,9 +16,9 @@ export default function TitleScreen() {
     <SafeAreaView style={styles.screen}>
       <TitleScene />
       <View style={styles.panel}>
-        <Text style={styles.title}>{text(copy.title)}</Text>
+        <Text style={styles.title}>{noLigature(text(copy.title))}</Text>
         {saveError && <Text style={styles.buttonText}>{text(saveError)}</Text>}
-        <Text style={styles.version}>V4-M0</Text>
+        <Text style={styles.version}>{versionLabel}</Text>
         <Link href="/game" asChild>
           <Pressable
             disabled={!ready}

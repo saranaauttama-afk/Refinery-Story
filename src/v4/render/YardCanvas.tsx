@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, AccessibilityInfo } from 'react-native'
-import { Canvas, Group, Picture, Skia, Path } from '@shopify/react-native-skia'
+import { Canvas, Group, Picture, Skia } from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile } from './iso'
 import { YARD, B, SALES } from '../data/balance'
 import { buildingDef } from '../data/buildings'
-import { palette } from './palette'
+import { palette, productAccent } from './palette'
 import { canPlace } from '../sim/systems/yard'
 import type { GameState } from '../sim/types'
 import { text } from '../i18n'
@@ -13,7 +13,22 @@ import { sprites } from './buildings'
 import { drawCommands } from './draw'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
+import { customers } from '../data/customers'
 const bounds = { x: -1500, y: -500, width: 3000, height: 2000 }
+// Tile just in front of a building's bottom corner, where its staff stand.
+const frontTile = (b: { x: number; y: number; defId: string }) => ({
+  x: b.x + buildingDef(b.defId).w + 0.3,
+  y: b.y + buildingDef(b.defId).h - 0.5,
+})
+const frontDepth = (b?: { x: number; y: number; defId: string }) =>
+  b ? b.x + b.y + buildingDef(b.defId).w + buildingDef(b.defId).h : 0
+// Spread workers out so they do not walk in lockstep.
+const staffOffset = (uid: string) => (uid.charCodeAt(uid.length - 1) % 7) / 7
+// Product trucks wear the colour of the product line they buy.
+const truckAccent = (customerId: string | null) => {
+  const base = customers.find(c => c.id === customerId)?.base
+  return (base && productAccent[base]) || '#E2483D'
+}
 export function YardCanvas({
   state: s,
   ghost,
@@ -89,6 +104,8 @@ export function YardCanvas({
         p = toTile((e.x - size.w / 2 - c.x) / c.zoom, (e.y - c.y) / c.zoom)
       onTile(p.x, p.y)
     })
+  const gate = s.yard.buildings.find(b => b.defId === 'gate')
+  const gateKey = gate ? `${gate.x},${gate.y}` : ''
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
@@ -110,8 +127,27 @@ export function YardCanvas({
           ])
         }
     }
+    // Public road outside the fence that trucks use to reach the gate.
+    if (gate) {
+      for (let i = 1; i <= SALES.approachTiles; i++) {
+        const tile = gate.x === 0 ? { x: -i, y: gate.y } : { x: gate.x, y: -i }
+        const p = toScreen(tile.x, tile.y)
+        drawCommands(canvas, [
+          poly(
+            [
+              [p.x, p.y],
+              [p.x + 16, p.y + 8],
+              [p.x, p.y + 16],
+              [p.x - 16, p.y + 8],
+            ],
+            palette.asphalt,
+          ),
+          rect(p.x - 1, p.y + 7, 3, 2, palette.hazard),
+        ])
+      }
+    }
     return recorder.finishRecordingAsPicture()
-  }, [s.yard.ownedParcels])
+  }, [s.yard.ownedParcels, gateKey])
   const entries = [
     ...s.yard.buildings.map(b => ({
       depth: b.x + b.y + buildingDef(b.defId).w + buildingDef(b.defId).h,
@@ -126,10 +162,7 @@ export function YardCanvas({
     ...s.staff
       .filter(p => p.assignedTo)
       .map(p => ({
-        depth:
-          (s.yard.buildings.find(b => b.uid === p.assignedTo)?.x ?? 0) +
-          (s.yard.buildings.find(b => b.uid === p.assignedTo)?.y ?? 0) +
-          1,
+        depth: frontDepth(s.yard.buildings.find(b => b.uid === p.assignedTo)) + 0.5,
         kind: 'worker' as const,
         p,
       })),
@@ -147,6 +180,18 @@ export function YardCanvas({
       }),
     )
   }, [s.yard.buildings])
+  const ghostPath = useMemo(() => {
+    if (!ghost) return null
+    const d = buildingDef(ghost.id),
+      p = toScreen(ghost.x, ghost.y),
+      path = Skia.Path.Make()
+    path.moveTo(p.x, p.y)
+    path.lineTo(p.x + d.w * 16, p.y + d.w * 8)
+    path.lineTo(p.x + (d.w - d.h) * 16, p.y + (d.w + d.h) * 8)
+    path.lineTo(p.x - d.h * 16, p.y + d.h * 8)
+    path.close()
+    return path
+  }, [ghost])
   const dynamicPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
@@ -172,7 +217,7 @@ export function YardCanvas({
           drawCommands(canvas, [
             rect(-5, -20, Math.abs(Math.sin(visualTime * 4)) * 12 + 1, 1, '#B5653A'),
           ])
-        if (b.defId === 'gate' && s.trucks.some(t => t.step < 2))
+        if (b.defId === 'gate' && s.trucks.some(t => Math.abs(t.step - SALES.approachTiles) <= 1))
           drawCommands(canvas, [rect(2, -24, 2, 18, '#F2C230')])
         if (b.level >= 5)
           drawCommands(canvas, [
@@ -189,22 +234,33 @@ export function YardCanvas({
                 : Math.min(1, Math.max(0, 1 - (t.nextTick - fractional) / SALES.roadTicks)),
             p = toScreen(a.x + 0.5 + (b.x - a.x) * fraction, a.y + 0.5 + (b.y - a.y) * fraction)
           canvas.translate(p.x, p.y)
-          drawCommands(canvas, truckSprite(t.kind, '#E2483D', visualTime))
+          drawCommands(canvas, truckSprite(t.kind, truckAccent(t.customer), visualTime))
         }
       } else {
         const p = entry.p,
           building = s.yard.buildings.find(b => b.uid === p.assignedTo),
           canteen = s.yard.buildings.find(b => b.defId === 'canteen')
         if (building) {
-          const phase = (visualTime / 8) % 2,
+          // Walk between the canteen and the work building, along their front edges;
+          // without a canteen, pace in front of the building.
+          const phase = (visualTime / 8 + staffOffset(p.uid)) % 2,
             f = phase < 1 ? phase : 2 - phase,
-            a = canteen ?? building,
-            point = toScreen(a.x + (building.x - a.x) * f, a.y + (building.y - a.y) * f)
+            work = frontTile(building),
+            rest = canteen ? frontTile(canteen) : { x: work.x - 1.5, y: work.y },
+            point = toScreen(rest.x + (work.x - rest.x) * f, rest.y + (work.y - rest.y) * f)
           canvas.translate(point.x, point.y)
           drawCommands(canvas, workerSprite(p.job, visualTime))
         }
       }
       canvas.restore()
+    }
+    // Placement preview, drawn in the same recording so it layers like everything else.
+    if (ghost && ghostPath) {
+      const paint = Skia.Paint()
+      paint.setColor(
+        Skia.Color(canPlace(s, ghost.id, ghost.x, ghost.y, ghost.uid) ? '#22C55E99' : '#EF444499'),
+      )
+      canvas.drawPath(ghostPath, paint)
     }
     return recorder.finishRecordingAsPicture()
   }, [
@@ -216,19 +272,9 @@ export function YardCanvas({
     s.baseStock,
     s.blend.base,
     reduced,
+    ghost,
+    ghostPath,
   ])
-  const ghostPath = useMemo(() => {
-    if (!ghost) return null
-    const d = buildingDef(ghost.id),
-      p = toScreen(ghost.x, ghost.y),
-      path = Skia.Path.Make()
-    path.moveTo(p.x, p.y)
-    path.lineTo(p.x + d.w * 16, p.y + d.w * 8)
-    path.lineTo(p.x + (d.w - d.h) * 16, p.y + (d.w + d.h) * 8)
-    path.lineTo(p.x - d.h * 16, p.y + d.h * 8)
-    path.close()
-    return path
-  }, [ghost])
   return (
     <View
       style={{ flex: 1 }}
@@ -245,14 +291,6 @@ export function YardCanvas({
           >
             <Picture picture={staticPicture} />
             <Picture picture={dynamicPicture} />
-            {ghost && ghostPath && (
-              <Path
-                path={ghostPath}
-                color={
-                  canPlace(s, ghost.id, ghost.x, ghost.y, ghost.uid) ? '#22C55E99' : '#EF444499'
-                }
-              />
-            )}
           </Group>
         </Canvas>
       </GestureDetector>

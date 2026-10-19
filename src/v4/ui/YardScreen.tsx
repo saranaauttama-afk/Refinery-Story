@@ -8,7 +8,6 @@ import { detectCombos } from '../sim/systems/combos'
 import { combos } from '../data/combos'
 import { CustomersPanel } from './CustomersPanel'
 import { BlendPanel } from './BlendPanel'
-import { buildStarter } from '../sim/actions'
 import { useState } from 'react'
 import { View, Text } from 'react-native'
 import { useGame } from '../store/useGame'
@@ -29,7 +28,7 @@ export function YardScreen() {
   return (
     <View style={{ flex: 1 }}>
       <HUD />
-      <Onboarding />
+      <Onboarding onPlace={(id, x, y) => setGhost({ id, x, y })} />
       <YardCanvas
         state={s}
         ghost={ghost}
@@ -44,11 +43,63 @@ export function YardScreen() {
           }
         }}
       />
-      {!s.yard.buildings.length && (
-        <Button
-          label={{ en: 'Build starter refinery $50k', th: 'สร้างโรงกลั่นเริ่มต้น $50,000' }}
-          onPress={() => dispatch(buildStarter)}
-        />
+      {ghost && (
+        <View
+          style={{
+            backgroundColor: '#FFF6E3',
+            borderTopWidth: 2,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+          }}
+        >
+          <Text style={styles.text}>
+            {detectCombos([
+              ...s.yard.buildings.filter(b => b.uid !== ghost.uid),
+              {
+                uid: 'preview',
+                defId: ghost.id,
+                x: ghost.x,
+                y: ghost.y,
+                level: 1,
+                staff: [],
+                cost: 0,
+              },
+            ])
+              .filter(c => c.members.includes('preview'))
+              .map(c => text(combos.find(d => d.id === c.id)!.name))
+              .join(' · ')}
+          </Text>
+          <Text style={styles.text}>
+            {text({ en: 'Tap a tile, then confirm', th: 'แตะพื้นที่ แล้วกดยืนยัน' })}
+          </Text>
+          <View style={{ flexDirection: 'row' }}>
+            <View style={{ flex: 2 }}>
+              <Button
+                disabled={
+                  !canPlace(s, ghost.id, ghost.x, ghost.y, ghost.uid) ||
+                  s.money <
+                    (ghost.uid
+                      ? YARD.moveCost
+                      : s.carriedBuildings[ghost.id]
+                        ? 0
+                        : buildingDef(ghost.id).cost)
+                }
+                label={{ en: 'Confirm', th: 'ยืนยัน' }}
+                onPress={() => {
+                  dispatch(s =>
+                    ghost.uid
+                      ? move(s, ghost.uid, ghost.x, ghost.y)
+                      : place(s, ghost.id, ghost.x, ghost.y),
+                  )
+                  setGhost(undefined)
+                }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button label={{ en: 'Cancel', th: 'ยกเลิก' }} onPress={() => setGhost(undefined)} />
+            </View>
+          </View>
+        </View>
       )}
       <View
         style={{ flexDirection: 'row', backgroundColor: '#FFF6E3', justifyContent: 'space-around' }}
@@ -82,60 +133,6 @@ export function YardScreen() {
       </View>
       <Notices />
 
-      {ghost && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 70,
-            left: 12,
-            right: 12,
-            backgroundColor: '#FFF6E3',
-            padding: 8,
-          }}
-        >
-          <Text style={styles.text}>
-            {detectCombos([
-              ...s.yard.buildings.filter(b => b.uid !== ghost.uid),
-              {
-                uid: 'preview',
-                defId: ghost.id,
-                x: ghost.x,
-                y: ghost.y,
-                level: 1,
-                staff: [],
-                cost: 0,
-              },
-            ])
-              .filter(c => c.members.includes('preview'))
-              .map(c => text(combos.find(d => d.id === c.id)!.name))
-              .join(' · ')}
-          </Text>
-          <Text style={styles.text}>
-            {text({ en: 'Tap a tile, then confirm', th: 'แตะพื้นที่ แล้วกดยืนยัน' })}
-          </Text>
-          <Button
-            disabled={
-              !canPlace(s, ghost.id, ghost.x, ghost.y, ghost.uid) ||
-              s.money <
-                (ghost.uid
-                  ? YARD.moveCost
-                  : s.carriedBuildings[ghost.id]
-                    ? 0
-                    : buildingDef(ghost.id).cost)
-            }
-            label={{ en: 'Confirm', th: 'ยืนยัน' }}
-            onPress={() => {
-              dispatch(s =>
-                ghost.uid
-                  ? move(s, ghost.uid, ghost.x, ghost.y)
-                  : place(s, ghost.id, ghost.x, ghost.y),
-              )
-              setGhost(undefined)
-            }}
-          />
-          <Button label={{ en: 'Cancel', th: 'ยกเลิก' }} onPress={() => setGhost(undefined)} />
-        </View>
-      )}
       {panel === 'company' && (
         <Sheet title={{ en: 'Company', th: 'บริษัท' }} onClose={() => setPanel('')}>
           <CompanyPanel />

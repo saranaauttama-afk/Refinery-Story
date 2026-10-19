@@ -5,6 +5,7 @@ import { dateAt } from '../../src/v4/sim/time'
 import { serialize, deserialize } from '../../src/v4/sim/save'
 import { sampleStaff } from './fixtures'
 import { random } from '../../src/v4/sim/rng'
+import { B } from '../../src/v4/data/balance'
 let s = createNewGame(7)
 s = {
   ...s,
@@ -17,7 +18,8 @@ s = {
 const initial = serialize(s)
 for (let i = 0; i < 720; i++) s = tick(s)
 assert.equal(s.ledger.length, 3)
-assert.equal(s.money, 46100)
+// 3 months × ($10k tank × 3% upkeep + $1k salary) = $3,900
+assert.equal(s.money, B.startingMoney - 3900)
 assert.deepEqual(dateAt(s.tick), { year: 1, month: 4, week: 1 })
 assert.deepEqual(deserialize(serialize(s)), s)
 let repeat = deserialize(initial)

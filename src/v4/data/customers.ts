@@ -12,7 +12,7 @@ export interface CustomerDef {
   gift: { kind: 'additive' | 'blueprint' | 'deco'; id: string }
 }
 const groups: { id: CustomerGroup; en: string; th: string; bases: BaseId[] }[] = [
-  { id: 'gas', en: 'Gas Station', th: 'ปั๊มน้ำมัน', bases: ['gasoline', 'diesel'] },
+  { id: 'gas', en: 'Gas Station', th: 'ปั๊มน้ำมัน', bases: ['gasoline', 'diesel', 'lpg'] },
   { id: 'air', en: 'Airline', th: 'สายการบิน', bases: ['jet'] },
   { id: 'shipping', en: 'Shipping', th: 'บริษัทเดินเรือ', bases: ['diesel', 'lube'] },
   { id: 'industrial', en: 'Industrial Buyer', th: 'โรงงานอุตสาหกรรม', bases: ['pellet', 'wax'] },

@@ -1,5 +1,5 @@
 export const B = {
-  startingMoney: 50_000,
+  startingMoney: 55_000,
   tickMs: 250,
   ticksPerWeek: 60,
   weeksPerMonth: 4,
@@ -70,6 +70,10 @@ export const SALES = {
   contractFame: 15,
   failedFame: 10,
   maxTrucks: 10,
+  approachTiles: 6,
+  // When tanks are this full, buyers take a below-standard lot at a discount.
+  clearanceFill: 0.8,
+  clearancePrice: 0.5,
 }
 export const COMBO = {
   distance: 2,
@@ -106,7 +110,7 @@ export const STAFF = {
   salaryRange: 7000,
 }
 export const PROGRESSION = {
-  rankFame: [0, 100, 300, 700, 1500, 3000, 6000, 12000, 25000, 50000],
+  rankFame: [0, 150, 1000, 1900, 3000, 6000, 11000, 20000, 33000, 47000],
   finalYear: 15,
   marketBonus: 0.3,
   marketMinYears: 2,
@@ -140,14 +144,14 @@ export const PROGRESSION = {
 }
 
 export const BASE_PRICES = {
-  lpg: 50,
-  gasoline: 38,
-  jet: 52.5,
-  diesel: 43,
-  lube: 105,
-  asphalt: 90,
-  wax: 90,
-  pellet: 100,
+  lpg: 63,
+  gasoline: 26,
+  jet: 66,
+  diesel: 30,
+  lube: 110,
+  asphalt: 80,
+  wax: 80,
+  pellet: 90,
 }
 
 export const POLISH = {
@@ -157,7 +161,7 @@ export const POLISH = {
   rdScoreDivisor: 1000,
   reportSeeds: 20,
   incomeTargets: { 1: 45000, 5: 500000, 10: 3000000 },
-  incomeMeanBounds: { 1: [30000, 60000], 5: [400000, 600000], 10: [2400000, 3600000] } as Record<
+  incomeMeanBounds: { 1: [30000, 60000], 5: [350000, 650000], 10: [2400000, 3600000] } as Record<
     number,
     number[]
   >,
@@ -337,6 +341,13 @@ export const BUILDING_BALANCE: Record<
   },
 }
 
+// The foreman the player starts with, so people walk the yard from minute one.
+export const STARTING_STAFF = {
+  name: 'Somchai',
+  stat: 2,
+  salary: 1000,
+  power: 12,
+}
 export const STAFF_HIRING = {
   word: {
     cost: 5000,

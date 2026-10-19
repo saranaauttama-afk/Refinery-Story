@@ -8,3 +8,14 @@ export const palette = {
   hazard: '#F2C230',
   rust: '#B5653A',
 }
+// Accent per product line (ART.md §3).
+export const productAccent: Record<string, string> = {
+  gasoline: '#E2483D',
+  diesel: '#F08A24',
+  jet: '#3D8FE0',
+  lpg: '#9C5BD6',
+  lube: '#2FB38E',
+  wax: '#2FB38E',
+  asphalt: '#6D5A4A',
+  pellet: '#E36BB0',
+}

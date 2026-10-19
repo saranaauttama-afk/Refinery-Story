@@ -6,11 +6,15 @@ export function Button({
   onPress,
   disabled = false,
   icon,
+  selected = false,
+  badge,
 }: {
   label: LocalizedText
   onPress: () => void
   disabled?: boolean
   icon?: React.ReactNode
+  selected?: boolean
+  badge?: { label: string; color: string }
 }) {
   const feedback = useFeedback()
   return (
@@ -24,12 +28,18 @@ export function Button({
       }}
       style={({ pressed }) => [
         styles.button,
+        selected && styles.selected,
         disabled && { opacity: 0.4 },
         pressed && { backgroundColor: '#F08A24' },
       ]}
     >
       {icon}
       <Text style={styles.text}>{text(label)}</Text>
+      {badge && (
+        <View style={[styles.badge, { backgroundColor: badge.color }]}>
+          <Text style={styles.badgeText}>{badge.label}</Text>
+        </View>
+      )}
     </Pressable>
   )
 }
@@ -71,6 +81,17 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
+  selected: { backgroundColor: '#FFF6E3', borderWidth: 3 },
+  badge: {
+    position: 'absolute',
+    right: 8,
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  badgeText: { fontFamily: 'PixelifySans_700Bold', fontSize: 14, color: '#14110F' },
   text: { fontFamily: 'Baloo2_400Regular', fontSize: 16, color: '#14110F' },
   heading: { fontFamily: 'Baloo2_700Bold', fontSize: 20, color: '#14110F' },
   sheet: {

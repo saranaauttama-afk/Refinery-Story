@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { BASE_PRICES } from '../../src/v4/data/balance'
 import { createNewGame } from '../../src/v4/sim/state'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
 import { eligibleLot, sellTo, roadPath } from '../../src/v4/sim/systems/customers'
@@ -23,7 +24,8 @@ assert.equal(eligibleLot(s, 'gasoline', 'B')!.uid, 's')
 assert.equal(eligibleLot(s, 'diesel', 'B'), undefined)
 assert.ok(roadPath(s).length > 0)
 const sold = sellTo(s, 'gas0')
-assert.equal(sold.money, 20520)
+// S grade sells at ×1.8 of the base price, 300 units per truck.
+assert.equal(sold.money, s.money + BASE_PRICES.gasoline * 1.8 * 300)
 assert.equal(sold.customers.gas0.hearts, 1)
 assert.ok(!sold.tanks.some(l => l.uid === 's'))
 for (let i = 0; i < 11; i++) s = sellTo({ ...s, tanks: [lot('x', 'B')] }, 'gas0')

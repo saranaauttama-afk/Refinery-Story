@@ -1,9 +1,5 @@
-export const starterLayout: [string, number, number][] = [
-  ['gate', 0, 0],
-  ['loading', 2, 0],
-  ['crudeTank', 0, 3],
-  ['cdu', 3, 3],
-  ['blend', 6, 3],
-  ['tank', 9, 3],
-  ['road', 1, 0],
-]
+import { hints } from './onboarding'
+// The guided first layout, in placement order. Used by the bot and the headless checks.
+export const starterLayout: [string, number, number][] = hints.flatMap(step =>
+  step.place.map(p => [p.id, p.x, p.y] as [string, number, number]),
+)

@@ -1,5 +1,6 @@
 import { PRODUCTION } from '../../src/v4/data/balance'
 import assert from 'node:assert/strict'
+import { B } from '../../src/v4/data/balance'
 import { scoreLot, blending } from '../../src/v4/sim/systems/blending'
 import { createNewGame } from '../../src/v4/sim/state'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
@@ -27,7 +28,8 @@ for (const b of bases) {
   for (const a of additives) assert.ok('SABCDF'.includes(compatibility[b.id][a.id]))
 }
 let s = buildStarter(createNewGame())
-assert.equal(s.money, 0)
+// The guided first layout costs $50k and leaves a little slack.
+assert.equal(s.money, B.startingMoney - 50000)
 const initialFame = s.fame
 for (let i = 0; i < 360 && !s.tanks.length; i++) s = tick(s)
 assert.ok(s.tanks.length > 0)
