@@ -291,7 +291,7 @@ the owner checks on the APK.
 
 | Milestone | Status | Commit | APK run | Owner verdict |
 | --- | --- | --- | --- | --- |
-| M0 Clean slate | not started | | | |
+| M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | pending |
 | M1 Sim core | not started | | | |
 | M2 Yard | not started | | | |
 | M2b Art pass 1 | not started | | | |
@@ -301,3 +301,13 @@ the owner checks on the APK.
 | M6 Staff | not started | | | |
 | M7 Progression | not started | | | |
 | M8 Balance & polish | not started | | | |
+
+### M0 validation
+
+- `npx tsc --noEmit`: passed.
+- `npm run export:web`: passed; exported `/` and `/game`.
+- `npm run v4:check`: this host blocks the tsx CLI IPC socket (`EPERM`).
+  Equivalent socket-free execution `node --import tsx scripts/v4/check-all.ts`
+  passed. M0 has no sim checks; the runner is ready for M1.
+- Android versionCode 11, version 4.0.0, build label V4-M0.
+- APK install / New Game verification and owner verdict remain pending.
