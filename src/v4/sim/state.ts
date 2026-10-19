@@ -69,6 +69,8 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     stormUntil: 0,
     evaluation: null,
     carriedBuildings: {},
+    opened: false,
+    loan: 0,
     hintIndex: 0,
     settings: { sound: true, haptics: true },
     staff: [foreman()],

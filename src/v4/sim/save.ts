@@ -22,6 +22,14 @@ const validBlend = (x: unknown) => {
 }
 export function deserialize(raw: string): GameState {
   const s = JSON.parse(raw)
+  // Fields added after the first v4 builds.
+  if (record(s)) {
+    if (s.loan === undefined) s.loan = 0
+    if (s.opened === undefined)
+      s.opened =
+        (record(s.year) && Number(s.year.sold) > 0) ||
+        (record(s.history) && Array.isArray(s.history.awards) && s.history.awards.length > 0)
+  }
   const arrays = [
     'staff',
     'firedStaff',
@@ -79,6 +87,8 @@ export function deserialize(raw: string): GameState {
     !record(s.market) ||
     !record(s.carriedBuildings) ||
     !Number.isInteger(s.hintIndex) ||
+    typeof s.opened !== 'boolean' ||
+    !Number.isFinite(s.loan) ||
     ['crude', 'monthProfit', 'stormUntil', 'careerManuals', 'merchantUntil'].some(
       k => !Number.isFinite(s[k]),
     ) ||

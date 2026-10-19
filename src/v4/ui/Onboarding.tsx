@@ -5,6 +5,9 @@ import { roadPath } from '../sim/systems/customers'
 import type { GameState } from '../sim/types'
 import { text } from '../i18n'
 import { styles } from './controls'
+import { buildingDef } from '../data/buildings'
+import { canBorrow, takeLoan } from '../sim/actions'
+import { LOAN } from '../data/balance'
 
 const has = (s: GameState, id: string) => s.yard.buildings.some(b => b.defId === id)
 
@@ -42,6 +45,8 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
   if (index === null) return null
   const step = hints[index]
   const target = nextPlacement(s, index)
+  // Out of cash mid-setup: offer a start-up loan instead of a dead end.
+  const shortOfCash = !!target && canBorrow(s, buildingDef(target.id).cost)
   return (
     <View
       style={{
@@ -56,7 +61,27 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
       <Text style={[styles.text, { flex: 1 }]}>
         {index + 1}/{hints.length} · {text(step)}
       </Text>
-      {target && (
+      {shortOfCash && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => dispatch(takeLoan)}
+          style={{
+            backgroundColor: '#2FB38E',
+            borderWidth: 2,
+            borderRadius: 6,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+          }}
+        >
+          <Text style={styles.text}>
+            {text({
+              en: `Borrow $${LOAN.amount.toLocaleString()}`,
+              th: `กู้ $${LOAN.amount.toLocaleString()}`,
+            })}
+          </Text>
+        </Pressable>
+      )}
+      {target && !shortOfCash && (
         <Pressable
           accessibilityRole="button"
           onPress={() => onPlace(target.id, target.x, target.y)}

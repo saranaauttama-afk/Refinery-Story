@@ -69,6 +69,10 @@ export interface GameState {
   stormUntil: number
   evaluation: number | null
   carriedBuildings: Record<string, number>
+  // Upkeep and salaries start only after the first sale.
+  opened: boolean
+  // Amount still owed to the bank; a share of each sale pays it back.
+  loan: number
   hintIndex: number
   settings: { sound: boolean; haptics: boolean }
   staff: Staff[]

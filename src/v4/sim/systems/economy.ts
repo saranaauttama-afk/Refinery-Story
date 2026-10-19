@@ -4,6 +4,8 @@ import { isMonthStart } from '../time'
 import type { GameState } from '../types'
 export function economy(s: GameState): GameState {
   if (!isMonthStart(s.tick)) return s
+  // No bills while the refinery is still being built.
+  if (!s.opened) return { ...s, fame: s.fame + getModifiers(s).monthlyFame }
   const amount = -(
     s.yard.buildings.reduce((n, b) => n + b.cost * B.upkeepRate, 0) +
     s.staff.reduce((n, p) => n + p.salary, 0)

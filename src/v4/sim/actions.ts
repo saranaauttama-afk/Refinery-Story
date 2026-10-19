@@ -17,3 +17,4 @@ export {
 export { invest } from './systems/investments'
 export { newGamePlus, dismissNotice } from './systems/progression'
 export { discardLot } from './systems/blending'
+export { takeLoan, canBorrow } from './systems/loan'

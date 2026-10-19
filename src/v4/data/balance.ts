@@ -55,6 +55,12 @@ export const GRADES = [
   { id: 'B', min: 120, price: 1, fame: 1 },
   { id: 'C', min: 0, price: 0.8, fame: 0 },
 ] as const
+// Start-up help: a bank loan when the first layout runs out of cash.
+export const LOAN = {
+  amount: 10000,
+  repay: 12000,
+  repayShare: 0.25,
+}
 export const SALES = {
   arrivalTicks: 60,
   highwayBays: 1.3,

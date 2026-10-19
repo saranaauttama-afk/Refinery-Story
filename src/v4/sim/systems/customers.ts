@@ -8,6 +8,7 @@ import type { GameState, Grade, Lot, Truck } from '../types'
 import { buildingDef } from '../../data/buildings'
 import { random } from '../rng'
 import { tankCapacity, tankUnits } from './blending'
+import { LOAN } from '../../data/balance'
 export const gradeRank = (g: Grade) => GRADES.findIndex(v => v.id === g)
 export const eligibleLot = (s: GameState, base: string, min: Grade): Lot | undefined =>
   s.tanks
@@ -110,9 +111,12 @@ export function sellTo(s: GameState, customerId: string): GameState {
     hearts = prev.hearts + (standard ? 1 : 0),
     gift = !prev.giftGiven && hearts >= C.giftHearts
   const p = s.yard.buildings.find(b => b.defId === 'loading')
+  const repayment = Math.min(s.loan, income * LOAN.repayShare)
   let next: GameState = {
     ...s,
-    money: s.money + income,
+    opened: true,
+    loan: s.loan - repayment,
+    money: s.money + income - repayment,
     year: { ...s.year, income: s.year.income + income, sold: s.year.sold + units },
     monthProfit: s.monthProfit + income,
     fame: s.fame + (standard ? GRADES.find(g => g.id === lot.grade)!.fame : 0),

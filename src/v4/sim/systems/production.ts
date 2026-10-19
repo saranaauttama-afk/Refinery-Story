@@ -24,6 +24,8 @@ export function production(s: GameState): GameState {
     .reduce((n, b) => n + P.crudeCapacity * (1 + YARD.outputPerLevel * (b.level - 1)), 0)
   if (
     has('gate') &&
+    has('blend') &&
+    has('tank') &&
     crude + delivery <= capacity &&
     money - delivery * P.crudeUnitPrice >= -P.creditLimit &&
     s.tick % P.crudeInterval === 0

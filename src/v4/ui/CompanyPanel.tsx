@@ -10,6 +10,14 @@ export function CompanyPanel() {
   const { state: s, dispatch, saveError, retrySave } = useGame()
   return (
     <>
+      {s.loan > 0 && (
+        <Text style={styles.text}>
+          {text({
+            en: `Bank loan left $${Math.ceil(s.loan).toLocaleString()} (repaid from sales)`,
+            th: `หนี้ธนาคารคงเหลือ $${Math.ceil(s.loan).toLocaleString()} (หักจากยอดขายอัตโนมัติ)`,
+          })}
+        </Text>
+      )}
       {saveError && (
         <>
           <Text style={styles.text}>{text(saveError)}</Text>

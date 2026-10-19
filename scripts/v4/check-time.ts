@@ -14,6 +14,7 @@ s = {
     buildings: [{ uid: 'test', defId: 'tank', x: 0, y: 0, level: 1, staff: [], cost: 10000 }],
   },
   staff: [{ ...sampleStaff(), salary: 1000 }],
+  opened: true,
 }
 const initial = serialize(s)
 for (let i = 0; i < 720; i++) s = tick(s)
