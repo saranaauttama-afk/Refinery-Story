@@ -5,8 +5,17 @@ export interface GameState {
   version: 4; seed: number; rng: number; tick: number; speed: Speed; nextId: number
   money: number; fame: number; rd: number; rank: number
   yard: { size: number; ownedParcels: string[]; buildings: Building[] }
+  crude:number; crudeType:'light'|'heavy'|'shale'; cuts:Record<import('../data/bases').CutId,number>
+  baseStock:Record<import('../data/bases').BaseId,number>; tanks:Lot[]
+  blend:{base:import('../data/bases').BaseId;additive:import('../data/additives').AdditiveId|null}
+  familiarity:Record<string,number>; useCounts:Record<string,number>; triedPairs:string[]
+  unlockedAdditives:import('../data/additives').AdditiveId[]; popups:Popup[]
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]
 }
 export type Action = (state: GameState) => GameState
+export type Grade='SS'|'S'|'A'|'B'|'C'
+export interface Stats { purity:number; yield:number; stability:number; eco:number }
+export interface Lot { uid:string; base:import('../data/bases').BaseId; additive:import('../data/additives').AdditiveId|null; stats:Stats; score:number; grade:Grade; units:number }
+export interface Popup { uid:string; tick:number; x:number; y:number; en:string; th:string }

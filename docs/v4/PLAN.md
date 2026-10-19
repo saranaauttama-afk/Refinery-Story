@@ -295,7 +295,7 @@ the owner checks on the APK.
 | M1 Sim core | done; automated checks passed | feat(v4): M1 sim core | automatic CI | deferred |
 | M2 Yard | done; automated checks passed | feat(v4): M2 yard | automatic CI | deferred |
 | M2b Art pass 1 | not started | | | |
-| M3 Production & blending | not started | | | |
+| M3 Production & blending | done; automated checks passed | feat(v4): M3 production and blending | automatic CI | deferred |
 | M4 Customers & contracts | not started | | | |
 | M5 Combos | not started | | | |
 | M6 Staff | not started | | | |
@@ -320,3 +320,7 @@ the owner checks on the APK.
 
 - M2: land purchases add one adjacent 8×8 parcel, not a free entire row/column. Bounding size grows while unowned tiles remain blocked. Land starts unlocking at rank 2.
 - M2: unspecified building prices use content-table defaults; the six basic production/logistics buildings total $50k.
+
+- M3: starter layout is a one-tap purchase costing exactly $50k, with no free buildings. Crude deliveries use up to $5k working credit so this start cannot deadlock before the first sale.
+- M3: one global recipe drives all stations. Familiarity uses the mean Base/Additive level (Base alone without additive). Predicted range is exact because no score noise is specified.
+- M3: unspecified base conversions, additive unlocks, 160 compatibility cells and cycle/buffer sizes are explicit content/balance defaults. Light/Heavy/Shale alter initial stat quality. Tuning is deferred to M8.
