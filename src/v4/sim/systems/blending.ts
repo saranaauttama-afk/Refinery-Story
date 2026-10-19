@@ -1,3 +1,4 @@
+import { getModifiers } from './combos'
 import { PRODUCTION as P,PAIR,GRADES } from '../../data/balance'
 import { pairCompat, type Compat } from '../../data/compatibility'
 import type { BaseId } from '../../data/bases'
@@ -5,8 +6,8 @@ import type { AdditiveId } from '../../data/additives'
 import type { GameState, Stats, Grade } from '../types'
 export const scoreLot=(stats:Stats,pair:Compat,familiarity:number,comboBonus=0)=>Object.values(stats).reduce((a,b)=>a+b,0)*PAIR[pair]*(1+P.familiarityBonus*familiarity)*(1+comboBonus)
 export const gradeFor=(score:number):Grade=>GRADES.find(g=>score>=g.min)?.id??'C'
-export function lotStats(s:GameState):Stats {const n=P.baseStat*P.crudeQuality[s.crudeType];return {purity:n,yield:n,stability:n,eco:n}}
-export function predictedScore(s:GameState,base=s.blend.base,additive=s.blend.additive){const familiarity=additive?((s.familiarity[base]??1)+(s.familiarity[additive]??1))/2:s.familiarity[base]??1;return scoreLot(lotStats(s),pairCompat(base,additive),familiarity)}
+export function lotStats(s:GameState):Stats {const n=P.baseStat*P.crudeQuality[s.crudeType];const m=getModifiers(s);return {purity:n+m.purity,yield:(n+m.yield)*(1+m.yieldPct),stability:n+m.stability,eco:n+m.eco}}
+export function predictedScore(s:GameState,base=s.blend.base,additive=s.blend.additive){const familiarity=additive?((s.familiarity[base]??1)+(s.familiarity[additive]??1))/2:s.familiarity[base]??1;const m=getModifiers(s);return scoreLot(lotStats(s),pairCompat(base,additive),familiarity,m.quality)+m.score+(base==='gasoline'?m.gasolineScore:0)}
 export function selectBlend(s:GameState,base:BaseId,additive:AdditiveId|null):GameState {
  if(additive&&!s.unlockedAdditives.includes(additive))return s
  return {...s,blend:{base,additive}}
@@ -14,7 +15,7 @@ export function selectBlend(s:GameState,base:BaseId,additive:AdditiveId|null):Ga
 export function blending(s:GameState):GameState {
  if(s.tick%P.cycle!==0)return s
  const stations=s.yard.buildings.filter(b=>b.defId==='blend');if(!stations.length)return s
- const capacity=s.yard.buildings.filter(b=>b.defId==='tank').length*P.tankCapacity
+ const capacity=s.yard.buildings.filter(b=>b.defId==='tank').length*P.tankCapacity*(1+getModifiers(s).capacity)
  let next=s
  for(const station of stations){
   const {base,additive}=next.blend

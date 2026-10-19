@@ -1,3 +1,4 @@
+import { getModifiers } from './combos'
 import { GRADES, SALES as C, B } from '../../data/balance'
 import { baseDef } from '../../data/bases'
 import { customers, type CustomerDef } from '../../data/customers'
@@ -7,7 +8,7 @@ import { random } from '../rng'
 export const gradeRank=(g:Grade)=>GRADES.findIndex(v=>v.id===g)
 export const eligibleLot=(s:GameState,base:string,min:Grade):Lot|undefined=>s.tanks.filter(l=>l.base===base&&l.units>0&&gradeRank(l.grade)<=gradeRank(min)).sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||b.score-a.score)[0]
 export const marketMultiplier=(s:GameState)=>s.market.phase==='boom'?1.3:s.market.phase==='bust'?.7:1
-export const salePrice=(s:GameState,l:Pick<Lot,'base'|'grade'>)=>baseDef(l.base).price*GRADES.find(g=>g.id===l.grade)!.price*marketMultiplier(s)
+export const salePrice=(s:GameState,l:Pick<Lot,'base'|'grade'>)=>baseDef(l.base).price*GRADES.find(g=>g.id===l.grade)!.price*marketMultiplier(s)*(1+getModifiers(s).price)
 export const customerUnlocked=(s:GameState,c:CustomerDef)=>c.group==='gas'?(Number(c.id.slice(3))<2||s.investments.highway>0):c.group==='air'?s.investments.airport>0:c.group==='shipping'?s.investments.port>0:c.group==='industrial'?s.investments.industrial>0:s.rank>=6
 export function roadPath(s:GameState):{x:number;y:number}[] {
  const gate=s.yard.buildings.find(b=>b.defId==='gate'),bay=s.yard.buildings.find(b=>b.defId==='loading');if(!gate||!bay)return []
@@ -30,7 +31,7 @@ export function sellTo(s:GameState,customerId:string):GameState {
 export function customerSystem(s:GameState):GameState {
  let next=s;const trucks:Truck[]=[]
  for(const truck of s.trucks){let t={...truck};if(s.tick>=t.nextTick){if(t.phase==='dwell'){if(t.customer)next=sellTo(next,t.customer);t={...t,phase:'out',path:[...t.path].reverse(),step:0,nextTick:s.tick+C.roadTicks}}
- else if(t.step<t.path.length-1)t={...t,step:t.step+1,nextTick:s.tick+C.roadTicks};else if(t.phase==='in')t={...t,phase:'dwell',nextTick:s.tick+C.dwellTicks};else continue}trucks.push(t)}
+ else if(t.step<t.path.length-1)t={...t,step:t.step+1,nextTick:s.tick+C.roadTicks};else if(t.phase==='in')t={...t,phase:'dwell',nextTick:s.tick+Math.max(1,Math.round(C.dwellTicks*(1+getModifiers(s).dwell)))};else continue}trucks.push(t)}
  if(s.tick%C.arrivalTicks===0&&trucks.length<C.maxTrucks){const path=roadPath(next),pool=customers.filter(c=>customerUnlocked(next,c));if(path.length&&pool.length){const [r,rng]=random(next.rng);const c=pool[Math.floor(r*pool.length)];trucks.push({uid:`t${next.nextId}`,kind:'product',customer:c.id,path,step:0,phase:'in',nextTick:s.tick+C.roadTicks});next={...next,rng,nextId:next.nextId+1}}}
  return {...next,trucks}
 }

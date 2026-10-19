@@ -1,0 +1,36 @@
+export interface Modifiers { dwell:number;purity:number;yield:number;stability:number;eco:number;score:number;gasolineScore:number;yieldPct:number;quality:number;capacity:number;production:number;price:number;regen:number;incident:number;monthlyFame:number;yearlyFame:number }
+export const emptyModifiers=():Modifiers=>({dwell:0,purity:0,yield:0,stability:0,eco:0,score:0,gasolineScore:0,yieldPct:0,quality:0,capacity:0,production:0,price:0,regen:0,incident:0,monthlyFame:0,yearlyFame:0})
+export interface ComboDef {id:string;name:{en:string;th:string};kind:'pair'|'set';members:string[];effect:Partial<Modifiers>;hidden:boolean}
+const c=(id:string,en:string,th:string,kind:ComboDef['kind'],members:string[],effect:Partial<Modifiers>,hidden=false):ComboDef=>({id,name:{en,th},kind,members,effect,hidden})
+export const combos:ComboDef[]=[
+ c('tankFarm','Tank Farm','ฟาร์มถัง','set',['tank','tank','pipe'],{capacity:.25}),
+ c('freshCut','Fresh Cut','กลั่นสะอาด','pair',['cdu','hydro'],{purity:10}),
+ c('octaneLine','Octane Line','สายออกเทน','set',['reformer','blend','lab'],{gasolineScore:15}),
+ c('quickLoad','Quick Load','จ่ายไว','pair',['loading','gate'],{dwell:-.3}),
+ c('watchful','Watchful Eye','จับตาปลอดภัย','pair',['control','process'],{incident:-.5}),
+ c('greenBelt','Green Belt','แนวสีเขียว','set',['tree','tree','tree'],{eco:10,monthlyFame:10}),
+ c('lunch','Lunch Break','พักกลางวัน','pair',['canteen','control'],{regen:.2}),
+ c('smoke','Smoke Break','ควันรบกวน','pair',['flare','canteen'],{regen:-.3}),
+ c('heavy','Heavy Duty','สายงานหนัก','set',['cracker','hydro','tank'],{yieldPct:.2}),
+ c('showcase','Showcase','โรงงานตัวอย่าง','set',['lab','lamp','sign'],{yearlyFame:40},true),
+ c('research','Research Row','แถววิจัย','pair',['lab','control'],{purity:5}),
+ c('cleanLab','Clean Lab','แล็บสีเขียว','pair',['lab','tree'],{eco:5}),
+ c('brightGate','Bright Gate','ประตูสว่าง','pair',['gate','lamp'],{price:.1}),
+ c('pipeFlow','Pipe Flow','ท่อคล่อง','pair',['pipe','cdu'],{production:.1}),
+ c('safeLoad','Safe Load','จ่ายปลอดภัย','pair',['loading','control'],{stability:5}),
+ c('tankCare','Tank Care','ดูแลถัง','pair',['tank','lab'],{stability:10}),
+ c('blendStudy','Blend Study','วิจัยสูตร','pair',['blend','lab'],{quality:.1}),
+ c('octaneCare','Octane Care','รักษาออกเทน','pair',['reformer','hydro'],{purity:5}),
+ c('welcome','Welcome','ต้อนรับ','set',['gate','sign','lamp'],{price:.1}),
+ c('restGarden','Rest Garden','สวนพัก','set',['canteen','tree','lamp'],{regen:.2}),
+ c('flowLine','Flow Line','สายไหลคล่อง','set',['cdu','pipe','blend'],{production:.2}),
+ c('quietLab','Quiet Lab','แล็บเงียบ','pair',['lab','flare'],{stability:-5}),
+ c('nightShift','Night Shift','กะกลางคืน','pair',['control','lamp'],{production:.1}),
+ c('greenBlend','Green Blend','ผสมรักษ์โลก','pair',['blend','tree'],{eco:10},true),
+ c('towerLight','Tower Light','แสงหอสูง','pair',['tower','lamp'],{price:.2},true),
+ c('greatView','Great View','วิวโรงงาน','pair',['tower','sign'],{yearlyFame:40},true),
+ c('hotScience','Hot Science','วิจัยร้อนแรง','set',['cracker','lab','flare'],{yield:15},true),
+ c('oilGarden','Oil Garden','สวนถังน้ำมัน','set',['crudeTank','tree','tank'],{eco:15},true),
+ c('teamSpirit','Team Spirit','พลังทีม','set',['canteen','control','sign'],{regen:.3},true),
+ c('perfectMix','Perfect Mix','สูตรสมบูรณ์','set',['hydro','blend','reformer'],{quality:.25},true),
+]

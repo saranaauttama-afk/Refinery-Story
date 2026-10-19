@@ -297,7 +297,7 @@ the owner checks on the APK.
 | M2b Art pass 1 | not started | | | |
 | M3 Production & blending | done; automated checks passed | feat(v4): M3 production and blending | automatic CI | deferred |
 | M4 Customers & contracts | done; automated checks passed | feat(v4): M4 customers and contracts | automatic CI | deferred |
-| M5 Combos | not started | | | |
+| M5 Combos | done; automated checks passed | feat(v4): M5 combos and auras | automatic CI | deferred |
 | M6 Staff | not started | | | |
 | M7 Progression | not started | | | |
 | M8 Balance & polish | not started | | | |
@@ -328,3 +328,7 @@ the owner checks on the APK.
 - M4: two local gas buyers are available before Highway investment; remaining buyers require their chain (government buyers rank 6). Each of five groups has eight named buyers.
 - M4: starter includes a road tile and a $100 lower Loading Bay price, preserving the $50k total. Trucks use a breadth-first path through gate/road/loading footprints; blocked roads prevent customer arrivals.
 - M4: contract deliveries may be partial and paid per delivered unit at current market price ×1.5; completion awards Fame once. Offers refresh monthly; deadlines count from the offer. Crude is received at the gate with a visual delivery truck.
+
+- M5: the 20 additional combos are explicit new content; one effect per combo definition (multiple copies do not stack). Set order may be reversed/permuted while footprints stay contiguous in one row.
+- M5: unspecified aura strength is 10 stat points times the exact GDD grid. Emitters stack; their contributions are averaged across production/blending buildings for global lot stats. Emitter itself receives no aura.
+- M5: hints cost $500. Hidden recipes stay unknown until discovered; discovery Fame is awarded once even after demolishing and rebuilding.

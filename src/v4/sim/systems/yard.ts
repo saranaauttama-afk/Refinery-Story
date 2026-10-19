@@ -1,3 +1,4 @@
+import { refreshCombos } from './combos'
 import { YARD } from '../../data/balance'
 import { buildingDef } from '../../data/buildings'
 import type { GameState, Building } from '../types'
@@ -14,23 +15,23 @@ export function canPlace(s:GameState,id:string,x:number,y:number,ignore?:string)
 export function place(s:GameState,id:string,x:number,y:number):GameState {
  const d=buildingDef(id);if((s.rank<d.rank&&!s.blueprints.includes(id)&&!s.decos.includes(id))||s.money<d.cost||!canPlace(s,id,x,y))return s
  const b:Building={uid:`b${s.nextId}`,defId:id,x,y,level:1,staff:[],cost:d.cost}
- return {...s,nextId:s.nextId+1,money:s.money-d.cost,yard:{...s.yard,buildings:[...s.yard.buildings,b]}}
+ return refreshCombos({...s,nextId:s.nextId+1,money:s.money-d.cost,yard:{...s.yard,buildings:[...s.yard.buildings,b]}})
 }
 export function move(s:GameState,uid:string,x:number,y:number):GameState {
  const b=s.yard.buildings.find(b=>b.uid===uid);if(!b||s.money<YARD.moveCost||!canPlace(s,b.defId,x,y,uid)||(b.x===x&&b.y===y))return s
- return {...s,money:s.money-YARD.moveCost,yard:{...s.yard,buildings:s.yard.buildings.map(b=>b.uid===uid?{...b,x,y}:b)}}
+ return refreshCombos({...s,money:s.money-YARD.moveCost,yard:{...s.yard,buildings:s.yard.buildings.map(b=>b.uid===uid?{...b,x,y}:b)}})
 }
 export function demolish(s:GameState,uid:string):GameState {
  const b=s.yard.buildings.find(b=>b.uid===uid);if(!b)return s
- return {...s,money:s.money+b.cost*YARD.refund,yard:{...s.yard,buildings:s.yard.buildings.filter(b=>b.uid!==uid)}}
+ return refreshCombos({...s,money:s.money+b.cost*YARD.refund,yard:{...s.yard,buildings:s.yard.buildings.filter(b=>b.uid!==uid)}})
 }
 export const upgradeCost=(b:Building)=>buildingDef(b.defId).cost*YARD.upgradeBase*YARD.upgradeGrowth**(b.level-1)
 export function upgrade(s:GameState,uid:string):GameState {
  const b=s.yard.buildings.find(b=>b.uid===uid);if(!b||b.level>=YARD.maxLevel||s.money<upgradeCost(b))return s
- return {...s,money:s.money-upgradeCost(b),yard:{...s.yard,buildings:s.yard.buildings.map(p=>p.uid===uid?{...p,level:p.level+1}:p)}}
+ return refreshCombos({...s,money:s.money-upgradeCost(b),yard:{...s.yard,buildings:s.yard.buildings.map(p=>p.uid===uid?{...p,level:p.level+1}:p)}})
 }
 export function buyLand(s:GameState,px:number,py:number):GameState {
  const key=`${px},${py}`;const adjacent=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>s.yard.ownedParcels.includes(`${px+dx},${py+dy}`))
  if(!Number.isInteger(px)||!Number.isInteger(py)||px<0||py<0||px>=YARD.maxSize/YARD.parcel||py>=YARD.maxSize/YARD.parcel||s.yard.ownedParcels.includes(key)||!adjacent||s.money<YARD.landCost||s.rank<2)return s
- return {...s,money:s.money-YARD.landCost,yard:{...s.yard,size:Math.max(s.yard.size,(px+1)*YARD.parcel,(py+1)*YARD.parcel),ownedParcels:[...s.yard.ownedParcels,key]}}
+ return refreshCombos({...s,money:s.money-YARD.landCost,yard:{...s.yard,size:Math.max(s.yard.size,(px+1)*YARD.parcel,(py+1)*YARD.parcel),ownedParcels:[...s.yard.ownedParcels,key]}})
 }

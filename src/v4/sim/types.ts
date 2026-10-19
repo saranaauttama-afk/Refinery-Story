@@ -13,6 +13,7 @@ export interface GameState {
   customers:Record<string,{hearts:number;giftGiven:boolean}>; trucks:Truck[]
   contracts:{offers:Contract[];active:Contract[]};blueprints:string[];decos:string[]
   investments:Record<string,number>;market:{phase:'normal'|'boom'|'bust';nextChangeTick:number}
+  activeCombos:ActiveCombo[];discoveredCombos:string[];comboHints:string[]
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]
@@ -24,3 +25,4 @@ export interface Lot { uid:string; base:import('../data/bases').BaseId; additive
 export interface Popup { uid:string; tick:number; x:number; y:number; en:string; th:string }
 export interface Truck { uid:string;customer:string|null;kind:'crude'|'product';path:{x:number;y:number}[];step:number;phase:'in'|'dwell'|'out';nextTick:number }
 export interface Contract { uid:string;base:import('../data/bases').BaseId;minGrade:Grade;units:number;delivered:number;deadline:number }
+export interface ActiveCombo {id:string;members:string[]}
