@@ -9,6 +9,8 @@ export interface Building {
   cost: number
   /** Plants only: 0–100, wears down monthly. Missing = 100 (older saves). */
   condition?: number
+  /** Plants from Lv3: one chosen specialisation. */
+  spec?: 'volume' | 'quality' | 'eco'
   /** Overhaul in progress until this tick: the plant is stopped. */
   repairUntil?: number
   /** Blend stations only: what this station mixes. Falls back to GameState.blend. */
@@ -96,6 +98,8 @@ export interface GameState {
   trend: { base: import('../data/bases').BaseId | null; until: number }
   /** Big repeatable projects (Phase B), by id → level. */
   projects: Record<string, number>
+  /** Ad campaigns: base → tick the campaign ends. */
+  ads: Record<string, number>
 }
 export type Action = (state: GameState) => GameState
 export type Grade = 'SS' | 'S' | 'A' | 'B' | 'C'

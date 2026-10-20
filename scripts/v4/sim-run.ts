@@ -8,7 +8,14 @@ import {
   researchCost,
   startResearch,
 } from '../../src/v4/sim/systems/research'
-import { wears, conditionOf, overhaulCost, overhaul } from '../../src/v4/sim/systems/plant'
+import {
+  wears,
+  conditionOf,
+  overhaulCost,
+  overhaul,
+  specialize,
+} from '../../src/v4/sim/systems/plant'
+import { demandOf, adCost, advertise } from '../../src/v4/sim/systems/market'
 import { projectCost, buyProject } from '../../src/v4/sim/systems/projects'
 import { createNewGame } from '../../src/v4/sim/state'
 import { tick } from '../../src/v4/sim/tick'
@@ -119,6 +126,9 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
   for (const b of s.yard.buildings)
     if (wears(b) && conditionOf(b) < 62 && s.money > overhaulCost(b) + reserve)
       s = overhaul(s, b.uid)
+  for (const b of s.yard.buildings)
+    if (wears(b) && !b.spec && b.level >= 3)
+      s = specialize(s, b.uid, b.defId === 'blend' ? 'quality' : 'volume')
   for (const id of ['researchCenter', 'export'] as const)
     if (s.money > projectCost(s, id) * 2 + reserve) s = buyProject(s, id)
   const station = s.yard.buildings.find(b => b.defId === 'blend')
@@ -204,6 +214,9 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
       if (target && s.money > researchCost(s, target).money + reserve)
         s = startResearch(s, lab.uid, target)
     }
+  // Advertise the best product once buyers tire of it.
+  const top = ranked[0]?.base
+  if (top && demandOf(s, top) < 0.75 && s.money > adCost(s) * 10 + reserve) s = advertise(s, top)
   const mixing = new Set(activeRecipes(s).map(r => r.base))
   for (const c of s.contracts.offers)
     if (mixing.has(c.base) && s.contracts.active.length < 3) s = acceptContract(s, c.uid)

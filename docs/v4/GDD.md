@@ -160,6 +160,14 @@ cost 20/60/150/300/500 RD; big projects: Overseas Export (rank 5, $5M × 1.8^lev
 counts one level higher). The Company sheet shows weekly oil flow per stage and
 names the bottleneck.
 
+**Phase C (v4.0.15):** from Lv3 a plant picks one specialisation, once:
+Volume (output +15%), Quality (every lot +6 Purity, +6 Stability) or Eco (every
+lot +8 Eco, wears 1%/month slower). Ad campaign per product: costs half the
+recent monthly profit (min $20k), resets demand to 100% and ×1.25 for a month.
+Every event logs its outcome (storm weeks, inspector result, spill handled or
+the fine). Spill fine = max($2k, 2% of building value). Secret combos give ×3
+Fame. New log lines show briefly as a toast over the yard.
+
 **Stations:** each Blending Station runs its own Base × Additive recipe (a new
 station starts on the last recipe picked). Every base a station is mixing is
 refined from its own cut, so a second product line uses cuts that would

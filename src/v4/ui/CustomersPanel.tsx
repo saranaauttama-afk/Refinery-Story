@@ -9,6 +9,7 @@ import { SALES, B } from '../data/balance'
 import { styles } from './controls'
 import { Card, Section, Row, ProductChip, GradeChip, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
+import { AdsSection } from './AdsSection'
 import type { Contract, GameState } from '../sim/types'
 
 const baseName = (id: string) => text(bases.find(b => b.id === id)!.name)
@@ -114,6 +115,7 @@ export function CustomersPanel() {
           </Row>
         </Card>
       ))}
+      <AdsSection />
       <Section>{text({ en: 'Regular customers', th: 'ลูกค้าประจำ' })}</Section>
       {regulars.map(({ c, rec }) => (
         <Card key={c.id}>

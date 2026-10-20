@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import { useGame } from '../store/useGame'
-import { overhaul } from '../sim/actions'
+import { overhaul, specialize } from '../sim/actions'
 import {
   wears,
   conditionOf,
@@ -9,10 +9,34 @@ import {
   overhaulCost,
   repairRate,
 } from '../sim/systems/plant'
-import { WEAR, B } from '../data/balance'
+import { WEAR, B, SPEC } from '../data/balance'
 import { styles } from './controls'
 import { Card, Row, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
+
+const specNames = {
+  volume: {
+    name: { en: 'Volume', th: 'เน้นปริมาณ' },
+    effect: {
+      en: `Output +${SPEC.volumeOutput * 100}%`,
+      th: `กำลังผลิต +${SPEC.volumeOutput * 100}%`,
+    },
+  },
+  quality: {
+    name: { en: 'Quality', th: 'เน้นคุณภาพ' },
+    effect: {
+      en: `Every lot +${SPEC.qualityPurity} Purity, +${SPEC.qualityStability} Stability`,
+      th: `ทุกล็อต Purity +${SPEC.qualityPurity} Stability +${SPEC.qualityStability}`,
+    },
+  },
+  eco: {
+    name: { en: 'Eco', th: 'เน้นสิ่งแวดล้อม' },
+    effect: {
+      en: `Every lot +${SPEC.ecoEco} Eco, wears ${SPEC.ecoWearLess}%/month slower`,
+      th: `ทุกล็อต Eco +${SPEC.ecoEco} และเสื่อมช้าลง ${SPEC.ecoWearLess}%/เดือน`,
+    },
+  },
+}
 
 /** Condition of a plant, what wear does to it, and the overhaul button. */
 export function PlantCard({ uid }: { uid: string }) {
@@ -44,6 +68,41 @@ export function PlantCard({ uid }: { uid: string }) {
               th: `กำลังผลิต ${Math.round(factor * 100)}% · เสื่อม ${WEAR.perMonth}%/เดือน${fix ? ` วิศวกรซ่อมให้ ${fix.toFixed(1)}%/เดือน` : ''} ต่ำกว่า ${WEAR.worn}% ผลิตลดลง ต่ำกว่า ${WEAR.broken}% เสี่ยงอุบัติเหตุ`,
             })}
       </Muted>
+      {b.spec ? (
+        <Muted>
+          {text({ en: 'Specialised: ', th: 'สายที่เลือก: ' })}
+          {text(specNames[b.spec].name)} · {text(specNames[b.spec].effect)}
+        </Muted>
+      ) : b.level >= SPEC.minLevel ? (
+        <>
+          <Text style={styles.text}>
+            {text({
+              en: 'Choose a specialisation (once):',
+              th: 'เลือกสายพัฒนา (เลือกได้ครั้งเดียว):',
+            })}
+          </Text>
+          {(['volume', 'quality', 'eco'] as const).map(id => (
+            <Row key={id}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.text}>{text(specNames[id].name)}</Text>
+                <Muted>{text(specNames[id].effect)}</Muted>
+              </View>
+              <SmallButton
+                label={text({ en: 'Pick', th: 'เลือก' })}
+                color="#FFF6E3"
+                onPress={() => dispatch(s => specialize(s, uid, id))}
+              />
+            </Row>
+          ))}
+        </>
+      ) : (
+        <Muted>
+          {text({
+            en: `At Lv${SPEC.minLevel} you can pick a specialisation: volume, quality or eco.`,
+            th: `ถึง Lv${SPEC.minLevel} เลือกสายพัฒนาได้: เน้นปริมาณ เน้นคุณภาพ หรือเน้นสิ่งแวดล้อม`,
+          })}
+        </Muted>
+      )}
       <View style={{ alignItems: 'flex-start' }}>
         <SmallButton
           label={text({

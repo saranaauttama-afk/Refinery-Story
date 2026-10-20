@@ -46,6 +46,7 @@ export function deserialize(raw: string): GameState {
     if (s.demand === undefined) s.demand = {}
     if (s.trend === undefined) s.trend = { base: null, until: 0 }
     if (s.projects === undefined) s.projects = {}
+    if (s.ads === undefined) s.ads = {}
     if (s.opened === undefined)
       s.opened =
         (record(s.year) && Number(s.year.sold) > 0) ||
@@ -116,6 +117,7 @@ export function deserialize(raw: string): GameState {
     !record(s.demand) ||
     !record(s.trend) ||
     !record(s.projects) ||
+    !record(s.ads) ||
     ['crude', 'monthProfit', 'stormUntil', 'careerManuals', 'merchantUntil'].some(
       k => !Number.isFinite(s[k]),
     ) ||
@@ -132,6 +134,7 @@ export function deserialize(raw: string): GameState {
       !Array.isArray(b.staff) ||
       (b.recipe !== undefined && !validBlend(b.recipe)) ||
       (b.condition !== undefined && !Number.isFinite(b.condition)) ||
+      (b.spec !== undefined && !['volume', 'quality', 'eco'].includes(b.spec as string)) ||
       (b.repairUntil !== undefined && !Number.isFinite(b.repairUntil))
     )
       throw new Error('Invalid building in v4 save')

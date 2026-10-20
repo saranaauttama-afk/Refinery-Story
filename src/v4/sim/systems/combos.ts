@@ -60,13 +60,20 @@ export function refreshCombos(s: GameState): GameState {
     ...s,
     activeCombos,
     discoveredCombos: [...s.discoveredCombos, ...fresh.map(c => c.id)],
-    fame: s.fame + fresh.length * COMBO.fame,
+    fame:
+      s.fame +
+      fresh.reduce(
+        (n, c) =>
+          n +
+          COMBO.fame * (combos.find(d => d.id === c.id)!.hidden ? COMBO.hiddenFameMultiplier : 1),
+        0,
+      ),
     log: [
       ...s.log,
       ...fresh.map(c => ({
         tick: s.tick,
-        en: `New Combo! ${combos.find(d => d.id === c.id)!.name.en}`,
-        th: `พบคอมโบใหม่! ${combos.find(d => d.id === c.id)!.name.th}`,
+        en: `${combos.find(d => d.id === c.id)!.hidden ? 'Secret combo found!' : 'New Combo!'} ${combos.find(d => d.id === c.id)!.name.en}`,
+        th: `${combos.find(d => d.id === c.id)!.hidden ? 'พบคอมโบลับ!' : 'พบคอมโบใหม่!'} ${combos.find(d => d.id === c.id)!.name.th}`,
       })),
     ].slice(-B.logLimit),
   }

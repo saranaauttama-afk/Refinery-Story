@@ -1,4 +1,4 @@
-import { WEAR as W, YARD, B, PRODUCTION, SALES } from '../../data/balance'
+import { WEAR as W, B, PRODUCTION, SALES, SPEC, YARD } from '../../data/balance'
 import { buildingDef } from '../../data/buildings'
 import { bases } from '../../data/bases'
 import { isMonthStart } from '../time'
@@ -18,7 +18,33 @@ export const plantFactor = (s: GameState, b: Building) => {
   if (!wears(b)) return 1
   if (repairing(s, b)) return 0
   const c = conditionOf(b)
-  return c < W.broken ? W.brokenOutput : c < W.worn ? W.wornOutput : 1
+  const spec = b.spec === 'volume' ? 1 + SPEC.volumeOutput : 1
+  return (c < W.broken ? W.brokenOutput : c < W.worn ? W.wornOutput : 1) * spec
+}
+/** Lot stat bonuses from plants specialised in quality or eco. */
+export const specStats = (s: GameState) =>
+  s.yard.buildings.reduce(
+    (n, b) => ({
+      purity: n.purity + (b.spec === 'quality' ? SPEC.qualityPurity : 0),
+      stability: n.stability + (b.spec === 'quality' ? SPEC.qualityStability : 0),
+      eco: n.eco + (b.spec === 'eco' ? SPEC.ecoEco : 0),
+    }),
+    { purity: 0, stability: 0, eco: 0 },
+  )
+export function specialize(
+  s: GameState,
+  uid: string,
+  spec: NonNullable<Building['spec']>,
+): GameState {
+  const b = s.yard.buildings.find(b => b.uid === uid)
+  if (!b || !wears(b) || b.spec || b.level < SPEC.minLevel) return s
+  return {
+    ...s,
+    yard: {
+      ...s.yard,
+      buildings: s.yard.buildings.map(x => (x.uid === uid ? { ...x, spec } : x)),
+    },
+  }
 }
 export const brokenPlants = (s: GameState) =>
   s.yard.buildings.filter(b => wears(b) && conditionOf(b) < W.broken).length
@@ -61,7 +87,16 @@ export function wearSystem(s: GameState): GameState {
         wears(b)
           ? {
               ...b,
-              condition: Math.max(0, Math.min(100, conditionOf(b) - W.perMonth + repairRate(s, b))),
+              condition: Math.max(
+                0,
+                Math.min(
+                  100,
+                  conditionOf(b) -
+                    W.perMonth +
+                    (b.spec === 'eco' ? SPEC.ecoWearLess : 0) +
+                    repairRate(s, b),
+                ),
+              ),
             }
           : b,
       ),

@@ -1,6 +1,6 @@
 import { baseAvailable } from './investments'
 import { recipeKnown } from './research'
-import { plantFactor } from './plant'
+import { plantFactor, specStats } from './plant'
 import { staffStats } from './staff'
 import { getModifiers } from './combos'
 import { PRODUCTION as P, PAIR, GRADES, YARD, GRADE_SCALE } from '../../data/balance'
@@ -22,12 +22,13 @@ export const gradeFor = (score: number, rank = 1): Grade =>
 export function lotStats(s: GameState): Stats {
   const n = P.baseStat * P.crudeQuality[s.crudeType]
   const m = getModifiers(s),
-    p = staffStats(s)
+    p = staffStats(s),
+    sp = specStats(s)
   return {
-    purity: n + m.purity + p.purity,
+    purity: n + m.purity + p.purity + sp.purity,
     yield: (n + m.yield + p.yield) * (1 + m.yieldPct),
-    stability: n + m.stability + p.stability,
-    eco: n + m.eco + p.eco,
+    stability: n + m.stability + p.stability + sp.stability,
+    eco: n + m.eco + p.eco + sp.eco,
   }
 }
 export function predictedScore(s: GameState, base = s.blend.base, additive = s.blend.additive) {

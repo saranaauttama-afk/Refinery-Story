@@ -12,6 +12,7 @@ import { combos } from '../data/combos'
 import { CustomersPanel } from './CustomersPanel'
 import { BlendPanel } from './BlendPanel'
 import { Alerts } from './Alerts'
+import { EventToast } from './EventToast'
 import { useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { BuildingSprite } from '../render/BuildingSprite'
@@ -94,6 +95,7 @@ export function YardScreen() {
             }}
           />
         )}
+        {!ghost && <EventToast />}
       </View>
       {ghost && (
         <View

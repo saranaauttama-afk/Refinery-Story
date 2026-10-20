@@ -52,6 +52,7 @@ For every sprite: stay within the existing logical footprint, keep its anchor st
 **Optional Phase 2:** PixelLab sprites only if visual reviews justify it. Keep the same 2:1 view, footprint, anchor, silhouette, limited palette, transparency, and nearest-neighbor scaling. Replace rendering assets, not gameplay rules.
 
 ## Acceptance checklist
+
 - [x] Each of the six buildings is distinct when shown without labels.
 - [x] Buildings fit their actual footprints and do not obscure placement decisions.
 - [x] 16×16 starter yard stays readable with several buildings packed together.

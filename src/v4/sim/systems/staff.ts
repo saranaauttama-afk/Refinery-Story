@@ -116,8 +116,8 @@ export function train(s: GameState, uid: string, training: TrainingId): GameStat
       ...s.log,
       {
         tick: s.tick,
-        en: superUp ? 'Super Up!' : 'Training complete',
-        th: superUp ? 'Super Up!' : 'ฝึกอบรมสำเร็จ',
+        en: `${p.name}: ${superUp ? 'Super Up!' : 'training complete'}${unlocked.length ? ' · new additive unlocked' : ''}`,
+        th: `${p.name}: ${superUp ? 'Super Up!' : 'ฝึกเสร็จ'}${unlocked.length ? ' · ปลดสารเติมแต่งใหม่' : ''}`,
       },
     ].slice(-B.logLimit),
   }

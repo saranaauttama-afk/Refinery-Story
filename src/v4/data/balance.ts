@@ -102,6 +102,21 @@ export const WEAR = {
   // Incident odds rise by this much for each plant below the broken line.
   incidentPerBroken: 0.5,
 }
+// Phase C: from Lv3 a plant can specialise once.
+export const SPEC = {
+  minLevel: 3,
+  volumeOutput: 0.15,
+  qualityPurity: 6,
+  qualityStability: 6,
+  ecoEco: 8,
+  ecoWearLess: 1,
+}
+// Phase C: an ad campaign resets one product's demand and lifts it for a month.
+export const ADS = {
+  minCost: 20000,
+  profitShare: 0.5,
+  boost: 1.25,
+}
 // Phase B: big repeatable projects soak up late-game money.
 export const PROJECTS = {
   export: { rank: 5, cost: 5_000_000, growth: 1.8, pricePerLevel: 0.05, max: 10 },
@@ -147,6 +162,8 @@ export const SALES = {
 export const COMBO = {
   distance: 2,
   fame: 20,
+  // Secret combos are worth this many times the Fame.
+  hiddenFameMultiplier: 3,
   hintCost: 500,
   auraPower: 10,
   aura: [
@@ -190,6 +207,8 @@ export const PROGRESSION = {
   eventsPerMonth: 2,
   stormWeeks: 1,
   spillMoney: 2000,
+  // Spill fine = max(spillMoney, building value × spillShare).
+  spillShare: 0.02,
   spillFame: 10,
   safeThreshold: 60,
   inspectorMoney: 3000,

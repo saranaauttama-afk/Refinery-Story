@@ -309,20 +309,20 @@ the owner checks on the APK.
 
 ## 5. Status
 
-| Milestone                | Status                                           | Commit                                            | APK run      | Owner verdict |
-| ------------------------ | ------------------------------------------------ | ------------------------------------------------- | ------------ | ------------- |
-| M0 Clean slate           | implemented; APK verification pending            | commit titled `feat(v4): complete M0 clean slate` | pending      | deferred      |
-| M1 Sim core              | done; automated checks passed                    | feat(v4): M1 sim core                             | automatic CI | deferred      |
-| M2 Yard                  | done; automated checks passed                    | feat(v4): M2 yard                                 | automatic CI | deferred      |
-| M2b Art pass 1           | done; automated art checks and web export passed | feat(v4): M2b code-drawn art                      | automatic CI | deferred      |
-| M3 Production & blending | done; automated checks passed                    | feat(v4): M3 production and blending              | automatic CI | deferred      |
-| M4 Customers & contracts | done; automated checks passed                    | feat(v4): M4 customers and contracts              | automatic CI | deferred      |
-| M5 Combos                | done; automated checks passed                    | feat(v4): M5 combos and auras                     | automatic CI | deferred      |
-| M6 Staff                 | done; automated checks passed                    | feat(v4): M6 staff                                | automatic CI | deferred      |
-| M7 Progression           | done; automated checks passed                    | feat(v4): M7 progression                          | automatic CI | deferred      |
-| M8 Balance & polish      | done; 20-seed checks passed                      | feat(v4): M8 balance and polish                   | automatic CI | deferred      |
-| M9 Cleanup (Claude)      | done                                             | see git log                                       | pending      | pending       |
-| UI redesign 4.0.13 | implemented; TypeScript, sim checks, web export and 390×844 browser checks passed | `feat(v4): complete chunky pixel industrial UI redesign` | Android Preview APK on push | deferred |
+| Milestone                | Status                                                                            | Commit                                                   | APK run                     | Owner verdict |
+| ------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------- | ------------- |
+| M0 Clean slate           | implemented; APK verification pending                                             | commit titled `feat(v4): complete M0 clean slate`        | pending                     | deferred      |
+| M1 Sim core              | done; automated checks passed                                                     | feat(v4): M1 sim core                                    | automatic CI                | deferred      |
+| M2 Yard                  | done; automated checks passed                                                     | feat(v4): M2 yard                                        | automatic CI                | deferred      |
+| M2b Art pass 1           | done; automated art checks and web export passed                                  | feat(v4): M2b code-drawn art                             | automatic CI                | deferred      |
+| M3 Production & blending | done; automated checks passed                                                     | feat(v4): M3 production and blending                     | automatic CI                | deferred      |
+| M4 Customers & contracts | done; automated checks passed                                                     | feat(v4): M4 customers and contracts                     | automatic CI                | deferred      |
+| M5 Combos                | done; automated checks passed                                                     | feat(v4): M5 combos and auras                            | automatic CI                | deferred      |
+| M6 Staff                 | done; automated checks passed                                                     | feat(v4): M6 staff                                       | automatic CI                | deferred      |
+| M7 Progression           | done; automated checks passed                                                     | feat(v4): M7 progression                                 | automatic CI                | deferred      |
+| M8 Balance & polish      | done; 20-seed checks passed                                                       | feat(v4): M8 balance and polish                          | automatic CI                | deferred      |
+| M9 Cleanup (Claude)      | done                                                                              | see git log                                              | pending                     | pending       |
+| UI redesign 4.0.13       | implemented; TypeScript, sim checks, web export and 390×844 browser checks passed | `feat(v4): complete chunky pixel industrial UI redesign` | Android Preview APK on push | deferred      |
 
 ### M0 validation
 
