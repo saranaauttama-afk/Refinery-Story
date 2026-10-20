@@ -7,6 +7,9 @@ import { jobs } from '../data/staff'
 import { YARD, B } from '../data/balance'
 import { upgrade, demolish } from '../sim/actions'
 import { upgradeCost, comboLeadsFor } from '../sim/systems/yardInfo'
+import { recipeOf, predictedScore, gradeFor } from '../sim/systems/blending'
+import { bases } from '../data/bases'
+import { additives } from '../data/additives'
 import { effectText } from './RecipeBook'
 import { styles } from './controls'
 import { Card, Section, Row, SmallButton, Muted, Chip } from './cards'
@@ -16,10 +19,12 @@ export function BuildingInfo({
   uid,
   onMove,
   onClose,
+  onRecipe,
 }: {
   uid: string
   onMove: () => void
   onClose: () => void
+  onRecipe: () => void
 }) {
   const { state: s, dispatch } = useGame()
   const b = s.yard.buildings.find(b => b.uid === uid)
@@ -41,6 +46,31 @@ export function BuildingInfo({
         </Muted>
       </Row>
       <Text style={styles.text}>{text(infoFor(b.defId))}</Text>
+      {b.defId === 'blend' &&
+        (() => {
+          const r = recipeOf(s, b)
+          const grade = gradeFor(predictedScore(s, r.base, r.additive), s.rank)
+          return (
+            <Card>
+              <Row>
+                <View style={{ flex: 1 }}>
+                  <Muted>{text({ en: 'Mixing now', th: 'กำลังผสม' })}</Muted>
+                  <Text style={styles.heading}>
+                    {text(bases.find(x => x.id === r.base)!.name)}
+                    {r.additive
+                      ? ` + ${text(additives.find(a => a.id === r.additive)!.name)}`
+                      : ''}{' '}
+                    · {grade}
+                  </Text>
+                </View>
+                <SmallButton
+                  label={text({ en: 'Change recipe', th: 'เปลี่ยนสูตร' })}
+                  onPress={onRecipe}
+                />
+              </Row>
+            </Card>
+          )
+        })()}
       {(['process', 'blend', 'support'] as string[]).includes(d.category) && (
         <>
           <Section>{text({ en: 'Staff here', th: 'พนักงานประจำ' })}</Section>

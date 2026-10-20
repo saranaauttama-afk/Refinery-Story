@@ -29,6 +29,28 @@ const truckAccent = (customerId: string | null) => {
   const base = customers.find(c => c.id === customerId)?.base
   return (base && productAccent[base]) || '#E2483D'
 }
+function landCenter(s: GameState) {
+  // Frame the buildings when there are some, otherwise the owned land.
+  const pts = s.yard.buildings.length
+    ? s.yard.buildings.flatMap(b => {
+        const d = buildingDef(b.defId)
+        return [
+          [b.x, b.y],
+          [b.x + d.w, b.y + d.h],
+        ]
+      })
+    : s.yard.ownedParcels.flatMap(p => {
+        const [x, y] = p.split(',').map(Number)
+        return [
+          [x * YARD.parcel, y * YARD.parcel],
+          [(x + 1) * YARD.parcel, (y + 1) * YARD.parcel],
+        ]
+      })
+  if (!pts.length) return toScreen(YARD.parcel / 2, YARD.parcel / 2)
+  const xs = pts.map(([x]) => x),
+    ys = pts.map(([, y]) => y)
+  return toScreen((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2)
+}
 export function YardCanvas({
   state: s,
   ghost,
@@ -42,6 +64,7 @@ export function YardCanvas({
     [camera, setCamera] = useState({ x: 0, y: 60, zoom: YARD.defaultZoom }),
     [frame, setFrame] = useState(0),
     [reduced, setReduced] = useState(false)
+  const centered = useRef(false)
   const cameraRef = useRef(camera),
     origin = useRef(camera),
     tickAt = useRef(0),
@@ -213,7 +236,7 @@ export function YardCanvas({
             canvas.drawCircle(5 + phase * 8, -d.height - 8 - phase * 18, 2 + phase * 4, paint)
           }
         }
-        if (b.defId === 'blend' && s.baseStock[s.blend.base] > 0)
+        if (b.defId === 'blend' && s.baseStock[(b.recipe ?? s.blend).base] > 0)
           drawCommands(canvas, [
             rect(-5, -20, Math.abs(Math.sin(visualTime * 4)) * 12 + 1, 1, '#B5653A'),
           ])
@@ -270,7 +293,7 @@ export function YardCanvas({
     visualTime,
     buildingPictures,
     s.baseStock,
-    s.blend.base,
+    s.blend,
     reduced,
     ghost,
     ghostPath,
@@ -278,7 +301,17 @@ export function YardCanvas({
   return (
     <View
       style={{ flex: 1 }}
-      onLayout={e => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      onLayout={e => {
+        const w = e.nativeEvent.layout.width,
+          h = e.nativeEvent.layout.height
+        setSize({ w, h })
+        if (!centered.current && h > 0) {
+          // Open with the owned land in the middle of the view instead of empty sky.
+          centered.current = true
+          const c = landCenter(s)
+          setCamera(cam => ({ ...cam, x: -c.x * cam.zoom, y: h / 2 - c.y * cam.zoom }))
+        }
+      }}
     >
       <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
         <Canvas style={{ flex: 1, backgroundColor: '#B5DBEA' }}>

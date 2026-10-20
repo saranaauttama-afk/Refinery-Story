@@ -1,17 +1,22 @@
 import { baseAvailable } from './investments'
 import { staffStats } from './staff'
 import { getModifiers } from './combos'
-import { PRODUCTION as P, PAIR, GRADES, YARD } from '../../data/balance'
+import { PRODUCTION as P, PAIR, GRADES, YARD, GRADE_SCALE } from '../../data/balance'
 import { pairCompat, type Compat } from '../../data/compatibility'
 import type { BaseId } from '../../data/bases'
 import type { AdditiveId } from '../../data/additives'
-import type { GameState, Stats, Grade } from '../types'
+import type { GameState, Stats, Grade, Building, Recipe } from '../types'
 export const scoreLot = (stats: Stats, pair: Compat, familiarity: number, comboBonus = 0) =>
   Object.values(stats).reduce((a, b) => a + b, 0) *
   PAIR[pair] *
   (1 + P.familiarityBonus * familiarity) *
   (1 + comboBonus)
-export const gradeFor = (score: number): Grade => GRADES.find(g => score >= g.min)?.id ?? 'C'
+export const gradeScale = (rank: number) =>
+  GRADE_SCALE[Math.max(0, Math.min(GRADE_SCALE.length - 1, rank - 1))]
+/** Minimum score for each grade at this rank. */
+export const gradeMin = (rank: number, min: number) => Math.round(min * gradeScale(rank))
+export const gradeFor = (score: number, rank = 1): Grade =>
+  GRADES.find(g => score >= gradeMin(rank, g.min))?.id ?? 'C'
 export function lotStats(s: GameState): Stats {
   const n = P.baseStat * P.crudeQuality[s.crudeType]
   const m = getModifiers(s),
@@ -34,9 +39,32 @@ export function predictedScore(s: GameState, base = s.blend.base, additive = s.b
     (base === 'gasoline' ? m.gasolineScore : 0)
   )
 }
-export function selectBlend(s: GameState, base: BaseId, additive: AdditiveId | null): GameState {
+export const blendStations = (s: GameState) => s.yard.buildings.filter(b => b.defId === 'blend')
+export const recipeOf = (s: GameState, b: Building): Recipe => b.recipe ?? s.blend
+/** Every recipe currently running, one per station (or the default when there is none). */
+export const activeRecipes = (s: GameState): Recipe[] => {
+  const st = blendStations(s)
+  return st.length ? st.map(b => recipeOf(s, b)) : [s.blend]
+}
+/** Pick a recipe. With a station uid only that station changes; without one, all stations do. */
+export function selectBlend(
+  s: GameState,
+  base: BaseId,
+  additive: AdditiveId | null,
+  station?: string,
+): GameState {
   if (!baseAvailable(s, base) || (additive && !s.unlockedAdditives.includes(additive))) return s
-  return { ...s, blend: { base, additive } }
+  const recipe = { base, additive }
+  return {
+    ...s,
+    blend: recipe,
+    yard: {
+      ...s.yard,
+      buildings: s.yard.buildings.map(b =>
+        b.defId === 'blend' && (!station || b.uid === station) ? { ...b, recipe } : b,
+      ),
+    },
+  }
 }
 export const tankCapacity = (s: GameState) =>
   s.yard.buildings
@@ -46,12 +74,12 @@ export const tankCapacity = (s: GameState) =>
 export const tankUnits = (s: GameState) => s.tanks.reduce((n, l) => n + l.units, 0)
 export function blending(s: GameState): GameState {
   if (s.tick % P.cycle !== 0 || s.tick < s.stormUntil) return s
-  const stations = s.yard.buildings.filter(b => b.defId === 'blend')
+  const stations = blendStations(s)
   if (!stations.length) return s
   const capacity = tankCapacity(s)
   let next = s
   for (const station of stations) {
-    const { base, additive } = next.blend
+    const { base, additive } = recipeOf(next, station)
     const units = P.lotUnits * (1 + YARD.outputPerLevel * (station.level - 1))
     if (next.baseStock[base] < units) continue
     if (tankUnits(next) + units > capacity) {
@@ -74,8 +102,8 @@ export function blending(s: GameState): GameState {
       continue
     }
     const stats = lotStats(next),
-      score = predictedScore(next),
-      grade = gradeFor(score),
+      score = predictedScore(next, base, additive),
+      grade = gradeFor(score, next.rank),
       key = `${base}:${additive ?? 'none'}`,
       first = !next.triedPairs.includes(key)
     const familiarity = { ...next.familiarity },

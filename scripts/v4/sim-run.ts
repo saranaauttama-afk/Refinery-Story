@@ -6,7 +6,13 @@ import { buildStarter } from '../../src/v4/sim/systems/starter'
 import { place, canPlace, upgrade } from '../../src/v4/sim/systems/yard'
 import { recruit, hire, assign, train, levelUp } from '../../src/v4/sim/systems/staff'
 import { invest, baseAvailable } from '../../src/v4/sim/systems/investments'
-import { selectBlend, predictedScore } from '../../src/v4/sim/systems/blending'
+import {
+  selectBlend,
+  predictedScore,
+  blendStations,
+  recipeOf,
+  activeRecipes,
+} from '../../src/v4/sim/systems/blending'
 import { acceptContract, deliverContract } from '../../src/v4/sim/systems/contracts'
 import { bases } from '../../src/v4/data/bases'
 import { hiring, trainings } from '../../src/v4/data/staff'
@@ -129,27 +135,44 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
       (!['jet'].includes(b.id) || s.investments.airport > 0) &&
       (!['wax', 'pellet'].includes(b.id) || s.investments.industrial > 0),
   )
-  let best:
-    { base: typeof s.blend.base; additive: typeof s.blend.additive; value: number } | undefined
-  for (const b of options)
-    for (const additive of [null, ...s.unlockedAdditives]) {
-      const score = predictedScore(s, b.id, additive)
-      const value = salePrice(s, { base: b.id, grade: gradeFor(score) })
-      if (!best || value > best.value) best = { base: b.id, additive, value }
-    }
-  if (best && roll(bot) < bot.explore) {
-    // Curious player: try something else this week.
-    const pick = options[Math.floor(roll(bot) * options.length)]
-    const additives = [null, ...s.unlockedAdditives]
-    best = {
-      base: pick.id,
-      additive: additives[Math.floor(roll(bot) * additives.length)],
-      value: 0,
-    }
-  }
-  if (best) s = selectBlend(s, best.base, best.additive)
+  // Best additive for each available base, then the bases ranked by sale value.
+  type Pick = { base: typeof s.blend.base; additive: typeof s.blend.additive; value: number }
+  const ranked: Pick[] = options
+    .map(b => {
+      let best: Pick | undefined
+      for (const additive of [null, ...s.unlockedAdditives]) {
+        const score = predictedScore(s, b.id, additive)
+        const value = salePrice(s, { base: b.id, grade: gradeFor(score, s.rank) })
+        if (!best || value > best.value) best = { base: b.id, additive, value }
+      }
+      return best!
+    })
+    .sort((a, b) => b.value - a.value)
+  const stations = blendStations(s)
+  // Like a player: every station runs the best product while its base lasts, extra stations
+  // move to the next-best product instead of waiting.
+  const reserved: Record<string, number> = {}
+  if (ranked.length)
+    stations.forEach(st => {
+      let pick = ranked.find(r => s.baseStock[r.base] - (reserved[r.base] ?? 0) >= 600) ?? ranked[0]
+      reserved[pick.base] = (reserved[pick.base] ?? 0) + 600
+      if (roll(bot) < bot.explore) {
+        // Curious player: try something else this week.
+        const base = options[Math.floor(roll(bot) * options.length)]
+        const additives = [null, ...s.unlockedAdditives]
+        pick = {
+          base: base.id,
+          additive: additives[Math.floor(roll(bot) * additives.length)],
+          value: 0,
+        }
+      }
+      const cur = recipeOf(s, st)
+      if (cur.base !== pick.base || cur.additive !== pick.additive)
+        s = selectBlend(s, pick.base, pick.additive, st.uid)
+    })
+  const mixing = new Set(activeRecipes(s).map(r => r.base))
   for (const c of s.contracts.offers)
-    if (c.base === s.blend.base && s.contracts.active.length < 3) s = acceptContract(s, c.uid)
+    if (mixing.has(c.base) && s.contracts.active.length < 3) s = acceptContract(s, c.uid)
   return s
 }
 export function simulate(seed: number, years = 16) {

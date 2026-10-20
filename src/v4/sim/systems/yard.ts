@@ -54,7 +54,16 @@ export function place(s: GameState, id: string, x: number, y: number): GameState
     !canPlace(s, id, x, y)
   )
     return s
-  const b: Building = { uid: `b${s.nextId}`, defId: id, x, y, level: 1, staff: [], cost: d.cost }
+  const b: Building = {
+    uid: `b${s.nextId}`,
+    defId: id,
+    x,
+    y,
+    level: 1,
+    staff: [],
+    cost: d.cost,
+    ...(id === 'blend' ? { recipe: { ...s.blend } } : {}),
+  }
   const placed = refreshCombos({
     ...s,
     nextId: s.nextId + 1,

@@ -7,6 +7,12 @@ export interface Building {
   level: number
   staff: string[]
   cost: number
+  /** Blend stations only: what this station mixes. Falls back to GameState.blend. */
+  recipe?: Recipe
+}
+export interface Recipe {
+  base: import('../data/bases').BaseId
+  additive: import('../data/additives').AdditiveId | null
 }
 export interface Staff {
   uid: string
@@ -38,10 +44,8 @@ export interface GameState {
   cuts: Record<import('../data/bases').CutId, number>
   baseStock: Record<import('../data/bases').BaseId, number>
   tanks: Lot[]
-  blend: {
-    base: import('../data/bases').BaseId
-    additive: import('../data/additives').AdditiveId | null
-  }
+  /** Default recipe for new blend stations (and the last one picked). */
+  blend: Recipe
   familiarity: Record<string, number>
   useCounts: Record<string, number>
   triedPairs: string[]

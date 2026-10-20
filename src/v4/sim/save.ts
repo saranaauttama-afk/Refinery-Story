@@ -102,7 +102,8 @@ export function deserialize(raw: string): GameState {
       !Number.isInteger(b.x) ||
       !Number.isInteger(b.y) ||
       !Number.isInteger(b.level) ||
-      !Array.isArray(b.staff)
+      !Array.isArray(b.staff) ||
+      (b.recipe !== undefined && !validBlend(b.recipe))
     )
       throw new Error('Invalid building in v4 save')
   }

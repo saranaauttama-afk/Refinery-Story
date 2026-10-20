@@ -119,16 +119,26 @@ Score = (Purity + Yield + Stability + Eco)
 M_pair: S 1.5, A 1.25, B 1.1, C 1.0, D 0.85, F 0.6
 ```
 
-| Grade | Score | Price × |
+| Grade | Score at rank 1 | Price × |
 | --- | --- | --- |
-| SS | ≥ 400 | 2.5 |
-| S | 300–399 | 1.8 |
-| A | 200–299 | 1.3 |
+| SS | ≥ 400 | 2.7 |
+| S | 300–399 | 1.9 |
+| A | 200–299 | 1.35 |
 | B | 120–199 | 1.0 |
 | C | < 120 | 0.8 |
 
-Target score: early game 80–150 (C–B), mid 200–300, late game SS possible with
-an S pair + combos + strong staff. Thresholds get tuned after playtest.
+**Pickier buyers:** thresholds are multiplied by `GRADE_SCALE[rank]` =
+1, 1.1, 1.2, 1.3, 1.45, 2.4, 4.5, 8, 12, 16 (ranks 1–10). Scores grow fast once
+staff and combos stack, so without this SS was reached in year 2 and grade stopped
+mattering (playtest v4.0.11). SS stays reachable at every rank but has to be
+chased. The Blend sheet shows the current SS line.
+
+**Stations:** each Blending Station runs its own Base × Additive recipe (a new
+station starts on the last recipe picked). Every base a station is mixing is
+refined from its own cut, so a second product line uses cuts that would
+otherwise sit idle. Product tanks stay one shared pool; lots keep their own
+grade. Each extra kind of product in the tanks draws more buyers (arrival ×
+(1 + 0.8 per extra product), up to 3 products).
 
 ---
 

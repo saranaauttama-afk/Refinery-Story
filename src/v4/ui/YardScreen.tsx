@@ -11,6 +11,7 @@ import { detectCombos } from '../sim/systems/combos'
 import { combos } from '../data/combos'
 import { CustomersPanel } from './CustomersPanel'
 import { BlendPanel } from './BlendPanel'
+import { Alerts } from './Alerts'
 import { useState } from 'react'
 import { View, Text } from 'react-native'
 import { useGame } from '../store/useGame'
@@ -33,26 +34,38 @@ export function YardScreen() {
   const { state: s, dispatch } = useGame()
   const [panel, setPanel] = useState('')
   const [selected, setSelected] = useState('')
+  const [blendStation, setBlendStation] = useState<string>()
   const [ghost, setGhost] = useState<{ id: string; x: number; y: number; uid?: string }>()
   const b = s.yard.buildings.find(b => b.uid === selected)
   return (
     <View style={{ flex: 1 }}>
       <HUD />
       <Onboarding onPlace={(id, x, y) => setGhost({ id, x, y })} />
-      <YardCanvas
-        state={s}
-        ghost={ghost}
-        onTile={(x, y) => {
-          if (ghost) setGhost({ ...ghost, x, y })
-          else {
-            const b = buildingAt(s, x, y)
-            if (b) {
-              setSelected(b.uid)
-              setPanel('info')
+      <View style={{ flex: 1 }}>
+        <YardCanvas
+          state={s}
+          ghost={ghost}
+          onTile={(x, y) => {
+            if (ghost) setGhost({ ...ghost, x, y })
+            else {
+              const b = buildingAt(s, x, y)
+              if (b) {
+                setSelected(b.uid)
+                setPanel('info')
+              }
             }
-          }
-        }}
-      />
+          }}
+        />
+        {!ghost && !panel && (
+          <Alerts
+            onOpen={a => {
+              const station = a.id.startsWith('idle:') ? a.id.split(':')[1] : undefined
+              setBlendStation(station)
+              setPanel(a.tab)
+            }}
+          />
+        )}
+      </View>
       {ghost && (
         <View
           style={{
@@ -138,7 +151,10 @@ export function YardScreen() {
             }
             label={tab}
             color={tab.color}
-            onPress={() => setPanel(tab.id)}
+            onPress={() => {
+              setBlendStation(undefined)
+              setPanel(tab.id)
+            }}
           />
         ))}
       </View>
@@ -166,7 +182,7 @@ export function YardScreen() {
       )}
       {panel === 'blend' && (
         <Sheet title={{ en: 'Blend', th: 'ผสมผลิตภัณฑ์' }} onClose={() => setPanel('')}>
-          <BlendPanel />
+          <BlendPanel station={blendStation} />
         </Sheet>
       )}
       {panel === 'build' && (
@@ -188,6 +204,10 @@ export function YardScreen() {
               setPanel('')
             }}
             onClose={() => setPanel('')}
+            onRecipe={() => {
+              setBlendStation(b.uid)
+              setPanel('blend')
+            }}
           />
         </Sheet>
       )}

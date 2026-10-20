@@ -11,7 +11,12 @@ import {
   lotStats,
   tankCapacity,
   tankUnits,
+  blendStations,
+  recipeOf,
+  gradeScale,
+  gradeMin,
 } from '../sim/systems/blending'
+import { useState } from 'react'
 import { salePrice } from '../sim/systems/customers'
 import { GRADES, SALES } from '../data/balance'
 import { productAccent } from '../render/palette'
@@ -101,19 +106,73 @@ function Option({
   )
 }
 
-export function BlendPanel() {
+export function BlendPanel({ station: initial }: { station?: string }) {
   const { state: s, dispatch } = useGame()
-  const score = predictedScore(s)
-  const grade = gradeFor(score)
+  const stations = blendStations(s)
+  const [picked, setPicked] = useState(initial)
+  const station = stations.find(b => b.uid === picked) ?? stations[0]
+  const r = station ? recipeOf(s, station) : s.blend
+  const pick = (base: BaseId, additive: AdditiveId | null) =>
+    dispatch(s => selectBlend(s, base, additive, station?.uid))
+  const score = predictedScore(s, r.base, r.additive)
+  const grade = gradeFor(score, s.rank)
   const stats = lotStats(s)
   const baseName = (id: string) => text(bases.find(b => b.id === id)!.name)
-  const perTruck = Math.round(salePrice(s, { base: s.blend.base, grade }) * SALES.units)
+  const perTruck = Math.round(salePrice(s, { base: r.base, grade }) * SALES.units)
   const multiplier = GRADES.find(g => g.id === grade)!.price
   const capacity = tankCapacity(s)
   const used = tankUnits(s)
   const thresholds = [...GRADES].reverse()
   return (
     <>
+      {stations.length > 1 && (
+        <>
+          <Muted>
+            {text({
+              en: 'Each station mixes its own recipe. Pick a station to change it.',
+              th: 'แต่ละสถานีผสมสูตรของตัวเอง เลือกสถานีที่จะเปลี่ยนสูตร',
+            })}
+          </Muted>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {stations.map((b, i) => {
+              const on = b.uid === station?.uid
+              const sr = recipeOf(s, b)
+              return (
+                <Pressable
+                  key={b.uid}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => setPicked(b.uid)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    borderWidth: on ? 3 : 2,
+                    borderRadius: 16,
+                    paddingHorizontal: 10,
+                    paddingVertical: 3,
+                    backgroundColor: on ? '#14110F' : '#FFFFFF',
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      borderWidth: 1,
+                      borderColor: '#FFF6E3',
+                      backgroundColor: productAccent[sr.base] ?? '#D8D2C4',
+                    }}
+                  />
+                  <Text style={[styles.text, { fontSize: 13 }, on && { color: '#FFF6E3' }]}>
+                    {text({ en: `Station ${i + 1}`, th: `สถานี ${i + 1}` })} · {baseName(sr.base)}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </View>
+        </>
+      )}
       <Card>
         <Row gap={12}>
           <View
@@ -133,15 +192,21 @@ export function BlendPanel() {
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.heading}>
-              {baseName(s.blend.base)} +{' '}
-              {s.blend.additive
-                ? text(additives.find(a => a.id === s.blend.additive)!.name)
+              {baseName(r.base)} +{' '}
+              {r.additive
+                ? text(additives.find(a => a.id === r.additive)!.name)
                 : text({ en: 'no additive', th: 'ไม่ใส่สาร' })}
             </Text>
             <Muted>
               {text({
                 en: `Score ${Math.round(score)} · sells ×${multiplier} · ~$${perTruck.toLocaleString()} per truck`,
                 th: `คะแนน ${Math.round(score)} · ขาย ×${multiplier} · ~$${perTruck.toLocaleString()} ต่อคันรถ`,
+              })}
+            </Muted>
+            <Muted>
+              {text({
+                en: `SS needs ${gradeMin(s.rank, GRADES[0].min).toLocaleString()} at rank ${s.rank} · buyers get pickier as you rank up`,
+                th: `SS ต้องได้ ${gradeMin(s.rank, GRADES[0].min).toLocaleString()} ที่แรงก์ ${s.rank} · ยิ่งแรงก์สูง ลูกค้ายิ่งเรื่องมาก`,
               })}
             </Muted>
             <View
@@ -165,7 +230,7 @@ export function BlendPanel() {
               <View
                 style={{
                   position: 'absolute',
-                  left: `${Math.min(98, (score / SCORE_MAX) * 100)}%`,
+                  left: `${Math.min(98, (score / gradeScale(s.rank) / SCORE_MAX) * 100)}%`,
                   top: -2,
                   width: 3,
                   height: 14,
@@ -221,9 +286,9 @@ export function BlendPanel() {
                 en: `ready ${Math.floor(s.baseStock[b.id])}`,
                 th: `พร้อม ${Math.floor(s.baseStock[b.id])}`,
               })}
-              selected={s.blend.base === b.id}
-              badge={recipeBadge(s, b.id, s.blend.additive)}
-              onPress={() => dispatch(s => selectBlend(s, b.id, s.blend.additive))}
+              selected={r.base === b.id}
+              badge={recipeBadge(s, b.id, r.additive)}
+              onPress={() => pick(b.id, r.additive)}
             />
           ))}
       </View>
@@ -231,17 +296,17 @@ export function BlendPanel() {
         {text({ en: 'Additive', th: 'สารเติมแต่ง' })}{' '}
         <Text style={[styles.text, { fontSize: 13, color: '#5E6470' }]}>
           {text({
-            en: `(letter = how well it suits ${baseName(s.blend.base)}, NEW = first try +10★)`,
-            th: `(ตัวอักษร = เข้ากับ${baseName(s.blend.base)}แค่ไหน, NEW = ลองครั้งแรก +10★)`,
+            en: `(letter = how well it suits ${baseName(r.base)}, NEW = first try +10★)`,
+            th: `(ตัวอักษร = เข้ากับ${baseName(r.base)}แค่ไหน, NEW = ลองครั้งแรก +10★)`,
           })}
         </Text>
       </Section>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         <Option
           label={text({ en: 'None', th: 'ไม่ใส่' })}
-          selected={s.blend.additive === null}
-          badge={recipeBadge(s, s.blend.base, null)}
-          onPress={() => dispatch(s => selectBlend(s, s.blend.base, null))}
+          selected={r.additive === null}
+          badge={recipeBadge(s, r.base, null)}
+          onPress={() => pick(r.base, null)}
         />
         {additives
           .filter(a => s.unlockedAdditives.includes(a.id))
@@ -249,9 +314,9 @@ export function BlendPanel() {
             <Option
               key={a.id}
               label={text(a.name)}
-              selected={s.blend.additive === a.id}
-              badge={recipeBadge(s, s.blend.base, a.id)}
-              onPress={() => dispatch(s => selectBlend(s, s.blend.base, a.id))}
+              selected={r.additive === a.id}
+              badge={recipeBadge(s, r.base, a.id)}
+              onPress={() => pick(r.base, a.id)}
             />
           ))}
       </View>

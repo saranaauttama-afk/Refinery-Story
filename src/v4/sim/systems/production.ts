@@ -1,6 +1,7 @@
 import { baseAvailable } from './investments'
 import { getModifiers } from './combos'
 import { truckRoute } from './customers'
+import { activeRecipes } from './blending'
 import { SALES } from '../../data/balance'
 import { PRODUCTION as P, YARD } from '../../data/balance'
 import { bases, type CutId } from '../../data/bases'
@@ -62,21 +63,27 @@ export function production(s: GameState): GameState {
         cuts[k] = Math.min(P.cutCapacity, cuts[k] + qty / 4)
     }
   }
-  const base = bases.find(b => b.id === s.blend.base)!
-  const units =
-    P.lotUnits *
-    s.yard.buildings
-      .filter(b => b.defId === base.unit)
-      .reduce((n, b) => n + 1 + YARD.outputPerLevel * (b.level - 1), 0) *
-    (1 + getModifiers(s).production)
-  if (
-    baseAvailable(s, base.id) &&
-    has(base.unit) &&
-    cuts[base.cut] >= units &&
-    baseStock[base.id] + units <= P.cutCapacity
-  ) {
-    cuts[base.cut] -= units
-    baseStock[base.id] += units
+  // Every base a station is mixing gets refined from its own cut, so a second product line
+  // uses crude cuts that would otherwise sit idle. Bases sharing a cut compete for it.
+  const wanted = [...new Set(activeRecipes(s).map(r => r.base))]
+  for (const id of wanted) {
+    const base = bases.find(b => b.id === id)!
+    const units =
+      P.lotUnits *
+      s.yard.buildings
+        .filter(b => b.defId === base.unit)
+        .reduce((n, b) => n + 1 + YARD.outputPerLevel * (b.level - 1), 0) *
+      (1 + getModifiers(s).production)
+    if (
+      units > 0 &&
+      baseAvailable(s, base.id) &&
+      has(base.unit) &&
+      cuts[base.cut] >= units &&
+      baseStock[base.id] + units <= P.cutCapacity
+    ) {
+      cuts[base.cut] -= units
+      baseStock[base.id] += units
+    }
   }
   return {
     ...s,

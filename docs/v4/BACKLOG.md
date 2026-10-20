@@ -3,20 +3,18 @@
 Running log of feedback and ideas from Sarana's APK playtests. Nothing here is
 decided until it moves into PLAN.md.
 
-## Open — waiting for a decision
+## Decided (v4.0.12)
 
-| #   | From       | Topic                                     | Notes / options                                                                                                                                                                                                                         |
-| --- | ---------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | v4.0.11 Y3 | **SS is too easy**                        | Y3 blend scored 623, but SS starts at 400. After that, grade gives nothing to chase. Options: (a) grade thresholds rise with rank (big buyers get pickier); (b) add an SSS tier for late game.                                          |
-| 2   | v4.0.11 Y3 | **One recipe for all blend stations**     | Every station uses the same base and additive, so a second station only adds speed. Gasoline sat unused (4,695 units) while diesel was selected. Proposal: each station sets its own recipe, so a new station opens a new product line. |
-| 3   | v4.0.11 Y3 | **Product tanks: shared or per product?** | Now one shared pool: each tank adds 1,200 capacity, and lots of any product sit together with their own grade. Proposal: keep it shared (simpler). If split tanks come later, make them flavor, e.g. an LPG sphere.                     |
-| 4   | v4.0.11 Y3 | **Yard tells you what to do next**        | Short alerts on the yard: tank near full, new contract offer, staff out of power, base stock piling up. The player then doesn't have to open every sheet to check.                                                                      |
+- **SS harder, still reachable:** grade thresholds scale with rank (`GRADE_SCALE`).
+- **Per-station recipes:** each blend station has its own recipe; more product kinds bring more buyers.
+- **Tanks stay shared.**
+- **Yard notices are optional:** small pills on the yard (tanks nearly full, contract offers, staff without a post, station with no refining unit). Tap opens the sheet; ✕ hides it. Nothing is forced.
+- **U1 camera:** opens centred on the buildings (or the owned land).
 
 ## UI fixes — Sarana will point them out one by one
 
 | #   | Topic                              | Notes                                                                                                                     |
 | --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| U1  | Camera shows too much sky          | Nearly half the screen is empty sky. Start the camera lower so the yard fills the screen. Promised with the first UI fix. |
 | U2  | Zoom-out view                      | See the whole yard at once.                                                                                               |
 | U3  | Yard is cluttered and hard to read | Mostly an art problem: PixelLab sprites with a distinct look per building. Code shapes are temporary.                     |
 

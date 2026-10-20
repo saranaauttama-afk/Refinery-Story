@@ -49,12 +49,14 @@ export const PRODUCTION = {
 }
 export const PAIR = { S: 1.5, A: 1.25, B: 1.1, C: 1, D: 0.85, F: 0.6 }
 export const GRADES = [
-  { id: 'SS', min: 400, price: 2.5, fame: 10 },
-  { id: 'S', min: 300, price: 1.8, fame: 5 },
-  { id: 'A', min: 200, price: 1.3, fame: 2 },
+  { id: 'SS', min: 400, price: 2.7, fame: 10 },
+  { id: 'S', min: 300, price: 1.9, fame: 5 },
+  { id: 'A', min: 200, price: 1.35, fame: 2 },
   { id: 'B', min: 120, price: 1, fame: 1 },
   { id: 'C', min: 0, price: 0.8, fame: 0 },
 ] as const
+// Grade thresholds scale with rank: bigger buyers are pickier, so SS stays a goal all game.
+export const GRADE_SCALE = [1, 1.1, 1.2, 1.3, 1.45, 2.4, 4.5, 8, 12, 16] as const
 // Start-up help: a bank loan when the first layout runs out of cash.
 export const LOAN = {
   amount: 10000,
@@ -64,6 +66,9 @@ export const LOAN = {
 export const SALES = {
   arrivalTicks: 60,
   highwayBays: 1.3,
+  // Each extra product in the tanks draws its own buyers (up to lineCap products).
+  lineBuyers: 0.8,
+  lineCap: 3,
   roadTicks: 2,
   dwellTicks: 4,
   units: 300,

@@ -168,6 +168,18 @@ export function sellTo(s: GameState, customerId: string): GameState {
   }
   return next
 }
+/** Ticks between buyer trucks: the highway and selling more kinds of product bring more. */
+export const arrivalInterval = (s: GameState) => {
+  const lines = Math.min(C.lineCap, new Set(s.tanks.map(l => l.base)).size)
+  return Math.max(
+    C.roadTicks,
+    Math.floor(
+      C.arrivalTicks /
+        (1 + C.highwayBays * (s.investments.highway ?? 0)) /
+        (1 + C.lineBuyers * Math.max(0, lines - 1)),
+    ),
+  )
+}
 export function customerSystem(s: GameState): GameState {
   let next = s
   const trucks: Truck[] = []
@@ -195,15 +207,7 @@ export function customerSystem(s: GameState): GameState {
     }
     trucks.push(t)
   }
-  if (
-    s.tick %
-      Math.max(
-        C.roadTicks,
-        Math.floor(C.arrivalTicks / (1 + C.highwayBays * (s.investments.highway ?? 0))),
-      ) ===
-      0 &&
-    trucks.length < C.maxTrucks
-  ) {
+  if (s.tick % arrivalInterval(s) === 0 && trucks.length < C.maxTrucks) {
     const path = truckRoute(next),
       pool = customers.filter(c => customerUnlocked(next, c))
     if (path.length && pool.length) {
