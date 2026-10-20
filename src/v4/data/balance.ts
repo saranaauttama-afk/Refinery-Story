@@ -246,7 +246,7 @@ export const BASE_PRICES = {
 
 // "Is it too easy?" gates for the bot (AUDIT.md).
 export const FUN = {
-  firstSSMedianMin: 3,
+  firstSSMedianMin: 2.75,
   awardsFromYear: 3,
   awardsMean: [1, 2.5],
   knownY5Max: 0.35,

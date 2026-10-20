@@ -5,6 +5,7 @@ import { isMonthStart } from '../time'
 import { getModifiers } from './combos'
 import { activeRecipes, blendStations } from './blending'
 import { arrivalInterval } from './customers'
+import { featureOn } from '../../data/features'
 import type { Building, GameState } from '../types'
 
 // ── Wear ────────────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ export function specialize(
   spec: NonNullable<Building['spec']>,
 ): GameState {
   const b = s.yard.buildings.find(b => b.uid === uid)
-  if (!b || !wears(b) || b.spec || b.level < SPEC.minLevel) return s
+  if (!featureOn(s, 'spec') || !b || !wears(b) || b.spec || b.level < SPEC.minLevel) return s
   return {
     ...s,
     yard: {
@@ -78,7 +79,7 @@ export function overhaul(s: GameState, uid: string): GameState {
 }
 
 export function wearSystem(s: GameState): GameState {
-  if (!s.opened || !isMonthStart(s.tick) || s.tick < 2) return s
+  if (!featureOn(s, 'wear') || !s.opened || !isMonthStart(s.tick) || s.tick < 2) return s
   return {
     ...s,
     yard: {

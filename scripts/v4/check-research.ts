@@ -88,12 +88,14 @@ const lot = (uid: string): Lot => ({
   units: 300,
   stats: { purity: 30, yield: 30, stability: 30, eco: 30 },
 })
-let m: GameState = { ...s, tanks: [lot('a'), lot('b')] }
+let m: GameState = { ...s, rank: 3, tanks: [lot('a'), lot('b')] }
 const before = salePrice(m, lot('a'))
 m = sellTo(m, 'gas0')
 assert.equal(demandOf(m, 'gasoline'), 1 - DEMAND.perSale)
 assert.ok(salePrice(m, lot('b')) < before)
 m = marketSystem({ ...m, tick: B.ticksPerWeek * 10 })
+// Before rank 3 the market never tires.
+assert.equal(demandOf(sellTo({ ...s, rank: 2, tanks: [lot('c')] }, 'gas0'), 'gasoline'), 1)
 assert.equal(demandOf(m, 'gasoline'), 1)
 // A monthly trend heats one product.
 const t = marketSystem({ ...s, tick: MONTH })

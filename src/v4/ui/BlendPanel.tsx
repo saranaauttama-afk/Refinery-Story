@@ -26,6 +26,7 @@ import { productAccent } from '../render/palette'
 import { styles } from './controls'
 import { Card, Section, Row, Bar, SmallButton, Muted, GradeChip } from './cards'
 import { text } from '../i18n'
+import { featureOn } from '../data/features'
 import type { GameState } from '../sim/types'
 
 const compatColors: Record<Compat, string> = {
@@ -309,12 +310,14 @@ export function BlendPanel({ station: initial }: { station?: string }) {
         </View>
       </Card>
       <Section>{text({ en: 'Base', th: 'ฐาน' })}</Section>
-      <Muted>
-        {text({
-          en: 'Demand % sets the price: selling one product a lot cools it down, it recovers each week. One product trends each month (×1.5).',
-          th: 'ตลาด % มีผลกับราคา ขายชนิดเดียวซ้ำ ๆ จะลดลง และฟื้นทุกสัปดาห์ แต่ละเดือนมีสินค้า 1 ชนิดเป็นกระแส (×1.5)',
-        })}
-      </Muted>
+      {featureOn(s, 'market') && (
+        <Muted>
+          {text({
+            en: 'Demand % sets the price: selling one product a lot cools it down, it recovers each week. One product trends each month (×1.5).',
+            th: 'ตลาด % มีผลกับราคา ขายชนิดเดียวซ้ำ ๆ จะลดลง และฟื้นทุกสัปดาห์ แต่ละเดือนมีสินค้า 1 ชนิดเป็นกระแส (×1.5)',
+          })}
+        </Muted>
+      )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {bases
           .filter(b => baseAvailable(s, b.id))
@@ -323,8 +326,8 @@ export function BlendPanel({ station: initial }: { station?: string }) {
               key={b.id}
               label={text(b.name)}
               sub={text({
-                en: `ready ${Math.floor(s.baseStock[b.id])} · demand ${Math.round(demandOf(s, b.id) * 100)}%${trending(s, b.id) ? ' · trend' : ''}`,
-                th: `พร้อม ${Math.floor(s.baseStock[b.id])} · ตลาด ${Math.round(demandOf(s, b.id) * 100)}%${trending(s, b.id) ? ' · กระแส' : ''}`,
+                en: `ready ${Math.floor(s.baseStock[b.id])}${featureOn(s, 'market') ? ` · demand ${Math.round(demandOf(s, b.id) * 100)}%` : ''}${trending(s, b.id) ? ' · trend' : ''}`,
+                th: `พร้อม ${Math.floor(s.baseStock[b.id])}${featureOn(s, 'market') ? ` · ตลาด ${Math.round(demandOf(s, b.id) * 100)}%` : ''}${trending(s, b.id) ? ' · กระแส' : ''}`,
               })}
               selected={r.base === b.id}
               badge={recipeBadge(s, b.id, r.additive)}

@@ -40,7 +40,16 @@ export function Notices() {
             <Award size={32} color={ui.gold} />
           </View>
           <ScrollView contentContainerStyle={{ gap: 10 }}>
-            <Text style={styles.heading}>{n && text(n)}</Text>
+            <Text style={styles.heading}>{n && text(n).split('\n')[0]}</Text>
+            {n &&
+              text(n)
+                .split('\n')
+                .slice(1)
+                .map(line => (
+                  <Text key={line} style={styles.text}>
+                    {line}
+                  </Text>
+                ))}
             {n?.kind === 'awards' && (
               <View style={{ marginVertical: 8, gap: 2 }}>
                 <View style={{ flexDirection: 'row', borderBottomWidth: 2, paddingBottom: 2 }}>

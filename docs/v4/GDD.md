@@ -168,6 +168,12 @@ Every event logs its outcome (storm weeks, inspector result, spill handled or
 the fine). Spill fine = max($2k, 2% of building value). Secret combos give ×3
 Fame. New log lines show briefly as a toast over the yard.
 
+**Pacing of systems (v4.0.16, `data/features.ts`):** year one is build →
+blend → sell, contracts and combos (monthly trends run from the start as a free
+bonus). Rank 2: lab research, land. Rank 3: demand cooling, ads, plant wear.
+Rank 4: specialisation. Rank 5+: big projects. Each rank-up notice lists the
+systems it switches on with a one-line intro.
+
 **Stations:** each Blending Station runs its own Base × Additive recipe (a new
 station starts on the last recipe picked). Every base a station is mixing is
 refined from its own cut, so a second product line uses cuts that would

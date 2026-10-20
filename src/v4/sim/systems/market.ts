@@ -2,6 +2,7 @@ import { DEMAND as D, B, MONTH, ADS } from '../../data/balance'
 import { bases, type BaseId } from '../../data/bases'
 import { baseAvailable } from './investments'
 import { random } from '../rng'
+import { featureOn } from '../../data/features'
 import type { GameState } from '../types'
 
 export const demandOf = (s: GameState, base: string) => s.demand[base] ?? 1
@@ -19,7 +20,14 @@ export const adCost = (s: GameState) => {
 }
 export function advertise(s: GameState, base: BaseId): GameState {
   const cost = adCost(s)
-  if (!s.opened || !baseAvailable(s, base) || advertised(s, base) || s.money < cost) return s
+  if (
+    !featureOn(s, 'ads') ||
+    !s.opened ||
+    !baseAvailable(s, base) ||
+    advertised(s, base) ||
+    s.money < cost
+  )
+    return s
   const name = bases.find(b => b.id === base)!.name
   return {
     ...s,
@@ -39,10 +47,10 @@ export function advertise(s: GameState, base: BaseId): GameState {
   }
 }
 /** One truck of this product sold: buyers want a little less of it. */
-export const cooled = (s: GameState, base: string): GameState => ({
-  ...s,
-  demand: { ...s.demand, [base]: Math.max(D.min, demandOf(s, base) - D.perSale) },
-})
+export const cooled = (s: GameState, base: string): GameState =>
+  featureOn(s, 'market')
+    ? { ...s, demand: { ...s.demand, [base]: Math.max(D.min, demandOf(s, base) - D.perSale) } }
+    : s
 
 export function marketSystem(s: GameState): GameState {
   let next = s
@@ -51,6 +59,7 @@ export function marketSystem(s: GameState): GameState {
     for (const b of bases) demand[b.id] = Math.min(D.max, demandOf(s, b.id) + D.recoverPerWeek)
     next = { ...next, demand }
   }
+  // Trends run from the start: a free bonus that teaches which products exist.
   if (s.opened && s.tick % MONTH === 0 && s.tick > 0) {
     const pool = bases.filter(b => baseAvailable(s, b.id)).map(b => b.id as BaseId)
     if (pool.length) {

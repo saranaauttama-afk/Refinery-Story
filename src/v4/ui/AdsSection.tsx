@@ -8,11 +8,24 @@ import { ADS, B } from '../data/balance'
 import { styles } from './controls'
 import { Card, Section, Row, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
+import { featureOn, FEATURE_RANK } from '../data/features'
 
 /** Market demand per product, with an ad campaign button. */
 export function AdsSection() {
   const { state: s, dispatch } = useGame()
   const cost = adCost(s)
+  if (!featureOn(s, 'market'))
+    return (
+      <>
+        <Section>{text({ en: 'Market & ads', th: 'ตลาดและโฆษณา' })}</Section>
+        <Muted>
+          {text({
+            en: `From rank ${FEATURE_RANK.market} buyers start to tire of a product you sell a lot, and ads unlock.`,
+            th: `ตั้งแต่แรงก์ ${FEATURE_RANK.market} ลูกค้าจะเริ่มเบื่อสินค้าที่ขายซ้ำ และปลดโฆษณา`,
+          })}
+        </Muted>
+      </>
+    )
   return (
     <>
       <Section>{text({ en: 'Market & ads', th: 'ตลาดและโฆษณา' })}</Section>

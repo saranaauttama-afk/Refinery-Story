@@ -13,6 +13,7 @@ import { WEAR, B, SPEC } from '../data/balance'
 import { styles } from './controls'
 import { Card, Row, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
+import { featureOn, FEATURE_RANK } from '../data/features'
 
 const specNames = {
   volume: {
@@ -42,7 +43,7 @@ const specNames = {
 export function PlantCard({ uid }: { uid: string }) {
   const { state: s, dispatch } = useGame()
   const b = s.yard.buildings.find(b => b.uid === uid)
-  if (!b || !wears(b)) return null
+  if (!b || !wears(b) || !featureOn(s, 'wear')) return null
   const c = Math.round(conditionOf(b))
   const factor = plantFactor(s, b)
   const color = c < WEAR.broken ? '#E2483D' : c < WEAR.worn ? '#F2C230' : '#2FB38E'
@@ -73,7 +74,7 @@ export function PlantCard({ uid }: { uid: string }) {
           {text({ en: 'Specialised: ', th: 'สายที่เลือก: ' })}
           {text(specNames[b.spec].name)} · {text(specNames[b.spec].effect)}
         </Muted>
-      ) : b.level >= SPEC.minLevel ? (
+      ) : b.level >= SPEC.minLevel && featureOn(s, 'spec') ? (
         <>
           <Text style={styles.text}>
             {text({
@@ -98,8 +99,8 @@ export function PlantCard({ uid }: { uid: string }) {
       ) : (
         <Muted>
           {text({
-            en: `At Lv${SPEC.minLevel} you can pick a specialisation: volume, quality or eco.`,
-            th: `ถึง Lv${SPEC.minLevel} เลือกสายพัฒนาได้: เน้นปริมาณ เน้นคุณภาพ หรือเน้นสิ่งแวดล้อม`,
+            en: `From rank ${FEATURE_RANK.spec}, Lv${SPEC.minLevel} plants can pick a specialisation: volume, quality or eco.`,
+            th: `ตั้งแต่แรงก์ ${FEATURE_RANK.spec} เครื่อง Lv${SPEC.minLevel} ขึ้นไปเลือกสายพัฒนาได้: เน้นปริมาณ คุณภาพ หรือสิ่งแวดล้อม`,
           })}
         </Muted>
       )}

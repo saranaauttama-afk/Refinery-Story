@@ -1,3 +1,4 @@
+import { FEATURE_RANK, featureIntro, type FeatureId } from '../../data/features'
 import { unlockName } from '../../i18nLabels'
 import { ranks } from '../../data/ranks'
 import { buildings } from '../../data/buildings'
@@ -8,12 +9,16 @@ import type { GameState } from '../types'
 export function progression(s: GameState): GameState {
   const rank = ranks.filter(r => s.fame >= r.fame).at(-1)!.rank
   if (rank <= s.rank) return s
+  // New systems switching on at these ranks get a one-line intro in the notice.
+  const intros = (Object.keys(FEATURE_RANK) as FeatureId[])
+    .filter(id => FEATURE_RANK[id] > s.rank && FEATURE_RANK[id] <= rank)
+    .map(id => featureIntro[id])
   const unlocked = ranks.filter(r => r.rank > s.rank && r.rank <= rank).flatMap(r => r.unlocks),
     notice = {
       uid: `rank${rank}`,
       kind: 'rank' as const,
-      en: `Rank ${rank}! ${unlocked.map(id => unlockName(id).en).join(', ')}`,
-      th: `แรงก์ ${rank}! ปลดล็อก ${unlocked.map(id => unlockName(id).th).join(', ')}`,
+      en: `Rank ${rank}! ${unlocked.map(id => unlockName(id).en).join(', ')}${intros.map(i => `\n• ${i.en}`).join('')}`,
+      th: `แรงก์ ${rank}! ปลดล็อก ${unlocked.map(id => unlockName(id).th).join(', ')}${intros.map(i => `\n• ${i.th}`).join('')}`,
     }
   return {
     ...s,
@@ -46,7 +51,10 @@ export function progression(s: GameState): GameState {
         : s.candidates,
     unlockHistory: [...s.unlockHistory, ...unlocked.map(key => ({ tick: s.tick, key }))],
     notices: [...s.notices, notice],
-    log: [...s.log, { tick: s.tick, en: notice.en, th: notice.th }].slice(-B.logLimit),
+    log: [
+      ...s.log,
+      { tick: s.tick, en: notice.en.split('\n')[0], th: notice.th.split('\n')[0] },
+    ].slice(-B.logLimit),
   }
 }
 export function newGamePlus(s: GameState): GameState {
