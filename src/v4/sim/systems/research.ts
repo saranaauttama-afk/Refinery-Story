@@ -4,6 +4,7 @@ import { bases, type BaseId } from '../../data/bases'
 import { additives, type AdditiveId } from '../../data/additives'
 import { baseAvailable } from './investments'
 import { random } from '../rng'
+import { labBonus } from './projects'
 import type { Building, GameState } from '../types'
 
 export const recipeKey = (base: string, additive: string | null) => `${base}:${additive ?? 'none'}`
@@ -22,15 +23,19 @@ export const researchCost = (s: GameState, base: BaseId) => {
   const tier = researchTier(s, base)
   return { rd: R.rdBase * tier, money: R.moneyBase * tier }
 }
-export const researchTicks = (lab: Building) =>
-  Math.round(R.weeks * B.ticksPerWeek * Math.max(0.5, 1 - R.fasterPerLevel * (lab.level - 1)))
+/** Lab level for research, including the Research Center project. */
+export const labLevel = (s: GameState, lab: Building) => lab.level + labBonus(s)
+export const researchTicks = (s: GameState, lab: Building) =>
+  Math.round(
+    R.weeks * B.ticksPerWeek * Math.max(0.5, 1 - R.fasterPerLevel * (labLevel(s, lab) - 1)),
+  )
 const labChem = (s: GameState, lab: Building) =>
   s.staff.filter(p => p.assignedTo === lab.uid).reduce((n, p) => n + p.stats.chem, 0)
 export const researchChance = (s: GameState, lab: Building, base: BaseId) =>
   Math.min(
     R.chanceMax,
     R.chanceBase +
-      R.chancePerLevel * lab.level +
+      R.chancePerLevel * labLevel(s, lab) +
       labChem(s, lab) / R.chemDivisor +
       R.clueBonus * (s.clues[base] ?? 0),
   )
@@ -62,7 +67,7 @@ export function startResearch(s: GameState, labUid: string, base: BaseId): GameS
     money: s.money - cost.money,
     year: { ...s.year, expenses: s.year.expenses + cost.money },
     monthProfit: s.monthProfit - cost.money,
-    research: [...s.research, { lab: labUid, base, endTick: s.tick + researchTicks(lab) }],
+    research: [...s.research, { lab: labUid, base, endTick: s.tick + researchTicks(s, lab) }],
   }
 }
 
@@ -98,7 +103,7 @@ export function researchSystem(s: GameState): GameState {
       continue
     }
     // Pick the quality bucket by lab level, then an additive inside it.
-    const weights = researchWeights(lab.level).map((w, i) =>
+    const weights = researchWeights(labLevel(s, lab)).map((w, i) =>
       candidates.some(a => bucket(job.base, a) === i) ? w : 0,
     )
     const total = weights.reduce((n, w) => n + w, 0)

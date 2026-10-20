@@ -12,6 +12,7 @@ import {
   researchCost,
   researchTicks,
   researchWeights,
+  labLevel,
 } from '../sim/systems/research'
 import { baseAvailable } from '../sim/systems/investments'
 import { styles } from './controls'
@@ -34,7 +35,7 @@ export function ResearchPanel({ labUid }: { labUid: string }) {
   if (!lab) return null
   const job = labJob(s, labUid)
   const name = (id: string) => text(bases.find(b => b.id === id)!.name)
-  const odds = researchWeights(lab.level)
+  const odds = researchWeights(labLevel(s, lab))
   const total = odds.reduce((a, b) => a + b, 0)
   return (
     <>
@@ -54,7 +55,7 @@ export function ResearchPanel({ labUid }: { labUid: string }) {
           </Text>
           <Row>
             <Bar
-              value={1 - (job.endTick - s.tick) / researchTicks(lab)}
+              value={1 - (job.endTick - s.tick) / researchTicks(s, lab)}
               color="#4FA3D9"
               height={10}
             />
@@ -76,8 +77,8 @@ export function ResearchPanel({ labUid }: { labUid: string }) {
       )}
       <Muted>
         {text({
-          en: `Odds at Lv${lab.level}: S ${Math.round((odds[3] / total) * 100)}% · A ${Math.round((odds[2] / total) * 100)}% · B ${Math.round((odds[1] / total) * 100)}% · other ${Math.round((odds[0] / total) * 100)}%`,
-          th: `โอกาสที่ Lv${lab.level}: S ${Math.round((odds[3] / total) * 100)}% · A ${Math.round((odds[2] / total) * 100)}% · B ${Math.round((odds[1] / total) * 100)}% · อื่น ${Math.round((odds[0] / total) * 100)}%`,
+          en: `Odds at Lv${labLevel(s, lab)}: S ${Math.round((odds[3] / total) * 100)}% · A ${Math.round((odds[2] / total) * 100)}% · B ${Math.round((odds[1] / total) * 100)}% · other ${Math.round((odds[0] / total) * 100)}%`,
+          th: `โอกาสที่ Lv${labLevel(s, lab)}: S ${Math.round((odds[3] / total) * 100)}% · A ${Math.round((odds[2] / total) * 100)}% · B ${Math.round((odds[1] / total) * 100)}% · อื่น ${Math.round((odds[0] / total) * 100)}%`,
         })}
       </Muted>
       {!job &&

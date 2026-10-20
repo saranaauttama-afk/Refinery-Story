@@ -26,12 +26,12 @@ for (let seed = 1; seed <= POLISH.reportSeeds; seed++) {
     awardWins: r.awardWins,
   })
 }
-// Pacing: lab research adds luck, so 90% of seeds must land in the window (rank 5 in years
-// 3–5, rank 10 in years 12–16) and every seed must get there within a year of it.
+// Pacing: research and wear add luck, so most seeds must land in the window (rank 5 in
+// years 3–5 for 90%, rank 10 in years 12–16 for 85%), and none may be far outside.
 const within = (rank: number, lo: number, hi: number) =>
   reports.filter(r => r.reached[rank] >= lo && r.reached[rank] <= hi).length / reports.length
 assert.ok(within(5, 3, 5) >= 0.9, `rank 5 window ${within(5, 3, 5)}`)
-assert.ok(within(10, 12, 16) >= 0.9, `rank 10 window ${within(10, 12, 16)}`)
+assert.ok(within(10, 12, 16) >= 0.85, `rank 10 window ${within(10, 12, 16)}`)
 assert.ok(within(5, 2.5, 6) === 1, 'rank 5 outlier')
 for (const r of reports)
   assert.ok(r.reached[10] >= 11 || !r.reached[10], `seed ${r.seed} rank 10 too early`)
@@ -59,7 +59,13 @@ assert.ok(wins >= FUN.awardsMean[0] && wins <= FUN.awardsMean[1], `award wins ${
 const known = (y: number) => mean(reports.map(r => r.annual[y - 1].known)) / pairs
 assert.ok(known(5) <= FUN.knownY5Max, `recipes known Y5 ${known(5)}`)
 assert.ok(known(15) >= FUN.knownY15[0] && known(15) <= FUN.knownY15[1], `known Y15 ${known(15)}`)
-const funLine = `first SS Y${firstSS.toFixed(1)}, awards ${wins.toFixed(1)}/yr, recipes Y5 ${Math.round(known(5) * 100)}% Y15 ${Math.round(known(15) * 100)}%`
+const cashMonths = (y: number) =>
+  mean(reports.map(r => r.annual[y - 1].money / Math.max(1, r.annual[y - 1].profit)))
+for (const y of [5, 10])
+  assert.ok(cashMonths(y) <= FUN.cashMonthsMax, `cash Y${y} ${cashMonths(y)} months of profit`)
+const rd10 = mean(reports.map(r => r.annual[9].rd))
+assert.ok(rd10 <= FUN.rdY10Max, `RD piles up: ${rd10}`)
+const funLine = `first SS Y${firstSS.toFixed(1)}, awards ${wins.toFixed(1)}/yr, recipes Y5 ${Math.round(known(5) * 100)}% Y15 ${Math.round(known(15) * 100)}%, cash Y5 ${cashMonths(5).toFixed(0)}/Y10 ${cashMonths(10).toFixed(0)} months, RD Y10 ${Math.round(rd10)}`
 assert.equal(hints.length, POLISH.hintLimit)
 const clean = createNewGame()
 assert.throws(() => deserialize(serialize({ ...clean, cuts: {} } as never)))

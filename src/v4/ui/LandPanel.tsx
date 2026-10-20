@@ -4,6 +4,7 @@ import { Text, View, Pressable } from 'react-native'
 import { useGame } from '../store/useGame'
 import { buyLand } from '../sim/actions'
 import { YARD } from '../data/balance'
+import { landPrice } from '../sim/systems/projects'
 import { styles } from './controls'
 import { Card, Row, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
@@ -30,7 +31,7 @@ export function LandPanel() {
     if (!adjacent(x, y)) return text({ en: 'Must touch your land', th: 'ต้องติดกับที่ดินเดิม' })
     if (s.yard.ownedParcels.length >= parcelCap(s))
       return text({ en: 'Rank up to own more', th: 'ขึ้นแรงก์เพื่อซื้อเพิ่ม' })
-    if (s.money < YARD.landCost) return text({ en: 'Not enough money', th: 'เงินไม่พอ' })
+    if (s.money < landPrice(s)) return text({ en: 'Not enough money', th: 'เงินไม่พอ' })
     return ''
   }
   return (
@@ -114,7 +115,7 @@ export function LandPanel() {
             <Text style={[styles.heading, { flex: 1 }]}>
               {text({ en: `Parcel ${picked.x}, ${picked.y}`, th: `แปลง ${picked.x}, ${picked.y}` })}
             </Text>
-            <Text style={styles.heading}>${YARD.landCost.toLocaleString()}</Text>
+            <Text style={styles.heading}>${landPrice(s).toLocaleString()}</Text>
           </Row>
           {reason(picked.x, picked.y) ? (
             <Muted>{reason(picked.x, picked.y)}</Muted>

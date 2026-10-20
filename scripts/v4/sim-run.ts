@@ -8,6 +8,8 @@ import {
   researchCost,
   startResearch,
 } from '../../src/v4/sim/systems/research'
+import { wears, conditionOf, overhaulCost, overhaul } from '../../src/v4/sim/systems/plant'
+import { projectCost, buyProject } from '../../src/v4/sim/systems/projects'
 import { createNewGame } from '../../src/v4/sim/state'
 import { tick } from '../../src/v4/sim/tick'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
@@ -113,6 +115,12 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
     )[0]
     if (p) s = hire(s, p.uid)
   }
+  // Overhaul worn plants, then put spare cash into big projects.
+  for (const b of s.yard.buildings)
+    if (wears(b) && conditionOf(b) < 62 && s.money > overhaulCost(b) + reserve)
+      s = overhaul(s, b.uid)
+  for (const id of ['researchCenter', 'export'] as const)
+    if (s.money > projectCost(s, id) * 2 + reserve) s = buyProject(s, id)
   const station = s.yard.buildings.find(b => b.defId === 'blend')
   const lab = labs(s)[0]
   if (lab && s.staff.length >= 2 && !s.staff.some(p => p.assignedTo === lab.uid)) {

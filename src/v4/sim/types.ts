@@ -7,6 +7,10 @@ export interface Building {
   level: number
   staff: string[]
   cost: number
+  /** Plants only: 0–100, wears down monthly. Missing = 100 (older saves). */
+  condition?: number
+  /** Overhaul in progress until this tick: the plant is stopped. */
+  repairUntil?: number
   /** Blend stations only: what this station mixes. Falls back to GameState.blend. */
   recipe?: Recipe
 }
@@ -90,6 +94,8 @@ export interface GameState {
   /** Per-base demand multiplier: falls with each sale, recovers weekly. */
   demand: Record<string, number>
   trend: { base: import('../data/bases').BaseId | null; until: number }
+  /** Big repeatable projects (Phase B), by id → level. */
+  projects: Record<string, number>
 }
 export type Action = (state: GameState) => GameState
 export type Grade = 'SS' | 'S' | 'A' | 'B' | 'C'

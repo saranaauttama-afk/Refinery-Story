@@ -147,6 +147,19 @@ random among unlocked additives, weighted by compatibility bucket
 −2.5%, and it recovers +5% per week. Price × demand. One available product
 trends each month (×1.5).
 
+**Wear (Phase B, v4.0.14):** process units and blend stations lose 4% condition
+a month. Below 60% they run at 80%, below 30% at 60%, and every plant below 30%
+raises incident odds by 50%. Engineers assigned to a plant repair Mech ÷ 25 % a
+month. An overhaul costs 15% of the build cost × (1 + 0.5 × (level − 1)),
+restores 100% and stops the plant for 1 week.
+
+**Money and RD sinks (Phase B):** land parcel n (past the first four) costs
+$20k × 1.6^(n−4); upkeep is 3% × (1 + 0.5 × (level − 1)) a month; staff level-ups
+cost 20/60/150/300/500 RD; big projects: Overseas Export (rank 5, $5M × 1.8^level,
++5% price per level, 10 levels) and Research Center (rank 6, $8M, every lab
+counts one level higher). The Company sheet shows weekly oil flow per stage and
+names the bottleneck.
+
 **Stations:** each Blending Station runs its own Base × Additive recipe (a new
 station starts on the last recipe picked). Every base a station is mixing is
 refined from its own cut, so a second product line uses cuts that would

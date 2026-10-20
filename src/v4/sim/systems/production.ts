@@ -2,6 +2,7 @@ import { baseAvailable } from './investments'
 import { getModifiers } from './combos'
 import { truckRoute } from './customers'
 import { activeRecipes } from './blending'
+import { plantFactor } from './plant'
 import { SALES } from '../../data/balance'
 import { PRODUCTION as P, YARD } from '../../data/balance'
 import { bases, type CutId } from '../../data/bases'
@@ -55,6 +56,7 @@ export function production(s: GameState): GameState {
       crude,
       P.crudeDelivery *
         (1 + YARD.outputPerLevel * (b.level - 1)) *
+        plantFactor(s, b) *
         (1 + getModifiers(s).production),
     )
     if (qty > 0 && crude >= qty) {
@@ -72,7 +74,7 @@ export function production(s: GameState): GameState {
       P.lotUnits *
       s.yard.buildings
         .filter(b => b.defId === base.unit)
-        .reduce((n, b) => n + 1 + YARD.outputPerLevel * (b.level - 1), 0) *
+        .reduce((n, b) => n + (1 + YARD.outputPerLevel * (b.level - 1)) * plantFactor(s, b), 0) *
       (1 + getModifiers(s).production)
     if (
       units > 0 &&

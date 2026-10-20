@@ -8,6 +8,8 @@ import { invest, newGamePlus } from '../sim/actions'
 import { styles } from './controls'
 import { Card, Section, Row, Bar, SmallButton, Muted, Chip } from './cards'
 import { text } from '../i18n'
+import { FlowCard } from './FlowCard'
+import { ProjectsSection } from './ProjectsSection'
 
 const short = (n: number) =>
   Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n / 1000).toLocaleString()}K`
@@ -111,6 +113,7 @@ export function CompanyPanel({ onLand, onCombos }: { onLand: () => void; onCombo
           </Text>
         </Card>
       )}
+      <FlowCard />
       <Section>{text({ en: 'Invest around the refinery', th: 'ลงทุนรอบโรงกลั่น' })}</Section>
       {investments.map(d => {
         const level = s.investments[d.id] ?? 0
@@ -154,6 +157,7 @@ export function CompanyPanel({ onLand, onCombos }: { onLand: () => void; onCombo
           </Card>
         )
       })}
+      <ProjectsSection />
       <Row gap={8}>
         <View style={{ flex: 1 }}>
           <SmallButton

@@ -126,7 +126,7 @@ export function levelUp(s: GameState, uid: string): GameState {
   const p = s.staff.find(p => p.uid === uid)
   if (!p) return s
   const target = p.jobLevels[p.job] + 1,
-    cost = C.levelRD * target
+    cost = C.levelRDCost[target - 1] ?? C.levelRD * target
   if (target > C.levelMax || s.rd < cost) return s
   return {
     ...s,

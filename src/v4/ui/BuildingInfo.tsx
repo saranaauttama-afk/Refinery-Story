@@ -15,6 +15,7 @@ import { bases } from '../data/bases'
 import { additives } from '../data/additives'
 import { effectText } from './RecipeBook'
 import { ResearchPanel } from './ResearchPanel'
+import { PlantCard } from './PlantCard'
 import { styles } from './controls'
 import { Card, Section, Row, SmallButton, Muted, Chip } from './cards'
 import { text } from '../i18n'
@@ -82,6 +83,7 @@ export function BuildingInfo({
             </Card>
           )
         })()}
+      <PlantCard uid={b.uid} />
       {b.defId === 'lab' && <ResearchPanel labUid={b.uid} />}
       {(['process', 'blend', 'support'] as string[]).includes(d.category) && (
         <>

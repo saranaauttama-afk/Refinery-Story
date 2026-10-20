@@ -7,8 +7,10 @@ export function economy(s: GameState): GameState {
   // No bills while the refinery is still being built.
   if (!s.opened) return { ...s, fame: s.fame + getModifiers(s).monthlyFame }
   const amount = -(
-    s.yard.buildings.reduce((n, b) => n + b.cost * B.upkeepRate, 0) +
-    s.staff.reduce((n, p) => n + p.salary, 0)
+    s.yard.buildings.reduce(
+      (n, b) => n + b.cost * B.upkeepRate * (1 + B.upkeepPerLevel * (b.level - 1)),
+      0,
+    ) + s.staff.reduce((n, p) => n + p.salary, 0)
   )
   return {
     ...s,

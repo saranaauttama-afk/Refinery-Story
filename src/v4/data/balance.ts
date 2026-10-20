@@ -5,6 +5,8 @@ export const B = {
   weeksPerMonth: 4,
   monthsPerYear: 12,
   upkeepRate: 0.03,
+  // Upkeep grows with level: × (1 + upkeepPerLevel × (level − 1)).
+  upkeepPerLevel: 0.5,
   logLimit: 50,
   saveKey: 'refinery-v4-save',
   defaultSeed: 42,
@@ -17,6 +19,9 @@ export const YARD = {
   parcel: 8,
   maxSize: 40,
   landCost: 20000,
+  // Each parcel past the first four costs ×landGrowth more.
+  landGrowth: 1.6,
+  startParcels: 4,
   moveCost: 2000,
   refund: 0.5,
   maxLevel: 5,
@@ -82,6 +87,26 @@ export const DEMAND = {
   min: 0.5,
   trendBoost: 1.5,
 }
+// Phase B: plants wear out and need engineers or an overhaul.
+export const WEAR = {
+  perMonth: 4,
+  // Condition below these lines cuts output.
+  worn: 60,
+  wornOutput: 0.8,
+  broken: 30,
+  brokenOutput: 0.6,
+  // Each engineer on the building restores Mech ÷ this per month.
+  mechDivisor: 25,
+  overhaulShare: 0.15,
+  overhaulWeeks: 1,
+  // Incident odds rise by this much for each plant below the broken line.
+  incidentPerBroken: 0.5,
+}
+// Phase B: big repeatable projects soak up late-game money.
+export const PROJECTS = {
+  export: { rank: 5, cost: 5_000_000, growth: 1.8, pricePerLevel: 0.05, max: 10 },
+  researchCenter: { rank: 6, cost: 8_000_000, growth: 1, labLevels: 1, max: 1 },
+}
 // Rivals grow like a typical player (fitted to the bot), so awards stay contested.
 export const RIVALS = {
   scoreBase: 240,
@@ -137,6 +162,8 @@ export const STAFF = {
   capMax: 12,
   levelMax: 5,
   levelRD: 20,
+  // RD to reach job level 1…5.
+  levelRDCost: [20, 60, 150, 300, 500],
   salaryGrowth: 1.2,
   superChance: 0.05,
   superGain: 3,
@@ -198,13 +225,17 @@ export const BASE_PRICES = {
   pellet: 90,
 }
 
-// "Is it too easy?" gates for the bot (AUDIT.md). Money/RD gates arrive with Phase B sinks.
+// "Is it too easy?" gates for the bot (AUDIT.md).
 export const FUN = {
   firstSSMedianMin: 3,
   awardsFromYear: 3,
   awardsMean: [1, 2.5],
   knownY5Max: 0.35,
   knownY15: [0.5, 0.99],
+  // Phase B sinks: cash on hand stays within this many months of profit (Y5, Y10),
+  // and RD does not pile up.
+  cashMonthsMax: 24,
+  rdY10Max: 3000,
 }
 export const POLISH = {
   hintLimit: 6,

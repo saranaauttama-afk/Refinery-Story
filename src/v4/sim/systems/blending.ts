@@ -1,5 +1,6 @@
 import { baseAvailable } from './investments'
 import { recipeKnown } from './research'
+import { plantFactor } from './plant'
 import { staffStats } from './staff'
 import { getModifiers } from './combos'
 import { PRODUCTION as P, PAIR, GRADES, YARD, GRADE_SCALE } from '../../data/balance'
@@ -86,7 +87,9 @@ export function blending(s: GameState): GameState {
   let next = s
   for (const station of stations) {
     const { base, additive } = recipeOf(next, station)
-    const units = P.lotUnits * (1 + YARD.outputPerLevel * (station.level - 1))
+    const units =
+      P.lotUnits * (1 + YARD.outputPerLevel * (station.level - 1)) * plantFactor(next, station)
+    if (units <= 0) continue
     if (next.baseStock[base] < units) continue
     if (tankUnits(next) + units > capacity) {
       // Tell the player why the station stopped.

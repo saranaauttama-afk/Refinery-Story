@@ -1,6 +1,7 @@
 import { marketNames } from '../../i18nLabels'
 import { events } from '../../data/events'
-import { B, MONTH, YEAR, PROGRESSION as P } from '../../data/balance'
+import { B, MONTH, YEAR, PROGRESSION as P, WEAR } from '../../data/balance'
+import { brokenPlants } from './plant'
 import { random } from '../rng'
 import { hasStimulus, hasShelter } from './investments'
 import { getModifiers } from './combos'
@@ -62,7 +63,12 @@ export function eventSystem(s: GameState): GameState {
   if (event.id === 'spill' && safe < P.safeThreshold) {
     const [risk, rng] = random(next.rng)
     next = { ...next, rng }
-    if (risk < P.incidentChance * (1 + getModifiers(s).incident)) {
+    if (
+      risk <
+      P.incidentChance *
+        (1 + getModifiers(s).incident) *
+        (1 + WEAR.incidentPerBroken * brokenPlants(s))
+    ) {
       const loss = P.spillMoney * (hasStimulus(s) ? P.stimulus : 1)
       return {
         ...next,

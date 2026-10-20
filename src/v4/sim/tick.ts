@@ -9,6 +9,7 @@ import { eventSystem } from './systems/events'
 import { awards } from './systems/awards'
 import { researchSystem } from './systems/research'
 import { marketSystem } from './systems/market'
+import { wearSystem } from './systems/plant'
 import { PRODUCTION } from '../data/balance'
 import type { GameState } from './types'
 export function tick(s: GameState): GameState {
@@ -19,6 +20,7 @@ export function tick(s: GameState): GameState {
   }
   next = economy(next)
   next = marketSystem(next)
+  next = wearSystem(next)
   next = researchSystem(next)
   next = contractSystem(next)
   next = eventSystem(next)

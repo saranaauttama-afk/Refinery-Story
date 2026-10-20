@@ -84,7 +84,7 @@ export function YardScreen() {
         {!ghost && !panel && (
           <Alerts
             onOpen={a => {
-              if (a.tab === 'lab' && a.target) {
+              if ((a.tab === 'lab' || a.tab === 'building') && a.target) {
                 setSelected(a.target)
                 setPanel('info')
                 return

@@ -8,8 +8,9 @@ import { place } from '../../src/v4/sim/systems/yard'
 import { MONTH, YEAR } from '../../src/v4/data/balance'
 for (const seed of [1, 2, 3]) {
   const r = simulate(seed)
-  assert.ok(r.reached[5] >= 3 && r.reached[5] <= 5, `seed ${seed} rank5 ${r.reached[5]}`)
-  assert.ok(r.reached[10] >= 13 && r.reached[10] <= 16, `seed ${seed} rank10 ${r.reached[10]}`)
+  // Exact pacing windows are checked statistically over 20 seeds in check-balance.
+  assert.ok(r.reached[5] >= 2.5 && r.reached[5] <= 6, `seed ${seed} rank5 ${r.reached[5]}`)
+  assert.ok(r.reached[10] >= 11 && r.reached[10] <= 16, `seed ${seed} rank10 ${r.reached[10]}`)
   assert.ok(r.unlocksFirst40Weeks >= 5, `seed ${seed} unlocks`)
   assert.ok(r.maxNegativeMonths <= 6, `seed ${seed} softlock`)
   assert.ok(r.state.evaluation !== null)

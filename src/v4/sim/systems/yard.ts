@@ -1,3 +1,4 @@
+import { landPrice } from './projects'
 import { refreshCombos } from './combos'
 import { YARD } from '../../data/balance'
 import { buildingDef } from '../../data/buildings'
@@ -143,14 +144,14 @@ export function buyLand(s: GameState, px: number, py: number): GameState {
     py >= YARD.maxSize / YARD.parcel ||
     s.yard.ownedParcels.includes(key) ||
     !adjacent ||
-    s.money < YARD.landCost ||
+    s.money < landPrice(s) ||
     s.rank < 2 ||
     s.yard.ownedParcels.length >= (s.rank >= 8 ? 25 : s.rank >= 6 ? 16 : s.rank >= 4 ? 9 : 5)
   )
     return s
   return refreshCombos({
     ...s,
-    money: s.money - YARD.landCost,
+    money: s.money - landPrice(s),
     yard: {
       ...s.yard,
       size: Math.max(s.yard.size, (px + 1) * YARD.parcel, (py + 1) * YARD.parcel),

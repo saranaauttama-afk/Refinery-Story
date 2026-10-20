@@ -10,6 +10,7 @@ import { random } from '../rng'
 import { tankCapacity, tankUnits } from './blending'
 import { LOAN } from '../../data/balance'
 import { demandFactor, cooled } from './market'
+import { exportBonus } from './projects'
 export const gradeRank = (g: Grade) => GRADES.findIndex(v => v.id === g)
 export const eligibleLot = (s: GameState, base: string, min: Grade): Lot | undefined =>
   s.tanks
@@ -27,6 +28,7 @@ export const salePrice = (s: GameState, l: Pick<Lot, 'base' | 'grade'>) =>
   marketMultiplier(s) *
   (1 + getModifiers(s).price) *
   demandFactor(s, l.base) *
+  exportBonus(s) *
   (s.investments.port >= 4 ? P.exportBonus : 1) *
   (l.base === 'jet' && ['S', 'SS'].includes(l.grade) && s.investments.airport >= 4
     ? P.airportBonus

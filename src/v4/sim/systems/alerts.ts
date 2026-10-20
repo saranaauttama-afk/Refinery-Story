@@ -3,12 +3,14 @@ import { blendStations, recipeOf, tankCapacity, tankUnits } from './blending'
 import { bases } from '../../data/bases'
 import { labs, labJob } from './research'
 import { trending } from './market'
+import { wears, repairing, conditionOf } from './plant'
+import { WEAR } from '../../data/balance'
 import type { GameState } from '../types'
 
 /** Optional nudges shown on the yard. They only point at a sheet; nothing is forced. */
 export interface Alert {
   id: string
-  tab: 'blend' | 'customers' | 'staff' | 'lab'
+  tab: 'blend' | 'customers' | 'staff' | 'lab' | 'building'
   /** Building to open for tab 'lab' (or a blend station for tab 'blend'). */
   target?: string
   en: string
@@ -40,6 +42,17 @@ export function yardAlerts(s: GameState): Alert[] {
         th: `สถานี ${i + 1} ไม่มีหน่วยผลิตน้ำมันฐานนี้ ลองเปลี่ยนสูตร`,
       })
   })
+  const worn = s.yard.buildings.filter(
+    b => wears(b) && !repairing(s, b) && conditionOf(b) < WEAR.worn,
+  )
+  if (worn.length)
+    out.push({
+      id: `worn:${worn.map(b => b.uid).join(',')}`,
+      tab: 'building',
+      target: [...worn].sort((a, b) => conditionOf(a) - conditionOf(b))[0].uid,
+      en: `${worn.length} plant${worn.length > 1 ? 's' : ''} worn down: overhaul to restore output`,
+      th: `เครื่องเสื่อม ${worn.length} ตัว ซ่อมใหญ่เพื่อให้ผลิตเต็มที่`,
+    })
   const idleLabs = labs(s).filter(l => !labJob(s, l.uid))
   if (idleLabs.length && s.unlockedAdditives.length)
     out.push({

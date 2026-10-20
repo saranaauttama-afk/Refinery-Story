@@ -9,6 +9,7 @@ const tabColor: Record<Alert['tab'], string> = {
   customers: '#8ED9C1',
   staff: '#9CC9EA',
   lab: '#4FA3D9',
+  building: '#F2C230',
 }
 
 /** Optional nudges over the yard. Tap to open the sheet, ✕ to hide. Nothing is forced. */

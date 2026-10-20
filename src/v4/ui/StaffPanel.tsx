@@ -71,7 +71,7 @@ function StaffCard({ p }: { p: Staff }) {
   const { state: s, dispatch } = useGame()
   const [open, setOpen] = useState<'' | 'train' | 'work' | 'more'>('')
   const level = p.jobLevels[p.job]
-  const levelCost = STAFF.levelRD * (level + 1)
+  const levelCost = STAFF.levelRDCost[level] ?? STAFF.levelRD * (level + 1)
   const workBuildings = s.yard.buildings.filter(b =>
     ['process', 'blend', 'support'].includes(buildingDef(b.defId).category),
   )

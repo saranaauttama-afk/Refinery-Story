@@ -81,5 +81,6 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     clues: {},
     demand: {},
     trend: { base: null, until: 0 },
+    projects: {},
   }
 }
