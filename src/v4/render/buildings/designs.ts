@@ -18,9 +18,12 @@ export const loading: Sprite = (l, a) => [
   ...detail(l, a),
 ]
 export const crudeTank: Sprite = (l, a) => [
-  ...tank(0, 5, 19, 23, a),
-  rect(-8, -19, 8, 2, ink),
-  rect(-1, -25, 2, 6, '#B5653A'),
+  ...box(-13, 8, 27, 25, 3, '#D8D2C4', '#B9B2A3', '#948C7E'),
+  ...tank(0, 3, 15, 19, a),
+  rect(-14, -9, 28, 3, '#F2C230'),
+  rect(11, -17, 2, 21, '#14110F'),
+  rect(0, -23, 4, 3, '#B5653A'),
+  ...(l >= 3 ? [rect(-12, -18, 7, 3, '#F08A24')] : []),
   ...detail(l, a),
 ]
 export const productTank: Sprite = (l, a) => [
@@ -30,20 +33,24 @@ export const productTank: Sprite = (l, a) => [
   ...detail(l, a),
 ]
 export const cdu: Sprite = (l, a) => [
-  ...box(-12, 1, 14, 12, 12, a),
-  ...tank(5, -2, 6, 40, '#F2C230'),
-  rect(10, -37, 2, 40, '#B5653A'),
-  rect(-11, -20, 4, 20, '#73818F'),
-  rect(-13, -23, 8, 3, ink),
-  rect(1, -34, 10, 2, '#F2C230'),
+  ...box(-15, 7, 29, 24, 4, '#D8D2C4', '#B9B2A3', '#948C7E'),
+  ...box(-14, -1, 15, 11, 14, '#F08A24', '#B5653A', '#73818F'),
+  ...tank(7, 0, 7, 38, '#F08A24'),
+  rect(0, -30, 14, 3, '#F2C230'),
+  rect(0, -17, 14, 3, '#F2C230'),
+  rect(12, -36, 2, 39, ink),
+  rect(-15, -17, 7, 3, ink),
+  ...(l >= 3 ? [...tank(-9, -5, 4, 20, '#73818F')] : []),
   ...detail(l, a),
 ]
 export const hydro: Sprite = (l, a) => [
-  ...tank(-9, 1, 7, 25, a),
-  ...tank(9, 9, 7, 28, a),
-  ...box(-2, 12, 12, 7, 7),
-  rect(-12, -5, 26, 2, '#B5653A'),
-  rect(8, -29, 2, 7, ink),
+  ...box(-14, 9, 28, 22, 4, '#D8D2C4', '#B9B2A3', '#948C7E'),
+  ...tank(-8, 0, 7, 24, a),
+  ...tank(9, 7, 7, 24, a),
+  rect(-13, -9, 26, 3, '#F2C230'),
+  rect(-12, -21, 3, 24, ink),
+  rect(13, -15, 3, 24, ink),
+  ...box(-3, 10, 10, 8, 7, '#C9D3DC'),
   ...detail(l, a),
 ]
 export const reformer: Sprite = (l, a) => [
@@ -64,17 +71,18 @@ export const cracker: Sprite = (l, a) => [
   ...detail(l, a),
 ]
 export const blend: Sprite = (l, a, t) => [
-  ...tank(-11, 2, 7, 13, a),
-  ...tank(0, 9, 7, 13, a),
-  ...tank(11, 2, 7, 13, a),
-  rect(-15, -18, 30, 2, ink),
-  rect(-1, -21, 2, 12, '#B5653A'),
-  rect(-6, -20, 12, 2, a),
+  ...box(-14, 10, 28, 24, 4, '#D8D2C4', '#B9B2A3', '#948C7E'),
+  ...tank(-9, 0, 6, 14, a),
+  ...tank(9, 0, 6, 14, a),
+  ...tank(0, 8, 6, 14, '#3D8FE0'),
+  rect(-14, -14, 28, 3, '#F2C230'),
+  rect(-1, -22, 3, 12, ink),
+  rect(-5, -21, 11, 3, a),
   ...detail(l, a),
 ]
 export const pipe: Sprite = (l, a) => [
-  rect(-10, -15, 2, 20, '#73818F'),
-  rect(8, -6, 2, 20, '#73818F'),
+  rect(-10, -15, 3, 20, '#73818F'),
+  rect(8, -6, 3, 20, '#73818F'),
   ...['#E2483D', '#F08A24', '#3D8FE0'].map((color, i) =>
     poly(
       [
