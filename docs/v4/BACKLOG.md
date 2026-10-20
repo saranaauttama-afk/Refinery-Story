@@ -11,12 +11,20 @@ decided until it moves into PLAN.md.
 - **Yard notices are optional:** small pills on the yard (tanks nearly full, contract offers, staff without a post, station with no refining unit). Tap opens the sheet; ✕ hides it. Nothing is forced.
 - **U1 camera:** opens centred on the buildings (or the owned land).
 
+## Open — waiting for a decision (v4.0.12 Y4–5)
+
+| #   | Topic                                     | Notes                                                                                                                                                                                                                                                                                  |
+| --- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5   | **Recipes too easy: research in the lab** | Every base × additive can be tried right away, and one lot shows its letter. Proposal: the blend sheet lists only researched recipes; the lab runs research projects (RD + money + weeks). The odds and quality of a find depend on lab level, the chemist assigned and a little luck. |
+| 6   | **Everything sells**                      | Every product line sells well. Proposal: demand per product cools down when you sell a lot of the same thing, and recovers over time (trend).                                                                                                                                          |
+| 7   | **Rivals too weak at awards**             | Y4: our product score was 1059 against rivals at 328–352. Proposal: rivals scale with year/rank so awards stay contested.                                                                                                                                                              |
+
 ## UI fixes — Sarana will point them out one by one
 
-| #   | Topic                              | Notes                                                                                                                     |
-| --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| U2  | Zoom-out view                      | See the whole yard at once.                                                                                               |
-| U3  | Yard is cluttered and hard to read | Mostly an art problem: PixelLab sprites with a distinct look per building. Code shapes are temporary.                     |
+| #   | Topic                              | Notes                                                                                                 |
+| --- | ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| U2  | Zoom-out view                      | See the whole yard at once.                                                                           |
+| U3  | Yard is cluttered and hard to read | Mostly an art problem: PixelLab sprites with a distinct look per building. Code shapes are temporary. |
 
 ## Later
 
