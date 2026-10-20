@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import type { ReactNode } from 'react'
 import { styles as base } from './controls'
+import { ui } from './theme'
 import { productAccent } from '../render/palette'
 
 // Small building blocks shared by the sheets: card, chip, bar, small button.
@@ -29,12 +30,28 @@ export function Card({
 
 export function Section({ children }: { children: ReactNode }) {
   return (
-    <Text style={[base.heading, { fontSize: 17, marginTop: 8, marginBottom: 2 }]}>{children}</Text>
+    <Text
+      style={[
+        base.heading,
+        {
+          fontSize: 16,
+          marginTop: 10,
+          marginBottom: 3,
+          borderLeftWidth: 4,
+          borderLeftColor: ui.gold,
+          paddingLeft: 8,
+        },
+      ]}
+    >
+      {children}
+    </Text>
   )
 }
 
 export function Row({ children, gap = 8 }: { children: ReactNode; gap?: number }) {
-  return <View style={{ flexDirection: 'row', alignItems: 'center', gap }}>{children}</View>
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0, gap }}>{children}</View>
+  )
 }
 
 export function Chip({ label, color = '#FFF6E3' }: { label: string; color?: string }) {
@@ -101,26 +118,33 @@ export function SmallButton({
         pressed && { transform: [{ translateY: 1 }] },
       ]}
     >
-      <Text style={base.text}>{label}</Text>
+      <Text style={[base.text, { fontSize: 14, textAlign: 'center' }]}>{label}</Text>
     </Pressable>
   )
 }
 
 export const Muted = ({ children }: { children: ReactNode }) => (
-  <Text style={[base.text, { fontSize: 13, color: '#5E6470' }]}>{children}</Text>
+  <Text style={[base.text, { fontSize: 13, lineHeight: 20, color: ui.muted }]}>{children}</Text>
 )
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ui.surface,
     borderWidth: 2,
     borderColor: '#14110F',
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 6,
+    padding: 12,
     marginVertical: 4,
     gap: 6,
   },
-  chip: { borderWidth: 2, borderRadius: 6, paddingHorizontal: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: ui.ink,
+    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    flexShrink: 1,
+  },
   chipText: { fontFamily: 'Kanit_400Regular', fontSize: 13, color: '#14110F' },
   bar: {
     borderWidth: 2,
@@ -129,5 +153,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     flex: 1,
   },
-  small: { borderWidth: 2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
+  small: {
+    minHeight: 40,
+    minWidth: 40,
+    maxWidth: '100%',
+    flexShrink: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: ui.ink,
+    borderWidth: 2,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    boxShadow: '0px 2px 0px #14110F',
+  },
 })

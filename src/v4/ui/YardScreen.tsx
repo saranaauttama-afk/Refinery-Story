@@ -13,13 +13,15 @@ import { CustomersPanel } from './CustomersPanel'
 import { BlendPanel } from './BlendPanel'
 import { Alerts } from './Alerts'
 import { useState } from 'react'
-import { View, Text } from 'react-native'
+import { View, Text, Pressable } from 'react-native'
+import { BuildingSprite } from '../render/BuildingSprite'
+import { ui } from './theme'
 import { useGame } from '../store/useGame'
 import { YardCanvas } from '../render/YardCanvas'
 import { buildings, buildingDef } from '../data/buildings'
 import { YARD } from '../data/balance'
-import { place, move, demolish, upgrade, buyLand } from '../sim/actions'
-import { buildingAt, canPlace, upgradeCost } from '../sim/systems/yard'
+import { place, move } from '../sim/actions'
+import { buildingAt, canPlace } from '../sim/systems/yard'
 import { HUD } from './HUD'
 import type { GameState } from '../sim/types'
 import { Button, Sheet, styles } from './controls'
@@ -37,10 +39,33 @@ export function YardScreen() {
   const [blendStation, setBlendStation] = useState<string>()
   const [ghost, setGhost] = useState<{ id: string; x: number; y: number; uid?: string }>()
   const b = s.yard.buildings.find(b => b.uid === selected)
+  const fits = ghost ? canPlace(s, ghost.id, ghost.x, ghost.y, ghost.uid) : false
+  const unchangedMove =
+    !!ghost?.uid &&
+    s.yard.buildings.some(b => b.uid === ghost.uid && b.x === ghost.x && b.y === ghost.y)
+  const previewCombos = ghost
+    ? detectCombos([
+        ...s.yard.buildings.filter(b => b.uid !== ghost.uid),
+        {
+          uid: 'preview',
+          defId: ghost.id,
+          x: ghost.x,
+          y: ghost.y,
+          level: s.yard.buildings.find(b => b.uid === ghost.uid)?.level ?? 1,
+          staff: [],
+          cost: 0,
+        },
+      ])
+        .filter(c => c.members.includes('preview'))
+        .filter(c => {
+          const d = combos.find(d => d.id === c.id)!
+          return !d.hidden || s.discoveredCombos.includes(d.id)
+        })
+    : []
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: ui.paper }}>
       <HUD />
-      <Onboarding onPlace={(id, x, y) => setGhost({ id, x, y })} />
+      {!ghost && !panel && <Onboarding onPlace={(id, x, y) => setGhost({ id, x, y })} />}
       <View style={{ flex: 1 }}>
         <YardCanvas
           state={s}
@@ -79,30 +104,39 @@ export function YardScreen() {
             paddingVertical: 4,
           }}
         >
-          <Text style={styles.text}>
-            {detectCombos([
-              ...s.yard.buildings.filter(b => b.uid !== ghost.uid),
-              {
-                uid: 'preview',
-                defId: ghost.id,
-                x: ghost.x,
-                y: ghost.y,
-                level: 1,
-                staff: [],
-                cost: 0,
-              },
-            ])
-              .filter(c => c.members.includes('preview'))
-              .map(c => text(combos.find(d => d.id === c.id)!.name))
-              .join(' · ')}
-          </Text>
-          <Text style={styles.text}>
-            {text({ en: 'Tap a tile, then confirm', th: 'แตะพื้นที่ แล้วกดยืนยัน' })}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <BuildingSprite
+              id={ghost.id}
+              level={s.yard.buildings.find(b => b.uid === ghost.uid)?.level ?? 1}
+              size={58}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heading}>{text(buildingDef(ghost.id).name)}</Text>
+              <Text style={[styles.text, { fontSize: 13, color: fits ? '#1E6E57' : '#B42318' }]}>
+                {text(
+                  fits
+                    ? { en: 'Ready · tap to reposition', th: 'วางได้ · แตะลานเพื่อปรับตำแหน่ง' }
+                    : {
+                        en: 'Blocked · choose an empty owned tile',
+                        th: 'วางไม่ได้ · เลือกช่องว่างในที่ดินของเรา',
+                      },
+                )}
+              </Text>
+              <Text style={[styles.text, { fontSize: 12 }]}>
+                {buildingDef(ghost.id).w}×{buildingDef(ghost.id).h} · {ghost.x}, {ghost.y}
+              </Text>
+            </View>
+          </View>
+          {!!previewCombos.length && (
+            <Text numberOfLines={2} style={[styles.text, { fontSize: 13, color: '#1E6E57' }]}>
+              {previewCombos.map(c => text(combos.find(d => d.id === c.id)!.name)).join(' · ')}
+            </Text>
+          )}
           <View style={{ flexDirection: 'row' }}>
             <View style={{ flex: 2 }}>
               <Button
                 disabled={
+                  unchangedMove ||
                   !canPlace(s, ghost.id, ghost.x, ghost.y, ghost.uid) ||
                   s.money <
                     (ghost.uid
@@ -111,7 +145,8 @@ export function YardScreen() {
                         ? 0
                         : buildingDef(ghost.id).cost)
                 }
-                label={{ en: 'Confirm', th: 'ยืนยัน' }}
+                color={ui.customers}
+                label={{ en: 'Confirm', th: 'ยืนยันวาง' }}
                 onPress={() => {
                   dispatch(s =>
                     ghost.uid
@@ -123,13 +158,26 @@ export function YardScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label={{ en: 'Cancel', th: 'ยกเลิก' }} onPress={() => setGhost(undefined)} />
+              <Button
+                color={ui.paper}
+                label={{ en: 'Cancel', th: 'ยกเลิก' }}
+                onPress={() => setGhost(undefined)}
+              />
             </View>
           </View>
         </View>
       )}
       <View
-        style={{ flexDirection: 'row', backgroundColor: '#FFF6E3', justifyContent: 'space-around' }}
+        style={{
+          height: 78,
+          flexDirection: 'row',
+          backgroundColor: ui.navy,
+          borderTopWidth: 2,
+          borderColor: ui.ink,
+          paddingHorizontal: 5,
+          gap: 4,
+          paddingVertical: 6,
+        }}
       >
         {[
           { id: 'build', en: 'Build', th: 'สร้าง', color: '#F08A24' },
@@ -138,28 +186,54 @@ export function YardScreen() {
           { id: 'customers', en: 'Customers', th: 'ลูกค้า', color: '#2FB38E' },
           { id: 'company', en: 'Company', th: 'บริษัท', color: '#B184E3' },
         ].map(tab => (
-          <Button
+          <Pressable
             key={tab.id}
-            icon={
-              tab.id === 'build' ? (
-                <Building2 size={20} />
-              ) : tab.id === 'blend' ? (
-                <FlaskConical size={20} />
-              ) : tab.id === 'staff' ? (
-                <Users size={20} />
-              ) : tab.id === 'customers' ? (
-                <Truck size={20} />
-              ) : (
-                <Landmark size={20} />
-              )
-            }
-            label={tab}
-            color={tab.color}
+            accessibilityRole="tab"
+            accessibilityLabel={text(tab)}
+            accessibilityState={{ selected: panel === tab.id }}
             onPress={() => {
+              setGhost(undefined)
               setBlendStation(undefined)
-              setPanel(tab.id)
+              setPanel(panel === tab.id ? '' : tab.id)
             }}
-          />
+            style={({ pressed }) => ({
+              flex: 1,
+              minWidth: 0,
+              borderWidth: 2,
+              borderColor: ui.ink,
+              borderRadius: 5,
+              backgroundColor: pressed || panel === tab.id ? tab.color : ui.paper,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+            })}
+          >
+            <View
+              style={{
+                backgroundColor: tab.color,
+                width: 30,
+                height: 25,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 3,
+              }}
+            >
+              {tab.id === 'build' ? (
+                <Building2 size={19} />
+              ) : tab.id === 'blend' ? (
+                <FlaskConical size={19} />
+              ) : tab.id === 'staff' ? (
+                <Users size={19} />
+              ) : tab.id === 'customers' ? (
+                <Truck size={19} />
+              ) : (
+                <Landmark size={19} />
+              )}
+            </View>
+            <Text style={[styles.text, { fontSize: 12, fontFamily: 'Kanit_600SemiBold' }]}>
+              {text(tab)}
+            </Text>
+          </Pressable>
         ))}
       </View>
       <Notices />
@@ -202,6 +276,7 @@ export function YardScreen() {
       {panel === 'info' && b && (
         <Sheet title={buildingDef(b.defId).name} onClose={() => setPanel('')}>
           <BuildingInfo
+            key={b.uid}
             uid={b.uid}
             onMove={() => {
               setGhost({ id: b.defId, x: b.x, y: b.y, uid: b.uid })

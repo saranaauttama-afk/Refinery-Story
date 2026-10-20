@@ -1,3 +1,4 @@
+import { PanelIntro } from './PanelIntro'
 import { Text } from 'react-native'
 import { useGame } from '../store/useGame'
 import { customers } from '../data/customers'
@@ -26,6 +27,14 @@ export function CustomersPanel() {
     )
   return (
     <>
+      <PanelIntro
+        label={{ en: 'Shipping desk', th: 'ศูนย์จ่ายสินค้า' }}
+        detail={{
+          en: 'Track deliveries and build lasting customer relationships.',
+          th: 'ติดตามสัญญาส่งสินค้าและความสัมพันธ์กับลูกค้า',
+        }}
+        color="#2FB38E"
+      />
       {!roadPath(s).length && (
         <Card tone="warn">
           <Text style={styles.text}>

@@ -1,3 +1,7 @@
+import { PanelIntro } from './PanelIntro'
+import { SpriteThumbnail } from '../render/SpriteThumbnail'
+import { useMemo } from 'react'
+import { workerSprite } from '../render/life'
 import { useState } from 'react'
 import { Text, View, Pressable } from 'react-native'
 import { STAFF } from '../data/balance'
@@ -32,20 +36,12 @@ const statRows = [
 const STAT_SCALE = 80
 
 function Avatar({ job }: { job: string }) {
+  const commands = useMemo(() => workerSprite(job, 0), [job])
   return (
     <View
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#D8B78A',
-        borderWidth: 2,
-        overflow: 'hidden',
-      }}
+      style={{ width: 46, height: 46, backgroundColor: '#E7F1F2', borderWidth: 1, borderRadius: 5 }}
     >
-      <View
-        style={{ height: 14, backgroundColor: jobColors[job] ?? '#F2C230', borderBottomWidth: 2 }}
-      />
+      <SpriteThumbnail commands={commands} cacheKey={`worker:${job}`} size={44} />
     </View>
   )
 }
@@ -113,7 +109,7 @@ function StaffCard({ p }: { p: Staff }) {
         </Text>
       </Row>
       <Stats p={p} />
-      <Row gap={6}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         <SmallButton label={text({ en: 'Train', th: 'ฝึก' })} onPress={() => toggle('train')} />
         <SmallButton
           label={text({ en: `Level up ${levelCost} RD`, th: `เลื่อนขั้น ${levelCost} RD` })}
@@ -126,8 +122,12 @@ function StaffCard({ p }: { p: Staff }) {
           color="#FFF6E3"
           onPress={() => toggle('work')}
         />
-        <SmallButton label="···" color="#FFF6E3" onPress={() => toggle('more')} />
-      </Row>
+        <SmallButton
+          label={text({ en: 'More', th: 'อื่น ๆ' })}
+          color="#FFF6E3"
+          onPress={() => toggle('more')}
+        />
+      </View>
       {open === 'train' &&
         trainings
           .filter(t => t.rank <= s.rank)
@@ -140,14 +140,16 @@ function StaffCard({ p }: { p: Staff }) {
               style={{
                 borderWidth: 2,
                 borderRadius: 8,
-                padding: 6,
+                padding: 8,
+                minHeight: 44,
+                backgroundColor: '#E7F1F2',
                 opacity: s.money < t.cost || p.power < t.power ? 0.4 : 1,
               }}
             >
               <Row>
                 <Text style={[styles.text, { flex: 1 }]}>{text(t.name)}</Text>
                 <Text style={styles.text}>
-                  ${t.cost.toLocaleString()} · ⚡{t.power}
+                  ${t.cost.toLocaleString()} · {text({ en: 'Power', th: 'พลัง' })} {t.power}
                 </Text>
               </Row>
               <Muted>
@@ -191,7 +193,7 @@ function StaffCard({ p }: { p: Staff }) {
               th: `คู่มืออาชีพที่มี: ${s.careerManuals} เล่ม · เปลี่ยนอาชีพใช้ 1 เล่ม`,
             })}
           </Muted>
-          <Row gap={4}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
             {jobs
               .filter(j => j.id !== p.job)
               .map(j => (
@@ -203,7 +205,7 @@ function StaffCard({ p }: { p: Staff }) {
                   onPress={() => dispatch(s => changeJob(s, p.uid, j.id))}
                 />
               ))}
-          </Row>
+          </View>
           <SmallButton
             label={text({ en: 'Fire', th: 'เลิกจ้าง' })}
             color="#FFF1EE"
@@ -221,6 +223,14 @@ export function StaffPanel() {
   const full = s.staff.length >= staffCap(s)
   return (
     <>
+      <PanelIntro
+        label={{ en: 'Refinery crew', th: 'ทีมโรงกลั่น' }}
+        detail={{
+          en: 'Assign work, train skills and grow your crew.',
+          th: 'มอบหมายงาน ฝึกฝีมือ และพัฒนาทีม',
+        }}
+        color="#3D8FE0"
+      />
       <View style={{ flexDirection: 'row', borderWidth: 2, borderRadius: 8, overflow: 'hidden' }}>
         {(['team', 'hire'] as const).map(t => (
           <Pressable
@@ -230,6 +240,8 @@ export function StaffPanel() {
             style={{
               flex: 1,
               padding: 6,
+              minHeight: 40,
+              justifyContent: 'center',
               alignItems: 'center',
               backgroundColor: tab === t ? '#14110F' : '#FFF6E3',
             }}

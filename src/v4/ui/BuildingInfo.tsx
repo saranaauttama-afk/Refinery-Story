@@ -1,3 +1,5 @@
+import { BuildingSprite } from '../render/BuildingSprite'
+import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { useGame } from '../store/useGame'
 import { buildingDef } from '../data/buildings'
@@ -6,7 +8,8 @@ import { combos } from '../data/combos'
 import { jobs } from '../data/staff'
 import { YARD, B } from '../data/balance'
 import { upgrade, demolish } from '../sim/actions'
-import { upgradeCost, comboLeadsFor } from '../sim/systems/yardInfo'
+import { upgradeCost } from '../sim/systems/yardInfo'
+import { comboLeads } from '../sim/systems/combos'
 import { recipeOf, predictedScore, gradeFor } from '../sim/systems/blending'
 import { bases } from '../data/bases'
 import { additives } from '../data/additives'
@@ -28,23 +31,30 @@ export function BuildingInfo({
   onRecipe: () => void
 }) {
   const { state: s, dispatch } = useGame()
+  const [confirmDemolish, setConfirmDemolish] = useState(false)
   const b = s.yard.buildings.find(b => b.uid === uid)
   if (!b) return null
   const d = buildingDef(b.defId)
   const active = s.activeCombos.filter(a => a.members.includes(b.uid))
   const staff = s.staff.filter(p => p.assignedTo === b.uid)
-  const leads = comboLeadsFor(s, b.defId).filter(l => !active.some(a => a.id === l.combo.id))
+  const leads = comboLeads(s, b.defId).filter(l => !active.some(a => a.id === l.combo.id))
   const cost = upgradeCost(b)
   return (
     <>
       <Row>
-        <Chip label={`Lv ${b.level}/${YARD.maxLevel}`} color="#FFE7A3" />
-        <Chip label={`${d.w}×${d.h}`} />
-        <Muted>
-          {text({ en: 'Upkeep', th: 'ค่าบำรุง' })} $
-          {Math.round(b.cost * B.upkeepRate).toLocaleString()}
-          {text({ en: '/mo', th: '/ด.' })}
-        </Muted>
+        <BuildingSprite id={b.defId} level={b.level} size={88} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={styles.heading}>{text(d.name)}</Text>
+          <Row>
+            <Chip label={`Lv ${b.level}/${YARD.maxLevel}`} color="#FFE7A3" />
+            <Chip label={`${d.w}×${d.h}`} />
+            <Muted>
+              {text({ en: 'Upkeep', th: 'ค่าบำรุง' })} $
+              {Math.round(b.cost * B.upkeepRate).toLocaleString()}
+              {text({ en: '/mo', th: '/ด.' })}
+            </Muted>
+          </Row>
+        </View>
       </Row>
       <Text style={styles.text}>{text(infoFor(b.defId))}</Text>
       {b.defId === 'blend' &&
@@ -105,18 +115,22 @@ export function BuildingInfo({
       {leads.map(l => (
         <Muted key={l.combo.id}>
           {text({
-            en: `Try placing near ${l.partnerNames} → ${l.known ? l.combo.name.en : 'a combo'}`,
-            th: `ลองวางใกล้ ${l.partnerNames} → ${l.known ? l.combo.name.th : 'เกิดคอมโบ'}`,
+            en: `Try placing near ${l.partners.map(id => (id === 'process' ? text({ en: 'any process unit', th: 'หน่วยผลิตใดก็ได้' }) : text(buildingDef(id).name))).join(' + ')} → ${l.known ? l.combo.name.en : 'a combo'}`,
+            th: `ลองวางใกล้ ${l.partners.map(id => (id === 'process' ? text({ en: 'any process unit', th: 'หน่วยผลิตใดก็ได้' }) : text(buildingDef(id).name))).join(' + ')} → ${l.known ? l.combo.name.th : 'เกิดคอมโบ'}`,
           })}
         </Muted>
       ))}
       {!active.length && !leads.length && (
         <Muted>{text({ en: 'No combo here yet.', th: 'ยังไม่มีคอมโบที่ตึกนี้' })}</Muted>
       )}
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+      <View style={{ gap: 10, marginTop: 10 }}>
         <View style={{ flex: 1 }}>
           <SmallButton
-            label={text({ en: 'Move $2k', th: 'ย้าย $2,000' })}
+            label={text({
+              en: `Move $${YARD.moveCost.toLocaleString()}`,
+              th: `ย้าย $${YARD.moveCost.toLocaleString()}`,
+            })}
+            disabled={s.money < YARD.moveCost}
             color="#FFF6E3"
             onPress={onMove}
           />
@@ -142,17 +156,39 @@ export function BuildingInfo({
               th: `รื้อ คืน $${Math.round(b.cost * YARD.refund).toLocaleString()}`,
             })}
             color="#FFF1EE"
-            onPress={() => {
-              dispatch(s => demolish(s, b.uid))
-              onClose()
-            }}
+            onPress={() => setConfirmDemolish(true)}
           />
         </View>
       </View>
+      {confirmDemolish && (
+        <Card tone="warn">
+          <Text style={styles.text}>
+            {text({
+              en: 'Demolish this building? Its combos will be recalculated.',
+              th: 'รื้ออาคารนี้หรือไม่? คอมโบที่เกี่ยวข้องจะคำนวณใหม่',
+            })}
+          </Text>
+          <Row>
+            <SmallButton
+              label={text({ en: 'Confirm demolish', th: 'ยืนยันรื้อ' })}
+              color="#F2A49B"
+              onPress={() => {
+                dispatch(s => demolish(s, b.uid))
+                onClose()
+              }}
+            />
+            <SmallButton
+              label={text({ en: 'Cancel', th: 'ยกเลิก' })}
+              color="#FFF6E3"
+              onPress={() => setConfirmDemolish(false)}
+            />
+          </Row>
+        </Card>
+      )}
       <Muted>
         {text({
           en: 'Upgrading adds +25% output per level and makes the building taller.',
-          th: 'อัปเกรดเพิ่มกำลังผลิต +25% ต่อเลเวล และตัวตึกจะใหญ่ขึ้น',
+          th: 'อัปเกรดเพิ่มกำลังผลิต +25% ต่อเลเวล และเพิ่มรายละเอียดอาคารในพื้นที่เดิม',
         })}
       </Muted>
     </>

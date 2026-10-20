@@ -71,29 +71,36 @@ export function box(
     ),
   ]
 }
+// Stepped octagons keep cylinders readable as large pixel clusters.
 export function tank(x: number, y: number, r: number, h: number, accent: string): Command[] {
+  const cap = (cy: number, color: string) =>
+    poly(
+      [
+        [x - r + 3, cy - r / 2],
+        [x + r - 3, cy - r / 2],
+        [x + r, cy - 1],
+        [x + r, cy + 1],
+        [x + r - 3, cy + r / 2],
+        [x - r + 3, cy + r / 2],
+        [x - r, cy + 1],
+        [x - r, cy - 1],
+      ],
+      color,
+    )
   return [
-    ellipse(x - r, y - r / 2, r * 2, r, '#73818F'),
+    cap(y, '#73818F'),
     rect(x - r, y - h, r * 2, h, '#9EABB8'),
+    rect(x + r - 4, y - h, 4, h, '#73818F'),
     rect(x - r, y - h / 2, r * 2, 3, accent),
-    ellipse(x - r, y - h - r / 2, r * 2, r, '#C9D3DC'),
-    rect(x + r - 3, y - h + 3, 2, h - 2, '#B5653A'),
+    cap(y - h, '#DFE8E8'),
   ]
 }
+// Upgrade marks stay inside even a one-tile footprint.
 export function detail(level: number, accent: string): Command[] {
-  const commands: Command[] = []
-  if (level >= 3)
-    commands.push(
-      ...box(4, -2, 7, 5, 12),
-      rect(-16, -10, 30, 2, '#F2C230'),
-      rect(-14, -16, 1, 6, ink),
-      rect(12, -16, 1, 6, ink),
-    )
-  if (level >= 5)
-    commands.push(
-      rect(0, -42, 1, 20, ink),
-      rect(1, -42, 7, 5, accent),
-      circle(-5, -30, 2, '#F2C230'),
-    )
-  return commands
+  return [
+    ...(level >= 2 ? [rect(-5, 0, 3, 2, '#FFF6E3')] : []),
+    ...(level >= 3 ? [rect(-6, -3, 12, 2, '#F2C230')] : []),
+    ...(level >= 4 ? [rect(5, -9, 2, 7, ink)] : []),
+    ...(level >= 5 ? [rect(5, -15, 1, 8, ink), rect(6, -15, 6, 4, accent)] : []),
+  ]
 }

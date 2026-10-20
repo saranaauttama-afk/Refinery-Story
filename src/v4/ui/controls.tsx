@@ -1,6 +1,8 @@
 import { Pressable, Text, StyleSheet, View, ScrollView } from 'react-native'
+import { X } from 'lucide-react-native'
 import { text, type LocalizedText } from '../i18n'
 import { useFeedback } from './Feedback'
+import { ui } from './theme'
 export function Button({
   label,
   onPress,
@@ -23,6 +25,7 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={text(label)}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={() => {
         feedback()
@@ -33,11 +36,11 @@ export function Button({
         color ? { backgroundColor: color } : null,
         selected && styles.selected,
         disabled && { opacity: 0.4 },
-        pressed && { backgroundColor: '#F08A24' },
+        pressed && { transform: [{ translateY: 2 }], boxShadow: '0px 0px 0px transparent' },
       ]}
     >
       {icon}
-      <Text style={styles.text}>{text(label)}</Text>
+      <Text style={styles.buttonText}>{text(label)}</Text>
       {badge && (
         <View style={[styles.badge, { backgroundColor: badge.color }]}>
           <Text style={styles.badgeText}>{badge.label}</Text>
@@ -47,13 +50,13 @@ export function Button({
   )
 }
 const headerColors: Record<string, string> = {
-  Build: '#F08A24',
-  Staff: '#3D8FE0',
-  Customers: '#2FB38E',
-  Company: '#B184E3',
-  'Buy land': '#8ED9C1',
-  'Recipe Book': '#F2C230',
-  Blend: '#E2483D',
+  Build: ui.build,
+  Staff: ui.staff,
+  Customers: ui.customers,
+  Company: ui.company,
+  'Buy land': ui.customers,
+  'Recipe Book': ui.gold,
+  Blend: ui.blend,
 }
 export function Sheet({
   title,
@@ -66,59 +69,95 @@ export function Sheet({
 }) {
   return (
     <View style={styles.sheet}>
-      <View style={[styles.header, { backgroundColor: headerColors[title.en] ?? '#F2C230' }]}>
-        <Text style={styles.heading}>{text(title)}</Text>
-        <Button label={{ en: 'Close', th: 'ปิด' }} onPress={onClose} />
+      <View style={styles.header}>
+        <View style={[styles.headerMark, { backgroundColor: headerColors[title.en] ?? ui.gold }]} />
+        <Text style={[styles.heading, { flex: 1, color: ui.paper }]}>{text(title)}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={text({ en: 'Close', th: 'ปิด' })}
+          onPress={onClose}
+          style={({ pressed }) => [styles.close, pressed && { backgroundColor: ui.gold }]}
+        >
+          <X size={20} color={ui.ink} strokeWidth={3} />
+        </Pressable>
       </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>{children}</ScrollView>
+      <ScrollView
+        key={title.en}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+        contentContainerStyle={{ padding: 12, paddingBottom: 24, gap: 6 }}
+      >
+        {children}
+      </ScrollView>
     </View>
   )
 }
 export const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#F2C230',
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#14110F',
+    backgroundColor: ui.gold,
+    minHeight: 44,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 2,
+    borderColor: ui.ink,
     borderRadius: 6,
     margin: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    flexShrink: 1,
+    gap: 3,
+    boxShadow: '0px 2px 0px #14110F',
   },
-  selected: { backgroundColor: '#FFF6E3', borderWidth: 3 },
+  selected: { borderColor: ui.paper, backgroundColor: ui.gold },
   badge: {
-    position: 'absolute',
-    right: 8,
     borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 6,
+    borderRadius: 3,
+    paddingHorizontal: 5,
     minWidth: 28,
     alignItems: 'center',
   },
-  badgeText: { fontFamily: 'PixelifySans_700Bold', fontSize: 14, color: '#14110F' },
-  text: { fontFamily: 'Kanit_400Regular', fontSize: 16, color: '#14110F' },
-  heading: { fontFamily: 'Kanit_600SemiBold', fontSize: 20, color: '#14110F' },
+  badgeText: { fontFamily: 'PixelifySans_700Bold', fontSize: 14, color: ui.ink },
+  buttonText: {
+    fontFamily: 'Kanit_600SemiBold',
+    fontSize: 14,
+    color: ui.ink,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
+  text: { fontFamily: 'Kanit_400Regular', fontSize: 15, color: ui.ink, flexShrink: 1 },
+  heading: { fontFamily: 'Kanit_600SemiBold', fontSize: 18, color: ui.ink, flexShrink: 1 },
   sheet: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    maxHeight: '65%',
-    padding: 12,
-    backgroundColor: '#FFF6E3',
+    bottom: 78,
+    left: 8,
+    right: 8,
+    maxHeight: '72%',
+    backgroundColor: ui.paper,
     borderWidth: 2,
-    borderRadius: 6,
-    boxShadow: '2px 2px 0px #14110F',
+    borderColor: ui.ink,
+    borderRadius: 8,
+    overflow: 'hidden',
+    boxShadow: '0px 4px 0px #14110F',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    margin: -10,
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
+    gap: 10,
+    backgroundColor: ui.navy,
+    padding: 8,
+    paddingLeft: 12,
+    borderBottomWidth: 2,
+    borderColor: ui.ink,
+  },
+  headerMark: { width: 8, height: 26, borderWidth: 1, borderColor: ui.ink },
+  close: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: ui.ink,
+    borderRadius: 5,
+    backgroundColor: ui.paper,
   },
 })

@@ -52,11 +52,18 @@ For every sprite: stay within the existing logical footprint, keep its anchor st
 **Optional Phase 2:** PixelLab sprites only if visual reviews justify it. Keep the same 2:1 view, footprint, anchor, silhouette, limited palette, transparency, and nearest-neighbor scaling. Replace rendering assets, not gameplay rules.
 
 ## Acceptance checklist
+- [x] Each of the six buildings is distinct when shown without labels.
+- [x] Buildings fit their actual footprints and do not obscure placement decisions.
+- [x] 16×16 starter yard stays readable with several buildings packed together.
+- [x] Ghost preview aligns with the building anchor.
+- [x] Pan/zoom, workers and trucks still layer correctly.
+- [x] No changes to `src/v4/sim/**`, `src/v4/data/**`, or `scripts/v4/**`.
+- [x] Before release: `npm run format`, `npx tsc --noEmit`, `npm run v4:check`, plus 390×844 visual inspection.
 
-- [ ] Each of the six buildings is distinct when shown without labels.
-- [ ] Buildings fit their actual footprints and do not obscure placement decisions.
-- [ ] 16×16 starter yard stays readable with several buildings packed together.
-- [ ] Ghost preview aligns with the building anchor.
-- [ ] Pan/zoom, workers and trucks still layer correctly.
-- [ ] No changes to `src/v4/sim/**`, `src/v4/data/**`, or `scripts/v4/**`.
-- [ ] Before release: `npm run format`, `npx tsc --noEmit`, `npm run v4:check`, plus 390×844 visual inspection.
+## 4.0.13 implementation
+
+- All 27 content definitions now have dedicated silhouettes, including flags, golden decor and the four award statues. Levels 2/4 add small marks; levels 3/5 add stronger upgrade details. Roads remain flat.
+- Catalogue, info and placement thumbnails use the same Skia command list as the yard. CPU snapshots are cached rather than creating one GPU context per card.
+- Yard camera framing uses projected sprite bounds; moving workers and trucks sort by their interpolated position. Placement ghosts use the real sprite, level and anchor.
+- Shared navy headers, cream inset cards, tab accents and 40px minimum action targets apply throughout the game.
+- Acceptance evidence and native-device limitations: [UI-PLAYTEST-4.0.13.md](UI-PLAYTEST-4.0.13.md).

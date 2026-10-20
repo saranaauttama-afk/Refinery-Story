@@ -12,7 +12,7 @@ export default function GameScreen() {
     }, [setPlaying]),
   )
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF6E3' }}>
       <YardScreen />
     </SafeAreaView>
   )

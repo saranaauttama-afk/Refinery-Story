@@ -1,3 +1,13 @@
+import {
+  flag,
+  goldTree,
+  goldSign,
+  legend,
+  awardProduct,
+  awardSafety,
+  awardEco,
+  awardRefinery,
+} from './designs'
 import type { Sprite } from './designs'
 import { draw as gate } from './gate'
 import { draw as loading } from './loading'
@@ -39,12 +49,12 @@ export const sprites: Record<string, Sprite> = {
   sign,
   tower,
   road,
-  goldTree: tree,
-  goldSign: sign,
-  flag: sign,
-  legend: trophy,
-  awardproduct: trophy,
-  awardsafety: trophy,
-  awardeco: trophy,
-  awardrefinery: trophy,
+  goldTree,
+  goldSign,
+  flag,
+  legend,
+  awardproduct: awardProduct,
+  awardsafety: awardSafety,
+  awardeco: awardEco,
+  awardrefinery: awardRefinery,
 }

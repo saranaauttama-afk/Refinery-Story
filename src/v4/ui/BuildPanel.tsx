@@ -1,3 +1,5 @@
+import { BuildingSprite } from '../render/BuildingSprite'
+import { LockKeyhole } from 'lucide-react-native'
 import { useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { useGame } from '../store/useGame'
@@ -55,7 +57,11 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
           <Pressable
             key={c.id}
             accessibilityRole="button"
-            onPress={() => setCategory(c.id)}
+            accessibilityState={{ selected: category === c.id }}
+            onPress={() => {
+              setCategory(c.id)
+              setSelected(undefined)
+            }}
             style={[styles.chip, category === c.id && styles.chipOn]}
           >
             <Text style={[base.text, category === c.id && { color: '#FFF6E3' }]}>{text(c)}</Text>
@@ -74,17 +80,21 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
               onPress={() => setSelected(d.id)}
               style={[styles.card, !open && styles.cardLocked, selected === d.id && styles.cardOn]}
             >
-              <View style={[styles.swatch, { backgroundColor: open ? d.accent : '#C9C1AE' }]}>
-                {!open && <Text style={styles.lockMark}>?</Text>}
+              <View style={[styles.swatch, !open && { opacity: 0.45 }]}>
+                <BuildingSprite id={d.id} size={88} />
               </View>
-              <Text style={styles.cardName} numberOfLines={1}>
+              <Text style={styles.cardName} numberOfLines={2}>
                 {text(d.name)}
               </Text>
               <Text style={styles.cardMeta}>
                 {open
                   ? `${d.w}×${d.h} · ${price(s, d)}`
-                  : text({ en: `Rank ${d.rank}`, th: `แรงก์ ${d.rank}` })}
+                  : text({
+                      en: `Rank ${d.rank} · ${d.w}×${d.h}`,
+                      th: `แรงก์ ${d.rank} · ${d.w}×${d.h}`,
+                    })}
               </Text>
+              {!open && <LockKeyhole size={14} style={{ position: 'absolute', top: 8, left: 8 }} />}
               {owned > 0 && <Text style={styles.owned}>×{owned}</Text>}
             </Pressable>
           )
@@ -92,7 +102,15 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
       </View>
       {picked && (
         <View style={styles.detail}>
-          <Text style={base.heading}>{text(picked.name)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <BuildingSprite id={picked.id} size={64} />
+            <View style={{ flex: 1 }}>
+              <Text style={base.heading}>{text(picked.name)}</Text>
+              <Text style={styles.cardMeta}>
+                {picked.w}×{picked.h} · {price(s, picked)}
+              </Text>
+            </View>
+          </View>
           <Text style={base.text}>{text(infoFor(picked.id))}</Text>
           {leads.map(l => (
             <Text key={l.combo.id} style={[base.text, { color: '#1E6E57' }]}>
@@ -130,30 +148,35 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  chip: { borderWidth: 2, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 2 },
+  chip: {
+    borderWidth: 2,
+    borderRadius: 5,
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   chipOn: { backgroundColor: '#14110F' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   card: {
-    width: '31%',
-    backgroundColor: '#FFFFFF',
+    width: '48%',
+    backgroundColor: '#FFFDF5',
     borderWidth: 2,
     borderRadius: 8,
     padding: 6,
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
-  cardOn: { borderWidth: 3, borderColor: '#F08A24' },
+  cardOn: { borderColor: '#14110F', backgroundColor: '#FFE7A3' },
   cardLocked: { backgroundColor: '#E9E2D2', borderStyle: 'dashed', borderColor: '#5E6470' },
-  swatch: {
-    width: 48,
-    height: 40,
-    borderWidth: 2,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  swatch: { height: 88, alignItems: 'center', justifyContent: 'center' },
   lockMark: { fontFamily: 'PixelifySans_700Bold', fontSize: 20, color: '#5E6470' },
-  cardName: { fontFamily: 'Kanit_600SemiBold', fontSize: 14, color: '#14110F' },
+  cardName: {
+    fontFamily: 'Kanit_600SemiBold',
+    fontSize: 15,
+    textAlign: 'center',
+    color: '#14110F',
+  },
   cardMeta: { fontFamily: 'Kanit_400Regular', fontSize: 12, color: '#3B3F47' },
   owned: {
     position: 'absolute',
@@ -166,7 +189,7 @@ const styles = StyleSheet.create({
   detail: {
     marginTop: 10,
     padding: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFDF5',
     borderWidth: 2,
     borderRadius: 8,
     gap: 4,

@@ -18,6 +18,9 @@ export default function TitleScreen() {
       <View style={styles.panel}>
         <Text style={styles.title}>{noLigature(text(copy.title))}</Text>
         {saveError && <Text style={styles.buttonText}>{text(saveError)}</Text>}
+        <Text style={styles.tagline}>
+          {text({ en: 'YOUR LITTLE INDUSTRIAL WORLD', th: 'โรงกลั่นจิ๋ว โลกอุตสาหกรรมของคุณ' })}
+        </Text>
         <Text style={styles.version}>{versionLabel}</Text>
         <Link href="/game" asChild>
           <Pressable
@@ -30,7 +33,7 @@ export default function TitleScreen() {
           </Pressable>
         </Link>
         {ready && hasSave && (
-          <Link href="/game" style={styles.buttonText}>
+          <Link href="/game" style={[styles.buttonText, { minHeight: 44, padding: 6 }]}>
             {text({ en: 'Continue', th: 'เล่นต่อ' })}
           </Link>
         )}
@@ -41,7 +44,7 @@ export default function TitleScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#8DBF5A',
+    backgroundColor: '#CEE0CE',
     justifyContent: 'flex-end',
     padding: 24,
     paddingBottom: 48,
@@ -52,6 +55,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 6,
     padding: 24,
+    boxShadow: '0px 5px 0px #14110F',
+    borderTopWidth: 8,
+    borderTopColor: '#263D49',
     alignItems: 'center',
     gap: 16,
   },
@@ -61,6 +67,7 @@ const styles = StyleSheet.create({
     color: '#14110F',
     textAlign: 'center',
   },
+  tagline: { fontFamily: 'Kanit_400Regular', color: '#52616B', fontSize: 14, textAlign: 'center' },
   version: { fontFamily: 'PixelifySans_700Bold', color: '#73818F', fontSize: 18 },
   button: {
     backgroundColor: '#F08A24',

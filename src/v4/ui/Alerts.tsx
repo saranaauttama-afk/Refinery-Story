@@ -22,7 +22,7 @@ export function Alerts({ onOpen }: { onOpen: (a: Alert) => void }) {
       pointerEvents="box-none"
       style={{ position: 'absolute', top: 8, left: 8, right: 8, gap: 6, alignItems: 'flex-start' }}
     >
-      {shown.slice(0, 3).map(a => (
+      {shown.slice(0, 2).map(a => (
         <View
           key={a.id}
           style={{
@@ -30,7 +30,7 @@ export function Alerts({ onOpen }: { onOpen: (a: Alert) => void }) {
             alignItems: 'center',
             maxWidth: '100%',
             borderWidth: 2,
-            borderRadius: 16,
+            borderRadius: 5,
             backgroundColor: '#FFF6E3',
             overflow: 'hidden',
           }}
@@ -39,7 +39,13 @@ export function Alerts({ onOpen }: { onOpen: (a: Alert) => void }) {
           <Pressable
             accessibilityRole="button"
             onPress={() => onOpen(a)}
-            style={{ paddingLeft: 8, paddingVertical: 4, flexShrink: 1 }}
+            style={{
+              paddingLeft: 8,
+              paddingVertical: 4,
+              minHeight: 40,
+              justifyContent: 'center',
+              flexShrink: 1,
+            }}
           >
             <Text
               numberOfLines={1}
@@ -50,10 +56,17 @@ export function Alerts({ onOpen }: { onOpen: (a: Alert) => void }) {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="hide"
+            accessibilityLabel={text({ en: 'Hide notice', th: 'ซ่อนแจ้งเตือน' })}
             hitSlop={8}
             onPress={() => setHidden(h => [...h, a.id])}
-            style={{ paddingHorizontal: 10, paddingVertical: 4 }}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              minWidth: 40,
+              minHeight: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 13, color: '#5E6470' }}>
               ✕
@@ -61,9 +74,9 @@ export function Alerts({ onOpen }: { onOpen: (a: Alert) => void }) {
           </Pressable>
         </View>
       ))}
-      {shown.length > 3 && (
+      {shown.length > 2 && (
         <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 12, color: '#3B3F47' }}>
-          +{shown.length - 3}
+          +{shown.length - 2}
         </Text>
       )}
     </View>

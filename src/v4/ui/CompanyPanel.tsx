@@ -1,3 +1,4 @@
+import { PanelIntro } from './PanelIntro'
 import { Text, View } from 'react-native'
 import { awardList, marketNames, unlockName } from '../i18nLabels'
 import { useGame } from '../store/useGame'
@@ -19,6 +20,14 @@ export function CompanyPanel({ onLand, onCombos }: { onLand: () => void; onCombo
     s.market.phase === 'boom' ? '#8ED9C1' : s.market.phase === 'bust' ? '#F2A49B' : '#FFF6E3'
   return (
     <>
+      <PanelIntro
+        label={{ en: 'Company office', th: 'สำนักงานบริษัท' }}
+        detail={{
+          en: 'Plan investments and the next refinery expansion.',
+          th: 'วางแผนลงทุนและขยายโรงกลั่นขั้นต่อไป',
+        }}
+        color="#B184E3"
+      />
       {saveError && (
         <Card tone="warn">
           <Text style={styles.text}>{text(saveError)}</Text>
@@ -34,7 +43,7 @@ export function CompanyPanel({ onLand, onCombos }: { onLand: () => void; onCombo
             style={{
               width: 54,
               height: 54,
-              borderRadius: 27,
+              borderRadius: 6,
               borderWidth: 2,
               backgroundColor: '#F2C230',
               alignItems: 'center',

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react-native'
 import { View, Text, Pressable } from 'react-native'
 import { useGame } from '../store/useGame'
 import { hints, type HintStep } from '../data/onboarding'
@@ -41,6 +43,7 @@ export function nextPlacement(s: GameState, index: number) {
 
 export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: number) => void }) {
   const { state: s, dispatch } = useGame()
+  const [expanded, setExpanded] = useState(true)
   const index = currentHint(s)
   if (index === null) return null
   const step = hints[index]
@@ -50,17 +53,35 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
   return (
     <View
       style={{
-        backgroundColor: '#FFF6E3',
+        backgroundColor: '#F5E8C7',
         padding: 8,
-        borderBottomWidth: 1,
+        borderBottomWidth: 2,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
       }}
     >
-      <Text style={[styles.text, { flex: 1 }]}>
-        {index + 1}/{hints.length} · {text(step)}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={text({ en: 'Toggle guide', th: 'ย่อหรือขยายคำแนะนำ' })}
+          onPress={() => setExpanded(!expanded)}
+          style={{ flexDirection: 'row', alignItems: 'center', minHeight: 40, gap: 4 }}
+        >
+          <Text style={[styles.heading, { fontSize: 14, flex: 1 }]}>
+            {text({
+              en: `STARTER GUIDE ${index + 1}/${hints.length}`,
+              th: `เริ่มโรงกลั่น ${index + 1}/${hints.length}`,
+            })}
+          </Text>
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </Pressable>
+        {expanded && (
+          <Text numberOfLines={3} style={[styles.text, { fontSize: 13, lineHeight: 19 }]}>
+            {text(step)}
+          </Text>
+        )}
+      </View>
       {shortOfCash && (
         <Pressable
           accessibilityRole="button"
@@ -71,6 +92,8 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
             borderRadius: 6,
             paddingHorizontal: 8,
             paddingVertical: 4,
+            minHeight: 40,
+            justifyContent: 'center',
           }}
         >
           <Text style={styles.text}>
@@ -91,6 +114,8 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
             borderRadius: 6,
             paddingHorizontal: 8,
             paddingVertical: 4,
+            minHeight: 40,
+            justifyContent: 'center',
           }}
         >
           <Text style={styles.text}>{text({ en: 'Place', th: 'วาง' })}</Text>
@@ -98,6 +123,7 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
       )}
       <Pressable
         accessibilityRole="button"
+        style={{ minWidth: 40, minHeight: 40, justifyContent: 'center' }}
         onPress={() => dispatch(s => ({ ...s, hintIndex: index + 1 }))}
       >
         <Text style={styles.text}>{text({ en: 'Skip', th: 'ข้าม' })} ›</Text>

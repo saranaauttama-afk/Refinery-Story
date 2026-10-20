@@ -1,3 +1,4 @@
+import { PanelIntro } from './PanelIntro'
 import { Text, View, Pressable } from 'react-native'
 import { baseAvailable } from '../sim/systems/investments'
 import { bases, type BaseId } from '../data/bases'
@@ -47,7 +48,7 @@ const SCORE_MAX = 450
 // Badge for a recipe: its compatibility letter once tried, otherwise NEW.
 function recipeBadge(s: GameState, base: BaseId, additive: AdditiveId | null) {
   if (!s.triedPairs.includes(`${base}:${additive ?? 'none'}`))
-    return { label: 'NEW', color: '#E36BB0' }
+    return { label: text({ en: 'NEW', th: 'ใหม่' }), color: '#E36BB0' }
   const compat = pairCompat(base, additive)
   return { label: compat, color: compatColors[compat] }
 }
@@ -72,6 +73,7 @@ function Option({
       onPress={onPress}
       style={{
         width: '48%',
+        minHeight: 64,
         borderWidth: selected ? 3 : 2,
         borderRadius: 8,
         paddingHorizontal: 8,
@@ -85,7 +87,7 @@ function Option({
       <View style={{ flex: 1 }}>
         <Text
           style={[styles.text, selected && { fontFamily: 'Kanit_600SemiBold' }]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {selected ? '✓ ' : ''}
           {label}
@@ -100,7 +102,16 @@ function Option({
           paddingHorizontal: 5,
         }}
       >
-        <Text style={{ fontFamily: 'PixelifySans_700Bold', fontSize: 13, color: '#14110F' }}>
+        <Text
+          style={{
+            fontFamily:
+              badge.label === text({ en: 'NEW', th: 'ใหม่' })
+                ? 'Kanit_600SemiBold'
+                : 'PixelifySans_700Bold',
+            fontSize: 13,
+            color: '#14110F',
+          }}
+        >
           {badge.label}
         </Text>
       </View>
@@ -127,6 +138,14 @@ export function BlendPanel({ station: initial }: { station?: string }) {
   const thresholds = [...GRADES].reverse()
   return (
     <>
+      <PanelIntro
+        label={{ en: 'Production desk', th: 'โต๊ะควบคุมการผสม' }}
+        detail={{
+          en: 'Choose a recipe and watch your product grade.',
+          th: 'เลือกสูตรและดูเกรดผลิตภัณฑ์',
+        }}
+        color="#E2483D"
+      />
       {stations.length > 1 && (
         <>
           <Muted>
@@ -150,9 +169,10 @@ export function BlendPanel({ station: initial }: { station?: string }) {
                     alignItems: 'center',
                     gap: 6,
                     borderWidth: on ? 3 : 2,
-                    borderRadius: 16,
+                    borderRadius: 5,
                     paddingHorizontal: 10,
-                    paddingVertical: 3,
+                    paddingVertical: 5,
+                    minHeight: 40,
                     backgroundColor: on ? '#14110F' : '#FFFFFF',
                   }}
                 >
@@ -270,7 +290,19 @@ export function BlendPanel({ station: initial }: { station?: string }) {
               key={name}
               style={{ width: '46%', flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
-              <Text style={[styles.text, { width: 64, fontSize: 13 }]}>{name}</Text>
+              <Text style={[styles.text, { width: 64, fontSize: 13 }]}>
+                {text({
+                  en: name,
+                  th: (
+                    {
+                      Purity: 'บริสุทธิ์',
+                      Yield: 'ผลผลิต',
+                      Stability: 'คงตัว',
+                      Eco: 'รักษ์โลก',
+                    } as Record<string, string>
+                  )[name],
+                })}
+              </Text>
               <Bar value={value / 120} color={color} height={8} />
             </View>
           ))}
@@ -305,7 +337,7 @@ export function BlendPanel({ station: initial }: { station?: string }) {
         <Text style={[styles.text, { fontSize: 13, color: '#5E6470' }]}>
           {text({
             en: `(letter = how well it suits ${baseName(r.base)}, NEW = first try +10★)`,
-            th: `(ตัวอักษร = เข้ากับ${baseName(r.base)}แค่ไหน, NEW = ลองครั้งแรก +10★)`,
+            th: `(ตัวอักษร = เข้ากับ${baseName(r.base)}แค่ไหน, ใหม่ = ลองครั้งแรก +10★)`,
           })}
         </Text>
       </Section>

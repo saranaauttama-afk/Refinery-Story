@@ -1,194 +1,211 @@
-import { box, tank, rect, circle, ellipse, poly, detail, ink, type Command } from './shapes'
+import { box, tank, rect, poly, detail, ink, type Command } from './shapes'
 export type Sprite = (level: number, accent: string, t: number) => Command[]
+const steel = '#DFE8E8',
+  blue = '#4FA3D9',
+  yellow = '#F2C230',
+  cream = '#FFF6E3'
+// Local origin is always the projected centre of the unchanged footprint.
+const pad = (w: number, d: number) =>
+  box((d - w) * 8, -(w + d) * 4, w * 16 - 3, d * 16 - 3, 2, '#E5D9BB', '#BEAF91', '#9F947E')
+const hut = (w: number, d: number, h: number, roof: string) =>
+  box((d - w) / 2, -(w + d) / 4, w, d, h, roof, cream, '#B6C8CB')
 export const gate: Sprite = (l, a, t) => [
-  ...box(-7, 0, 8, 8, 12, '#FFF6E3'),
-  rect(0, -6, 22, 2, ink),
-  rect(1, -7 - (Math.sin(t) > 0 ? 8 : 0), 18, 2, a),
-  rect(5, -8, 2, 3, ink),
-  rect(11, -8, 2, 3, ink),
+  ...pad(1, 2),
+  ...hut(10, 10, 12, blue),
+  rect(-7, -9, 5, 4, '#264554'),
+  ...(t > 0
+    ? [rect(5, -25, 3, 20, yellow), rect(5, -20, 3, 3, ink), rect(5, -12, 3, 3, ink)]
+    : [rect(5, -5, 17, 3, yellow), rect(10, -5, 3, 3, ink), rect(17, -5, 3, 3, ink)]),
+  rect(20, -2, 3, 7, '#73818F'),
   ...detail(l, a),
 ]
 export const loading: Sprite = (l, a) => [
-  rect(-18, -20, 2, 30, '#73818F'),
-  rect(16, -4, 2, 22, '#73818F'),
-  ...box(-4, -16, 24, 24, 4, a, '#B5653A', '#948C7E'),
-  rect(-14, 2, 28, 2, '#F2C230'),
-  rect(-10, -7, 3, 10, ink),
-  rect(8, 1, 3, 10, ink),
+  ...pad(2, 2),
+  rect(-22, -17, 3, 26, '#73818F'),
+  rect(19, -17, 3, 26, '#73818F'),
+  ...box(-2, -22, 24, 22, 4, a, '#C36D29', '#8B613F'),
+  rect(-16, 5, 30, 3, yellow),
+  rect(-10, -4, 3, 10, ink),
+  rect(9, -4, 3, 10, ink),
   ...detail(l, a),
 ]
 export const crudeTank: Sprite = (l, a) => [
-  ...box(-13, 8, 27, 25, 3, '#D8D2C4', '#B9B2A3', '#948C7E'),
-  ...tank(0, 3, 15, 19, a),
-  rect(-14, -9, 28, 3, '#F2C230'),
-  rect(11, -17, 2, 21, '#14110F'),
-  rect(0, -23, 4, 3, '#B5653A'),
-  ...(l >= 3 ? [rect(-12, -18, 7, 3, '#F08A24')] : []),
+  ...pad(2, 2),
+  ...tank(0, 6, 20, 21, a),
+  rect(-17, -4, 34, 4, a),
+  rect(13, -17, 3, 23, yellow),
+  rect(-3, -22, 6, 4, '#73818F'),
   ...detail(l, a),
 ]
 export const productTank: Sprite = (l, a) => [
-  ...tank(0, 3, 10, 20, a),
-  rect(-8, -9, 16, 3, a),
-  rect(0, -24, 3, 4, '#B5653A'),
+  ...pad(1, 1),
+  ...tank(0, 3, 11, 18, a),
+  rect(-8, -8, 16, 4, a),
+  rect(-2, -20, 4, 3, steel),
   ...detail(l, a),
 ]
 export const cdu: Sprite = (l, a) => [
-  ...box(-15, 7, 29, 24, 4, '#D8D2C4', '#B9B2A3', '#948C7E'),
-  ...box(-14, -1, 15, 11, 14, '#F08A24', '#B5653A', '#73818F'),
-  ...tank(7, 0, 7, 38, '#F08A24'),
-  rect(0, -30, 14, 3, '#F2C230'),
-  rect(0, -17, 14, 3, '#F2C230'),
-  rect(12, -36, 2, 39, ink),
-  rect(-15, -17, 7, 3, ink),
-  ...(l >= 3 ? [...tank(-9, -5, 4, 20, '#73818F')] : []),
+  ...pad(2, 2),
+  ...box(-7, 0, 14, 12, 14, '#F08A24', '#C3773B', '#845C49'),
+  ...tank(8, 2, 8, 36, '#F08A24'),
+  rect(0, -28, 16, 3, yellow),
+  rect(0, -16, 16, 3, yellow),
+  rect(-14, -5, 7, 5, ink),
+  rect(12, -32, 2, 32, ink),
   ...detail(l, a),
 ]
 export const hydro: Sprite = (l, a) => [
-  ...box(-14, 9, 28, 22, 4, '#D8D2C4', '#B9B2A3', '#948C7E'),
-  ...tank(-8, 0, 7, 24, a),
-  ...tank(9, 7, 7, 24, a),
-  rect(-13, -9, 26, 3, '#F2C230'),
-  rect(-12, -21, 3, 24, ink),
-  rect(13, -15, 3, 24, ink),
-  ...box(-3, 10, 10, 8, 7, '#C9D3DC'),
+  ...pad(2, 2),
+  ...tank(-10, -1, 8, 25, a),
+  ...tank(10, 7, 8, 25, a),
+  rect(-10, -14, 20, 3, yellow),
+  ...box(-3, 7, 11, 9, 7, steel),
   ...detail(l, a),
 ]
 export const reformer: Sprite = (l, a) => [
-  ...box(-14, 8, 16, 20, 9, a),
-  ...tank(-10, -3, 5, 27, a),
-  ...tank(0, 2, 5, 30, a),
-  ...tank(10, 7, 5, 27, a),
-  rect(-15, -15, 31, 2, '#B5653A'),
+  ...pad(2, 3),
+  ...tank(-19, 1, 6, 21, a),
+  ...tank(-3, 7, 6, 25, a),
+  ...tank(13, 13, 6, 21, a),
+  rect(-19, -8, 33, 3, yellow),
+  ...box(-9, 5, 11, 10, 10, '#F08A24'),
   ...detail(l, a),
 ]
 export const cracker: Sprite = (l, a) => [
-  ...box(-14, 5, 20, 20, 14, a),
-  ...tank(-10, -2, 8, 43, a),
-  ...tank(12, 8, 11, 34, a),
-  rect(3, -40, 4, 44, '#73818F'),
-  rect(-18, -26, 32, 2, '#F2C230'),
-  rect(-16, -25, 2, 20, '#B5653A'),
+  ...pad(3, 3),
+  ...tank(13, 9, 15, 27, a),
+  ...tank(-15, 0, 9, 42, a),
+  rect(-7, -32, 18, 4, yellow),
+  ...box(-12, 16, 20, 15, 10, steel),
+  rect(-20, -31, 3, 28, '#B5653A'),
   ...detail(l, a),
 ]
-export const blend: Sprite = (l, a, t) => [
-  ...box(-14, 10, 28, 24, 4, '#D8D2C4', '#B9B2A3', '#948C7E'),
-  ...tank(-9, 0, 6, 14, a),
-  ...tank(9, 0, 6, 14, a),
-  ...tank(0, 8, 6, 14, '#3D8FE0'),
-  rect(-14, -14, 28, 3, '#F2C230'),
-  rect(-1, -22, 3, 12, ink),
-  rect(-5, -21, 11, 3, a),
+export const blend: Sprite = (l, a) => [
+  ...pad(2, 2),
+  ...tank(-12, 0, 8, 13, a),
+  ...tank(10, 0, 8, 13, blue),
+  ...tank(0, 12, 8, 13, '#2FB38E'),
+  rect(-14, -16, 28, 3, yellow),
+  rect(-2, -23, 4, 10, ink),
+  rect(-7, -24, 14, 4, cream),
   ...detail(l, a),
 ]
 export const pipe: Sprite = (l, a) => [
-  rect(-10, -15, 3, 20, '#73818F'),
-  rect(8, -6, 3, 20, '#73818F'),
-  ...['#E2483D', '#F08A24', '#3D8FE0'].map((color, i) =>
+  rect(-12, -11, 3, 16, '#73818F'),
+  rect(9, -11, 3, 16, '#73818F'),
+  ...['#E2483D', '#F08A24', blue].map((c, i) =>
     poly(
       [
-        [-12, -16 + i * 3],
-        [0, -10 + i * 3],
-        [12, -16 + i * 3],
-        [12, -14 + i * 3],
+        [-13, -14 + i * 3],
         [0, -8 + i * 3],
-        [-12, -14 + i * 3],
+        [13, -14 + i * 3],
+        [13, -11 + i * 3],
+        [0, -5 + i * 3],
+        [-13, -11 + i * 3],
       ],
-      color,
+      c,
     ),
   ),
   ...detail(l, a),
 ]
 export const lab: Sprite = (l, a) => [
-  ...box(-5, 0, 14, 12, 16, a, '#FFF6E3', '#D8D2C4'),
-  rect(-12, -7, 6, 5, '#4FA3D9'),
-  rect(-2, -18, 6, 8, '#FFF6E3'),
-  rect(0, -17, 2, 4, a),
-  circle(1, -12, 3, a),
+  ...pad(1, 1),
+  ...hut(12, 12, 13, a),
+  rect(-9, -5, 5, 5, '#264554'),
+  rect(-1, -21, 4, 8, cream),
+  rect(-4, -16, 10, 5, '#2FB38E'),
   ...detail(l, a),
 ]
-export const control: Sprite = (l, a, t) => [
-  ...box(-10, 1, 24, 12, 15, a, '#FFF6E3', '#D8D2C4'),
-  rect(-17, -5, 21, 5, '#3D8FE0'),
-  rect(-14, -4, 3, 2, '#2FB38E'),
-  rect(-8, -4, 3, 2, '#F2C230'),
+export const control: Sprite = (l, a) => [
+  ...pad(2, 1),
+  ...hut(25, 12, 13, a),
+  rect(-16, -6, 19, 5, '#264554'),
+  rect(-14, -5, 4, 2, '#2FB38E'),
+  rect(-7, -5, 4, 2, yellow),
+  rect(7, -24, 2, 12, ink),
   ...detail(l, a),
 ]
 export const canteen: Sprite = (l, a) => [
-  ...box(-10, 0, 24, 12, 13, '#B5653A', '#FFF6E3', '#D8D2C4'),
+  ...pad(2, 1),
+  ...hut(24, 12, 11, a),
   poly(
     [
-      [-22, -6],
-      [-12, -19],
-      [12, -7],
-      [2, 6],
+      [-18, -12],
+      [-7, -23],
+      [18, -10],
+      [7, 1],
     ],
-    '#B5653A',
+    '#D47B43',
   ),
-  rect(-13, -8, 4, 8, '#4FA3D9'),
-  ...box(10, 10, 8, 5, 5, '#B5653A'),
-  rect(-2, -25, 4, 12, '#73818F'),
+  rect(-12, -7, 5, 8, blue),
+  rect(7, -20, 4, 8, steel),
   ...detail(l, a),
 ]
 export const flare: Sprite = (l, a, t) => [
-  ...box(-4, 2, 9, 9, 5),
-  rect(-2, -46, 4, 50, '#73818F'),
-  rect(-4, -35, 2, 34, '#B5653A'),
+  ...pad(1, 1),
+  rect(-3, -30, 6, 35, '#73818F'),
+  rect(-5, -22, 2, 25, '#B5653A'),
   poly(
     [
-      [-3, -46],
-      [0, -56 - Math.floor(Math.abs(Math.sin(t)) * 3)],
-      [4, -46],
-    ],
-    '#F08A24',
-  ),
-  poly(
-    [
-      [-1, -46],
-      [1, -51],
-      [2, -46],
-    ],
-    '#F2C230',
-  ),
-  ...detail(l, a),
-]
-export const tree: Sprite = (l, a) => [
-  rect(-2, -10, 4, 17, '#B5653A'),
-  poly(
-    [
-      [-12, -7],
-      [-8, -23],
-      [0, -29],
-      [9, -21],
-      [12, -4],
-      [0, 2],
+      [-5, -30],
+      [-5, -36],
+      [-2, -36],
+      [-2, -42 - Math.floor(Math.abs(Math.sin(t)) * 3)],
+      [2, -39],
+      [6, -33],
+      [3, -29],
     ],
     a,
   ),
-  rect(-7, -19, 4, 4, '#8DBF5A'),
-  ...(l >= 3 ? [circle(-8, -10, 5, '#5E8C3A'), circle(8, -12, 6, '#8DBF5A')] : []),
-  ...(l >= 5 ? [circle(-6, -22, 6, '#8DBF5A'), circle(6, -26, 6, '#7AAA4C')] : []),
+  rect(-1, -36, 3, 6, yellow),
+  ...detail(l, a),
+]
+export const tree: Sprite = (l, a) => [
+  ...pad(1, 1),
+  rect(-2, -9, 4, 14, '#B5653A'),
+  poly(
+    [
+      [-12, -5],
+      [-12, -15],
+      [-7, -15],
+      [-7, -23],
+      [5, -23],
+      [5, -19],
+      [11, -19],
+      [11, -6],
+      [5, -6],
+      [5, -2],
+      [-6, -2],
+      [-6, -5],
+    ],
+    a,
+  ),
+  rect(-7, -17, 6, 6, '#8DBF5A'),
+  ...detail(l, a),
 ]
 export const lamp: Sprite = (l, a) => [
-  rect(-1, -25, 2, 30, '#73818F'),
-  rect(-5, -27, 10, 5, a),
-  rect(-6, -29, 12, 2, ink),
-  ...(l >= 3 ? [rect(-10, -22, 20, 2, ink), rect(-12, -22, 5, 5, a), rect(8, -22, 5, 5, a)] : []),
-  ...(l >= 5 ? [rect(-1, -38, 2, 10, ink), rect(-6, -41, 12, 5, a)] : []),
+  ...pad(1, 1),
+  rect(-2, -22, 4, 26, '#73818F'),
+  rect(-7, -25, 14, 7, a),
+  rect(-8, -27, 16, 3, ink),
+  ...detail(l, a),
 ]
 export const sign: Sprite = (l, a) => [
-  rect(-8, -15, 2, 22, '#73818F'),
-  rect(8, -6, 2, 22, '#73818F'),
-  ...box(-8, -14, 22, 3, 10, a),
-  rect(-7, -20, 12, 2, '#FFF6E3'),
-  ...(l >= 3 ? [rect(-7, -16, 12, 2, '#F2C230')] : []),
-  ...(l >= 5 ? [rect(0, -35, 1, 12, ink), rect(1, -35, 8, 5, a)] : []),
+  ...pad(1, 1),
+  rect(-8, -10, 3, 16, '#73818F'),
+  rect(6, -10, 3, 16, '#73818F'),
+  rect(-13, -22, 26, 15, a),
+  rect(-9, -18, 18, 3, cream),
+  rect(-9, -12, 11, 2, cream),
+  ...detail(l, a),
 ]
 export const tower: Sprite = (l, a) => [
-  ...box(-8, 0, 24, 22, 58, a),
-  rect(-18, -28, 26, 3, '#F2C230'),
-  rect(-18, -43, 26, 3, '#4FA3D9'),
-  rect(-18, -13, 26, 3, '#4FA3D9'),
-  rect(1, -66, 2, 16, ink),
+  ...pad(3, 3),
+  ...hut(30, 28, 29, a),
+  ...hut(20, 18, 48, '#C9D3DC'),
+  rect(-15, -30, 21, 4, blue),
+  rect(-15, -42, 21, 4, blue),
+  rect(-2, -60, 4, 13, yellow),
   ...detail(l, a),
 ]
 export const road: Sprite = () => [
@@ -199,28 +216,153 @@ export const road: Sprite = () => [
       [0, 8],
       [-16, 0],
     ],
-    '#4A4E57',
+    '#59636A',
   ),
-  rect(-1, -2, 3, 2, '#F2C230'),
+  poly(
+    [
+      [-5, -3],
+      [-1, -5],
+      [6, -1],
+      [2, 1],
+    ],
+    cream,
+  ),
 ]
 export const trophy: Sprite = (l, a) => [
-  ...box(-3, 3, 8, 8, 5, a),
-  rect(-1, -17, 3, 20, a),
-  ellipse(-8, -24, 16, 12, a),
-  rect(-9, -26, 18, 2, ink),
-  ...(l >= 3 ? [circle(-8, -19, 3, '#F2C230'), circle(8, -19, 3, '#F2C230')] : []),
-  ...(l >= 5
-    ? [
-        poly(
-          [
-            [-7, -29],
-            [-3, -34],
-            [0, -29],
-            [3, -34],
-            [7, -29],
-          ],
-          '#F2C230',
-        ),
-      ]
-    : []),
+  ...pad(1, 1),
+  ...hut(9, 8, 5, '#73818F'),
+  rect(-2, -13, 4, 12, a),
+  poly(
+    [
+      [-8, -23],
+      [8, -23],
+      [8, -14],
+      [4, -10],
+      [-4, -10],
+      [-8, -14],
+    ],
+    a,
+  ),
+  rect(-11, -21, 3, 9, yellow),
+  rect(8, -21, 3, 9, yellow),
+  ...detail(l, a),
+]
+export const flag: Sprite = (l, a) => [
+  ...pad(1, 1),
+  rect(-3, -29, 3, 35, steel),
+  poly(
+    [
+      [0, -29],
+      [13, -26],
+      [10, -20],
+      [0, -23],
+    ],
+    a,
+  ),
+  ...detail(l, a),
+]
+export const goldTree: Sprite = (l, a) => [
+  ...pad(1, 1),
+  rect(-2, -12, 4, 17, '#B5653A'),
+  poly(
+    [
+      [-12, -10],
+      [0, -28],
+      [12, -10],
+      [6, -10],
+      [12, -3],
+      [-12, -3],
+      [-6, -10],
+    ],
+    a,
+  ),
+  rect(-5, -16, 4, 4, cream),
+  ...detail(l, a),
+]
+export const goldSign: Sprite = (l, a) => [
+  ...pad(1, 1),
+  rect(-2, -14, 4, 20, steel),
+  poly(
+    [
+      [-14, -26],
+      [10, -26],
+      [14, -19],
+      [10, -12],
+      [-14, -12],
+      [-10, -19],
+    ],
+    a,
+  ),
+  rect(-7, -21, 14, 3, cream),
+  ...detail(l, a),
+]
+export const legend: Sprite = (l, a) => [
+  ...pad(1, 1),
+  ...hut(12, 10, 6, '#73818F'),
+  rect(-5, -19, 10, 14, a),
+  rect(-4, -27, 8, 8, steel),
+  rect(-7, -29, 14, 3, yellow),
+  rect(-10, -18, 5, 3, a),
+  ...detail(l, a),
+]
+export const awardProduct: Sprite = (l, a) => [
+  ...pad(1, 1),
+  ...hut(10, 9, 6, a),
+  poly(
+    [
+      [0, -28],
+      [8, -17],
+      [8, -11],
+      [3, -7],
+      [-3, -7],
+      [-8, -11],
+      [-8, -17],
+    ],
+    '#E2483D',
+  ),
+  rect(-3, -16, 3, 5, cream),
+  ...detail(l, a),
+]
+export const awardSafety: Sprite = (l, a) => [
+  ...pad(1, 1),
+  ...hut(10, 9, 6, a),
+  poly(
+    [
+      [-10, -26],
+      [10, -26],
+      [10, -14],
+      [0, -6],
+      [-10, -14],
+    ],
+    '#2FB38E',
+  ),
+  rect(-2, -23, 4, 11, cream),
+  rect(-5, -20, 10, 4, cream),
+  ...detail(l, a),
+]
+export const awardEco: Sprite = (l, a) => [
+  ...pad(1, 1),
+  ...hut(12, 10, 6, a),
+  rect(-2, -20, 4, 17, '#B5653A'),
+  poly(
+    [
+      [-12, -19],
+      [-9, -26],
+      [0, -22],
+      [2, -28],
+      [12, -26],
+      [10, -16],
+      [0, -14],
+    ],
+    '#5E8C3A',
+  ),
+  ...detail(l, a),
+]
+export const awardRefinery: Sprite = (l, a) => [
+  ...pad(1, 1),
+  ...hut(12, 10, 6, a),
+  ...tank(-6, -8, 4, 17, steel),
+  ...tank(5, -5, 4, 27, steel),
+  rect(-7, -17, 13, 3, yellow),
+  ...detail(l, a),
 ]

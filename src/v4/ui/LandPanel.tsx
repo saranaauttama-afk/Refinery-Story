@@ -1,3 +1,4 @@
+import { PanelIntro } from './PanelIntro'
 import { useState } from 'react'
 import { Text, View, Pressable } from 'react-native'
 import { useGame } from '../store/useGame'
@@ -34,13 +35,31 @@ export function LandPanel() {
   }
   return (
     <>
+      <PanelIntro
+        label={{ en: 'Expansion map', th: 'แผนที่ขยายลาน' }}
+        detail={{
+          en: 'Select a neighbouring parcel to see its availability.',
+          th: 'เลือกแปลงข้างเคียงเพื่อดูราคาและเงื่อนไข',
+        }}
+        color="#2FB38E"
+      />
       <Muted>
         {text({
           en: `Each parcel is ${YARD.parcel}×${YARD.parcel} tiles · you own ${s.yard.ownedParcels.length} of ${parcelCap(s)} allowed at this rank`,
           th: `แปลงละ ${YARD.parcel}×${YARD.parcel} ช่อง · มีแล้ว ${s.yard.ownedParcels.length} จาก ${parcelCap(s)} แปลงที่แรงก์นี้ซื้อได้`,
         })}
       </Muted>
-      <View style={{ alignSelf: 'center', marginVertical: 10, gap: 4 }}>
+      <View
+        style={{
+          alignSelf: 'center',
+          marginVertical: 10,
+          gap: 4,
+          backgroundColor: '#EAE3D1',
+          padding: 8,
+          borderWidth: 2,
+          borderRadius: 6,
+        }}
+      >
         {Array.from({ length: GRID }, (_, y) => (
           <View key={y} style={{ flexDirection: 'row', gap: 4 }}>
             {Array.from({ length: GRID }, (_, x) => {
@@ -51,7 +70,11 @@ export function LandPanel() {
                 <Pressable
                   key={x}
                   accessibilityRole="button"
-                  accessibilityLabel={`${x},${y}`}
+                  accessibilityLabel={text({
+                    en: `Parcel ${x}, ${y}: ${mine ? 'owned' : open ? 'available' : 'locked'}`,
+                    th: `แปลง ${x}, ${y}: ${mine ? 'ของเรา' : open ? 'ซื้อได้' : 'ยังซื้อไม่ได้'}`,
+                  })}
+                  accessibilityState={{ selected: on }}
                   onPress={() => setPicked({ x, y })}
                   style={{
                     width: 54,
@@ -60,10 +83,10 @@ export function LandPanel() {
                     borderWidth: on ? 3 : 2,
                     borderStyle: open && !mine ? 'dashed' : 'solid',
                     borderColor: mine || open ? '#14110F' : '#9E978A',
-                    backgroundColor: mine
-                      ? '#8DBF5A'
-                      : on
-                        ? '#F2C230'
+                    backgroundColor: on
+                      ? '#F2C230'
+                      : mine
+                        ? '#8DBF5A'
                         : open
                           ? '#FFE7A3'
                           : '#D8D2C4',
