@@ -1,4 +1,5 @@
 import { baseAvailable } from './investments'
+import { recipeKnown } from './research'
 import { staffStats } from './staff'
 import { getModifiers } from './combos'
 import { PRODUCTION as P, PAIR, GRADES, YARD, GRADE_SCALE } from '../../data/balance'
@@ -53,7 +54,12 @@ export function selectBlend(
   additive: AdditiveId | null,
   station?: string,
 ): GameState {
-  if (!baseAvailable(s, base) || (additive && !s.unlockedAdditives.includes(additive))) return s
+  if (
+    !baseAvailable(s, base) ||
+    (additive && !s.unlockedAdditives.includes(additive)) ||
+    !recipeKnown(s, base, additive)
+  )
+    return s
   const recipe = { base, additive }
   return {
     ...s,

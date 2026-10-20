@@ -56,7 +56,40 @@ export const GRADES = [
   { id: 'C', min: 0, price: 0.8, fame: 0 },
 ] as const
 // Grade thresholds scale with rank: bigger buyers are pickier, so SS stays a goal all game.
-export const GRADE_SCALE = [1, 1.1, 1.2, 1.3, 1.45, 2.4, 4.5, 8, 12, 16] as const
+export const GRADE_SCALE = [1, 1.2, 1.35, 1.45, 1.55, 2.4, 4.5, 8, 12, 16] as const
+// Lab research: the blend sheet only offers base × additive pairs found here.
+export const RESEARCH = {
+  rdBase: 100,
+  moneyBase: 5000,
+  weeks: 3,
+  fasterPerLevel: 0.1,
+  chanceBase: 0.4,
+  chancePerLevel: 0.06,
+  chemDivisor: 300,
+  chanceMax: 0.85,
+  clueBonus: 0.15,
+  // Odds of the find's compatibility bucket [bad (C/D/F), B, A, S] at lab Lv1 and Lv5.
+  weightsLv1: [50, 30, 15, 5],
+  weightsLv5: [20, 30, 30, 20],
+  // Fame for a find, by bucket [bad, B, A, S].
+  fame: [2, 8, 20, 40],
+}
+// Demand per product: selling the same thing cools it down; a monthly trend heats one up.
+export const DEMAND = {
+  perSale: 0.025,
+  recoverPerWeek: 0.05,
+  max: 1,
+  min: 0.5,
+  trendBoost: 1.5,
+}
+// Rivals grow like a typical player (fitted to the bot), so awards stay contested.
+export const RIVALS = {
+  scoreBase: 240,
+  scoreGrowth: 1.45,
+  profitBase: 420000,
+  profitGrowth: 1.53,
+  spread: 0.15,
+}
 // Start-up help: a bank loan when the first layout runs out of cash.
 export const LOAN = {
   amount: 10000,
@@ -121,7 +154,7 @@ export const STAFF = {
   salaryRange: 7000,
 }
 export const PROGRESSION = {
-  rankFame: [0, 150, 1000, 1900, 3000, 6000, 11000, 20000, 33000, 47000],
+  rankFame: [0, 150, 1000, 1800, 2900, 6000, 11000, 20000, 30000, 40000],
   finalYear: 15,
   marketBonus: 0.3,
   marketMinYears: 2,
@@ -136,9 +169,9 @@ export const PROGRESSION = {
   inspectorFame: 5,
   celebrityFame: 10,
   incidentChance: 0.15,
-  awardMin: 100,
-  awardMax: 500,
-  awardYearStep: 45,
+  awardMin: 150,
+  awardMax: 600,
+  awardYearStep: 60,
   rivalScoreBase: 280,
   rivalScoreYear: 12,
   rivalScoreGap: 8,
@@ -165,14 +198,23 @@ export const BASE_PRICES = {
   pellet: 90,
 }
 
+// "Is it too easy?" gates for the bot (AUDIT.md). Money/RD gates arrive with Phase B sinks.
+export const FUN = {
+  firstSSMedianMin: 3,
+  awardsFromYear: 3,
+  awardsMean: [1, 2.5],
+  knownY5Max: 0.35,
+  knownY15: [0.5, 0.99],
+}
 export const POLISH = {
   hintLimit: 6,
   confettiPieces: 28,
   confettiMs: 1000,
   rdScoreDivisor: 1000,
   reportSeeds: 20,
-  incomeTargets: { 1: 45000, 5: 500000, 10: 3000000 },
-  incomeMeanBounds: { 1: [30000, 60000], 5: [350000, 650000], 10: [2400000, 3600000] } as Record<
+  // Lowered in Phase A (lab research, demand, rivals): money still piles up, so this is not a squeeze.
+  incomeTargets: { 1: 45000, 5: 300000, 10: 2500000 },
+  incomeMeanBounds: { 1: [30000, 60000], 5: [180000, 500000], 10: [1500000, 3600000] } as Record<
     number,
     number[]
   >,

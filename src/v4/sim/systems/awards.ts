@@ -1,5 +1,5 @@
 import { awardNames } from '../../i18nLabels'
-import { B, YEAR, MONTH, POLISH, PROGRESSION as P } from '../../data/balance'
+import { B, YEAR, MONTH, POLISH, PROGRESSION as P, RIVALS as RV } from '../../data/balance'
 import { dateAt } from '../time'
 import { emptyYear } from '../state'
 import { getModifiers } from './combos'
@@ -19,9 +19,14 @@ export function awards(s: GameState): GameState {
     const year = dateAt(s.tick).year
     const rivals = Array.from({ length: 4 }, (_, i) => ({
       name: `Refinery ${i + 1}`,
-      product: P.rivalScoreBase + year * P.rivalScoreYear + i * P.rivalScoreGap,
+      // Spread the four rivals around a typical player's curve: −15% … +15%.
+      product: Math.round(
+        RV.scoreBase * RV.scoreGrowth ** (year - 1) * (1 + RV.spread * (i / 1.5 - 1)),
+      ),
       eco: P.rivalEcoBase + year * P.rivalEcoYear + i * P.rivalEcoGap,
-      profit: P.rivalProfitBase + year * year * P.rivalProfitYear + i * P.rivalProfitGap,
+      profit: Math.round(
+        RV.profitBase * RV.profitGrowth ** (year - 1) * (1 + RV.spread * (i / 1.5 - 1)),
+      ),
       safety: Math.max(0, 100 - year - i),
     }))
     const wins: string[] = []

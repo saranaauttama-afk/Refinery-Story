@@ -29,30 +29,30 @@ pixel diorama**: small, readable, bright, with black outlines.
 
 ## 3. Palette (tokens in `src/v4/render/palette.ts`)
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| outline | #14110F | all outlines |
-| ground | #8DBF5A / #7AAA4C / #5E8C3A | grass top / left / right |
-| concrete | #D8D2C4 / #B9B2A3 / #948C7E | pads, roads |
-| asphalt | #4A4E57 / #3B3F47 / #2D3037 | roads, truck bays |
-| steel | #C9D3DC / #9EABB8 / #73818F | tanks, columns |
-| rust | #B5653A | ladders, pipe flanges |
-| hazard | #F2C230 + outline stripes | rails, bollards |
-| water | #4FA3D9 → #2F7DB8 | port, ponds |
-| smoke | #FFFFFF @ 0.55 → 0 | stacks |
+| Token    | Hex                         | Use                      |
+| -------- | --------------------------- | ------------------------ |
+| outline  | #14110F                     | all outlines             |
+| ground   | #8DBF5A / #7AAA4C / #5E8C3A | grass top / left / right |
+| concrete | #D8D2C4 / #B9B2A3 / #948C7E | pads, roads              |
+| asphalt  | #4A4E57 / #3B3F47 / #2D3037 | roads, truck bays        |
+| steel    | #C9D3DC / #9EABB8 / #73818F | tanks, columns           |
+| rust     | #B5653A                     | ladders, pipe flanges    |
+| hazard   | #F2C230 + outline stripes   | rails, bollards          |
+| water    | #4FA3D9 → #2F7DB8           | port, ponds              |
+| smoke    | #FFFFFF @ 0.55 → 0          | stacks                   |
 
 **Accent per product line** (roof bands, pipe colour, tank stripe, UI chips):
 
-| Line | Accent |
-| --- | --- |
-| Crude / CDU | #3C3C46 (oil black) |
-| Gasoline | #E2483D (red) |
-| Diesel / Gasoil | #F08A24 (orange) |
-| Jet / Kerosene | #3D8FE0 (blue) |
-| LPG | #9C5BD6 (purple) |
-| Lube / Wax | #2FB38E (teal) |
-| Asphalt | #6D5A4A (brown) |
-| Pellet / Petrochem | #E36BB0 (pink) |
+| Line                            | Accent                      |
+| ------------------------------- | --------------------------- |
+| Crude / CDU                     | #3C3C46 (oil black)         |
+| Gasoline                        | #E2483D (red)               |
+| Diesel / Gasoil                 | #F08A24 (orange)            |
+| Jet / Kerosene                  | #3D8FE0 (blue)              |
+| LPG                             | #9C5BD6 (purple)            |
+| Lube / Wax                      | #2FB38E (teal)              |
+| Asphalt                         | #6D5A4A (brown)             |
+| Pellet / Petrochem              | #E36BB0 (pink)              |
 | Support (Lab, Control, Canteen) | #FFFFFF body + #4FA3D9 trim |
 
 ## 4. Building sprites (M2b order)
@@ -62,23 +62,23 @@ changes. Minimum visible differences: L1 base shape; L3 extra column/tank +
 walkway; L5 taller, lit beacon, company flag. Footprint never changes with
 level (unlike V3).
 
-| Building | Footprint | Silhouette idea |
-| --- | --- | --- |
-| Truck Gate | 1×2 | booth + striped barrier arm (animates) |
-| Loading Bay | 2×2 | canopy on posts, 2 bays, hoses |
-| Crude Tank | 2×2 | wide squat cylinder, dark band, ladder |
-| Product Tank | 1×1 | small cylinder, accent stripe = product |
-| CDU | 2×2 | tall column + furnace box + stack (smoke) |
-| Hydrotreater | 2×2 | 2 reactors + heat exchanger |
-| Reformer | 2×3 | row of 3 reactors + furnace |
-| Cracker | 3×3 | tall riser + regenerator + big stack |
-| Blending Station | 2×2 | 3 small vats + mixer arms (spin) |
-| Pipe Rack | 1×1 | steel frame with 3 coloured pipes |
-| Lab | 1×1 | white box, blue roof, flask sign |
-| Control Room | 2×1 | flat box, window strip with blinking screens |
-| Canteen | 2×1 | warm roof, chimney, tables outside |
-| Flare | 1×1 | thin tall stack + flame (flicker) |
-| Deco | 1×1 | tree, lamp, bench, flowerbed, sign, flag, bus stop |
+| Building         | Footprint | Silhouette idea                                    |
+| ---------------- | --------- | -------------------------------------------------- |
+| Truck Gate       | 1×2       | booth + striped barrier arm (animates)             |
+| Loading Bay      | 2×2       | canopy on posts, 2 bays, hoses                     |
+| Crude Tank       | 2×2       | wide squat cylinder, dark band, ladder             |
+| Product Tank     | 1×1       | small cylinder, accent stripe = product            |
+| CDU              | 2×2       | tall column + furnace box + stack (smoke)          |
+| Hydrotreater     | 2×2       | 2 reactors + heat exchanger                        |
+| Reformer         | 2×3       | row of 3 reactors + furnace                        |
+| Cracker          | 3×3       | tall riser + regenerator + big stack               |
+| Blending Station | 2×2       | 3 small vats + mixer arms (spin)                   |
+| Pipe Rack        | 1×1       | steel frame with 3 coloured pipes                  |
+| Lab              | 1×1       | white box, blue roof, flask sign                   |
+| Control Room     | 2×1       | flat box, window strip with blinking screens       |
+| Canteen          | 2×1       | warm roof, chimney, tables outside                 |
+| Flare            | 1×1       | thin tall stack + flame (flicker)                  |
+| Deco             | 1×1       | tree, lamp, bench, flowerbed, sign, flag, bus stop |
 
 ## 5. Life in the yard (priority over menu polish)
 

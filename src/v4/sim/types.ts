@@ -82,6 +82,14 @@ export interface GameState {
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]
+  /** Base × additive pairs found by lab research ("base:additive"). No-additive is always known. */
+  knownRecipes: string[]
+  research: ResearchJob[]
+  /** Failed research leaves a clue that raises the next attempt's odds, per base. */
+  clues: Record<string, number>
+  /** Per-base demand multiplier: falls with each sale, recovers weekly. */
+  demand: Record<string, number>
+  trend: { base: import('../data/bases').BaseId | null; until: number }
 }
 export type Action = (state: GameState) => GameState
 export type Grade = 'SS' | 'S' | 'A' | 'B' | 'C'
@@ -152,4 +160,9 @@ export interface Notice {
   kind: 'rank' | 'awards' | 'ending' | 'market'
   en: string
   th: string
+}
+export interface ResearchJob {
+  lab: string
+  base: import('../data/bases').BaseId
+  endTick: number
 }

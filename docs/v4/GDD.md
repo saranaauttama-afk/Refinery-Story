@@ -15,12 +15,12 @@ employees/training/genres-and-types. Links at the end.
 The game is: **arrange the refinery yard to trigger combos, then blend products
 up to S grade**, with something new unlocking every 2–3 in-game months.
 
-| Pillar | Borrowed from |
-| --- | --- |
+| Pillar                                                        | Borrowed from                      |
+| ------------------------------------------------------------- | ---------------------------------- |
 | Layout as a puzzle — buildings near each other trigger combos | Hot Springs Story, Mega Mall Story |
-| Blend and gamble on grade — Base × Additive → S…F | Game Dev Story (genre × type) |
-| Something new often — rank-ups unlock things, year-end awards | All Kairosoft games |
-| A living yard — trucks in/out, workers walking, money pop-ups | All Kairosoft games |
+| Blend and gamble on grade — Base × Additive → S…F             | Game Dev Story (genre × type)      |
+| Something new often — rank-ups unlock things, year-end awards | All Kairosoft games                |
+| A living yard — trucks in/out, workers walking, money pop-ups | All Kairosoft games                |
 
 **Three loop layers**
 
@@ -72,18 +72,18 @@ up to S grade**, with something new unlocking every 2–3 in-game months.
 
 **Combo list (first 10; fill the rest to 30 in `data/combos.ts`)**
 
-| Combo | Kind | Buildings | Effect |
-| --- | --- | --- | --- |
-| Tank Farm | Set | Tank + Tank + Pipe Rack | Tank capacity +25% |
-| Fresh Cut | Pair | CDU + Hydrotreater | Purity +10 |
-| Octane Line | Set | Reformer + Blending + Lab | Gasoline grade score +15 |
-| Quick Load | Pair | Loading Bay + Truck Gate | Truck dwell −30% |
-| Watchful Eye | Pair | Control Room + any Process unit | Incident chance −50% |
-| Green Belt | Set | Tree × 3 | Eco +10, Fame +10/month |
-| Lunch Break | Pair | Canteen + Control Room | Staff power regen +20% |
-| Smoke Break | Pair | Flare + Canteen | Staff power regen −30% (negative) |
-| Heavy Duty | Set | Cracker + Hydrotreater + Tank | Yield +20% |
-| Showcase | Set | Lab + Lamp + Company Sign | Fame +40/year (hidden) |
+| Combo        | Kind | Buildings                       | Effect                            |
+| ------------ | ---- | ------------------------------- | --------------------------------- |
+| Tank Farm    | Set  | Tank + Tank + Pipe Rack         | Tank capacity +25%                |
+| Fresh Cut    | Pair | CDU + Hydrotreater              | Purity +10                        |
+| Octane Line  | Set  | Reformer + Blending + Lab       | Gasoline grade score +15          |
+| Quick Load   | Pair | Loading Bay + Truck Gate        | Truck dwell −30%                  |
+| Watchful Eye | Pair | Control Room + any Process unit | Incident chance −50%              |
+| Green Belt   | Set  | Tree × 3                        | Eco +10, Fame +10/month           |
+| Lunch Break  | Pair | Canteen + Control Room          | Staff power regen +20%            |
+| Smoke Break  | Pair | Flare + Canteen                 | Staff power regen −30% (negative) |
+| Heavy Duty   | Set  | Cracker + Hydrotreater + Tank   | Yield +20%                        |
+| Showcase     | Set  | Lab + Lamp + Company Sign       | Fame +40/year (hidden)            |
 
 ---
 
@@ -99,7 +99,7 @@ Gasoline, Jet, Diesel, Lube, Asphalt, Wax, Pellet.
 
 **Additives:** 20 types (Octane Booster, Anti-freeze, Detergent, Bio-blend, Dye,
 Fragrance, …). Each unlocks when a staff member of a given job and level does a
-given training (GDS type unlock). Example: Chemist Lv2 does *Lab Study* →
+given training (GDS type unlock). Example: Chemist Lv2 does _Lab Study_ →
 Octane Booster.
 
 **Compatibility:** 6 grades S / A / B / C (neutral) / D / F, stored as a
@@ -120,18 +120,32 @@ M_pair: S 1.5, A 1.25, B 1.1, C 1.0, D 0.85, F 0.6
 ```
 
 | Grade | Score at rank 1 | Price × |
-| --- | --- | --- |
-| SS | ≥ 400 | 2.7 |
-| S | 300–399 | 1.9 |
-| A | 200–299 | 1.35 |
-| B | 120–199 | 1.0 |
-| C | < 120 | 0.8 |
+| ----- | --------------- | ------- |
+| SS    | ≥ 400           | 2.7     |
+| S     | 300–399         | 1.9     |
+| A     | 200–299         | 1.35    |
+| B     | 120–199         | 1.0     |
+| C     | < 120           | 0.8     |
 
 **Pickier buyers:** thresholds are multiplied by `GRADE_SCALE[rank]` =
-1, 1.1, 1.2, 1.3, 1.45, 2.4, 4.5, 8, 12, 16 (ranks 1–10). Scores grow fast once
+1, 1.2, 1.35, 1.45, 1.55, 2.4, 4.5, 8, 12, 16 (ranks 1–10). Scores grow fast once
 staff and combos stack, so without this SS was reached in year 2 and grade stopped
 mattering (playtest v4.0.11). SS stays reachable at every rank but has to be
 chased. The Blend sheet shows the current SS line.
+
+**Lab research (Phase A, v4.0.13):** the Blend sheet only offers base × additive
+pairs that a Lab has found; no-additive recipes are always known. A Lab runs one
+project at a time: the player picks a base, pays RD 100 × tier and $5k × tier
+(tier = 1 + pairs already found for that base), and waits 3 weeks (−10% per lab
+level). Chance to find a pair = 40% + 6% × lab level + chemists' Chem ÷ 300 +
+15% per clue (max 85%). A miss leaves a clue for that base. The pair found is
+random among unlocked additives, weighted by compatibility bucket
+[other, B, A, S] = 50/30/15/5 at Lv1 → 20/30/30/20 at Lv5. A find gives Fame
+2/8/20/40 and counts as an unlock. Old saves keep every pair they already tried.
+
+**Demand (Phase A):** each product has demand 50–100%; each truck sold takes
+−2.5%, and it recovers +5% per week. Price × demand. One available product
+trends each month (×1.5).
 
 **Stations:** each Blending Station runs its own Base × Additive recipe (a new
 station starts on the last recipe picked). Every base a station is mixing is
@@ -162,12 +176,12 @@ favourite product and a minimum grade; satisfied repeat buyers give gifts.
 
 **Investment chains** (each step requires the previous one; $20k → $5M)
 
-| Chain | First → last step | Unlocks |
-| --- | --- | --- |
-| Highway | Rest Stop $20k → Logistics Hub $3M | Gas stations, more truck bays |
-| Port | Jetty $80k → Deep-sea Terminal $5M | Shipping, export (price ×1.3) |
-| Industrial Park | Land Prep $50k → Petrochem Zone $4M | Industrial park, Pellet/Wax bases |
-| Airport | Fuel Depot $150k → Hub Airport $4.5M | Airlines, S-grade Jet sells ×2 |
+| Chain           | First → last step                    | Unlocks                           |
+| --------------- | ------------------------------------ | --------------------------------- |
+| Highway         | Rest Stop $20k → Logistics Hub $3M   | Gas stations, more truck bays     |
+| Port            | Jetty $80k → Deep-sea Terminal $5M   | Shipping, export (price ×1.3)     |
+| Industrial Park | Land Prep $50k → Petrochem Zone $4M  | Industrial park, Pellet/Wax bases |
+| Airport         | Fuel Depot $150k → Hub Airport $4.5M | Airlines, S-grade Jet sells ×2    |
 
 Each chain also has a **Stimulus** step (reduces oil-price-crash impact) and a
 **Shelter** step (reduces storm impact), like Mega Mall's walkway/stimulus.
@@ -188,30 +202,30 @@ Mechanics → Stability (+ fewer breakdowns), Safety → Eco (+ fewer incidents)
 
 **Jobs (6):** Operator, Chemist, Engineer, Safety Officer, Manager, Plant
 Director (secret: unlocks when someone reaches Manager Lv5 + Chemist Lv5). Each
-job has levels 1–5. Change job with a *Career Manual* from the travelling
+job has levels 1–5. Change job with a _Career Manual_ from the travelling
 merchant ($200k).
 
 - Hire cap: 3 at rank 1, +1 per rank, max 12.
 - Power 8–30 per person; spent by work and training, refills after shift.
 - Fired staff keep their stats and can be re-hired later.
 
-| Hiring method | Cost | Unlocks |
-| --- | --- | --- |
-| Word of mouth | $5k | Start |
-| Job board | $20k | Start |
-| University | $80k | Rank 3 |
-| Job Fair | $250k | Rank 5 |
-| Headhunter | $600k | Rank 7 |
+| Hiring method | Cost  | Unlocks |
+| ------------- | ----- | ------- |
+| Word of mouth | $5k   | Start   |
+| Job board     | $20k  | Start   |
+| University    | $80k  | Rank 3  |
+| Job Fair      | $250k | Rank 5  |
+| Headhunter    | $600k | Rank 7  |
 
-| Training | Cost | Power | Op | Chem | Mech | Safe | Unlocks |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Read manual | $3k | 2 | +2 | +3 | | | Start |
-| Yard walk | $3k | 2 | +3 | | | +3 | Start |
-| Hands-on repair | $6k | 3 | | | +5 | +1 | Start |
-| Lab Study | $12k | 4 | | +6 | | −2 | Rank 2 |
-| Fire drill | $15k | 4 | +1 | | | +6 | Rank 3 |
-| Plant tour | $60k | 6 | +5 | +4 | +4 | +3 | Rank 5 |
-| Overseas course | $200k | 9 | +7 | +7 | +5 | +5 | Rank 7 |
+| Training        | Cost  | Power | Op  | Chem | Mech | Safe | Unlocks |
+| --------------- | ----- | ----- | --- | ---- | ---- | ---- | ------- |
+| Read manual     | $3k   | 2     | +2  | +3   |      |      | Start   |
+| Yard walk       | $3k   | 2     | +3  |      |      | +3   | Start   |
+| Hands-on repair | $6k   | 3     |     |      | +5   | +1   | Start   |
+| Lab Study       | $12k  | 4     |     | +6   |      | −2   | Rank 2  |
+| Fire drill      | $15k  | 4     | +1  |      |      | +6   | Rank 3  |
+| Plant tour      | $60k  | 6     | +5  | +4   | +4   | +3   | Rank 5  |
+| Overseas course | $200k | 9     | +7  | +7   | +5   | +5   | Rank 7  |
 
 `gain = base × max(0, 1 − n/12)` where n = times this person already did this
 training. Every training has a **5% "Super Up!"** chance: base × 3, even when
@@ -225,18 +239,18 @@ Rank comes from cumulative Fame (only drops on failed contracts or incidents).
 Every rank unlocks ≥ 3 things. Pacing target: **≥ 5 unlocks in the first 10
 real minutes**, then something new every 2–3 in-game months.
 
-| Rank | Fame | Unlocks | Target year |
-| --- | --- | --- | --- |
-| 1 | 0 | CDU, Tank, Truck Gate, Blending, Bases Gasoline/Diesel | 1 |
-| 2 | 150 | Hydrotreater, Lab, 2nd land parcel, Lab Study training | 1 |
-| 3 | 1,000 | Reformer, University hiring, Highway chain | 2 |
-| 4 | 1,900 | Cracker, Bases LPG/Jet, Airport chain | 3 |
-| 5 | 3,000 | Control Room, Job Fair, Port chain | 4 |
-| 6 | 6,000 | Bases Lube/Asphalt, 4th parcel | 5–6 |
-| 7 | 11,000 | Headhunter, Industrial Park chain, Bases Wax/Pellet | 7 |
-| 8 | 20,000 | Plant Director, full 40×40 yard | 9 |
-| 9 | 33,000 | Special building "Mega Refinery Tower" | 11–12 |
-| 10 | 47,000 | Special ending, secret mascot applies for a job | 14–15 |
+| Rank | Fame   | Unlocks                                                | Target year |
+| ---- | ------ | ------------------------------------------------------ | ----------- |
+| 1    | 0      | CDU, Tank, Truck Gate, Blending, Bases Gasoline/Diesel | 1           |
+| 2    | 150    | Hydrotreater, Lab, 2nd land parcel, Lab Study training | 1           |
+| 3    | 1,000  | Reformer, University hiring, Highway chain             | 2           |
+| 4    | 1,900  | Cracker, Bases LPG/Jet, Airport chain                  | 3           |
+| 5    | 3,000  | Control Room, Job Fair, Port chain                     | 4           |
+| 6    | 6,000  | Bases Lube/Asphalt, 4th parcel                         | 5–6         |
+| 7    | 11,000 | Headhunter, Industrial Park chain, Bases Wax/Pellet    | 7           |
+| 8    | 20,000 | Plant Director, full 40×40 yard                        | 9           |
+| 9    | 33,000 | Special building "Mega Refinery Tower"                 | 11–12       |
+| 10   | 47,000 | Special ending, secret mascot applies for a job        | 14–15       |
 
 **Year-end awards** (last week of month 12): Best Product (highest-grade lot of
 the year), Safety (zero incidents), Eco, Refinery of the Year (total score).
@@ -257,26 +271,26 @@ Game+ carries over one of each unlocked building (Hot Springs).
 Ratios follow the Kairosoft data: cheapest→most expensive building ≈ ×200,
 monthly upkeep ≈ 3% of build cost, price-side combo bonus +10–25%.
 
-| Constant | Value | Note |
-| --- | --- | --- |
-| Starting money | $55k | Guided first layout costs $50k; one Operator foreman starts on staff |
-| 1 week | 15 s | 1 year = 12 min |
-| Early building cost | $5k–$25k | Tank $5k, CDU $20k |
-| Mid building cost | $80k–$400k | Reformer $120k, Cracker $300k |
-| Late building cost | $1M–$3M | Mega Tower $3M |
-| Upkeep / month | 3% of build cost | |
-| Max building level | 5 | |
-| Upgrade cost | buildCost × 0.6 × 1.5^(lv−1) | Lv2 = 0.6×, Lv5 ≈ 3× |
-| Output per building level | +25% | |
-| Base price, grade B, per unit | $26 (Gasoline) – $110 (Lube) | see `BASE_PRICES` |
-| Pair combo | +5–15 stat or +10–20% | |
-| Set combo | +15–30 stat or +20–30% | |
-| Fame per sale | 1 (B), 2 (A), 5 (S), 10 (SS) | C gives 0 |
-| RD per sale | 1 per 10 units sold | |
-| Staff level-up | 20 RD × target level | Lv5 = 100 RD |
-| Staff starting salary | $1k–$8k / month | ×1.2 per level |
-| Super Up! chance | 5% | ×3 |
-| Move building | $2k | |
+| Constant                      | Value                        | Note                                                                 |
+| ----------------------------- | ---------------------------- | -------------------------------------------------------------------- |
+| Starting money                | $55k                         | Guided first layout costs $50k; one Operator foreman starts on staff |
+| 1 week                        | 15 s                         | 1 year = 12 min                                                      |
+| Early building cost           | $5k–$25k                     | Tank $5k, CDU $20k                                                   |
+| Mid building cost             | $80k–$400k                   | Reformer $120k, Cracker $300k                                        |
+| Late building cost            | $1M–$3M                      | Mega Tower $3M                                                       |
+| Upkeep / month                | 3% of build cost             |                                                                      |
+| Max building level            | 5                            |                                                                      |
+| Upgrade cost                  | buildCost × 0.6 × 1.5^(lv−1) | Lv2 = 0.6×, Lv5 ≈ 3×                                                 |
+| Output per building level     | +25%                         |                                                                      |
+| Base price, grade B, per unit | $26 (Gasoline) – $110 (Lube) | see `BASE_PRICES`                                                    |
+| Pair combo                    | +5–15 stat or +10–20%        |                                                                      |
+| Set combo                     | +15–30 stat or +20–30%       |                                                                      |
+| Fame per sale                 | 1 (B), 2 (A), 5 (S), 10 (SS) | C gives 0                                                            |
+| RD per sale                   | 1 per 10 units sold          |                                                                      |
+| Staff level-up                | 20 RD × target level         | Lv5 = 100 RD                                                         |
+| Staff starting salary         | $1k–$8k / month              | ×1.2 per level                                                       |
+| Super Up! chance              | 5%                           | ×3                                                                   |
+| Move building                 | $2k                          |                                                                      |
 
 **Income targets:** Year 1 profit ≈ $30–60k/month, Year 5 ≈ $500k/month,
 Year 10 ≈ $3M/month. If reality is off, tune Base prices first.

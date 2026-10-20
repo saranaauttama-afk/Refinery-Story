@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { writeFileSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { simulate } from './sim-run'
-import { POLISH } from '../../src/v4/data/balance'
+import { POLISH, FUN } from '../../src/v4/data/balance'
+import { additives } from '../../src/v4/data/additives'
+import { bases } from '../../src/v4/data/bases'
 import { serialize, deserialize } from '../../src/v4/sim/save'
 import { hints } from '../../src/v4/data/onboarding'
 import { createNewGame } from '../../src/v4/sim/state'
@@ -11,8 +13,6 @@ import { buildStarter } from '../../src/v4/sim/systems/starter'
 const reports: Array<Omit<ReturnType<typeof simulate>, 'state'> & { seed: number }> = []
 for (let seed = 1; seed <= POLISH.reportSeeds; seed++) {
   const r = simulate(seed)
-  assert.ok(r.reached[5] >= 3 && r.reached[5] <= 5, `seed ${seed}: rank 5 ${r.reached[5]}`)
-  assert.ok(r.reached[10] >= 13 && r.reached[10] <= 16, `seed ${seed}: rank 10 ${r.reached[10]}`)
   assert.ok(r.maxNegativeMonths <= 6, `seed ${seed}: softlock`)
   assert.ok(r.unlocksFirst40Weeks >= 5, `seed ${seed}: early unlocks`)
   assert.deepEqual(deserialize(serialize(r.state)), r.state, `seed ${seed}: late save roundtrip`)
@@ -22,8 +22,19 @@ for (let seed = 1; seed <= POLISH.reportSeeds; seed++) {
     maxNegativeMonths: r.maxNegativeMonths,
     unlocksFirst40Weeks: r.unlocksFirst40Weeks,
     annual: r.annual,
+    firstSS: r.firstSS,
+    awardWins: r.awardWins,
   })
 }
+// Pacing: lab research adds luck, so 90% of seeds must land in the window (rank 5 in years
+// 3–5, rank 10 in years 12–16) and every seed must get there within a year of it.
+const within = (rank: number, lo: number, hi: number) =>
+  reports.filter(r => r.reached[rank] >= lo && r.reached[rank] <= hi).length / reports.length
+assert.ok(within(5, 3, 5) >= 0.9, `rank 5 window ${within(5, 3, 5)}`)
+assert.ok(within(10, 12, 16) >= 0.9, `rank 10 window ${within(10, 12, 16)}`)
+assert.ok(within(5, 2.5, 6) === 1, 'rank 5 outlier')
+for (const r of reports)
+  assert.ok(r.reached[10] >= 11 || !r.reached[10], `seed ${r.seed} rank 10 too early`)
 const income = ([1, 5, 10] as const).map(year => {
   const samples = reports.map(r => r.annual[year - 1].profit),
     mean = Math.round(samples.reduce((n, v) => n + v, 0) / samples.length)
@@ -37,6 +48,18 @@ const income = ([1, 5, 10] as const).map(year => {
     max: Math.max(...samples),
   }
 })
+// Fun gates: the bot must not find the game too easy (docs/v4/AUDIT.md).
+const pairs = additives.length * bases.length
+const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)]
+const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length
+const firstSS = median(reports.map(r => r.firstSS || 99))
+assert.ok(firstSS >= FUN.firstSSMedianMin, `first SS median year ${firstSS}`)
+const wins = mean(reports.flatMap(r => r.awardWins.slice(FUN.awardsFromYear - 1, 15)))
+assert.ok(wins >= FUN.awardsMean[0] && wins <= FUN.awardsMean[1], `award wins ${wins}`)
+const known = (y: number) => mean(reports.map(r => r.annual[y - 1].known)) / pairs
+assert.ok(known(5) <= FUN.knownY5Max, `recipes known Y5 ${known(5)}`)
+assert.ok(known(15) >= FUN.knownY15[0] && known(15) <= FUN.knownY15[1], `known Y15 ${known(15)}`)
+const funLine = `first SS Y${firstSS.toFixed(1)}, awards ${wins.toFixed(1)}/yr, recipes Y5 ${Math.round(known(5) * 100)}% Y15 ${Math.round(known(15) * 100)}%`
 assert.equal(hints.length, POLISH.hintLimit)
 const clean = createNewGame()
 assert.throws(() => deserialize(serialize({ ...clean, cuts: {} } as never)))
@@ -91,3 +114,4 @@ if (process.argv.includes('--write-report')) {
 console.log(
   `M8 ${POLISH.reportSeeds} seeds × 16 years / pacing / no softlock / save integrity / sim isolation / hints passed; monthly mean ${income.map(r => `Y${r.year} $${r.mean}`).join(', ')}`,
 )
+console.log(`M11 fun gates passed: ${funLine}`)

@@ -76,5 +76,10 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     staff: [foreman()],
     ledger: [],
     log: [],
+    knownRecipes: [],
+    research: [],
+    clues: {},
+    demand: {},
+    trend: { base: null, until: 0 },
   }
 }

@@ -59,8 +59,12 @@ export function YardScreen() {
         {!ghost && !panel && (
           <Alerts
             onOpen={a => {
-              const station = a.id.startsWith('idle:') ? a.id.split(':')[1] : undefined
-              setBlendStation(station)
+              if (a.tab === 'lab' && a.target) {
+                setSelected(a.target)
+                setPanel('info')
+                return
+              }
+              setBlendStation(a.target)
               setPanel(a.tab)
             }}
           />

@@ -7,6 +7,8 @@ import { staffSystem } from './systems/staff'
 import { progression } from './systems/progression'
 import { eventSystem } from './systems/events'
 import { awards } from './systems/awards'
+import { researchSystem } from './systems/research'
+import { marketSystem } from './systems/market'
 import { PRODUCTION } from '../data/balance'
 import type { GameState } from './types'
 export function tick(s: GameState): GameState {
@@ -16,6 +18,8 @@ export function tick(s: GameState): GameState {
     popups: s.popups.filter(p => s.tick - p.tick < PRODUCTION.popupTicks),
   }
   next = economy(next)
+  next = marketSystem(next)
+  next = researchSystem(next)
   next = contractSystem(next)
   next = eventSystem(next)
   next = staffSystem(next)

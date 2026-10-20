@@ -98,52 +98,72 @@ history keeps it.
 ## 2. Core data model (sketch — refine in M1)
 
 ```ts
-type Tick = number;                       // 1 tick = 0.25 s at 1× → 60 ticks/week
-type Grade = 'SS' | 'S' | 'A' | 'B' | 'C';
-type Compat = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
+type Tick = number // 1 tick = 0.25 s at 1× → 60 ticks/week
+type Grade = 'SS' | 'S' | 'A' | 'B' | 'C'
+type Compat = 'S' | 'A' | 'B' | 'C' | 'D' | 'F'
 
 interface Building {
-  uid: string; defId: BuildingId;
-  x: number; y: number;                   // top-left tile
-  level: 1 | 2 | 3 | 4 | 5;
-  staff: string[];                        // staff uids assigned
+  uid: string
+  defId: BuildingId
+  x: number
+  y: number // top-left tile
+  level: 1 | 2 | 3 | 4 | 5
+  staff: string[] // staff uids assigned
 }
 
 interface Lot {
-  uid: string; base: BaseId; additive: AdditiveId | null;
-  stats: { purity: number; yield: number; stability: number; eco: number };
-  score: number; grade: Grade; units: number;
+  uid: string
+  base: BaseId
+  additive: AdditiveId | null
+  stats: { purity: number; yield: number; stability: number; eco: number }
+  score: number
+  grade: Grade
+  units: number
 }
 
 interface Staff {
-  uid: string; name: string; job: JobId;
-  jobLevels: Record<JobId, number>;       // 0 = never had that job
-  stats: { op: number; chem: number; mech: number; safe: number };
-  power: number; maxPower: number; salary: number;
-  trainingCounts: Partial<Record<TrainingId, number>>;
-  assignedTo: string | null;              // building uid
+  uid: string
+  name: string
+  job: JobId
+  jobLevels: Record<JobId, number> // 0 = never had that job
+  stats: { op: number; chem: number; mech: number; safe: number }
+  power: number
+  maxPower: number
+  salary: number
+  trainingCounts: Partial<Record<TrainingId, number>>
+  assignedTo: string | null // building uid
 }
 
 interface GameState {
-  version: 4; seed: number; rng: number; tick: Tick; speed: 0 | 1 | 2 | 4;
-  money: number; fame: number; rd: number; rank: number;
-  yard: { size: number; ownedParcels: string[]; buildings: Building[] };
-  crude: number; cuts: Record<CutId, number>;
-  tanks: Lot[];                           // finished lots waiting for sale
-  familiarity: Record<BaseId | AdditiveId, number>;
-  triedPairs: string[];                   // "gasoline:octane"
-  discoveredCombos: ComboId[]; activeCombos: ActiveCombo[];
-  staff: Staff[]; firedStaff: Staff[];
-  unlockedAdditives: AdditiveId[];
-  customers: Record<CustomerId, { hearts: number; giftGiven: boolean }>;
-  trucks: Truck[];                        // visual + logical, in-yard
-  contracts: { offers: Contract[]; active: Contract[] };
-  investments: Record<ChainId, number>;   // steps bought
-  market: { phase: 'normal' | 'boom' | 'bust'; nextChangeTick: Tick };
-  year: YearStats;                        // reset each year for awards
-  history: { awards: AwardResult[]; }
-  log: LogEntry[];                        // last 50 messages
-  popups: Popup[];                        // money/fame pop-ups for the renderer
+  version: 4
+  seed: number
+  rng: number
+  tick: Tick
+  speed: 0 | 1 | 2 | 4
+  money: number
+  fame: number
+  rd: number
+  rank: number
+  yard: { size: number; ownedParcels: string[]; buildings: Building[] }
+  crude: number
+  cuts: Record<CutId, number>
+  tanks: Lot[] // finished lots waiting for sale
+  familiarity: Record<BaseId | AdditiveId, number>
+  triedPairs: string[] // "gasoline:octane"
+  discoveredCombos: ComboId[]
+  activeCombos: ActiveCombo[]
+  staff: Staff[]
+  firedStaff: Staff[]
+  unlockedAdditives: AdditiveId[]
+  customers: Record<CustomerId, { hearts: number; giftGiven: boolean }>
+  trucks: Truck[] // visual + logical, in-yard
+  contracts: { offers: Contract[]; active: Contract[] }
+  investments: Record<ChainId, number> // steps bought
+  market: { phase: 'normal' | 'boom' | 'bust'; nextChangeTick: Tick }
+  year: YearStats // reset each year for awards
+  history: { awards: AwardResult[] }
+  log: LogEntry[] // last 50 messages
+  popups: Popup[] // money/fame pop-ups for the renderer
 }
 ```
 
@@ -289,19 +309,19 @@ the owner checks on the APK.
 
 ## 5. Status
 
-| Milestone | Status | Commit | APK run | Owner verdict |
-| --- | --- | --- | --- | --- |
-| M0 Clean slate | implemented; APK verification pending | commit titled `feat(v4): complete M0 clean slate` | pending | deferred |
-| M1 Sim core | done; automated checks passed | feat(v4): M1 sim core | automatic CI | deferred |
-| M2 Yard | done; automated checks passed | feat(v4): M2 yard | automatic CI | deferred |
-| M2b Art pass 1 | done; automated art checks and web export passed | feat(v4): M2b code-drawn art | automatic CI | deferred |
-| M3 Production & blending | done; automated checks passed | feat(v4): M3 production and blending | automatic CI | deferred |
-| M4 Customers & contracts | done; automated checks passed | feat(v4): M4 customers and contracts | automatic CI | deferred |
-| M5 Combos | done; automated checks passed | feat(v4): M5 combos and auras | automatic CI | deferred |
-| M6 Staff | done; automated checks passed | feat(v4): M6 staff | automatic CI | deferred |
-| M7 Progression | done; automated checks passed | feat(v4): M7 progression | automatic CI | deferred |
-| M8 Balance & polish | done; 20-seed checks passed | feat(v4): M8 balance and polish | automatic CI | deferred |
-| M9 Cleanup (Claude) | done | see git log | pending | pending |
+| Milestone                | Status                                           | Commit                                            | APK run      | Owner verdict |
+| ------------------------ | ------------------------------------------------ | ------------------------------------------------- | ------------ | ------------- |
+| M0 Clean slate           | implemented; APK verification pending            | commit titled `feat(v4): complete M0 clean slate` | pending      | deferred      |
+| M1 Sim core              | done; automated checks passed                    | feat(v4): M1 sim core                             | automatic CI | deferred      |
+| M2 Yard                  | done; automated checks passed                    | feat(v4): M2 yard                                 | automatic CI | deferred      |
+| M2b Art pass 1           | done; automated art checks and web export passed | feat(v4): M2b code-drawn art                      | automatic CI | deferred      |
+| M3 Production & blending | done; automated checks passed                    | feat(v4): M3 production and blending              | automatic CI | deferred      |
+| M4 Customers & contracts | done; automated checks passed                    | feat(v4): M4 customers and contracts              | automatic CI | deferred      |
+| M5 Combos                | done; automated checks passed                    | feat(v4): M5 combos and auras                     | automatic CI | deferred      |
+| M6 Staff                 | done; automated checks passed                    | feat(v4): M6 staff                                | automatic CI | deferred      |
+| M7 Progression           | done; automated checks passed                    | feat(v4): M7 progression                          | automatic CI | deferred      |
+| M8 Balance & polish      | done; 20-seed checks passed                      | feat(v4): M8 balance and polish                   | automatic CI | deferred      |
+| M9 Cleanup (Claude)      | done                                             | see git log                                       | pending      | pending       |
 
 ### M0 validation
 

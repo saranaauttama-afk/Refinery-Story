@@ -25,6 +25,26 @@ export function deserialize(raw: string): GameState {
   // Fields added after the first v4 builds.
   if (record(s)) {
     if (s.loan === undefined) s.loan = 0
+    if (s.knownRecipes === undefined) {
+      // Saves from before lab research: every pair already tried or in use counts as found.
+      const used = [
+        s.blend,
+        ...((s.yard as { buildings?: { recipe?: unknown }[] })?.buildings ?? []).map(b => b.recipe),
+      ]
+        .filter(record)
+        .map(r => `${r.base}:${r.additive ?? 'none'}`)
+      s.knownRecipes = [
+        ...new Set(
+          [...(Array.isArray(s.triedPairs) ? (s.triedPairs as string[]) : []), ...used].filter(
+            k => !k.endsWith(':none'),
+          ),
+        ),
+      ]
+    }
+    if (s.research === undefined) s.research = []
+    if (s.clues === undefined) s.clues = {}
+    if (s.demand === undefined) s.demand = {}
+    if (s.trend === undefined) s.trend = { base: null, until: 0 }
     if (s.opened === undefined)
       s.opened =
         (record(s.year) && Number(s.year.sold) > 0) ||
@@ -48,6 +68,8 @@ export function deserialize(raw: string): GameState {
     'notices',
     'ledger',
     'log',
+    'knownRecipes',
+    'research',
   ]
   if (
     !record(s) ||
@@ -89,6 +111,9 @@ export function deserialize(raw: string): GameState {
     !Number.isInteger(s.hintIndex) ||
     typeof s.opened !== 'boolean' ||
     !Number.isFinite(s.loan) ||
+    !record(s.clues) ||
+    !record(s.demand) ||
+    !record(s.trend) ||
     ['crude', 'monthProfit', 'stormUntil', 'careerManuals', 'merchantUntil'].some(
       k => !Number.isFinite(s[k]),
     ) ||

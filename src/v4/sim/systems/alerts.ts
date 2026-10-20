@@ -1,12 +1,16 @@
 import { SALES, PRODUCTION as P } from '../../data/balance'
 import { blendStations, recipeOf, tankCapacity, tankUnits } from './blending'
 import { bases } from '../../data/bases'
+import { labs, labJob } from './research'
+import { trending } from './market'
 import type { GameState } from '../types'
 
 /** Optional nudges shown on the yard. They only point at a sheet; nothing is forced. */
 export interface Alert {
   id: string
-  tab: 'blend' | 'customers' | 'staff'
+  tab: 'blend' | 'customers' | 'staff' | 'lab'
+  /** Building to open for tab 'lab' (or a blend station for tab 'blend'). */
+  target?: string
   en: string
   th: string
 }
@@ -31,10 +35,35 @@ export function yardAlerts(s: GameState): Alert[] {
       out.push({
         id: `idle:${b.uid}:${r.base}`,
         tab: 'blend',
+        target: b.uid,
         en: `Station ${i + 1}: nothing refines this base, try another recipe`,
         th: `สถานี ${i + 1} ไม่มีหน่วยผลิตน้ำมันฐานนี้ ลองเปลี่ยนสูตร`,
       })
   })
+  const idleLabs = labs(s).filter(l => !labJob(s, l.uid))
+  if (idleLabs.length && s.unlockedAdditives.length)
+    out.push({
+      id: `lab:${idleLabs.map(l => l.uid).join(',')}:${s.knownRecipes.length}`,
+      tab: 'lab',
+      target: idleLabs[0].uid,
+      en:
+        idleLabs.length > 1
+          ? `${idleLabs.length} labs idle: start researching recipes`
+          : 'Lab is idle: start researching a recipe',
+      th:
+        idleLabs.length > 1
+          ? `ห้องทดลองว่าง ${idleLabs.length} ห้อง เริ่มวิจัยสูตรใหม่ได้`
+          : 'ห้องทดลองว่าง เริ่มวิจัยสูตรใหม่ได้',
+    })
+  if (s.trend.base && trending(s, s.trend.base)) {
+    const name = bases.find(b => b.id === s.trend.base)!.name
+    out.push({
+      id: `trend:${s.trend.until}`,
+      tab: 'blend',
+      en: `Trend: ${name.en} sells ×1.5 this month`,
+      th: `กระแส: ${name.th} ราคา ×1.5 เดือนนี้`,
+    })
+  }
   const offers = s.contracts.offers
   if (offers.length && s.contracts.active.length < SALES.maxContracts)
     out.push({

@@ -33,8 +33,8 @@ export const buildingInfo: Record<string, LocalizedText> = {
     th: 'ทำความสะอาดน้ำมัน ทำฐานเจ็ท น้ำมันหล่อลื่น และแว็กซ์',
   },
   lab: {
-    en: 'Raises Purity of nearby units. Lets staff do Lab Study.',
-    th: 'เพิ่ม Purity ให้หน่วยผลิตใกล้ ๆ และใช้ฝึกศึกษาในแล็บ',
+    en: 'Researches new blend recipes (base + additive) with RD. A higher level and a chemist on duty find better pairs. Also raises Purity nearby.',
+    th: 'วิจัยสูตรผสมใหม่ (ฐาน + สารเติมแต่ง) ด้วย RD เลเวลสูงและมีนักเคมีประจำจะเจอสูตรดีขึ้น และเพิ่ม Purity ให้ตึกใกล้ ๆ',
   },
   reformer: {
     en: 'Upgrades naphtha for better Gasoline.',

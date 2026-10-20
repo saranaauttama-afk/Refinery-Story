@@ -1,5 +1,13 @@
 import { salePrice } from '../../src/v4/sim/systems/customers'
 import { gradeFor } from '../../src/v4/sim/systems/blending'
+import {
+  recipeKnown,
+  labs,
+  labJob,
+  researchCandidates,
+  researchCost,
+  startResearch,
+} from '../../src/v4/sim/systems/research'
 import { createNewGame } from '../../src/v4/sim/state'
 import { tick } from '../../src/v4/sim/tick'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
@@ -84,6 +92,10 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
     buildOnce('cracker', 300000)
   }
   const lines = year >= 7 ? 3 : year >= 4.6 ? 2 : 1
+  // More labs as the refinery grows, so research keeps pace.
+  const wantLabs = year >= 7 ? 3 : year >= 4 ? 2 : 1
+  if (labs(s).length && labs(s).length < wantLabs && s.money > 100000 + reserve)
+    s = buildFirstFree(s, 'lab')
   if (s.money > 500000 + reserve)
     for (const id of ['crudeTank', 'cdu', 'hydro', 'tank', 'blend'])
       if (s.yard.buildings.filter(b => b.defId === id).length < lines) s = buildFirstFree(s, id)
@@ -102,6 +114,11 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
     if (p) s = hire(s, p.uid)
   }
   const station = s.yard.buildings.find(b => b.defId === 'blend')
+  const lab = labs(s)[0]
+  if (lab && s.staff.length >= 2 && !s.staff.some(p => p.assignedTo === lab.uid)) {
+    const chemist = [...s.staff].sort((a, b) => b.stats.chem - a.stats.chem)[0]
+    s = assign(s, chemist.uid, lab.uid)
+  }
   for (const p of s.staff) if (station && !p.assignedTo) s = assign(s, p.uid, station.uid)
   if (s.tick % MONTH === 0) {
     for (const p of s.staff) {
@@ -140,7 +157,7 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
   const ranked: Pick[] = options
     .map(b => {
       let best: Pick | undefined
-      for (const additive of [null, ...s.unlockedAdditives]) {
+      for (const additive of [null, ...s.unlockedAdditives].filter(a => recipeKnown(s, b.id, a))) {
         const score = predictedScore(s, b.id, additive)
         const value = salePrice(s, { base: b.id, grade: gradeFor(score, s.rank) })
         if (!best || value > best.value) best = { base: b.id, additive, value }
@@ -159,7 +176,7 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
       if (roll(bot) < bot.explore) {
         // Curious player: try something else this week.
         const base = options[Math.floor(roll(bot) * options.length)]
-        const additives = [null, ...s.unlockedAdditives]
+        const additives = [null, ...s.unlockedAdditives].filter(a => recipeKnown(s, base.id, a))
         pick = {
           base: base.id,
           additive: additives[Math.floor(roll(bot) * additives.length)],
@@ -170,6 +187,15 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
       if (cur.base !== pick.base || cur.additive !== pick.additive)
         s = selectBlend(s, pick.base, pick.additive, st.uid)
     })
+  // Keep every lab researching: the best-selling base with pairs still unknown first.
+  for (const lab of labs(s))
+    if (!labJob(s, lab.uid)) {
+      const target = [...ranked.map(r => r.base), ...options.map(o => o.id)].find(
+        b => researchCandidates(s, b).length,
+      )
+      if (target && s.money > researchCost(s, target).money + reserve)
+        s = startResearch(s, lab.uid, target)
+    }
   const mixing = new Set(activeRecipes(s).map(r => r.base))
   for (const c of s.contracts.offers)
     if (mixing.has(c.base) && s.contracts.active.length < 3) s = acceptContract(s, c.uid)
@@ -181,9 +207,22 @@ export function simulate(seed: number, years = 16) {
     negative = 0,
     maxNegative = 0
   const reached: Record<number, number> = { 1: 1 }
-  const annual: { year: number; rank: number; fame: number; money: number; profit: number }[] = []
+  const annual: {
+    year: number
+    rank: number
+    fame: number
+    money: number
+    profit: number
+    rd: number
+    known: number
+    expenses: number
+  }[] = []
+  let firstSS = 0,
+    expenses = 0
   for (let i = 0; i < years * YEAR; i++) {
     s = autoplay(tick(s), bot)
+    if (!firstSS && s.tanks.some(l => l.grade === 'SS')) firstSS = s.tick / YEAR
+    if (s.tick % YEAR === YEAR - 1) expenses = s.year.expenses
     for (let rank = 2; rank <= s.rank; rank++) if (!(rank in reached)) reached[rank] = s.tick / YEAR
     negative = s.money < 0 ? negative + 1 : 0
     maxNegative = Math.max(maxNegative, negative)
@@ -194,6 +233,9 @@ export function simulate(seed: number, years = 16) {
         fame: s.fame,
         money: Math.round(s.money),
         profit: Math.round(s.history.profits.slice(-12).reduce((n, p) => n + p.profit, 0) / 12),
+        rd: Math.round(s.rd),
+        known: s.knownRecipes.length,
+        expenses: Math.round(expenses),
       })
   }
   return {
@@ -202,6 +244,8 @@ export function simulate(seed: number, years = 16) {
     maxNegativeMonths: maxNegative / MONTH,
     unlocksFirst40Weeks: s.unlockHistory.filter(u => u.tick <= 40 * B.ticksPerWeek).length,
     annual,
+    firstSS,
+    awardWins: s.history.awards.map(a => a.wins.length),
   }
 }
 if (process.argv[1]?.endsWith('sim-run.ts')) {

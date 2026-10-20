@@ -9,6 +9,7 @@ import { buildingDef } from '../../data/buildings'
 import { random } from '../rng'
 import { tankCapacity, tankUnits } from './blending'
 import { LOAN } from '../../data/balance'
+import { demandFactor, cooled } from './market'
 export const gradeRank = (g: Grade) => GRADES.findIndex(v => v.id === g)
 export const eligibleLot = (s: GameState, base: string, min: Grade): Lot | undefined =>
   s.tanks
@@ -25,6 +26,7 @@ export const salePrice = (s: GameState, l: Pick<Lot, 'base' | 'grade'>) =>
   GRADES.find(g => g.id === l.grade)!.price *
   marketMultiplier(s) *
   (1 + getModifiers(s).price) *
+  demandFactor(s, l.base) *
   (s.investments.port >= 4 ? P.exportBonus : 1) *
   (l.base === 'jet' && ['S', 'SS'].includes(l.grade) && s.investments.airport >= 4
     ? P.airportBonus
@@ -113,7 +115,7 @@ export function sellTo(s: GameState, customerId: string): GameState {
   const p = s.yard.buildings.find(b => b.defId === 'loading')
   const repayment = Math.min(s.loan, income * LOAN.repayShare)
   let next: GameState = {
-    ...s,
+    ...cooled(s, lot.base),
     opened: true,
     loan: s.loan - repayment,
     money: s.money + income - repayment,
