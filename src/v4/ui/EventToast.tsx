@@ -9,7 +9,7 @@ const SHOW_MS = 3500
  * Shows each new log line (events, finds, gifts) briefly over the yard, so the player
  * sees what happened without opening the Company sheet. The full list stays there.
  */
-export function EventToast() {
+export function EventToast({ bottom = 12 }: { bottom?: number }) {
   const { state: s } = useGame()
   const seen = useRef<number | null>(null)
   const [queue, setQueue] = useState<{ key: string; en: string; th: string }[]>([])
@@ -39,7 +39,7 @@ export function EventToast() {
   return (
     <View
       pointerEvents="none"
-      style={{ position: 'absolute', left: 12, right: 72, bottom: 12, alignItems: 'flex-start' }}
+      style={{ position: 'absolute', left: 12, right: 72, bottom, alignItems: 'flex-start' }}
     >
       <View
         style={{

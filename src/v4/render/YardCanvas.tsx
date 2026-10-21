@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, AccessibilityInfo } from 'react-native'
-import { Canvas, Group, Picture, Skia } from '@shopify/react-native-skia'
+import {
+  Canvas,
+  Group,
+  Picture,
+  Skia,
+  useImage,
+  rect as skRect,
+  FilterMode,
+  MipmapMode,
+} from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile } from './iso'
 import { yardGround, yardColors } from './yardGround'
@@ -13,6 +22,7 @@ import { text } from '../i18n'
 import { sprites } from './buildings'
 import { drawCommands } from './draw'
 import { useSpriteImages, drawBuilding } from './useSpriteImages'
+import { spriteImageFor } from './spriteImages'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
@@ -41,6 +51,15 @@ function yardFrame(s: GameState, width: number, height: number) {
       p = toScreen(b.x, b.y)
     const ox = p.x + (d.w - d.h) * 8,
       oy = p.y + (d.w + d.h) * 4
+    const image = spriteImageFor(b.defId, b.level)
+    if (image) {
+      const k = image.scale / 2
+      points.push(
+        [ox - image.ax * k, oy - image.ay * k],
+        [ox + (image.w - image.ax) * k, oy + (image.h - image.ay) * k],
+      )
+      continue
+    }
     for (const c of sprites[b.defId](b.level, d.accent, 0)) {
       const pts =
         c.kind === 'polygon'
@@ -77,8 +96,8 @@ function yardFrame(s: GameState, width: number, height: number) {
     minY = Math.min(...ys),
     maxY = Math.max(...ys)
   const zoom = Math.max(
-    // Never open smaller than 2×: buildings must read on a phone; the edges may crop.
-    YARD.defaultZoom,
+    // The approved redesign opens close to the plant; players can still zoom out.
+    Math.min(YARD.maxZoom, YARD.defaultZoom + 1),
     Math.min(
       // Frame the buildings as large as fits (up to 3×) so they read on a phone.
       YARD.maxZoom - 1,
@@ -178,10 +197,36 @@ export function YardCanvas({
   }, [ghostKey, size.h])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
   const gateKey = gate ? `${gate.x},${gate.y}` : ''
+  const coastal = useImage(require('../../../assets/v4/art/yard_coastal_v2.png'))
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
-    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost), false)
+    if (coastal && s.yard.ownedParcels.length) {
+      const points = s.yard.ownedParcels.flatMap(parcel => {
+        const [x, y] = parcel.split(',').map(Number)
+        return [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+          [1, 1],
+        ].map(([dx, dy]) => toScreen((x + dx) * YARD.parcel, (y + dy) * YARD.parcel))
+      })
+      const minX = Math.min(...points.map(p => p.x)),
+        maxX = Math.max(...points.map(p => p.x))
+      const minY = Math.min(...points.map(p => p.y)),
+        maxY = Math.max(...points.map(p => p.y))
+      const width = maxX - minX + 320,
+        height = (width * coastal.height()) / coastal.width()
+      canvas.drawImageRectOptions(
+        coastal,
+        skRect(0, 0, coastal.width(), coastal.height()),
+        skRect((minX + maxX - width) / 2, (minY + maxY - height) / 2, width, height),
+        FilterMode.Nearest,
+        MipmapMode.None,
+        Skia.Paint(),
+      )
+    }
+    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!coastal), false)
     // Public road outside the fence that trucks use to reach the gate.
     if (gate) {
       for (let i = 1; i <= SALES.approachTiles; i++) {
@@ -202,7 +247,7 @@ export function YardCanvas({
       }
     }
     return recorder.finishRecordingAsPicture()
-  }, [s.yard.ownedParcels, gateKey, !!ghost])
+  }, [s.yard.ownedParcels, gateKey, !!ghost, coastal])
   const truckPositions = new Map(
     s.trucks.map(t => {
       const a = t.path[t.step],

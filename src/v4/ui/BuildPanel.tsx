@@ -139,7 +139,7 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
                 ]}
               >
                 <View style={[styles.swatch, !open && { opacity: 0.4 }]}>
-                  <BuildingSprite id={d.id} size={72} />
+                  <BuildingSprite id={d.id} size={88} />
                 </View>
                 <Text style={styles.cardName} numberOfLines={1}>
                   {text(d.name)}
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
   },
   chipOn: { backgroundColor: ui.navy },
   card: {
-    width: 116,
-    height: 156,
+    width: 136,
+    height: 176,
     backgroundColor: '#FFFDF5',
     borderWidth: 2,
     borderRadius: 10,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   cardLocked: { backgroundColor: '#E9E2D2', borderStyle: 'dashed', borderColor: '#9E978A' },
   swatch: {
-    height: 76,
+    height: 92,
     width: '100%',
     backgroundColor: '#E8EEEA',
     borderRadius: 5,

@@ -134,14 +134,14 @@ export const customerPortrait = (id: string): number | undefined => {
   return set ? set[Number(m![2]) % set.length] : undefined
 }
 export const headerArt: Record<string, number> = {
-  Build: require('../../../assets/v4/art/header_build.jpg'),
-  Blend: require('../../../assets/v4/art/header_blend.jpg'),
-  Staff: require('../../../assets/v4/art/header_staff.jpg'),
-  Customers: require('../../../assets/v4/art/header_customers.jpg'),
-  Company: require('../../../assets/v4/art/header_company.jpg'),
+  Build: require('../../../art-src/gpt/bg_build.png'),
+  Blend: require('../../../art-src/gpt/bg_blend.png'),
+  Staff: require('../../../art-src/gpt/bg_staff.png'),
+  Customers: require('../../../art-src/gpt/bg_customers.png'),
+  Company: require('../../../art-src/gpt/bg_company.png'),
 }
 export const sceneArt = {
   rank: require('../../../assets/v4/art/scene_rank.jpg'),
   awards: require('../../../assets/v4/art/scene_award.jpg'),
-  title: require('../../../assets/v4/art/title.jpg'),
+  title: require('../../../assets/v4/art/title_coastal_v2.png'),
 }

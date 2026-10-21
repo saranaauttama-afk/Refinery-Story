@@ -5,18 +5,18 @@ import { poly, type Command } from './buildings/shapes'
 // Presentation only: the owned parcels remain the sole source of the yard boundary.
 // One continuous floor, with no slab edges between tiles or adjacent parcels.
 export const yardColors = {
-  backdrop: '#BED0C6',
+  backdrop: '#118EC8',
   grass: '#B0C39D',
   grassLight: '#B6C9A3',
-  concrete: '#D9DEDA',
-  joint: '#C9CFCB',
+  concrete: '#E5E3D7',
+  joint: '#D4D4C7',
   grid: '#ACB8B2',
   curb: '#EEF0E5',
   edge: '#8C9D98',
   edgeDark: '#728780',
 }
 
-export function yardGround(parcels: string[], placement: boolean): Command[] {
+export function yardGround(parcels: string[], placement: boolean, coastal = false): Command[] {
   const tiles = new Set<string>()
   for (const parcel of parcels) {
     const [px, py] = parcel.split(',').map(Number)
@@ -43,7 +43,7 @@ export function yardGround(parcels: string[], placement: boolean): Command[] {
       for (let dy = -2; dy <= 2; dy++) if (!has(x + dx, y + dy)) surround.add(`${x + dx},${y + dy}`)
   }
   const commands: Command[] = []
-  for (const tile of surround) {
+  for (const tile of coastal ? [] : surround) {
     const [x, y] = tile.split(',').map(Number)
     commands.push(
       diamond(x, y, (x * 3 + y * 7) % 5 === 0 ? yardColors.grassLight : yardColors.grass),

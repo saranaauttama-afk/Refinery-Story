@@ -77,3 +77,14 @@ For every sprite: stay within the existing logical footprint, keep its anchor st
 - Panels share an illustrated navy header, a colored category badge and cream surfaces. Active tabs have a category-colored marker. Thai values always use Kanit, including the market state.
 - Preserve the current plant sprites for the later dedicated plant-art pass.
 - Evidence: [UI-SURFACES-4.0.24.md](UI-SURFACES-4.0.24.md).
+
+## Approved 4.0.25 Coastal Pixel Industrial direction
+
+The owner approved a fresh full-screen concept with a matching title screen. Use generous, readable cream enamel controls on navy frames, orange primary actions, original chunky pixel icons and high-resolution coastal art. Earlier small HUD/button size constraints are superseded for this visual pass.
+
+- UI text and controls are live native elements, never baked into a screenshot or background.
+- Keep title art at its native PNG resolution. Yard art contains empty terrain only; the concrete footprint and all gameplay objects remain rendered separately.
+- Logical placement remains 32×16 and all footprints stay unchanged. UI size, camera presentation zoom and icon resolution are independent of that logical grid.
+- Present actual screenshots individually at 2x device scale instead of shrinking multiple screens into a tiny montage.
+- Use the approved cream/navy/orange instruments and 88px navigation dock consistently.
+- Provenance, exact prompts and validation: [COASTAL-REDESIGN-4.0.25.md](COASTAL-REDESIGN-4.0.25.md).

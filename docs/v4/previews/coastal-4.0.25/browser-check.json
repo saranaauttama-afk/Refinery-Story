@@ -1,0 +1,91 @@
+{
+  "errors": [],
+  "results": [
+    {
+      "screen": "build",
+      "overflow": false
+    },
+    {
+      "screen": "blend",
+      "overflow": false
+    },
+    {
+      "screen": "staff",
+      "overflow": false
+    },
+    {
+      "screen": "customers",
+      "overflow": false
+    },
+    {
+      "screen": "company",
+      "overflow": false
+    }
+  ],
+  "checks": [
+    {
+      "check": "fresh title has no Continue button",
+      "pass": true
+    },
+    {
+      "check": "New Game opens the existing starter guide",
+      "pass": true
+    },
+    {
+      "check": "Continue preserves saved money",
+      "pass": true
+    },
+    {
+      "check": "outside-land tap disables placement and preserves cash",
+      "pass": true
+    },
+    {
+      "check": "cancel placement preserves funds",
+      "pass": true
+    },
+    {
+      "check": "valid placement enabled",
+      "pass": true
+    },
+    {
+      "check": "place action charges exactly $5000",
+      "pass": true
+    },
+    {
+      "check": "help opens",
+      "pass": true
+    },
+    {
+      "check": "staff hire tab switches",
+      "pass": true
+    },
+    {
+      "check": "customer tab ตลาด",
+      "pass": true
+    },
+    {
+      "check": "customer tab ลูกค้าประจำ",
+      "pass": true
+    },
+    {
+      "check": "land purchase uses existing $20000 action",
+      "pass": true
+    },
+    {
+      "check": "360px page fits horizontally",
+      "pass": true
+    },
+    {
+      "check": "HUD gear opens existing settings",
+      "pass": true
+    },
+    {
+      "check": "yard build CTA opens existing catalogue",
+      "pass": true
+    },
+    {
+      "check": "New Game from existing save resets to rank 1",
+      "pass": true
+    }
+  ]
+}

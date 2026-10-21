@@ -53,9 +53,12 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
   return (
     <View
       style={{
-        backgroundColor: '#F5E8C7',
-        padding: 8,
-        borderBottomWidth: 2,
+        backgroundColor: '#FFF6E3',
+        padding: 9,
+        borderWidth: 3,
+        borderColor: '#14110F',
+        borderRadius: 9,
+        boxShadow: '0px 3px 0px #173548',
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,

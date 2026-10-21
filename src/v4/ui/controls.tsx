@@ -1,19 +1,12 @@
 import { headerArt } from './art'
 import { useState } from 'react'
 import { Pressable, Text, StyleSheet, View, ScrollView, Image } from 'react-native'
-import {
-  X,
-  Building2,
-  FlaskConical,
-  Users,
-  Truck,
-  Landmark,
-  Map,
-  BookOpen,
-} from 'lucide-react-native'
+import { X, Building2, Map, BookOpen } from 'lucide-react-native'
 import { text, type LocalizedText } from '../i18n'
 import { useFeedback } from './Feedback'
 import { ui, type } from './theme'
+import { GameIcon } from './GameIcon'
+import { Enamel } from './GameChrome'
 export function Button({
   label,
   onPress,
@@ -50,6 +43,7 @@ export function Button({
         pressed && { transform: [{ translateY: 2 }], boxShadow: '0px 0px 0px transparent' },
       ]}
     >
+      <Enamel />
       {icon}
       <Text style={styles.buttonText}>{text(label)}</Text>
       {badge && (
@@ -70,11 +64,11 @@ const headerColors: Record<string, string> = {
   Blend: ui.blend,
 }
 const headerIcons: Record<string, React.ReactNode> = {
-  Build: <Building2 size={23} color={ui.ink} />,
-  Blend: <FlaskConical size={23} color={ui.ink} />,
-  Staff: <Users size={23} color={ui.ink} />,
-  Customers: <Truck size={23} color={ui.ink} />,
-  Company: <Landmark size={23} color={ui.ink} />,
+  Build: <GameIcon name="build" size={32} />,
+  Blend: <GameIcon name="blend" size={32} />,
+  Staff: <GameIcon name="staff" size={32} />,
+  Customers: <GameIcon name="customers" size={32} />,
+  Company: <GameIcon name="company" size={32} />,
   'Buy land': <Map size={23} color={ui.ink} />,
   'Recipe Book': <BookOpen size={23} color={ui.ink} />,
 }
@@ -142,7 +136,8 @@ export function Sheet({
   return (
     <View style={[styles.sheet, low && { maxHeight: undefined }]}>
       <View style={{ height: 4, backgroundColor: headerColors[title.en] ?? ui.gold }} />
-      <View style={[styles.header, low && { minHeight: 64 }]}>
+      <View style={[styles.header, low && { minHeight: 70 }]}>
+        <Enamel dark />
         {headerArt[title.en] && (
           <>
             <Image
@@ -165,7 +160,7 @@ export function Sheet({
                 right: 0,
                 top: 0,
                 bottom: 0,
-                backgroundColor: '#18313EC9',
+                backgroundColor: '#18313EBA',
               }}
             />
           </>
@@ -174,9 +169,9 @@ export function Sheet({
           {headerIcons[title.en] ?? <Building2 size={23} color={ui.ink} />}
         </View>
         <View style={{ flex: 1, gap: 1 }}>
-          <Text style={[styles.heading, { color: ui.paper, fontSize: 21 }]}>{text(title)}</Text>
+          <Text style={[styles.heading, { color: ui.paper, fontSize: 22 }]}>{text(title)}</Text>
           {!low && headerCaptions[title.en] && (
-            <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 11, color: '#DAE4DF' }}>
+            <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 12, color: '#DAE4DF' }}>
               {text(headerCaptions[title.en])}
             </Text>
           )}
@@ -232,8 +227,8 @@ export function Sheet({
 }
 export const styles = StyleSheet.create({
   button: {
-    backgroundColor: ui.gold,
-    minHeight: 44,
+    backgroundColor: ui.build,
+    minHeight: 48,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 2,
@@ -266,10 +261,10 @@ export const styles = StyleSheet.create({
   heading: { fontFamily: 'Kanit_600SemiBold', fontSize: 18, color: ui.ink, flexShrink: 1 },
   sheet: {
     position: 'absolute',
-    bottom: 64,
+    bottom: ui.dockHeight,
     left: 0,
     right: 0,
-    maxHeight: '58%',
+    maxHeight: '62%',
     backgroundColor: ui.paper,
     borderTopWidth: 3,
     borderColor: ui.ink,
@@ -283,15 +278,15 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     backgroundColor: ui.navy,
-    minHeight: 80,
+    minHeight: 88,
     padding: 10,
     paddingLeft: 12,
     borderBottomWidth: 2,
     borderColor: ui.ink,
   },
   headerMark: {
-    width: 42,
-    height: 42,
+    width: 46,
+    height: 46,
     borderWidth: 2,
     borderColor: ui.ink,
     borderRadius: 7,

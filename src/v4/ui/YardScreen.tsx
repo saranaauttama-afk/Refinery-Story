@@ -1,8 +1,9 @@
-import { Onboarding } from './Onboarding'
+import { Onboarding, currentHint } from './Onboarding'
+import { GameDock } from './GameDock'
+import { YardWelcome } from './YardWelcome'
 import { BuildPanel } from './BuildPanel'
 import { LandPanel } from './LandPanel'
 import { BuildingInfo } from './BuildingInfo'
-import { Building2, FlaskConical, Users, Truck, Landmark } from 'lucide-react-native'
 import { CompanyPanel } from './CompanyPanel'
 import { Notices } from './Notices'
 import { StaffPanel } from './StaffPanel'
@@ -56,6 +57,7 @@ export function YardScreen() {
   const [blendStation, setBlendStation] = useState<string>()
   const [companyView, setCompanyView] = useState<string>()
   const [ghost, setGhost] = useState<Ghost>()
+  const [guideHeight, setGuideHeight] = useState(0)
   const b = s.yard.buildings.find(b => b.uid === selected)
   const alerts = yardAlerts(s)
   const cost = (g: Ghost) =>
@@ -103,12 +105,17 @@ export function YardScreen() {
   }
   return (
     <View style={{ flex: 1, backgroundColor: ui.paper }}>
-      <HUD alerts={alerts.length} bellOpen={bell} onBell={() => setBell(v => !v)} />
-      {!ghost && !panel && !bell && (
-        <Onboarding
-          onPlace={(id, x, y) => setGhost({ id, x, y, repeat: false, placed: 0, spent: 0 })}
-        />
-      )}
+      <HUD
+        alerts={alerts.length}
+        bellOpen={bell}
+        onBell={() => setBell(v => !v)}
+        onSettings={() => {
+          setGhost(undefined)
+          setBell(false)
+          setCompanyView('settings')
+          setPanel('company')
+        }}
+      />
       <View style={{ flex: 1 }}>
         <YardCanvas
           state={s}
@@ -129,7 +136,20 @@ export function YardScreen() {
             }
           }}
         />
-        {!ghost && <EventToast />}
+        {!ghost && !panel && !bell && (
+          <View
+            onLayout={e => setGuideHeight(e.nativeEvent.layout.height)}
+            style={{ position: 'absolute', left: 10, right: 62, bottom: 12 }}
+          >
+            <Onboarding
+              onPlace={(id, x, y) => setGhost({ id, x, y, repeat: false, placed: 0, spent: 0 })}
+            />
+            {currentHint(s) === null && s.yard.buildings.length > 0 && (
+              <YardWelcome count={s.yard.buildings.length} onBuild={() => openTab('build')} />
+            )}
+          </View>
+        )}
+        {!ghost && <EventToast bottom={!panel && !bell ? guideHeight + 24 : 12} />}
         {bell && !ghost && (
           <Alerts
             onOpen={a => {
@@ -238,100 +258,11 @@ export function YardScreen() {
         </View>
       )}
       {!ghost && (
-        <View
-          style={{
-            height: 64,
-            flexDirection: 'row',
-            backgroundColor: ui.paper,
-            borderTopWidth: 3,
-            borderColor: ui.ink,
-          }}
-        >
-          {[
-            { id: 'build', en: 'Build', th: 'สร้าง', color: '#F08A24', tint: '#FBE0C4' },
-            { id: 'blend', en: 'Blend', th: 'ผสม', color: '#E2483D', tint: '#F6D6D2' },
-            { id: 'staff', en: 'Staff', th: 'คน', color: '#3D8FE0', tint: '#D6E6F7' },
-            { id: 'customers', en: 'Customers', th: 'ลูกค้า', color: '#2FB38E', tint: '#CDEFE3' },
-            { id: 'company', en: 'Company', th: 'บริษัท', color: '#B184E3', tint: '#E8DAF6' },
-          ].map(tab => (
-            <Pressable
-              key={tab.id}
-              accessibilityRole="tab"
-              accessibilityLabel={text(tab)}
-              accessibilityState={{ selected: panel === tab.id }}
-              onPress={() => openTab(tab.id)}
-              style={({ pressed }) => ({
-                flex: 1,
-                minWidth: 0,
-                backgroundColor: pressed || panel === tab.id ? tab.tint : 'transparent',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 2,
-              })}
-            >
-              {panel === tab.id && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 10,
-                    right: 10,
-                    height: 3,
-                    backgroundColor: tab.color,
-                  }}
-                />
-              )}
-              <View
-                style={{
-                  width: 32,
-                  height: 28,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 6,
-                  backgroundColor: panel === tab.id ? tab.tint : 'transparent',
-                }}
-              >
-                {tab.id === 'build' ? (
-                  <Building2 size={22} color={tab.color} />
-                ) : tab.id === 'blend' ? (
-                  <FlaskConical size={22} color={tab.color} />
-                ) : tab.id === 'staff' ? (
-                  <Users size={22} color={tab.color} />
-                ) : tab.id === 'customers' ? (
-                  <Truck size={22} color={tab.color} />
-                ) : (
-                  <Landmark size={22} color={tab.color} />
-                )}
-              </View>
-              <Text
-                style={[
-                  type.small,
-                  {
-                    color: ui.ink,
-                    fontFamily: panel === tab.id ? 'Kanit_600SemiBold' : 'Kanit_400Regular',
-                  },
-                ]}
-              >
-                {text(tab)}
-              </Text>
-              {tab.id === 'customers' && alerts.some(a => a.tab === 'customers') && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: '28%',
-                    width: 10,
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: '#E2483D',
-                    borderWidth: 2,
-                    borderColor: ui.ink,
-                  }}
-                />
-              )}
-            </Pressable>
-          ))}
-        </View>
+        <GameDock
+          active={panel}
+          onTab={openTab}
+          customerNotice={alerts.some(a => a.tab === 'customers')}
+        />
       )}
       <Notices />
 

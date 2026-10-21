@@ -13,6 +13,7 @@ export const ui = {
   customers: '#2FB38E',
   company: '#B184E3',
   gold: '#F2C230',
+  dockHeight: 88,
 }
 // One type scale for the whole game: numbers, titles, body, small.
 export const type = {
