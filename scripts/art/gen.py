@@ -2,9 +2,9 @@ import json,base64,sys,urllib.request,os
 key=open(os.path.expanduser('~/.pixellab_key')).read().strip()
 P={
  'cdu':'oil refinery distillation unit: one tall grey steel column with two safety-orange rings and a ladder, beside a squat orange furnace box with a dark door, on a concrete pad',
- 'crudeTank':'wide low grey steel crude oil storage tank cylinder seen from a 3/4 isometric angle, black band around the middle, yellow rim railing and a side ladder, on a square concrete pad',
+ 'crudeTank':'wide low round steel crude oil storage tank, a true circular cylinder seen in isometric view so the round roof is a wide ellipse, light grey, dark band, yellow side ladder, on a diamond concrete pad',
  'blend':'blending station: three short steel vats with red, blue and teal stripes around a central yellow mixer arm, on a concrete pad',
- 'tank':'small grey steel product storage tank, short cylinder with a domed top and one red stripe, tiny ladder',
+ 'tank':'small round vertical steel storage tank, a true circular cylinder seen in isometric view so the round roof is a wide ellipse, light grey, one red band, small yellow ladder',
  'hydro':'hydrotreater unit: two grey steel reactor cylinders with orange bands joined by a yellow crosspipe, small grey control box, on a concrete pad',
  'reformer':'catalytic reformer: orange furnace box in front of three slim grey steel reactor cylinders with red bands and a yellow pipe, on a long concrete pad',
  'cracker':'big fluid catalytic cracker: tall grey riser column with a purple band and copper pipe, a fat grey regenerator vessel with purple band, low grey compressor block, on a large concrete pad',

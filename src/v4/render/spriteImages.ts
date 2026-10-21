@@ -11,14 +11,30 @@ const at = (src: number, w: number, h: number, footprint: number): SpriteImage =
   ay: h - footprint * 8,
 })
 export const spriteImages: Record<string, Partial<Record<1 | 3 | 5, SpriteImage>>> = {
+  awardeco: { 1: at(require('../../../assets/v4/sprites/awardeco_L1.png'), 48, 67, 2) },
+  awardproduct: { 1: at(require('../../../assets/v4/sprites/awardproduct_L1.png'), 40, 65, 2) },
+  awardrefinery: { 1: at(require('../../../assets/v4/sprites/awardrefinery_L1.png'), 46, 62, 2) },
+  awardsafety: { 1: at(require('../../../assets/v4/sprites/awardsafety_L1.png'), 40, 62, 2) },
   blend: { 1: at(require('../../../assets/v4/sprites/blend_L1.png'), 116, 77, 4) },
+  canteen: { 1: at(require('../../../assets/v4/sprites/canteen_L1.png'), 76, 65, 3) },
   cdu: { 1: at(require('../../../assets/v4/sprites/cdu_L1.png'), 100, 152, 4) },
+  control: { 1: at(require('../../../assets/v4/sprites/control_L1.png'), 76, 70, 3) },
   cracker: { 1: at(require('../../../assets/v4/sprites/cracker_L1.png'), 182, 204, 6) },
-  crudeTank: { 1: at(require('../../../assets/v4/sprites/crudeTank_L1.png'), 93, 68, 4) },
+  crudeTank: { 1: at(require('../../../assets/v4/sprites/crudeTank_L1.png'), 126, 92, 4) },
+  flag: { 1: at(require('../../../assets/v4/sprites/flag_L1.png'), 54, 71, 2) },
+  goldSign: { 1: at(require('../../../assets/v4/sprites/goldSign_L1.png'), 58, 73, 2) },
+  goldTree: { 1: at(require('../../../assets/v4/sprites/goldTree_L1.png'), 48, 68, 2) },
   hydro: { 1: at(require('../../../assets/v4/sprites/hydro_L1.png'), 116, 83, 4) },
+  lab: { 1: at(require('../../../assets/v4/sprites/lab_L1.png'), 52, 58, 2) },
+  lamp: { 1: at(require('../../../assets/v4/sprites/lamp_L1.png'), 54, 67, 2) },
+  legend: { 1: at(require('../../../assets/v4/sprites/legend_L1.png'), 42, 74, 2) },
   loading: { 1: at(require('../../../assets/v4/sprites/loading_L1.png'), 118, 79, 4) },
+  pipe: { 1: at(require('../../../assets/v4/sprites/pipe_L1.png'), 54, 42, 2) },
   reformer: { 1: at(require('../../../assets/v4/sprites/reformer_L1.png'), 150, 128, 5) },
+  sign: { 1: at(require('../../../assets/v4/sprites/sign_L1.png'), 54, 60, 2) },
+  tank: { 1: at(require('../../../assets/v4/sprites/tank_L1.png'), 46, 57, 2) },
   tower: { 1: at(require('../../../assets/v4/sprites/tower_L1.png'), 180, 226, 6) },
+  tree: { 1: at(require('../../../assets/v4/sprites/tree_L1.png'), 48, 54, 2) },
 }
 export const tierOf = (level: number): 1 | 3 | 5 => (level >= 5 ? 5 : level >= 3 ? 3 : 1)
 /** The tier image a building at this level uses, falling back to a lower tier. */

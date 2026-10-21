@@ -1,6 +1,6 @@
 # PixelLab sprite list and spec
 
-Status: pilot in game (v4.0.18): cdu, crudeTank, blend at L1. PixelLab pixflux, init image = code sprite at 2×, init_image_strength 50.
+Status: all buildings and decor at L1 in game (v4.0.19), except gate/flare/road (code-animated). L3/L5 next. PixelLab pixflux, init image = code sprite at 2×, init_image_strength 50.
 Look and palette: `ART.md` and `STYLE-BIBLE.md`.
 
 ## Rules every sprite follows
