@@ -1,6 +1,6 @@
 # PixelLab sprite list and spec
 
-Status: plan, 2026-10-21. Pilot first (3 buildings), then the full set.
+Status: pilot in game (v4.0.18): cdu, crudeTank, blend at L1. PixelLab pixflux, init image = code sprite at 2×, init_image_strength 50.
 Look and palette: `ART.md` and `STYLE-BIBLE.md`.
 
 ## Rules every sprite follows
@@ -78,7 +78,7 @@ Use the same seed/style reference for the whole set so the buildings match.
 
 ## Engineering (when the pilot images arrive)
 
-- Sprites go in `assets/sprites/<id>_L<tier>.png`.
+- Sprites go in `assets/v4/sprites/<id>_L<tier>.png` and are listed in `src/v4/render/spriteImages.ts` (size + footprint; anchor = bottom tip of the diamond).
 - `src/v4/render/buildings/` gains an image path: when a PNG exists for an id
   and tier, the yard, build cards and placement ghost draw it; otherwise they
   fall back to today's code-drawn sprite. Footprints, anchors and the sim do

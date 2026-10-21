@@ -11,6 +11,7 @@ import type { GameState } from '../sim/types'
 import { text } from '../i18n'
 import { sprites } from './buildings'
 import { drawCommands } from './draw'
+import { useSpriteImages, drawBuilding } from './useSpriteImages'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
@@ -278,6 +279,12 @@ export function YardCanvas({
         ]
       : []),
   ].sort((a, b) => a.depth - b.depth)
+  const loadedRaw = useSpriteImages()
+  const loadedKey = Object.values(loadedRaw)
+    .map(v => (v ? 1 : 0))
+    .join('')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loaded = useMemo(() => loadedRaw, [loadedKey])
   const buildingPictures = useMemo(() => {
     return Object.fromEntries(
       s.yard.buildings.map(b => {
@@ -286,11 +293,11 @@ export function YardCanvas({
           recorder = Skia.PictureRecorder(),
           canvas = recorder.beginRecording(bounds)
         canvas.translate(p.x + (d.w - d.h) * 8, p.y + (d.w + d.h) * 4)
-        drawCommands(canvas, sprites[b.defId](b.level, d.accent, 0))
+        drawBuilding(canvas, loaded, b.defId, b.level, d.accent)
         return [b.uid, recorder.finishRecordingAsPicture()]
       }),
     )
-  }, [s.yard.buildings])
+  }, [s.yard.buildings, loaded])
   const ghostPath = useMemo(() => {
     if (!ghost) return null
     const d = buildingDef(ghost.id),
@@ -371,7 +378,7 @@ export function YardCanvas({
         const paint = Skia.Paint()
         paint.setAlphaf(0.62)
         canvas.saveLayer(paint)
-        drawCommands(canvas, sprites[g.id](level, d.accent, 0))
+        drawBuilding(canvas, loaded, g.id, level, d.accent)
         canvas.restore()
       } else if (entry.kind === 'truck') {
         const p = truckPositions.get(entry.t.uid)!,
