@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native'
-import { Pause, Bell, Settings, HardHat, FlaskConical } from 'lucide-react-native'
+import { Pause, Bell, Settings, HardHat } from 'lucide-react-native'
 import { useGame } from '../store/useGame'
 import { dateAt } from '../sim/time'
 import { ranks } from '../data/ranks'
@@ -97,7 +97,7 @@ export function HUD({
         </View>
         <View style={h.resource}>
           <Enamel />
-          <FlaskConical size={25} color={ui.ink} fill="#55B5E0" />
+          <GameIcon name="rd" size={27} />
           <Text
             accessibilityLabel={text({ en: `Research data ${s.rd}`, th: `ข้อมูลวิจัย ${s.rd}` })}
             numberOfLines={1}

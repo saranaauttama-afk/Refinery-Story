@@ -1,10 +1,39 @@
+import { Image } from 'react-native'
 import Svg, { G, Path, Rect } from 'react-native-svg'
 
-export type GameIconName = 'build' | 'blend' | 'staff' | 'customers' | 'company' | 'cash' | 'star'
+export type GameIconName =
+  | 'build'
+  | 'blend'
+  | 'staff'
+  | 'customers'
+  | 'company'
+  | 'cash'
+  | 'star'
+  | 'rd'
+  | 'calendar'
+  | 'crown'
+
+// PixelLab icons in the mockup's style (scripts/art, rounds 1–2), stored pre-scaled with
+// nearest-neighbour. Names without a bitmap fall back to the code-drawn icon below.
+const bitmaps: Partial<Record<GameIconName, number>> = {
+  build: require('../../../assets/v4/ui/tab_build.png'),
+  blend: require('../../../assets/v4/ui/tab_blend.png'),
+  staff: require('../../../assets/v4/ui/tab_staff.png'),
+  customers: require('../../../assets/v4/ui/tab_customers.png'),
+  company: require('../../../assets/v4/ui/tab_company.png'),
+  cash: require('../../../assets/v4/ui/cash.png'),
+  star: require('../../../assets/v4/ui/star.png'),
+  rd: require('../../../assets/v4/ui/rd.png'),
+  calendar: require('../../../assets/v4/ui/calendar.png'),
+  crown: require('../../../assets/v4/ui/crown.png'),
+}
 const ink = '#172B38'
 
-/** Original, code-native pixel icons: sharp at every phone density, with no bitmap upscaling. */
+/** Game icons: PixelLab bitmaps where we have them, else original code-native pixel icons. */
 export function GameIcon({ name, size = 36 }: { name: GameIconName; size?: number }) {
+  const bitmap = bitmaps[name]
+  if (bitmap)
+    return <Image accessible={false} source={bitmap} style={{ width: size, height: size }} />
   return (
     <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
       <G stroke={ink} strokeWidth={2} strokeLinejoin="miter" strokeLinecap="square">
