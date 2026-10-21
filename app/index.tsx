@@ -76,53 +76,55 @@ function GameButton({
 export default function TitleScreen() {
   const { ready, hasSave, newGame, saveError } = useGame()
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={{ flex: 1, backgroundColor: '#3D8FE0' }}>
       <Image
         source={sceneArt.title}
         resizeMode="cover"
         style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
       />
-      <View style={styles.logo}>
-        <Outlined size={46} fill="#FFD84D">
-          {noLigature(text(copy.title))}
-        </Outlined>
-        <View style={styles.ribbon}>
-          <Text style={styles.tagline}>
-            {text({ en: 'YOUR LITTLE INDUSTRIAL WORLD', th: 'โรงกลั่นจิ๋ว โลกอุตสาหกรรมของคุณ' })}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.menu}>
-        {saveError && (
-          <View style={styles.error}>
-            <Text style={styles.errorText}>{text(saveError)}</Text>
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.logo}>
+          <Outlined size={46} fill="#FFD84D">
+            {noLigature(text(copy.title))}
+          </Outlined>
+          <View style={styles.ribbon}>
+            <Text style={styles.tagline}>
+              {text({ en: 'YOUR LITTLE INDUSTRIAL WORLD', th: 'โรงกลั่นจิ๋ว โลกอุตสาหกรรมของคุณ' })}
+            </Text>
           </View>
-        )}
-        {ready && hasSave && (
+        </View>
+        <View style={styles.menu}>
+          {saveError && (
+            <View style={styles.error}>
+              <Text style={styles.errorText}>{text(saveError)}</Text>
+            </View>
+          )}
+          {ready && hasSave && (
+            <Link href="/game" asChild>
+              <GameButton
+                label={text({ en: 'Continue', th: 'เล่นต่อ' })}
+                color="#F08A24"
+                light="#FFB25C"
+              />
+            </Link>
+          )}
           <Link href="/game" asChild>
             <GameButton
-              label={text({ en: 'Continue', th: 'เล่นต่อ' })}
-              color="#F08A24"
-              light="#FFB25C"
+              label={text(copy.newGame)}
+              color={hasSave ? '#FFF6E3' : '#F08A24'}
+              light={hasSave ? '#FFFFFF' : '#FFB25C'}
+              onPress={newGame}
+              disabled={!ready}
             />
           </Link>
-        )}
-        <Link href="/game" asChild>
-          <GameButton
-            label={text(copy.newGame)}
-            color={hasSave ? '#FFF6E3' : '#F08A24'}
-            light={hasSave ? '#FFFFFF' : '#FFB25C'}
-            onPress={newGame}
-            disabled={!ready}
-          />
-        </Link>
-      </View>
-      <Text style={styles.version}>{versionLabel}</Text>
-    </SafeAreaView>
+        </View>
+        <Text style={styles.version}>{versionLabel}</Text>
+      </SafeAreaView>
+    </View>
   )
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#3D8FE0', justifyContent: 'space-between' },
+  screen: { flex: 1, justifyContent: 'space-between' },
   logo: { alignItems: 'center', marginTop: 56, gap: 14, paddingHorizontal: 16 },
   ribbon: {
     backgroundColor: '#263D49',
