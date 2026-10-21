@@ -35,10 +35,11 @@ export function drawBuilding(
   const img = spriteImageFor(id, level)
   const sk = tier ? loaded[`${id}:${tier}`] : null
   if (img && sk) {
+    const k = img.scale / 2
     canvas.drawImageRectOptions(
       sk,
       rect(0, 0, img.w, img.h),
-      rect(-img.ax / 2, -img.ay / 2, img.w / 2, img.h / 2),
+      rect(-img.ax * k, -img.ay * k, img.w * k, img.h * k),
       FilterMode.Nearest,
       MipmapMode.None,
       Skia.Paint(),
