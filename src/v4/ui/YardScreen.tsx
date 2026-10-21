@@ -1,8 +1,8 @@
+import { icons } from './icons'
 import { Onboarding } from './Onboarding'
 import { BuildPanel } from './BuildPanel'
 import { LandPanel } from './LandPanel'
 import { BuildingInfo } from './BuildingInfo'
-import { Building2, FlaskConical, Users, Truck, Landmark } from 'lucide-react-native'
 import { CompanyPanel } from './CompanyPanel'
 import { Notices } from './Notices'
 import { StaffPanel } from './StaffPanel'
@@ -16,7 +16,7 @@ import { yardAlerts } from '../sim/systems/alerts'
 import { help } from './help'
 import { EventToast } from './EventToast'
 import { useState } from 'react'
-import { View, Text, Pressable } from 'react-native'
+import { View, Text, Pressable, Image } from 'react-native'
 import { BuildingSprite } from '../render/BuildingSprite'
 import { ui } from './theme'
 import { useGame } from '../store/useGame'
@@ -240,10 +240,13 @@ export function YardScreen() {
       {!ghost && (
         <View
           style={{
-            height: 64,
+            height: 78,
             flexDirection: 'row',
-            backgroundColor: ui.paper,
-            borderTopWidth: 3,
+            gap: 5,
+            paddingHorizontal: 6,
+            paddingVertical: 6,
+            backgroundColor: '#263D49',
+            borderTopWidth: 4,
             borderColor: ui.ink,
           }}
         >
@@ -263,29 +266,28 @@ export function YardScreen() {
               style={({ pressed }) => ({
                 flex: 1,
                 minWidth: 0,
-                backgroundColor: pressed || panel === tab.id ? tab.tint : 'transparent',
+                backgroundColor: panel === tab.id ? '#F08A24' : pressed ? '#FFE7A3' : ui.paper,
+                borderWidth: panel === tab.id ? 3 : 2.5,
+                borderColor: panel === tab.id ? '#F2C230' : ui.ink,
+                borderRadius: 8,
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 2,
+                gap: 0,
+                boxShadow: '0px 3px 0px #14110F',
+                transform: [{ translateY: pressed ? 2 : 0 }],
               })}
             >
-              {tab.id === 'build' ? (
-                <Building2 size={22} color={tab.color} />
-              ) : tab.id === 'blend' ? (
-                <FlaskConical size={22} color={tab.color} />
-              ) : tab.id === 'staff' ? (
-                <Users size={22} color={tab.color} />
-              ) : tab.id === 'customers' ? (
-                <Truck size={22} color={tab.color} />
-              ) : (
-                <Landmark size={22} color={tab.color} />
-              )}
+              <Image
+                source={icons[tab.id as 'build' | 'blend' | 'staff' | 'customers' | 'company']}
+                style={{ width: 34, height: 34 }}
+              />
               <Text
                 style={[
                   type.small,
                   {
-                    color: ui.ink,
-                    fontFamily: panel === tab.id ? 'Kanit_600SemiBold' : 'Kanit_400Regular',
+                    color: panel === tab.id ? ui.paper : ui.ink,
+                    fontFamily: 'Kanit_600SemiBold',
+                    lineHeight: 16,
                   },
                 ]}
               >

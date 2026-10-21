@@ -192,7 +192,7 @@ export const styles = StyleSheet.create({
   heading: { fontFamily: 'Kanit_600SemiBold', fontSize: 18, color: ui.ink, flexShrink: 1 },
   sheet: {
     position: 'absolute',
-    bottom: 64,
+    bottom: 78,
     left: 0,
     right: 0,
     maxHeight: '58%',
