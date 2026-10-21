@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, Text, StyleSheet, View, ScrollView } from 'react-native'
 import { X } from 'lucide-react-native'
 import { text, type LocalizedText } from '../i18n'
@@ -62,16 +63,34 @@ export function Sheet({
   title,
   onClose,
   children,
+  help,
+  low = false,
 }: {
   title: LocalizedText
   onClose: () => void
   children: React.ReactNode
+  /** Rules text shown only when the player taps "?". */
+  help?: LocalizedText
+  /** A short tray (Build) instead of the half-screen sheet. */
+  low?: boolean
 }) {
+  const [showHelp, setShowHelp] = useState(false)
   return (
-    <View style={styles.sheet}>
+    <View style={[styles.sheet, low && { maxHeight: undefined }]}>
       <View style={styles.header}>
         <View style={[styles.headerMark, { backgroundColor: headerColors[title.en] ?? ui.gold }]} />
         <Text style={[styles.heading, { flex: 1, color: ui.paper }]}>{text(title)}</Text>
+        {help && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={text({ en: 'How it works', th: 'วิธีเล่น' })}
+            accessibilityState={{ expanded: showHelp }}
+            onPress={() => setShowHelp(v => !v)}
+            style={[styles.close, { borderRadius: 20 }, showHelp && { backgroundColor: ui.gold }]}
+          >
+            <Text style={styles.heading}>?</Text>
+          </Pressable>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={text({ en: 'Close', th: 'ปิด' })}
@@ -81,14 +100,31 @@ export function Sheet({
           <X size={20} color={ui.ink} strokeWidth={3} />
         </Pressable>
       </View>
-      <ScrollView
-        key={title.en}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator
-        contentContainerStyle={{ padding: 12, paddingBottom: 24, gap: 6 }}
-      >
-        {children}
-      </ScrollView>
+      {low ? (
+        <View style={{ padding: 10, gap: 8 }}>{children}</View>
+      ) : (
+        <ScrollView
+          key={title.en}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator
+          contentContainerStyle={{ padding: 12, paddingBottom: 20, gap: 8 }}
+        >
+          {help && showHelp && (
+            <View
+              style={{
+                padding: 10,
+                borderWidth: 2,
+                borderColor: ui.ink,
+                borderRadius: 6,
+                backgroundColor: '#FFF1C9',
+              }}
+            >
+              <Text style={[styles.text, { fontSize: 14 }]}>{text(help)}</Text>
+            </View>
+          )}
+          {children}
+        </ScrollView>
+      )}
     </View>
   )
 }
@@ -128,16 +164,16 @@ export const styles = StyleSheet.create({
   heading: { fontFamily: 'Kanit_600SemiBold', fontSize: 18, color: ui.ink, flexShrink: 1 },
   sheet: {
     position: 'absolute',
-    bottom: 78,
-    left: 8,
-    right: 8,
-    maxHeight: '72%',
+    bottom: 64,
+    left: 0,
+    right: 0,
+    maxHeight: '58%',
     backgroundColor: ui.paper,
-    borderWidth: 2,
+    borderTopWidth: 3,
     borderColor: ui.ink,
-    borderRadius: 8,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     overflow: 'hidden',
-    boxShadow: '0px 4px 0px #14110F',
   },
   header: {
     flexDirection: 'row',
@@ -151,8 +187,8 @@ export const styles = StyleSheet.create({
   },
   headerMark: { width: 8, height: 26, borderWidth: 1, borderColor: ui.ink },
   close: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,

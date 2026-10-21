@@ -17,6 +17,8 @@ export function progression(s: GameState): GameState {
     notice = {
       uid: `rank${rank}`,
       kind: 'rank' as const,
+      chips: unlocked.map(id => unlockName(id)),
+      lines: intros,
       en: `Rank ${rank}! ${unlocked.map(id => unlockName(id).en).join(', ')}${intros.map(i => `\n• ${i.en}`).join('')}`,
       th: `แรงก์ ${rank}! ปลดล็อก ${unlocked.map(id => unlockName(id).th).join(', ')}${intros.map(i => `\n• ${i.th}`).join('')}`,
     }

@@ -1,5 +1,6 @@
-import { PanelIntro } from './PanelIntro'
-import { Text } from 'react-native'
+import { useState } from 'react'
+import { Text, View, Pressable } from 'react-native'
+import { type } from './theme'
 import { useGame } from '../store/useGame'
 import { customers } from '../data/customers'
 import { bases } from '../data/bases'
@@ -20,6 +21,7 @@ const reward = (s: GameState, c: Contract) =>
 
 export function CustomersPanel() {
   const { state: s, dispatch } = useGame()
+  const [tab, setTab] = useState<'contracts' | 'market' | 'regulars'>('contracts')
   const regulars = customers
     .filter(c => customerUnlocked(s, c))
     .map(c => ({ c, rec: s.customers[c.id] ?? { hearts: 0, giftGiven: false } }))
@@ -28,14 +30,6 @@ export function CustomersPanel() {
     )
   return (
     <>
-      <PanelIntro
-        label={{ en: 'Shipping desk', th: 'ศูนย์จ่ายสินค้า' }}
-        detail={{
-          en: 'Track deliveries and build lasting customer relationships.',
-          th: 'ติดตามสัญญาส่งสินค้าและความสัมพันธ์กับลูกค้า',
-        }}
-        color="#2FB38E"
-      />
       {!roadPath(s).length && (
         <Card tone="warn">
           <Text style={styles.text}>
@@ -46,98 +40,150 @@ export function CustomersPanel() {
           </Text>
         </Card>
       )}
-      <Section>
-        {text({ en: 'Active contracts', th: 'สัญญาที่รับไว้' })} ({s.contracts.active.length}/
-        {SALES.maxContracts})
-      </Section>
-      {!s.contracts.active.length && (
-        <Muted>
-          {text({
-            en: 'None yet. Accept an offer below.',
-            th: 'ยังไม่มี รับจากข้อเสนอด้านล่างได้',
-          })}
-        </Muted>
-      )}
-      {s.contracts.active.map(c => (
-        <Card key={c.uid}>
-          <Row>
-            <ProductChip base={c.base} label={baseName(c.base)} />
-            <GradeChip grade={c.minGrade} suffix="+" />
-            <Text
-              style={[
-                styles.text,
-                { marginLeft: 'auto', color: weeksLeft(s, c) <= 2 ? '#B42318' : '#14110F' },
-              ]}
-            >
-              {text({
-                en: `${weeksLeft(s, c)} weeks left`,
-                th: `เหลือ ${weeksLeft(s, c)} สัปดาห์`,
-              })}
+      <View
+        accessibilityRole="tablist"
+        style={{ flexDirection: 'row', borderWidth: 2, borderRadius: 8, overflow: 'hidden' }}
+      >
+        {(
+          [
+            [
+              'contracts',
+              {
+                en: `Contracts ${s.contracts.active.length}/${SALES.maxContracts}`,
+                th: `สัญญา ${s.contracts.active.length}/${SALES.maxContracts}`,
+              },
+            ],
+            ['market', { en: 'Market', th: 'ตลาด' }],
+            ['regulars', { en: 'Regulars', th: 'ประจำ ♥' }],
+          ] as const
+        ).map(([id, label], i) => (
+          <Pressable
+            key={id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === id }}
+            onPress={() => setTab(id)}
+            style={{
+              flex: 1,
+              minHeight: 42,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderLeftWidth: i ? 2 : 0,
+              backgroundColor: tab === id ? '#14110F' : '#FFF6E3',
+            }}
+          >
+            <Text style={[type.body, { fontSize: 14 }, tab === id && { color: '#FFF6E3' }]}>
+              {text(label)}
             </Text>
-          </Row>
-          <Row>
-            <Bar value={c.delivered / c.units} />
-            <Text style={styles.text}>
-              {c.delivered}/{c.units}
-            </Text>
-          </Row>
-          <Muted>
-            {text({
-              en: `Reward ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★ · lots that qualify are sent automatically every week`,
-              th: `รางวัล ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★ · ล็อตที่ผ่านเกณฑ์ส่งให้อัตโนมัติทุกสัปดาห์`,
-            })}
-          </Muted>
-        </Card>
-      ))}
-      <Section>{text({ en: 'Offers this month', th: 'ข้อเสนอเดือนนี้' })}</Section>
-      {s.contracts.offers.map(c => (
-        <Card key={c.uid} dashed>
-          <Row>
-            <ProductChip base={c.base} label={baseName(c.base)} />
-            <GradeChip grade={c.minGrade} suffix="+" />
-            <Text style={styles.text}>
-              {text({ en: `${c.units} units`, th: `${c.units} หน่วย` })}
-            </Text>
-          </Row>
-          <Row>
+          </Pressable>
+        ))}
+      </View>
+      {tab === 'contracts' && (
+        <>
+          <Section>
+            {text({ en: 'Active contracts', th: 'สัญญาที่รับไว้' })} ({s.contracts.active.length}/
+            {SALES.maxContracts})
+          </Section>
+          {!s.contracts.active.length && (
             <Muted>
               {text({
-                en: `${SALES.deadlineWeeks} weeks · ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★`,
-                th: `${SALES.deadlineWeeks} สัปดาห์ · ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★`,
+                en: 'None yet. Accept an offer below.',
+                th: 'ยังไม่มี รับจากข้อเสนอด้านล่างได้',
               })}
             </Muted>
-            <SmallButton
-              label={text({ en: 'Accept', th: 'รับ' })}
-              color="#2FB38E"
-              disabled={s.contracts.active.length >= SALES.maxContracts}
-              onPress={() => dispatch(s => acceptContract(s, c.uid))}
-            />
-          </Row>
-        </Card>
-      ))}
-      <AdsSection />
-      <Section>{text({ en: 'Regular customers', th: 'ลูกค้าประจำ' })}</Section>
-      {regulars.map(({ c, rec }) => (
-        <Card key={c.id}>
-          <Row>
-            <ProductChip base={c.base} label={baseName(c.base)} />
-            <Text style={[styles.text, { flex: 1 }]}>{text(c.name)}</Text>
-            <GradeChip grade={c.minGrade} suffix="+" />
-          </Row>
-          {rec.giftGiven ? (
-            <Muted>
-              {text({ en: 'Gift received · loyal customer', th: 'ให้ของขวัญแล้ว · ลูกค้าประจำ' })}
-            </Muted>
-          ) : (
-            <Row>
-              <Bar value={rec.hearts / SALES.giftHearts} color="#E2483D" />
-              <Text style={styles.text}>
-                ♥ {rec.hearts}/{SALES.giftHearts}
-              </Text>
-            </Row>
           )}
-        </Card>
-      ))}
+          {s.contracts.active.map(c => (
+            <Card key={c.uid}>
+              <Row>
+                <ProductChip base={c.base} label={baseName(c.base)} />
+                <GradeChip grade={c.minGrade} suffix="+" />
+                <Text
+                  style={[
+                    styles.text,
+                    { marginLeft: 'auto', color: weeksLeft(s, c) <= 2 ? '#B42318' : '#14110F' },
+                  ]}
+                >
+                  {text({
+                    en: `${weeksLeft(s, c)} weeks left`,
+                    th: `เหลือ ${weeksLeft(s, c)} สัปดาห์`,
+                  })}
+                </Text>
+              </Row>
+              <Row>
+                <Bar value={c.delivered / c.units} />
+                <Text style={styles.text}>
+                  {c.delivered}/{c.units}
+                </Text>
+              </Row>
+              <Muted>
+                {text({
+                  en: `Reward ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★ · lots that qualify are sent automatically every week`,
+                  th: `รางวัล ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★ · ล็อตที่ผ่านเกณฑ์ส่งให้อัตโนมัติทุกสัปดาห์`,
+                })}
+              </Muted>
+            </Card>
+          ))}
+          <Section>{text({ en: 'Offers this month', th: 'ข้อเสนอเดือนนี้' })}</Section>
+          {s.contracts.offers.map(c => (
+            <Card key={c.uid} dashed>
+              <Row>
+                <ProductChip base={c.base} label={baseName(c.base)} />
+                <GradeChip grade={c.minGrade} suffix="+" />
+                <Text style={styles.text}>
+                  {text({ en: `${c.units} units`, th: `${c.units} หน่วย` })}
+                </Text>
+              </Row>
+              <Row>
+                <Muted>
+                  {text({
+                    en: `${SALES.deadlineWeeks} weeks · ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★`,
+                    th: `${SALES.deadlineWeeks} สัปดาห์ · ~$${reward(s, c).toLocaleString()} +${SALES.contractFame}★`,
+                  })}
+                </Muted>
+                <SmallButton
+                  label={text({ en: 'Accept', th: 'รับ' })}
+                  color="#2FB38E"
+                  disabled={s.contracts.active.length >= SALES.maxContracts}
+                  onPress={() => dispatch(s => acceptContract(s, c.uid))}
+                />
+              </Row>
+            </Card>
+          ))}
+        </>
+      )}
+      {tab === 'market' && (
+        <>
+          <AdsSection />
+        </>
+      )}
+      {tab === 'regulars' && (
+        <>
+          <Section>{text({ en: 'Regular customers', th: 'ลูกค้าประจำ' })}</Section>
+          {regulars.map(({ c, rec }) => (
+            <Card key={c.id}>
+              <Row>
+                <ProductChip base={c.base} label={baseName(c.base)} />
+                <Text style={[styles.text, { flex: 1 }]}>{text(c.name)}</Text>
+                <GradeChip grade={c.minGrade} suffix="+" />
+              </Row>
+              {rec.giftGiven ? (
+                <Muted>
+                  {text({
+                    en: 'Gift received · loyal customer',
+                    th: 'ให้ของขวัญแล้ว · ลูกค้าประจำ',
+                  })}
+                </Muted>
+              ) : (
+                <Row>
+                  <Bar value={rec.hearts / SALES.giftHearts} color="#E2483D" />
+                  <Text style={styles.text}>
+                    ♥ {rec.hearts}/{SALES.giftHearts}
+                  </Text>
+                </Row>
+              )}
+            </Card>
+          ))}
+        </>
+      )}
     </>
   )
 }

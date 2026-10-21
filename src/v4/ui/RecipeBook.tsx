@@ -1,4 +1,3 @@
-import { PanelIntro } from './PanelIntro'
 import { Text } from 'react-native'
 import { useState } from 'react'
 import { useGame } from '../store/useGame'
@@ -52,14 +51,6 @@ export function RecipeBook() {
   const unknown = combos.filter(c => !known(c))
   return (
     <>
-      <PanelIntro
-        label={{ en: 'Layout discoveries', th: 'บันทึกการจัดวาง' }}
-        detail={{
-          en: 'Discover building combinations around your refinery.',
-          th: 'ค้นพบคอมโบจากการจัดอาคารในโรงกลั่น',
-        }}
-        color="#F2C230"
-      />
       <View
         style={{
           flexDirection: 'row',

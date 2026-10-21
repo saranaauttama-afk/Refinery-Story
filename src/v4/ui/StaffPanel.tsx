@@ -1,4 +1,3 @@
-import { PanelIntro } from './PanelIntro'
 import { SpriteThumbnail } from '../render/SpriteThumbnail'
 import { useMemo } from 'react'
 import { workerSprite } from '../render/life'
@@ -67,10 +66,59 @@ const workplace = (s: GameState, p: Staff) => {
   return b ? text(buildingDef(b.defId).name) : text({ en: 'No job', th: 'ยังไม่มีงาน' })
 }
 
-function StaffCard({ p }: { p: Staff }) {
+function StaffCard({
+  p,
+  expanded,
+  onExpand,
+}: {
+  p: Staff
+  expanded: boolean
+  onExpand: () => void
+}) {
   const { state: s, dispatch } = useGame()
   const [open, setOpen] = useState<'' | 'train' | 'work' | 'more'>('')
   const level = p.jobLevels[p.job]
+  if (!expanded)
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: false }}
+        onPress={onExpand}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          minHeight: 56,
+          paddingHorizontal: 10,
+          borderWidth: 2,
+          borderRadius: 8,
+          backgroundColor: pressed ? '#FFE7A3' : '#FFFFFF',
+        })}
+      >
+        <View
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            borderWidth: 2,
+            backgroundColor: jobColors[p.job] ?? '#D8D2C4',
+          }}
+        />
+        <Text style={[styles.text, { flex: 1, fontSize: 14 }]} numberOfLines={1}>
+          {p.name} · {jobName(p.job)} Lv{level}
+          <Text style={{ color: '#52616B' }}> · {workplace(s, p)}</Text>
+        </Text>
+        <Text
+          style={{
+            fontFamily: 'PixelifySans_700Bold',
+            fontSize: 13,
+            color: p.resting ? '#B42318' : '#14110F',
+          }}
+        >
+          {p.resting ? text({ en: 'rest', th: 'พัก' }) : `${Math.round(p.power)}/${p.maxPower}`}
+        </Text>
+      </Pressable>
+    )
   const levelCost = STAFF.levelRDCost[level] ?? STAFF.levelRD * (level + 1)
   const workBuildings = s.yard.buildings.filter(b =>
     ['process', 'blend', 'support'].includes(buildingDef(b.defId).category),
@@ -220,17 +268,10 @@ function StaffCard({ p }: { p: Staff }) {
 export function StaffPanel() {
   const { state: s, dispatch } = useGame()
   const [tab, setTab] = useState<'team' | 'hire'>('team')
+  const [expanded, setExpanded] = useState(s.staff[0]?.uid ?? '')
   const full = s.staff.length >= staffCap(s)
   return (
     <>
-      <PanelIntro
-        label={{ en: 'Refinery crew', th: 'ทีมโรงกลั่น' }}
-        detail={{
-          en: 'Assign work, train skills and grow your crew.',
-          th: 'มอบหมายงาน ฝึกฝีมือ และพัฒนาทีม',
-        }}
-        color="#3D8FE0"
-      />
       <View style={{ flexDirection: 'row', borderWidth: 2, borderRadius: 8, overflow: 'hidden' }}>
         {(['team', 'hire'] as const).map(t => (
           <Pressable
@@ -257,17 +298,15 @@ export function StaffPanel() {
           </Pressable>
         ))}
       </View>
-      {tab === 'team' && s.staff.map(p => <StaffCard key={p.uid} p={p} />)}
-      {tab === 'team' && (
-        <Card>
-          <Muted>
-            {text({
-              en: 'Tip: a Chemist at the Blending Station raises Purity. Lab Study can unlock new additives.',
-              th: 'เคล็ดลับ: นักเคมีที่สถานีผสมช่วยเพิ่ม Purity · ฝึก "ศึกษาในแล็บ" อาจปลดสารเติมแต่งใหม่',
-            })}
-          </Muted>
-        </Card>
-      )}
+      {tab === 'team' &&
+        s.staff.map(p => (
+          <StaffCard
+            key={p.uid}
+            p={p}
+            expanded={expanded === p.uid}
+            onExpand={() => setExpanded(p.uid)}
+          />
+        ))}
       {tab === 'hire' && (
         <>
           {full && (

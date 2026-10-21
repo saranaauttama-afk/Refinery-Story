@@ -168,6 +168,9 @@ export interface AwardResult {
 export interface Notice {
   uid: string
   kind: 'rank' | 'awards' | 'ending' | 'market'
+  /** Rank-up: what unlocked (chips) and one line per newly active system. */
+  chips?: { en: string; th: string }[]
+  lines?: { en: string; th: string }[]
   en: string
   th: string
 }

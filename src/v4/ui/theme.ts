@@ -14,3 +14,11 @@ export const ui = {
   company: '#B184E3',
   gold: '#F2C230',
 }
+// One type scale for the whole game: numbers, titles, body, small.
+export const type = {
+  num: { fontFamily: 'PixelifySans_700Bold', fontSize: 16, color: '#14110F' },
+  numBig: { fontFamily: 'PixelifySans_700Bold', fontSize: 22, color: '#14110F' },
+  title: { fontFamily: 'Kanit_600SemiBold', fontSize: 17, color: '#14110F' },
+  body: { fontFamily: 'Kanit_400Regular', fontSize: 15, color: '#14110F' },
+  small: { fontFamily: 'Kanit_400Regular', fontSize: 13, color: '#52616B' },
+} as const

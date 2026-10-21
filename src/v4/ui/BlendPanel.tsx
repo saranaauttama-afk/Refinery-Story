@@ -1,5 +1,5 @@
-import { PanelIntro } from './PanelIntro'
-import { Text, View, Pressable } from 'react-native'
+import { Text, View, Pressable, ScrollView } from 'react-native'
+import { type, ui } from './theme'
 import { baseAvailable } from '../sim/systems/investments'
 import { bases, type BaseId } from '../data/bases'
 import { additives, type AdditiveId } from '../data/additives'
@@ -120,10 +120,13 @@ function Option({
   )
 }
 
+/** Blend: pick a station, see grade and price, pick base and additive. Tanks fold into one bar. */
 export function BlendPanel({ station: initial }: { station?: string }) {
   const { state: s, dispatch } = useGame()
   const stations = blendStations(s)
   const [picked, setPicked] = useState(initial)
+  const [showLots, setShowLots] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const station = stations.find(b => b.uid === picked) ?? stations[0]
   const r = station ? recipeOf(s, station) : s.blend
   const pick = (base: BaseId, additive: AdditiveId | null) =>
@@ -133,217 +136,177 @@ export function BlendPanel({ station: initial }: { station?: string }) {
   const stats = lotStats(s)
   const baseName = (id: string) => text(bases.find(b => b.id === id)!.name)
   const perTruck = Math.round(salePrice(s, { base: r.base, grade }) * SALES.units)
-  const multiplier = GRADES.find(g => g.id === grade)!.price
   const capacity = tankCapacity(s)
   const used = tankUnits(s)
-  const thresholds = [...GRADES].reverse()
+  const gi = GRADES.findIndex(g => g.id === grade)
+  const better = gi > 0 ? GRADES[gi - 1] : undefined
+  const toNext = better ? Math.max(0, gradeMin(s.rank, better.min) - Math.round(score)) : 0
+  const unknown = researchCandidates(s, r.base).length
+  const market = featureOn(s, 'market')
   return (
     <>
-      <PanelIntro
-        label={{ en: 'Production desk', th: 'โต๊ะควบคุมการผสม' }}
-        detail={{
-          en: 'Choose a recipe and watch your product grade.',
-          th: 'เลือกสูตรและดูเกรดผลิตภัณฑ์',
-        }}
-        color="#E2483D"
-      />
       {stations.length > 1 && (
-        <>
-          <Muted>
-            {text({
-              en: 'Each station mixes its own recipe. Pick a station to change it.',
-              th: 'แต่ละสถานีผสมสูตรของตัวเอง เลือกสถานีที่จะเปลี่ยนสูตร',
-            })}
-          </Muted>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {stations.map((b, i) => {
-              const on = b.uid === station?.uid
-              const sr = recipeOf(s, b)
-              return (
-                <Pressable
-                  key={b.uid}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  onPress={() => setPicked(b.uid)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    borderWidth: on ? 3 : 2,
-                    borderRadius: 5,
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    minHeight: 40,
-                    backgroundColor: on ? '#14110F' : '#FFFFFF',
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      borderWidth: 1,
-                      borderColor: '#FFF6E3',
-                      backgroundColor: productAccent[sr.base] ?? '#D8D2C4',
-                    }}
-                  />
-                  <Text style={[styles.text, { fontSize: 13 }, on && { color: '#FFF6E3' }]}>
-                    {text({ en: `Station ${i + 1}`, th: `สถานี ${i + 1}` })} · {baseName(sr.base)}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </View>
-        </>
-      )}
-      <Card>
-        <Row gap={12}>
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderWidth: 2,
-              borderRadius: 10,
-              backgroundColor: gradeFill[grade],
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontFamily: 'PixelifySans_700Bold', fontSize: 36, color: '#14110F' }}>
-              {grade}
-            </Text>
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.heading}>
-              {baseName(r.base)} +{' '}
-              {r.additive
-                ? text(additives.find(a => a.id === r.additive)!.name)
-                : text({ en: 'no additive', th: 'ไม่ใส่สาร' })}
-            </Text>
-            <Muted>
-              {text({
-                en: `Score ${Math.round(score)} · sells ×${multiplier} · ~$${perTruck.toLocaleString()} per truck`,
-                th: `คะแนน ${Math.round(score)} · ขาย ×${multiplier} · ~$${perTruck.toLocaleString()} ต่อคันรถ`,
-              })}
-            </Muted>
-            <Muted>
-              {text({
-                en: `SS needs ${gradeMin(s.rank, GRADES[0].min).toLocaleString()} at rank ${s.rank} · buyers get pickier as you rank up`,
-                th: `SS ต้องได้ ${gradeMin(s.rank, GRADES[0].min).toLocaleString()} ที่แรงก์ ${s.rank} · ยิ่งแรงก์สูง ลูกค้ายิ่งเรื่องมาก`,
-              })}
-            </Muted>
-            <View
-              style={{
-                flexDirection: 'row',
-                height: 12,
-                borderWidth: 2,
-                borderRadius: 4,
-                overflow: 'hidden',
-              }}
-            >
-              {thresholds.map((g, i) => {
-                const next = thresholds[i + 1]?.min ?? SCORE_MAX
-                return (
-                  <View
-                    key={g.id}
-                    style={{ flex: next - g.min, backgroundColor: gradeFill[g.id] }}
-                  />
-                )
-              })}
-              <View
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 6 }}
+        >
+          {stations.map((b, i) => {
+            const on = b.uid === station?.uid
+            const sr = recipeOf(s, b)
+            return (
+              <Pressable
+                key={b.uid}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => setPicked(b.uid)}
                 style={{
-                  position: 'absolute',
-                  left: `${Math.min(98, (score / gradeScale(s.rank) / SCORE_MAX) * 100)}%`,
-                  top: -2,
-                  width: 3,
-                  height: 14,
-                  backgroundColor: '#14110F',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  borderWidth: 2,
+                  borderRadius: 20,
+                  paddingHorizontal: 12,
+                  minHeight: 40,
+                  backgroundColor: on ? ui.ink : '#FFFFFF',
                 }}
-              />
-            </View>
-            <View style={{ flexDirection: 'row' }}>
-              {thresholds.map((g, i) => (
-                <Text
-                  key={g.id}
+              >
+                <View
                   style={{
-                    flex: (thresholds[i + 1]?.min ?? SCORE_MAX) - g.min,
-                    fontFamily: 'PixelifySans_700Bold',
-                    fontSize: 11,
-                    color: '#5E6470',
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: productAccent[sr.base] ?? '#D8D2C4',
                   }}
-                >
-                  {g.id}
+                />
+                <Text style={[type.body, { fontSize: 14 }, on && { color: ui.paper }]}>
+                  {i + 1} · {baseName(sr.base)}
                 </Text>
-              ))}
-            </View>
-          </View>
-        </Row>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 2, columnGap: 12 }}>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+      )}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showStats }}
+        onPress={() => setShowStats(v => !v)}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          padding: 10,
+          borderWidth: 2,
+          borderColor: ui.ink,
+          borderRadius: 8,
+          backgroundColor: '#FFFFFF',
+        }}
+      >
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderWidth: 2,
+            borderRadius: 8,
+            backgroundColor: gradeFill[grade],
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={[type.numBig, { fontSize: 30 }]}>{grade}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={type.numBig}>
+            ${perTruck.toLocaleString()}
+            <Text style={type.small}> {text({ en: 'per truck', th: 'ต่อคันรถ' })}</Text>
+          </Text>
+          <Text style={type.small}>
+            {better
+              ? text({
+                  en: `${toNext} more points to ${better.id}`,
+                  th: `อีก ${toNext} คะแนนถึง ${better.id}`,
+                })
+              : text({ en: 'Top grade', th: 'เกรดสูงสุดแล้ว' })}
+          </Text>
+        </View>
+      </Pressable>
+      {showStats && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 12 }}>
           {(
             [
-              ['Purity', stats.purity, '#3D8FE0'],
-              ['Yield', stats.yield, '#F08A24'],
-              ['Stability', stats.stability, '#9C5BD6'],
-              ['Eco', stats.eco, '#2FB38E'],
+              [{ en: 'Purity', th: 'บริสุทธิ์' }, stats.purity, '#3D8FE0'],
+              [{ en: 'Yield', th: 'ผลผลิต' }, stats.yield, '#F08A24'],
+              [{ en: 'Stability', th: 'คงตัว' }, stats.stability, '#9C5BD6'],
+              [{ en: 'Eco', th: 'รักษ์โลก' }, stats.eco, '#2FB38E'],
             ] as const
           ).map(([name, value, color]) => (
             <View
-              key={name}
+              key={name.en}
               style={{ width: '46%', flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
-              <Text style={[styles.text, { width: 64, fontSize: 13 }]}>
-                {text({
-                  en: name,
-                  th: (
-                    {
-                      Purity: 'บริสุทธิ์',
-                      Yield: 'ผลผลิต',
-                      Stability: 'คงตัว',
-                      Eco: 'รักษ์โลก',
-                    } as Record<string, string>
-                  )[name],
-                })}
-              </Text>
+              <Text style={[type.small, { width: 64, color: ui.ink }]}>{text(name)}</Text>
               <Bar value={value / 120} color={color} height={8} />
             </View>
           ))}
+          <Text style={type.small}>
+            {text({
+              en: `Score ${Math.round(score)} · SS needs ${gradeMin(s.rank, GRADES[0].min)} at rank ${s.rank}`,
+              th: `คะแนน ${Math.round(score)} · SS ต้องได้ ${gradeMin(s.rank, GRADES[0].min)} ที่แรงก์ ${s.rank}`,
+            })}
+          </Text>
         </View>
-      </Card>
-      <Section>{text({ en: 'Base', th: 'ฐาน' })}</Section>
-      {featureOn(s, 'market') && (
-        <Muted>
-          {text({
-            en: 'Demand % sets the price: selling one product a lot cools it down, it recovers each week. One product trends each month (×1.5).',
-            th: 'ตลาด % มีผลกับราคา ขายชนิดเดียวซ้ำ ๆ จะลดลง และฟื้นทุกสัปดาห์ แต่ละเดือนมีสินค้า 1 ชนิดเป็นกระแส (×1.5)',
-          })}
-        </Muted>
       )}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+
+      <Text style={type.small}>{text({ en: 'Base', th: 'ฐาน' })}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6 }}
+      >
         {bases
           .filter(b => baseAvailable(s, b.id))
-          .map(b => (
-            <Option
-              key={b.id}
-              label={text(b.name)}
-              sub={text({
-                en: `ready ${Math.floor(s.baseStock[b.id])}${featureOn(s, 'market') ? ` · demand ${Math.round(demandOf(s, b.id) * 100)}%` : ''}${trending(s, b.id) ? ' · trend' : ''}`,
-                th: `พร้อม ${Math.floor(s.baseStock[b.id])}${featureOn(s, 'market') ? ` · ตลาด ${Math.round(demandOf(s, b.id) * 100)}%` : ''}${trending(s, b.id) ? ' · กระแส' : ''}`,
-              })}
-              selected={r.base === b.id}
-              badge={recipeBadge(s, b.id, r.additive)}
-              onPress={() => pick(b.id, r.additive)}
-            />
-          ))}
-      </View>
-      <Section>
-        {text({ en: 'Additive', th: 'สารเติมแต่ง' })}{' '}
-        <Text style={[styles.text, { fontSize: 13, color: '#5E6470' }]}>
-          {text({
-            en: `(letter = how well it suits ${baseName(r.base)}, NEW = first try +10★)`,
-            th: `(ตัวอักษร = เข้ากับ${baseName(r.base)}แค่ไหน, ใหม่ = ลองครั้งแรก +10★)`,
+          .map(b => {
+            const on = r.base === b.id
+            const d = demandOf(s, b.id)
+            const sub = trending(s, b.id)
+              ? { text: text({ en: 'trend ×1.5', th: 'กระแส ×1.5' }), color: '#8A5A00' }
+              : market && d < 0.95
+                ? {
+                    text: text({
+                      en: `demand ${Math.round(d * 100)}%`,
+                      th: `ตลาด ${Math.round(d * 100)}%`,
+                    }),
+                    color: d < 0.75 ? '#B42318' : ui.muted,
+                  }
+                : { text: `${Math.floor(s.baseStock[b.id]).toLocaleString()}`, color: ui.muted }
+            return (
+              <Pressable
+                key={b.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                onPress={() => pick(b.id, recipeKnown(s, b.id, r.additive) ? r.additive : null)}
+                style={{
+                  minWidth: 96,
+                  height: 54,
+                  paddingHorizontal: 10,
+                  borderWidth: on ? 3 : 2,
+                  borderRadius: 8,
+                  backgroundColor: on ? '#FFE7A3' : '#FFFFFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={[type.body, on && { fontFamily: 'Kanit_600SemiBold' }]}>
+                  {text(b.name)}
+                </Text>
+                <Text style={[type.small, { fontSize: 11, color: sub.color }]}>{sub.text}</Text>
+              </Pressable>
+            )
           })}
-        </Text>
-      </Section>
+      </ScrollView>
+
+      <Text style={type.small}>{text({ en: 'Additive', th: 'สารเติมแต่ง' })}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         <Option
           label={text({ en: 'None', th: 'ไม่ใส่' })}
@@ -362,74 +325,90 @@ export function BlendPanel({ station: initial }: { station?: string }) {
               onPress={() => pick(r.base, a.id)}
             />
           ))}
-      </View>
-      {researchCandidates(s, r.base).length > 0 && (
-        <Muted>
-          {text({
-            en: `${researchCandidates(s, r.base).length} more pairs for ${baseName(r.base)} are unknown: research them at a Lab.`,
-            th: `${baseName(r.base)}ยังมีอีก ${researchCandidates(s, r.base).length} สูตรที่ยังไม่รู้ วิจัยได้ที่ห้องทดลอง`,
-          })}
-        </Muted>
-      )}
-      {!s.unlockedAdditives.length && (
-        <Muted>
-          {text({
-            en: 'Unlock additives by training staff or from regular customers’ gifts.',
-            th: 'ปลดสารเติมแต่งได้จากการฝึกพนักงาน หรือของขวัญจากลูกค้าประจำ',
-          })}
-        </Muted>
-      )}
-      <Section>{text({ en: 'Product tanks', th: 'ถังผลิตภัณฑ์' })}</Section>
-      <Card tone={used >= capacity * SALES.clearanceFill ? 'warn' : undefined}>
-        <Row>
+        {unknown > 0 && (
           <View
             style={{
-              flex: 1,
-              flexDirection: 'row',
-              height: 14,
+              width: '48%',
+              minHeight: 44,
               borderWidth: 2,
-              borderRadius: 4,
-              overflow: 'hidden',
-              backgroundColor: '#FFFFFF',
+              borderStyle: 'dashed',
+              borderColor: ui.navy,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 6,
             }}
           >
-            {s.tanks.map(l => (
-              <View
-                key={l.uid}
-                style={{
-                  width: `${(l.units / Math.max(capacity, 1)) * 100}%`,
-                  backgroundColor: productAccent[l.base] ?? '#D8D2C4',
-                  borderRightWidth: 1,
-                }}
-              />
-            ))}
-          </View>
-          <Text style={styles.text}>
-            {Math.round(used).toLocaleString()}/{Math.round(capacity).toLocaleString()}
-          </Text>
-        </Row>
-        {used >= capacity * SALES.clearanceFill && (
-          <Muted>
-            {text({
-              en: 'Nearly full: buyers take low-grade lots at half price. Build more tanks or discard.',
-              th: 'เกือบเต็ม: ล็อตเกรดต่ำจะถูกขายลดครึ่งราคา สร้างถังเพิ่มหรือระบายทิ้งได้',
-            })}
-          </Muted>
-        )}
-        {s.tanks.map(l => (
-          <Row key={l.uid}>
-            <Text style={[styles.text, { flex: 1 }]}>
-              {baseName(l.base)} · {l.units} {text({ en: 'units', th: 'หน่วย' })}
+            <Text style={[type.small, { color: ui.navy, textAlign: 'center' }]}>
+              {text({
+                en: `+${unknown} more at a Lab`,
+                th: `+ วิจัยอีก ${unknown} สูตรที่ห้องทดลอง`,
+              })}
             </Text>
-            <GradeChip grade={l.grade} />
-            <SmallButton
-              label={text({ en: 'Discard', th: 'ระบาย' })}
-              color="#FFF6E3"
-              onPress={() => dispatch(s => discardLot(s, l.uid))}
+          </View>
+        )}
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showLots }}
+        onPress={() => setShowLots(v => !v)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 }}
+      >
+        <Text style={type.small}>{text({ en: 'Tanks', th: 'ถัง' })}</Text>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            height: 14,
+            borderWidth: 2,
+            borderRadius: 4,
+            overflow: 'hidden',
+            backgroundColor: '#FFFFFF',
+            borderColor: used >= capacity * SALES.clearanceFill ? '#B42318' : ui.ink,
+          }}
+        >
+          {s.tanks.map(l => (
+            <View
+              key={l.uid}
+              style={{
+                width: `${(l.units / Math.max(capacity, 1)) * 100}%`,
+                backgroundColor: productAccent[l.base] ?? '#D8D2C4',
+                borderRightWidth: 1,
+              }}
             />
-          </Row>
-        ))}
-      </Card>
+          ))}
+        </View>
+        <Text style={type.num}>
+          {Math.round(used).toLocaleString()}/{Math.round(capacity).toLocaleString()}
+        </Text>
+        <Text style={type.body}>{showLots ? '▴' : '▾'}</Text>
+      </Pressable>
+      {showLots && (
+        <>
+          {used >= capacity * SALES.clearanceFill && (
+            <Muted>
+              {text({
+                en: 'Nearly full: buyers take low-grade lots at half price. Build tanks or discard.',
+                th: 'เกือบเต็ม: ล็อตเกรดต่ำจะถูกขายลดครึ่งราคา สร้างถังเพิ่มหรือระบายทิ้งได้',
+              })}
+            </Muted>
+          )}
+          {s.tanks.map(l => (
+            <Row key={l.uid}>
+              <Text style={[type.body, { flex: 1 }]}>
+                {baseName(l.base)} · {l.units}
+              </Text>
+              <GradeChip grade={l.grade} />
+              <SmallButton
+                label={text({ en: 'Discard', th: 'ระบาย' })}
+                color="#FFF6E3"
+                onPress={() => dispatch(s => discardLot(s, l.uid))}
+              />
+            </Row>
+          ))}
+        </>
+      )}
     </>
   )
 }

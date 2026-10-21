@@ -75,11 +75,13 @@ function yardFrame(s: GameState, width: number, height: number) {
     minY = Math.min(...ys),
     maxY = Math.max(...ys)
   const zoom = Math.max(
-    YARD.minZoom,
+    // Never open smaller than 2×: buildings must read on a phone; the edges may crop.
+    YARD.defaultZoom,
     Math.min(
-      YARD.defaultZoom,
+      // Frame the buildings as large as fits (up to 3×) so they read on a phone.
+      YARD.maxZoom - 1,
       Math.floor(
-        Math.min((width - 12) / Math.max(1, maxX - minX), (height - 48) / Math.max(1, maxY - minY)),
+        Math.min((width - 12) / Math.max(1, maxX - minX), (height - 24) / Math.max(1, maxY - minY)),
       ),
     ),
   )
@@ -89,15 +91,19 @@ export function YardCanvas({
   state: s,
   ghost,
   onTile,
+  lift = 0,
 }: {
   state: GameState
   ghost?: { id: string; x: number; y: number; uid?: string }
   onTile: (x: number, y: number) => void
+  /** Share of the view covered by a sheet from below; the yard slides up by half of it. */
+  lift?: number
 }) {
   const [size, setSize] = useState({ w: 360, h: 500 }),
     [camera, setCamera] = useState({ x: 0, y: 60, zoom: YARD.defaultZoom }),
     [frame, setFrame] = useState(0),
     [reduced, setReduced] = useState(false)
+  const liftY = -Math.round((lift * size.h) / 2)
   const centered = useRef(false)
   const cameraRef = useRef(camera),
     origin = useRef(camera),
@@ -158,7 +164,7 @@ export function YardCanvas({
     .runOnJS(true)
     .onEnd(e => {
       const c = cameraRef.current,
-        p = toTile((e.x - size.w / 2 - c.x) / c.zoom, (e.y - c.y) / c.zoom)
+        p = toTile((e.x - size.w / 2 - c.x) / c.zoom, (e.y - c.y - liftY) / c.zoom)
       onTile(p.x, p.y)
     })
   const ghostKey = ghost ? `${ghost.id}:${ghost.uid ?? ''}` : ''
@@ -412,7 +418,7 @@ export function YardCanvas({
           <Group
             transform={[
               { translateX: Math.round(size.w / 2 + camera.x) },
-              { translateY: Math.round(camera.y) },
+              { translateY: Math.round(camera.y + liftY) },
               { scale: camera.zoom },
             ]}
           >
@@ -470,7 +476,7 @@ export function YardCanvas({
             style={{
               position: 'absolute',
               left: size.w / 2 + camera.x + a.x * camera.zoom,
-              top: camera.y + a.y * camera.zoom - 60 - (fractional - p.tick) * 6,
+              top: camera.y + liftY + a.y * camera.zoom - 60 - (fractional - p.tick) * 6,
               color: '#B5653A',
               fontFamily: 'PixelifySans_700Bold',
               fontSize: 22,

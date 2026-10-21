@@ -25,7 +25,7 @@ UI code may **read** anything from the sim (selectors such as `recipeOf`,
 | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | `src/v4/ui/YardScreen.tsx`                                                                | Layout, bottom tab bar, which sheet is open                     |
 | `src/v4/ui/HUD.tsx`                                                                       | Top bar: date, money, fame, RD, rank bar, speed                 |
-| `src/v4/ui/Alerts.tsx`                                                                    | Optional notice pills over the yard                             |
+| `src/v4/ui/Alerts.tsx`                                                                    | Bell drop-down: notices + recent events                         |
 | `src/v4/ui/Onboarding.tsx`                                                                | Guided first steps                                              |
 | `src/v4/ui/BuildPanel.tsx` / `BuildingInfo.tsx` / `LandPanel.tsx`                         | Build sheet, tapped-building sheet, land map                    |
 | `src/v4/ui/BlendPanel.tsx`                                                                | Blend sheet (station tabs, grade card, base/additive, tanks)    |
@@ -34,6 +34,13 @@ UI code may **read** anything from the sim (selectors such as `recipeOf`,
 | `src/v4/ui/cards.tsx`                                                                     | Shared bits: Card, Section, Row, Chip, Bar, SmallButton, Muted… |
 | `src/v4/ui/controls.tsx`                                                                  | Sheet, Button, text styles                                      |
 | `src/v4/render/YardCanvas.tsx`                                                            | Skia yard (camera, drawing). Drawing only — no rules            |
+
+## UI v2 layout (v4.0.17, wireframes: "Refinery Story UI v2" design canvas)
+
+- Yard is the main screen; HUD is two rows (resources + bell + one cycling speed button, then date/rank bar).
+- Sheets are half-height from the bottom (`Sheet`), the yard slides up above them (`YardCanvas` `lift`). Rules text lives behind the sheet's `?` (`help.ts`), not on screen.
+- Build is a short tray (`Sheet low`): category chips, one sideways card row; tap = place, hold = details. Roads, pipes, tanks and decor keep placing (`วางต่อ`).
+- Type scale: `type` in `theme.ts` (num, numBig, title, body, small). Use it for new text.
 
 ## Style rules
 

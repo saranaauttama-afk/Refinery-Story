@@ -1,4 +1,3 @@
-import { PanelIntro } from './PanelIntro'
 import { Text, View } from 'react-native'
 import { useGame } from '../store/useGame'
 import { bases } from '../data/bases'
@@ -39,14 +38,6 @@ export function ResearchPanel({ labUid }: { labUid: string }) {
   const total = odds.reduce((a, b) => a + b, 0)
   return (
     <>
-      <PanelIntro
-        label={{ en: 'Laboratory', th: 'ห้องปฏิบัติการ' }}
-        detail={{
-          en: 'Research new base and additive pairs with your lab crew.',
-          th: 'ให้ทีมแล็บค้นคว้าคู่น้ำมันฐานและสารเติมแต่งใหม่',
-        }}
-        color="#4FA3D9"
-      />
       <Section>{text({ en: 'Research', th: 'วิจัยสูตร' })}</Section>
       {job ? (
         <Card>

@@ -1,4 +1,3 @@
-import { PanelIntro } from './PanelIntro'
 import { useState } from 'react'
 import { Text, View, Pressable } from 'react-native'
 import { useGame } from '../store/useGame'
@@ -36,14 +35,6 @@ export function LandPanel() {
   }
   return (
     <>
-      <PanelIntro
-        label={{ en: 'Expansion map', th: 'แผนที่ขยายลาน' }}
-        detail={{
-          en: 'Select a neighbouring parcel to see its availability.',
-          th: 'เลือกแปลงข้างเคียงเพื่อดูราคาและเงื่อนไข',
-        }}
-        color="#2FB38E"
-      />
       <Muted>
         {text({
           en: `Each parcel is ${YARD.parcel}×${YARD.parcel} tiles · you own ${s.yard.ownedParcels.length} of ${parcelCap(s)} allowed at this rank`,

@@ -40,16 +40,69 @@ export function Notices() {
             <Award size={32} color={ui.gold} />
           </View>
           <ScrollView contentContainerStyle={{ gap: 10 }}>
-            <Text style={styles.heading}>{n && text(n).split('\n')[0]}</Text>
-            {n &&
-              text(n)
-                .split('\n')
-                .slice(1)
-                .map(line => (
-                  <Text key={line} style={styles.text}>
-                    {line}
-                  </Text>
-                ))}
+            {n?.kind === 'rank' && n.chips ? (
+              <>
+                <Text style={styles.heading}>
+                  {text({ en: `Rank ${n.uid.slice(4)}!`, th: `แรงก์ ${n.uid.slice(4)}!` })}
+                </Text>
+                {n.chips.length > 0 && (
+                  <>
+                    <Text style={[styles.text, { fontSize: 13, color: '#5E6470' }]}>
+                      {text({ en: 'Unlocked', th: 'ปลดล็อก' })}
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {n.chips.map(c => (
+                        <View
+                          key={c.en}
+                          style={{
+                            borderWidth: 2,
+                            borderRadius: 16,
+                            paddingHorizontal: 10,
+                            paddingVertical: 3,
+                            backgroundColor: '#FFFFFF',
+                          }}
+                        >
+                          <Text style={[styles.text, { fontSize: 14 }]}>{text(c)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
+                {!!n.lines?.length && (
+                  <View
+                    style={{
+                      borderWidth: 2,
+                      borderRadius: 8,
+                      padding: 10,
+                      gap: 6,
+                      backgroundColor: '#FFFFFF',
+                    }}
+                  >
+                    <Text style={[styles.text, { fontFamily: 'Kanit_600SemiBold', fontSize: 14 }]}>
+                      {text({ en: 'New systems', th: 'ระบบใหม่' })}
+                    </Text>
+                    {n.lines.map(l => (
+                      <Text key={l.en} style={[styles.text, { fontSize: 14 }]}>
+                        • {text(l)}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.heading}>{n && text(n).split('\n')[0]}</Text>
+                {n &&
+                  text(n)
+                    .split('\n')
+                    .slice(1)
+                    .map(line => (
+                      <Text key={line} style={styles.text}>
+                        {line}
+                      </Text>
+                    ))}
+              </>
+            )}
             {n?.kind === 'awards' && (
               <View style={{ marginVertical: 8, gap: 2 }}>
                 <View style={{ flexDirection: 'row', borderBottomWidth: 2, paddingBottom: 2 }}>
