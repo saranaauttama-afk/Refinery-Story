@@ -11,7 +11,7 @@ import {
   vec,
 } from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import { toScreen, toTile } from './iso'
+import { toScreen, toTile, TILE } from './iso'
 import { yardGround, yardColors } from './yardGround'
 import { YARD, B, SALES } from '../data/balance'
 import { buildingDef } from '../data/buildings'
@@ -26,7 +26,8 @@ import { spriteImageFor } from './spriteImages'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
-import { worldAtlasSrc, seaColor } from './worldAtlas'
+import { tdAtlasSrc } from './tdAtlas'
+const seaColor = '#119BF1'
 import {
   drawWorld,
   drawSeaLife,
@@ -42,11 +43,12 @@ import { customers } from '../data/customers'
 const bounds = { x: -2400, y: -900, width: 4800, height: 3000 }
 // Tile just in front of a building's bottom corner, where its staff stand.
 const frontTile = (b: { x: number; y: number; defId: string }) => ({
-  x: b.x + buildingDef(b.defId).w + 0.3,
-  y: b.y + buildingDef(b.defId).h + 0.2,
+  x: b.x + buildingDef(b.defId).w / 2,
+  y: b.y + buildingDef(b.defId).h + 0.3,
 })
+// Draw order on a square grid: whatever stands lower on the screen is in front.
 const frontDepth = (b?: { x: number; y: number; defId: string }) =>
-  b ? b.x + b.y + buildingDef(b.defId).w + buildingDef(b.defId).h : 0
+  b ? b.y + buildingDef(b.defId).h + b.x * 0.001 : 0
 // Spread workers out so they do not walk in lockstep.
 const staffOffset = (uid: string) => (uid.charCodeAt(uid.length - 1) % 7) / 7
 // Product trucks wear the colour of the product line they buy.
@@ -54,70 +56,33 @@ const truckAccent = (customerId: string | null) => {
   const base = customers.find(c => c.id === customerId)?.base
   return (base && productAccent[base]) || '#E2483D'
 }
-// Frame projected sprite bounds, not the diagonal of a tile-space bounding box.
-// An L-shaped starter layout otherwise crops its western tank on a narrow phone.
+// Zoom steps for the square top-down grid (1 = 32 pt per tile, about the mockup's scale).
+export const ZOOMS = [0.75, 1, 1.5, 2, 3]
+const MIN_ZOOM = ZOOMS[0],
+  MAX_ZOOM = ZOOMS[ZOOMS.length - 1]
+// Frame the owned yard plus the road above it, and the tops of tall buildings.
 function yardFrame(s: GameState, width: number, height: number) {
-  const points: number[][] = []
-  for (const b of s.yard.buildings) {
-    const d = buildingDef(b.defId),
-      p = toScreen(b.x, b.y)
-    const ox = p.x + (d.w - d.h) * 8,
-      oy = p.y + (d.w + d.h) * 4
-    const image = spriteImageFor(b.defId, b.level)
-    if (image) {
-      const k = image.scale / 2
-      points.push(
-        [ox - image.ax * k, oy - image.ay * k],
-        [ox + (image.w - image.ax) * k, oy + (image.h - image.ay) * k],
-      )
-      continue
-    }
-    for (const c of sprites[b.defId](b.level, d.accent, 0)) {
-      const pts =
-        c.kind === 'polygon'
-          ? c.points
-          : c.kind === 'circle'
-            ? [
-                [c.x - c.r, c.y - c.r],
-                [c.x + c.r, c.y + c.r],
-              ]
-            : [
-                [c.x, c.y],
-                [c.x + c.w, c.y + c.h],
-              ]
-      points.push(...pts.map(([x, y]) => [x + ox, y + oy]))
-    }
+  const xs: number[] = [],
+    ys: number[] = []
+  for (const parcel of s.yard.ownedParcels) {
+    const [x, y] = parcel.split(',').map(Number)
+    xs.push(x * YARD.parcel * TILE, (x + 1) * YARD.parcel * TILE)
+    ys.push(y * YARD.parcel * TILE, (y + 1) * YARD.parcel * TILE)
   }
-  if (!points.length)
-    for (const parcel of s.yard.ownedParcels) {
-      const [x, y] = parcel.split(',').map(Number)
-      for (const [dx, dy] of [
-        [0, 0],
-        [1, 0],
-        [0, 1],
-        [1, 1],
-      ]) {
-        const p = toScreen((x + dx) * YARD.parcel, (y + dy) * YARD.parcel)
-        points.push([p.x, p.y])
-      }
-    }
-  const xs = points.map(p => p[0]),
-    ys = points.map(p => p[1])
+  ys.push(-2 * TILE)
+  for (const b of s.yard.buildings) {
+    const image = spriteImageFor(b.defId, b.level)
+    if (image) ys.push((b.y + buildingDef(b.defId).h) * TILE - (image.h * image.scale) / 2)
+  }
   const minX = Math.min(...xs),
     maxX = Math.max(...xs),
     minY = Math.min(...ys),
     maxY = Math.max(...ys)
-  const zoom = Math.max(
-    // The approved redesign opens close to the plant; players can still zoom out.
-    Math.min(YARD.maxZoom, YARD.defaultZoom + 1),
-    Math.min(
-      // Frame the buildings as large as fits (up to 3×) so they read on a phone.
-      YARD.maxZoom - 1,
-      Math.floor(
-        Math.min((width - 12) / Math.max(1, maxX - minX), (height - 24) / Math.max(1, maxY - minY)),
-      ),
-    ),
+  const fit = Math.min(
+    (width - 12) / Math.max(1, maxX - minX),
+    (height - 24) / Math.max(1, maxY - minY),
   )
+  const zoom = Math.max(MIN_ZOOM, Math.min(2, fit))
   return { x: (-(minX + maxX) / 2) * zoom, y: height / 2 - ((minY + maxY) / 2) * zoom, zoom }
 }
 export function YardCanvas({
@@ -133,7 +98,7 @@ export function YardCanvas({
   lift?: number
 }) {
   const [size, setSize] = useState({ w: 360, h: 500 }),
-    [camera, setCamera] = useState({ x: 0, y: 60, zoom: YARD.defaultZoom }),
+    [camera, setCamera] = useState({ x: 0, y: 60, zoom: 1 }),
     [frame, setFrame] = useState(0),
     [reduced, setReduced] = useState(false)
   const liftY = -Math.round((lift * size.h) / 2)
@@ -187,9 +152,7 @@ export function YardCanvas({
     .onUpdate(e =>
       setCamera(c => ({
         ...c,
-        zoom: Math.round(
-          Math.min(YARD.maxZoom, Math.max(YARD.minZoom, origin.current.zoom * e.scale)),
-        ),
+        zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, origin.current.zoom * e.scale)),
       })),
     )
   const tap = Gesture.Tap()
@@ -209,32 +172,13 @@ export function YardCanvas({
   }, [ghostKey, size.h])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
   const gateKey = gate ? `${gate.x},${gate.y}` : ''
-  const world = useImage(worldAtlasSrc)
+  const world = useImage(tdAtlasSrc)
   const ambient = !reduced && s.settings.ambient !== false
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
     if (world) drawWorld(canvas, world, s.yard.ownedParcels, gate ?? undefined)
     drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!world), false)
-    // Public road outside the fence that trucks use to reach the gate (code fallback).
-    if (gate && !world) {
-      for (let i = 1; i <= SALES.approachTiles; i++) {
-        const tile = gate.x === 0 ? { x: -i, y: gate.y } : { x: gate.x, y: -i }
-        const p = toScreen(tile.x, tile.y)
-        drawCommands(canvas, [
-          poly(
-            [
-              [p.x, p.y],
-              [p.x + 16, p.y + 8],
-              [p.x, p.y + 16],
-              [p.x - 16, p.y + 8],
-            ],
-            palette.asphalt,
-          ),
-          rect(p.x - 1, p.y + 7, 3, 2, palette.hazard),
-        ])
-      }
-    }
     return recorder.finishRecordingAsPicture()
   }, [s.yard.ownedParcels, gateKey, !!ghost, world])
   const truckPositions = new Map(
@@ -273,21 +217,21 @@ export function YardCanvas({
         b,
       })),
     ...s.trucks.map(t => ({
-      depth: truckPositions.get(t.uid)!.x + truckPositions.get(t.uid)!.y,
+      depth: truckPositions.get(t.uid)!.y + 0.5,
       kind: 'truck' as const,
       t,
     })),
     ...s.staff
       .filter(p => p.assignedTo)
       .map(p => ({
-        depth: workerPositions.get(p.uid)!.x + workerPositions.get(p.uid)!.y,
+        depth: workerPositions.get(p.uid)!.y,
         kind: 'worker' as const,
         p,
       })),
     ...(ghost
       ? [
           {
-            depth: ghost.x + ghost.y + buildingDef(ghost.id).w + buildingDef(ghost.id).h,
+            depth: ghost.y + buildingDef(ghost.id).h + 0.5,
             kind: 'ghost' as const,
             g: ghost,
           },
@@ -317,7 +261,7 @@ export function YardCanvas({
           p = toScreen(b.x, b.y),
           recorder = Skia.PictureRecorder(),
           canvas = recorder.beginRecording(bounds)
-        canvas.translate(p.x + (d.w - d.h) * 8, p.y + (d.w + d.h) * 4)
+        canvas.translate(p.x + (d.w * TILE) / 2, p.y + d.h * TILE)
         drawBuilding(canvas, loaded, b.defId, b.level, d.accent)
         return [b.uid, recorder.finishRecordingAsPicture()]
       }),
@@ -328,10 +272,7 @@ export function YardCanvas({
     const d = buildingDef(ghost.id),
       p = toScreen(ghost.x, ghost.y),
       path = Skia.PathBuilder.Make()
-    path.moveTo(p.x, p.y)
-    path.lineTo(p.x + d.w * 16, p.y + d.w * 8)
-    path.lineTo(p.x + (d.w - d.h) * 16, p.y + (d.w + d.h) * 8)
-    path.lineTo(p.x - d.h * 16, p.y + d.h * 8)
+    path.addRect(Skia.XYWHRect(p.x, p.y, d.w * TILE, d.h * TILE))
     path.close()
     return path.detach()
   }, [ghost])
@@ -365,32 +306,20 @@ export function YardCanvas({
           sh.setColor(Skia.Color('#0B2A33'))
           sh.setAlphaf(0.16)
           const path = Skia.PathBuilder.Make()
-          const o = { x: q.x + 5, y: q.y + 3 }
-          path.moveTo(o.x, o.y)
-          path.lineTo(o.x + d0.w * 16, o.y + d0.w * 8)
-          path.lineTo(o.x + (d0.w - d0.h) * 16, o.y + (d0.w + d0.h) * 8)
-          path.lineTo(o.x - d0.h * 16, o.y + d0.h * 8)
+          path.addRect(Skia.XYWHRect(q.x + 6, q.y + 6, d0.w * TILE, d0.h * TILE))
           path.close()
           canvas.drawPath(path.detach(), sh)
         }
-        if (!['gate', 'flare'].includes(entry.b.defId))
-          canvas.drawPicture(buildingPictures[entry.b.uid])
+        canvas.drawPicture(buildingPictures[entry.b.uid])
         const b = entry.b,
           d = buildingDef(b.defId),
           p = toScreen(b.x, b.y)
-        canvas.translate(p.x + (d.w - d.h) * 8, p.y + (d.w + d.h) * 4)
-        if (b.defId === 'flare') drawCommands(canvas, sprites.flare(b.level, d.accent, visualTime))
-        if (b.defId === 'gate')
-          drawCommands(
-            canvas,
-            sprites.gate(
-              b.level,
-              d.accent,
-              s.trucks.some(t => Math.abs(t.step - SALES.approachTiles) <= 1) ? 1 : 0,
-            ),
-          )
+        canvas.translate(p.x + (d.w * TILE) / 2, p.y + d.h * TILE)
+        // Height of the art (or box) above the slab's bottom, for smoke, sparkles and lights.
+        const img = spriteImageFor(b.defId, b.level)
+        const top = img ? (img.ay * img.scale) / 2 : d.h * TILE + 20
         if (world && ambient && ['cdu', 'cracker'].includes(b.defId))
-          drawSmoke(canvas, world, visualTime, 7, -d.height - 10)
+          drawSmoke(canvas, world, visualTime, -6, -top + 6)
         else if (!reduced && ['cdu', 'cracker', 'flare'].includes(b.defId)) {
           for (let i = 0; i < 3; i++) {
             const phase = (visualTime * 0.6 + i / 3) % 1
@@ -401,7 +330,7 @@ export function YardCanvas({
             canvas.drawRect(
               {
                 x: Math.round(5 + phase * 8),
-                y: Math.round(-d.height - 8 - phase * 18),
+                y: Math.round(-top - phase * 18),
                 width: 4 + Math.floor(phase * 2) * 2,
                 height: 4 + Math.floor(phase * 2) * 2,
               },
@@ -411,21 +340,27 @@ export function YardCanvas({
         }
         if (b.defId === 'blend' && s.baseStock[(b.recipe ?? s.blend).base] > 0)
           drawCommands(canvas, [
-            rect(-5, -25, Math.floor(Math.abs(Math.sin(visualTime * 4)) * 4) * 3 + 1, 2, '#B5653A'),
+            rect(
+              -8,
+              -top + 8,
+              Math.floor(Math.abs(Math.sin(visualTime * 4)) * 4) * 3 + 1,
+              3,
+              '#B5653A',
+            ),
           ])
         const sparked = sparkAt.current.get(b.uid)
         if (world && sparked !== undefined && time.current - sparked < 900)
-          drawSparkle(canvas, world, (time.current - sparked) / 900, 0, -d.height / 2 - 6)
+          drawSparkle(canvas, world, (time.current - sparked) / 900, 0, -top / 2)
         if (b.level >= 5)
           drawCommands(canvas, [
-            circle(-5, -30, 2, Math.floor(visualTime * 2) % 2 ? '#F2C230' : '#F08A24'),
+            circle(0, -top - 4, 3, Math.floor(visualTime * 2) % 2 ? '#F2C230' : '#F08A24'),
           ])
       } else if (entry.kind === 'ghost') {
         const g = entry.g,
           d = buildingDef(g.id),
           p = toScreen(g.x, g.y)
         const level = s.yard.buildings.find(b => b.uid === g.uid)?.level ?? 1
-        canvas.translate(p.x + (d.w - d.h) * 8, p.y + (d.w + d.h) * 4)
+        canvas.translate(p.x + (d.w * TILE) / 2, p.y + d.h * TILE)
         const paint = Skia.Paint()
         paint.setAlphaf(0.62)
         canvas.saveLayer(paint)
@@ -444,7 +379,7 @@ export function YardCanvas({
           const dx =
               a && n && (n.x !== a.x || n.y !== a.y) ? n.x - a.x : a && back ? a.x - back.x : 1,
             dy = a && n && (n.x !== a.x || n.y !== a.y) ? n.y - a.y : a && back ? a.y - back.y : 0
-          sprite(canvas, world, truckName(t.kind, dx, dy), 0, 4, 0.42)
+          sprite(canvas, world, truckName(t.kind, dx, dy), 0, 8, 0.62, 1, true)
         } else
           drawCommands(canvas, truckSprite(entry.t.kind, truckAccent(entry.t.customer), visualTime))
       } else {
@@ -527,13 +462,18 @@ export function YardCanvas({
             id: 'out',
             label: text({ en: 'Zoom out', th: 'ย่อ' }),
             icon: <Minus size={18} />,
-            act: () => setCamera(c => ({ ...c, zoom: Math.max(YARD.minZoom, c.zoom - 1) })),
+            act: () =>
+              setCamera(c => ({
+                ...c,
+                zoom: [...ZOOMS].reverse().find(z => z < c.zoom - 0.01) ?? MIN_ZOOM,
+              })),
           },
           {
             id: 'in',
             label: text({ en: 'Zoom in', th: 'ขยาย' }),
             icon: <Plus size={18} />,
-            act: () => setCamera(c => ({ ...c, zoom: Math.min(YARD.maxZoom, c.zoom + 1) })),
+            act: () =>
+              setCamera(c => ({ ...c, zoom: ZOOMS.find(z => z > c.zoom + 0.01) ?? MAX_ZOOM })),
           },
           {
             id: 'center',

@@ -12,6 +12,7 @@ on:
       - devGraphic
       - art/yard-v2
       - rewrite/v4
+      - topdown/v5
 
 jobs:
   build-apk:

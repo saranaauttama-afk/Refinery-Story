@@ -8,7 +8,7 @@ import {
   type SkImage,
 } from '@shopify/react-native-skia'
 import { allSpriteImages, spriteImageFor, spriteTierFor } from './spriteImages'
-import { sprites } from './buildings'
+import { boxCommands } from './box'
 import { drawCommands } from './draw'
 
 export type LoadedSprites = Record<string, SkImage | null>
@@ -23,7 +23,7 @@ export function useSpriteImages(): LoadedSprites {
   return out
 }
 
-/** Draw a building at the canvas origin (its footprint centre): image if loaded, else code. */
+/** Draw a building with its slab's bottom centre at the canvas origin: art if loaded, else a box. */
 export function drawBuilding(
   canvas: SkCanvas,
   loaded: LoadedSprites,
@@ -46,5 +46,6 @@ export function drawBuilding(
     )
     return
   }
-  drawCommands(canvas, sprites[id](level, accent, 0))
+  void accent
+  drawCommands(canvas, boxCommands(id, level))
 }

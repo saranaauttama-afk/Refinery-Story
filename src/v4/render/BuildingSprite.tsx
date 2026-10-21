@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
-import { buildingDef } from '../data/buildings'
-import { sprites } from './buildings'
+import { boxCommands } from './box'
 import { SpriteThumbnail } from './SpriteThumbnail'
 import { Image } from 'react-native'
 import { spriteImageFor } from './spriteImages'
@@ -13,7 +12,7 @@ export function BuildingSprite({
   level?: number
   size?: number
 }) {
-  const commands = useMemo(() => sprites[id](level, buildingDef(id).accent, 0), [id, level])
+  const commands = useMemo(() => boxCommands(id, level), [id, level])
   const img = spriteImageFor(id, level)
   if (img)
     return (
