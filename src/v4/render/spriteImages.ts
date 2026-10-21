@@ -9,6 +9,8 @@ export type SpriteImage = {
   ax: number
   ay: number
   scale: number
+  /** Hi-res art: scale with linear filtering instead of nearest-neighbour. */
+  smooth: boolean
 }
 const img = (
   src: number,
@@ -17,14 +19,8 @@ const img = (
   ax: number,
   ay: number,
   scale: number,
-): SpriteImage => ({
-  src,
-  w,
-  h,
-  ax,
-  ay,
-  scale,
-})
+  smooth = false,
+): SpriteImage => ({ src, w, h, ax, ay, scale, smooth })
 export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = {
   awardeco: {
     1: img(require('../../../assets/v4/sprites/awardeco_L1.png'), 47, 79, 20.5, 66.0, 1.004),
@@ -45,7 +41,11 @@ export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = 
     1: img(require('../../../assets/v4/sprites/canteen_L1.png'), 94, 74, 46.5, 46.0, 1.032),
   },
   cdu: {
-    1: img(require('../../../assets/v4/sprites/cdu_L1.png'), 116, 162, 57.5, 125.0, 1.113),
+    1: img(require('../../../assets/v4/sprites/cdu_L1.png'), 257, 352, 128.0, 279.7, 0.5, true),
+    2: img(require('../../../assets/v4/sprites/cdu_L2.png'), 257, 354, 128.0, 276.4, 0.5, true),
+    3: img(require('../../../assets/v4/sprites/cdu_L3.png'), 257, 344, 128.0, 268.2, 0.5, true),
+    4: img(require('../../../assets/v4/sprites/cdu_L4.png'), 257, 339, 128.0, 263.8, 0.5, true),
+    5: img(require('../../../assets/v4/sprites/cdu_L5.png'), 257, 365, 128.0, 287.6, 0.5, true),
   },
   control: {
     1: img(require('../../../assets/v4/sprites/control_L1.png'), 84, 67, 41.5, 44.0, 1.157),

@@ -40,8 +40,8 @@ export function drawBuilding(
       sk,
       rect(0, 0, img.w, img.h),
       rect(-img.ax * k, -img.ay * k, img.w * k, img.h * k),
-      FilterMode.Nearest,
-      MipmapMode.None,
+      img.smooth ? FilterMode.Linear : FilterMode.Nearest,
+      img.smooth ? MipmapMode.Linear : MipmapMode.None,
       Skia.Paint(),
     )
     return
