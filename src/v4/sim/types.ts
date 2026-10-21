@@ -84,7 +84,7 @@ export interface GameState {
   // Amount still owed to the bank; a share of each sale pays it back.
   loan: number
   hintIndex: number
-  settings: { sound: boolean; haptics: boolean }
+  settings: { sound: boolean; haptics: boolean; ambient?: boolean }
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]

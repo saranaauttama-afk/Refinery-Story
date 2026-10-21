@@ -1,15 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, AccessibilityInfo } from 'react-native'
-import {
-  Canvas,
-  Group,
-  Picture,
-  Skia,
-  useImage,
-  rect as skRect,
-  FilterMode,
-  MipmapMode,
-} from '@shopify/react-native-skia'
+import { Canvas, Group, Picture, Skia, useImage } from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile } from './iso'
 import { yardGround, yardColors } from './yardGround'
@@ -26,8 +17,19 @@ import { spriteImageFor } from './spriteImages'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
+import { worldAtlasSrc, seaColor } from './worldAtlas'
+import {
+  drawWorld,
+  drawSeaLife,
+  drawTraffic,
+  drawSky,
+  drawSmoke,
+  drawSparkle,
+  sprite,
+  truckName,
+} from './world'
 import { customers } from '../data/customers'
-const bounds = { x: -1500, y: -500, width: 3000, height: 2000 }
+const bounds = { x: -2400, y: -900, width: 4800, height: 3000 }
 // Tile just in front of a building's bottom corner, where its staff stand.
 const frontTile = (b: { x: number; y: number; defId: string }) => ({
   x: b.x + buildingDef(b.defId).w + 0.3,
@@ -197,38 +199,15 @@ export function YardCanvas({
   }, [ghostKey, size.h])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
   const gateKey = gate ? `${gate.x},${gate.y}` : ''
-  const coastal = useImage(require('../../../assets/v4/art/yard_coastal_v2.png'))
+  const world = useImage(worldAtlasSrc)
+  const ambient = !reduced && s.settings.ambient !== false
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
-    if (coastal && s.yard.ownedParcels.length) {
-      const points = s.yard.ownedParcels.flatMap(parcel => {
-        const [x, y] = parcel.split(',').map(Number)
-        return [
-          [0, 0],
-          [1, 0],
-          [0, 1],
-          [1, 1],
-        ].map(([dx, dy]) => toScreen((x + dx) * YARD.parcel, (y + dy) * YARD.parcel))
-      })
-      const minX = Math.min(...points.map(p => p.x)),
-        maxX = Math.max(...points.map(p => p.x))
-      const minY = Math.min(...points.map(p => p.y)),
-        maxY = Math.max(...points.map(p => p.y))
-      const width = maxX - minX + 320,
-        height = (width * coastal.height()) / coastal.width()
-      canvas.drawImageRectOptions(
-        coastal,
-        skRect(0, 0, coastal.width(), coastal.height()),
-        skRect((minX + maxX - width) / 2, (minY + maxY - height) / 2, width, height),
-        FilterMode.Nearest,
-        MipmapMode.None,
-        Skia.Paint(),
-      )
-    }
-    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!coastal), false)
-    // Public road outside the fence that trucks use to reach the gate.
-    if (gate) {
+    if (world) drawWorld(canvas, world, s.yard.ownedParcels, gate ?? undefined)
+    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!world), false)
+    // Public road outside the fence that trucks use to reach the gate (code fallback).
+    if (gate && !world) {
       for (let i = 1; i <= SALES.approachTiles; i++) {
         const tile = gate.x === 0 ? { x: -i, y: gate.y } : { x: gate.x, y: -i }
         const p = toScreen(tile.x, tile.y)
@@ -247,7 +226,7 @@ export function YardCanvas({
       }
     }
     return recorder.finishRecordingAsPicture()
-  }, [s.yard.ownedParcels, gateKey, !!ghost, coastal])
+  }, [s.yard.ownedParcels, gateKey, !!ghost, world])
   const truckPositions = new Map(
     s.trucks.map(t => {
       const a = t.path[t.step],
@@ -304,6 +283,16 @@ export function YardCanvas({
         ]
       : []),
   ].sort((a, b) => a.depth - b.depth)
+  // Remember when each building last went up a level, for a short sparkle.
+  const levels = useRef(new Map<string, number>()),
+    sparkAt = useRef(new Map<string, number>())
+  useEffect(() => {
+    for (const b of s.yard.buildings) {
+      const before = levels.current.get(b.uid)
+      if (before !== undefined && b.level > before) sparkAt.current.set(b.uid, time.current)
+      levels.current.set(b.uid, b.level)
+    }
+  }, [s.yard.buildings])
   const loadedRaw = useSpriteImages()
   const loadedKey = Object.values(loadedRaw)
     .map(v => (v ? 1 : 0))
@@ -338,6 +327,10 @@ export function YardCanvas({
   const dynamicPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
+    if (world && ambient) {
+      drawSeaLife(canvas, world, visualTime)
+      drawTraffic(canvas, world, visualTime, gate ?? undefined)
+    }
     if (ghost && ghostPath) {
       const paint = Skia.Paint()
       paint.setAntiAlias(false)
@@ -368,7 +361,9 @@ export function YardCanvas({
               s.trucks.some(t => Math.abs(t.step - SALES.approachTiles) <= 1) ? 1 : 0,
             ),
           )
-        if (!reduced && ['cdu', 'cracker', 'flare'].includes(b.defId)) {
+        if (world && ambient && ['cdu', 'cracker'].includes(b.defId))
+          drawSmoke(canvas, world, visualTime, 7, -d.height - 10)
+        else if (!reduced && ['cdu', 'cracker', 'flare'].includes(b.defId)) {
           for (let i = 0; i < 3; i++) {
             const phase = (visualTime * 0.6 + i / 3) % 1
             const paint = Skia.Paint()
@@ -390,6 +385,9 @@ export function YardCanvas({
           drawCommands(canvas, [
             rect(-5, -25, Math.floor(Math.abs(Math.sin(visualTime * 4)) * 4) * 3 + 1, 2, '#B5653A'),
           ])
+        const sparked = sparkAt.current.get(b.uid)
+        if (world && sparked !== undefined && time.current - sparked < 900)
+          drawSparkle(canvas, world, (time.current - sparked) / 900, 0, -d.height / 2 - 6)
         if (b.level >= 5)
           drawCommands(canvas, [
             circle(-5, -30, 2, Math.floor(visualTime * 2) % 2 ? '#F2C230' : '#F08A24'),
@@ -409,7 +407,17 @@ export function YardCanvas({
         const p = truckPositions.get(entry.t.uid)!,
           point = toScreen(p.x, p.y)
         canvas.translate(point.x, point.y)
-        drawCommands(canvas, truckSprite(entry.t.kind, truckAccent(entry.t.customer), visualTime))
+        if (world) {
+          const t = entry.t,
+            a = t.path[t.step],
+            n = t.path[Math.min(t.step + 1, t.path.length - 1)],
+            back = t.path[Math.max(0, t.step - 1)]
+          const dx =
+              a && n && (n.x !== a.x || n.y !== a.y) ? n.x - a.x : a && back ? a.x - back.x : 1,
+            dy = a && n && (n.x !== a.x || n.y !== a.y) ? n.y - a.y : a && back ? a.y - back.y : 0
+          sprite(canvas, world, truckName(t.kind, dx, dy), 0, 4, 0.42)
+        } else
+          drawCommands(canvas, truckSprite(entry.t.kind, truckAccent(entry.t.customer), visualTime))
       } else {
         const p = workerPositions.get(entry.p.uid)!,
           point = toScreen(p.x, p.y)
@@ -418,6 +426,7 @@ export function YardCanvas({
       }
       canvas.restore()
     }
+    if (world && ambient) drawSky(canvas, world, visualTime)
     return recorder.finishRecordingAsPicture()
   }, [
     s.yard.buildings,
@@ -430,6 +439,8 @@ export function YardCanvas({
     reduced,
     ghost,
     ghostPath,
+    world,
+    ambient,
   ])
   return (
     <View
@@ -446,7 +457,7 @@ export function YardCanvas({
       }}
     >
       <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
-        <Canvas style={{ flex: 1, backgroundColor: yardColors.backdrop }}>
+        <Canvas style={{ flex: 1, backgroundColor: world ? seaColor : yardColors.backdrop }}>
           <Group
             transform={[
               { translateX: Math.round(size.w / 2 + camera.x) },

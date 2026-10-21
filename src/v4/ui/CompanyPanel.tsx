@@ -184,6 +184,20 @@ export function CompanyPanel({
                 dispatch(s => ({ ...s, settings: { ...s.settings, haptics: !s.settings.haptics } }))
               }
             />
+            <SmallButton
+              label={text(
+                s.settings.ambient !== false
+                  ? { en: 'Scenery motion on', th: 'ฉากเคลื่อนไหว: เปิด' }
+                  : { en: 'Scenery motion off', th: 'ฉากเคลื่อนไหว: ปิด' },
+              )}
+              color="#FFF6E3"
+              onPress={() =>
+                dispatch(s => ({
+                  ...s,
+                  settings: { ...s.settings, ambient: s.settings.ambient === false },
+                }))
+              }
+            />
           </Row>
         )}
       </>
