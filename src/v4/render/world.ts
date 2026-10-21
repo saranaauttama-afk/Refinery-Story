@@ -33,10 +33,19 @@ export function sprite(
   y: number,
   scale = 1,
   alpha = 1,
+  shadow = false,
 ) {
   const r = atlas[name]
   if (!r) return
   const [sx, sy, w, h, ax, ay] = r
+  // Soft contact shadow, cast to the lower right (light from the top-left).
+  if (shadow) {
+    const sp = paint()
+    sp.setColor(Skia.Color('#0B2A33'))
+    sp.setAlphaf(0.22 * alpha)
+    const sw = w * scale * 0.8
+    c.drawOval(Skia.XYWHRect(x - sw / 2 + sw * 0.18, y - sw * 0.14, sw, sw * 0.32), sp)
+  }
   const p = paint()
   if (alpha < 1) p.setAlphaf(alpha)
   c.drawImageRectOptions(
@@ -66,7 +75,7 @@ export function terrainAt(x: number, y: number) {
 /** Rough distance from land (negative on land), for sea effects. */
 const coastDistance = (x: number, y: number) =>
   Math.max(Math.max(x, y) - L1 - wobble(x - y), L0 - Math.min(x, y))
-export const PIER = { y: 10, from: -4, to: -8 }
+export const PIER = { x: -7, y: 9 }
 
 /** Highway: an L along both top sides; the gate links to it with a T. */
 export function roadTiles(_gate?: Pt) {
@@ -98,6 +107,18 @@ export function approachTile(p: Pt, gate?: Pt): Pt {
   return { x: gate.x + dir * (i - 1), y: HW }
 }
 
+/** A GPT texture tile; 2x2 variants tile seamlessly across the map. */
+function tex(
+  c: SkCanvas,
+  img: SkImage,
+  name: string,
+  x: number,
+  y: number,
+  left: number,
+  top: number,
+) {
+  sprite(c, img, `tex_${name}${((x % 2) + 2) % 2}${((y % 2) + 2) % 2}`, left, top)
+}
 const diamondPath = (x: number, y: number) => {
   const b = Skia.PathBuilder.Make()
   b.moveTo(x, y - 0.5)
@@ -129,8 +150,8 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
   const decor: { depth: number; draw: () => void }[] = []
   const under = paint()
   under.setColor(Skia.Color('#60932F'))
-  const lo = L0 - 16,
-    hi = L1 + 14
+  const lo = L0 - 30,
+    hi = L1 + 30
   const stripe = paint(),
     dark = paint(),
     quayPaint = paint(),
@@ -139,8 +160,8 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
   dark.setColor(Skia.Color('#2A2A2E'))
   quayPaint.setColor(Skia.Color('#CBB89A'))
   foam.setColor(Skia.Color('#E8FBFF'))
-  const pier = (x: number, y: number) =>
-    y >= PIER.y && y <= PIER.y + 1 && x <= PIER.from && x >= PIER.to
+  const lane = paint()
+  lane.setColor(Skia.Color('#F2E3B0'))
   for (let s = lo * 2; s <= hi * 2; s++)
     for (let x = lo; x <= hi; x++) {
       const y = s - x
@@ -158,16 +179,8 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
       const min = Math.min(...cs),
         max = Math.max(...cs)
       if (top || max === 0) {
-        if (coastDistance(x, y) < 14) sprite(c, img, 'sw0', left, p.y, 1)
+        if (coastDistance(x, y) < 30) tex(c, img, 'water', x, y, left, p.y)
         else continue
-        if (top && pier(x, y)) {
-          c.drawPath(diamondPath(p.x, p.y - 4), quayPaint)
-          dark.setAlphaf(0.5)
-          c.drawRect(Skia.XYWHRect(p.x - 2, p.y + 12, 3, 6), dark)
-          dark.setAlphaf(1)
-          if ((x + y) % 2 === 0) c.drawRect(Skia.XYWHRect(p.x - 1, p.y - 2, 2, 3), dark)
-          continue
-        }
         if (hash(x, y, 7) < 0.012 && coastDistance(x, y) > 3)
           decor.push({
             depth: x + y,
@@ -198,10 +211,8 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
         continue
       }
       const key = `${x},${y}`
-      // Solid underlay so the 1px seams between pixel diamonds never show the sea.
-      c.drawPath(diamondPath(p.x, p.y), under)
       if (QUAY.includes(x) || QUAY.includes(y)) {
-        c.drawPath(diamondPath(p.x, p.y), quayPaint)
+        tex(c, img, 'quay', x, y, left, p.y)
         // Sea edge: foam and bollards; lamps along the highway side.
         if (x === QUAY[0] || y === QUAY[0]) {
           // Thin foam along the sea-facing diamond edge (top-left for x, top-right for y).
@@ -209,10 +220,17 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
             if (x === QUAY[0]) c.drawRect(Skia.XYWHRect(p.x - 2 - k * 2, p.y + k, 2, 1), foam)
             if (y === QUAY[0]) c.drawRect(Skia.XYWHRect(p.x + k * 2, p.y + k, 2, 1), foam)
           }
-          c.drawRect(Skia.XYWHRect(p.x - 1, p.y + 2, 3, 3), dark)
+          if ((x + y) % 2 === 0)
+            decor.push({
+              depth: x + y + 0.5,
+              draw: () => sprite(c, img, 'g_bollard', p.x, p.y + 5, 1),
+            })
         }
         if ((x === QUAY[1] || y === QUAY[1]) && (x + y) % 5 === 0)
-          decor.push({ depth: x + y + 1, draw: () => sprite(c, img, 'lamp0', p.x, p.y + 12, 0.7) })
+          decor.push({
+            depth: x + y + 1,
+            draw: () => sprite(c, img, 'g_lamp', p.x, p.y + 12, 1, 1, true),
+          })
         continue
       }
       if (roads.has(key)) {
@@ -221,7 +239,13 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
           (linked.has(`${x + 1},${y}`) ? 2 : 0) |
           (linked.has(`${x},${y + 1}`) ? 4 : 0) |
           (linked.has(`${x - 1},${y}`) ? 8 : 0)
-        sprite(c, img, `road${m}`, left, p.y, 0.5)
+        void m
+        tex(c, img, 'asphalt', x, y, left, p.y)
+        // Dashed centre line along the highway leg.
+        if ((x === HW) !== (y === HW) && (x + y) % 2 === 0) {
+          if (x === HW) c.drawRect(Skia.XYWHRect(p.x - 3, p.y + 7, 6, 1), lane)
+          else c.drawRect(Skia.XYWHRect(p.x - 3, p.y + 8, 6, 1), lane)
+        }
         // Yellow-black kerb on the quay side.
         for (let k = 0; k < 4; k++) {
           const paintK = k % 2 ? dark : stripe
@@ -231,21 +255,23 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
         continue
       }
       const buyable = x >= 0 && y >= 0 && x < YARD.maxSize && y < YARD.maxSize
-      const tile = owned.has(key)
-        ? 'grass0'
-        : buyable && !near(x, y, 1)
-          ? `locked${hash(x, y, 1) < 0.5 ? 0 : 1}`
-          : hash(x, y, 2) < 0.12
-            ? 'flower0'
-            : `grass${hash(x, y, 1) < 0.5 ? 0 : 1}`
-      sprite(c, img, tile, left, p.y)
+      tex(
+        c,
+        img,
+        owned.has(key) ? 'concrete' : buyable && !near(x, y, 1) ? 'locked' : 'grass',
+        x,
+        y,
+        left,
+        p.y,
+      )
       if (owned.has(key) || near(x, y, 2) || roadNear(x, y)) continue
       const r = hash(x, y, 9),
         density = buyable ? 0.025 : 0.14
       if (r < density)
         decor.push({
           depth: x + y + 1,
-          draw: () => sprite(c, img, `tree${Math.floor(hash(x, y, 10) * 7)}`, p.x, p.y + 12, 0.6),
+          draw: () =>
+            sprite(c, img, `tree${Math.floor(hash(x, y, 10) * 7)}`, p.x, p.y + 12, 0.6, 1, true),
         })
       else if (r < density * 1.7)
         decor.push({
@@ -254,20 +280,39 @@ export function drawWorld(c: SkCanvas, img: SkImage, parcels: string[], gate?: P
         })
     }
   // Port: cranes and container stacks by the pier, warehouses and pipe racks on the far land.
-  const prop = (name: string, x: number, y: number, scale: number) => {
+  const prop = (name: string, x: number, y: number, scale: number, shadow = true) => {
     const p = toScreen(x, y)
-    decor.push({ depth: x + y + 1, draw: () => sprite(c, img, name, p.x, p.y + 8, scale) })
+    decor.push({
+      depth: x + y + 1,
+      draw: () => sprite(c, img, name, p.x, p.y + 8, scale, 1, shadow),
+    })
   }
-  prop('crane0', QUAY[0] + 0.5, PIER.y - 1.5, 0.75)
-  prop('containers0', QUAY[0] + 0.6, PIER.y + 3.5, 0.6)
-  prop('containers1', QUAY[0] + 0.6, PIER.y + 5, 0.6)
-  prop('crane1', 14, QUAY[0] + 0.5, 0.75)
-  prop('containers2', 17, QUAY[0] + 0.6, 0.6)
-  prop('containers3', 4, QUAY[0] + 0.6, 0.6)
-  prop('warehouse0', YARD.maxSize + 1.5, 4, 0.75)
-  prop('piperack0', YARD.maxSize + 1.5, 9, 0.7)
-  prop('warehouse1', 4, YARD.maxSize + 1.5, 0.75)
-  prop('piperack1', 10, YARD.maxSize + 1.5, 0.7)
+  // GPT port set: an L-shaped fuel jetty where the tanker berths, a long pier, a ramp.
+  prop('g_pier_l', PIER.x, PIER.y, 1, false)
+  prop('g_pier_long', 22, -7.5, 1, false)
+  prop('g_ramp', 7, -4.6, 1, false)
+  prop('g_gantry', 15.5, QUAY[0] + 0.7, 1)
+  prop('g_crane', QUAY[0] + 0.6, PIER.y - 3.2, 1)
+  prop('g_stack3', QUAY[0] + 0.5, PIER.y + 3.6, 1)
+  prop('g_stack2', QUAY[0] + 0.5, PIER.y + 5.2, 1)
+  prop('g_cont_red', QUAY[0] + 0.6, PIER.y + 7, 1)
+  prop('g_cont_blue', 18.5, QUAY[0] + 0.6, 1)
+  prop('g_stack3', 25, QUAY[0] + 0.5, 1)
+  prop('g_crates', 3.5, QUAY[0] + 0.6, 1)
+  prop('g_drums', QUAY[0] + 0.6, 3.5, 1)
+  prop('g_barrier', 11, QUAY[0] + 0.7, 1)
+  prop('g_cones', QUAY[0] + 0.7, 17, 1)
+  // Outskirts beyond the buyable land.
+  const M = YARD.maxSize + 1.7
+  prop('g_warehouse_blue', M, 3, 1)
+  prop('g_tankpipe', M, 8, 1)
+  prop('g_piperack', M, 12.5, 1)
+  prop('g_watertower', M, 17, 1)
+  prop('g_office', 3, M, 1)
+  prop('g_warehouse_long', 8.5, M, 1)
+  prop('g_substation', 14, M, 1)
+  prop('g_chimney', 18, M, 1)
+  prop('g_gasstation', M, 24, 1)
   // Two far mountain islands give the sea a horizon.
   for (const [mx, my, i] of [
     [L0 - 12, 18, 0],
@@ -307,7 +352,7 @@ export function drawSeaLife(c: SkCanvas, img: SkImage, t: number) {
     }
   })
   // Tanker ship sails in, berths along the pier, then leaves.
-  const dock = { x: (PIER.from + PIER.to) / 2, y: PIER.y + 2.6 },
+  const dock = { x: PIER.x + 0.2, y: PIER.y + 3.4 },
     far = { x: L0 - 22, y: PIER.y + 18 }
   const f = cycle(t, 150)
   let pos = dock,

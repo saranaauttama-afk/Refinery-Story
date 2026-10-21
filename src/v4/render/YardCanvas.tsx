@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, AccessibilityInfo } from 'react-native'
-import { Canvas, Group, Picture, Skia, useImage } from '@shopify/react-native-skia'
+import {
+  Canvas,
+  Group,
+  Picture,
+  Skia,
+  useImage,
+  Rect as SkRect,
+  RadialGradient,
+  vec,
+} from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile } from './iso'
 import { yardGround, yardColors } from './yardGround'
@@ -347,6 +356,23 @@ export function YardCanvas({
     for (const entry of entries) {
       canvas.save()
       if (entry.kind === 'building') {
+        if (world) {
+          // Soft shadow of the footprint, shifted to the lower right.
+          const b0 = entry.b,
+            d0 = buildingDef(b0.defId),
+            q = toScreen(b0.x, b0.y)
+          const sh = Skia.Paint()
+          sh.setColor(Skia.Color('#0B2A33'))
+          sh.setAlphaf(0.16)
+          const path = Skia.PathBuilder.Make()
+          const o = { x: q.x + 5, y: q.y + 3 }
+          path.moveTo(o.x, o.y)
+          path.lineTo(o.x + d0.w * 16, o.y + d0.w * 8)
+          path.lineTo(o.x + (d0.w - d0.h) * 16, o.y + (d0.w + d0.h) * 8)
+          path.lineTo(o.x - d0.h * 16, o.y + d0.h * 8)
+          path.close()
+          canvas.drawPath(path.detach(), sh)
+        }
         if (!['gate', 'flare'].includes(entry.b.defId))
           canvas.drawPicture(buildingPictures[entry.b.uid])
         const b = entry.b,
@@ -471,6 +497,28 @@ export function YardCanvas({
             <Picture picture={staticPicture} />
             <Picture picture={dynamicPicture} />
           </Group>
+          {world && (
+            <>
+              {/* One warm grade over everything so art from different sources reads as one scene. */}
+              <SkRect
+                x={0}
+                y={0}
+                width={size.w}
+                height={size.h}
+                color="#FFC56B"
+                opacity={0.07}
+                blendMode="softLight"
+              />
+              <SkRect x={0} y={0} width={size.w} height={size.h}>
+                <RadialGradient
+                  c={vec(size.w / 2, size.h / 2)}
+                  r={Math.max(size.w, size.h) * 0.75}
+                  colors={['#00000000', '#00000000', '#0B2A3340']}
+                  positions={[0, 0.6, 1]}
+                />
+              </SkRect>
+            </>
+          )}
         </Canvas>
       </GestureDetector>
       <View style={{ position: 'absolute', right: 10, bottom: 10, gap: 6 }}>

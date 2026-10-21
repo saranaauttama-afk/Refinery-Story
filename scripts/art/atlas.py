@@ -7,6 +7,18 @@ def add(name,im,ax=None,ay=None):
     im=im.convert('RGBA'); items[name]=(im, im.width/2 if ax is None else ax, im.height if ay is None else ay)
 def T(d,n): return Image.open(f'r4/{d}/tile_{n}.png').convert('RGBA')
 GS=[T('grass_sand',i) for i in range(16)]; SW=[T('sand_water',i) for i in range(16)]
+# Recolour PixelLab transition tiles to the GPT texture tones so coast and textures match.
+GPT={'water':np.array([17,155,241]),'sand':np.array([250,215,158]),'grass':np.array([85,174,52])}
+def recolor(t):
+    a=np.array(t).astype(float); m=a[:,:,3]>0; r,g,b=a[:,:,0],a[:,:,1],a[:,:,2]
+    cls={'water':m&(b>r+20),'grass':m&(g>r+10)&(g>b+10),'sand':m&(r>140)&(g>110)&(r>b+25)&~((g>r+10)&(g>b+10))}
+    for k,mm in cls.items():
+        if mm.sum()==0: continue
+        top=mm.copy(); top[16:]=False
+        ref=a[top][:,:3].mean(0) if top.sum()>10 else a[mm][:,:3].mean(0)
+        a[mm,:3]=np.clip(a[mm,:3]*(GPT[k]/np.maximum(ref,1)),0,255)
+    return Image.fromarray(a.astype('uint8'))
+GS=[recolor(x) for x in GS]; SW=[recolor(x) for x in SW]
 ref=np.array(GS[15])[:16]; rm=ref[ref[:,:,3]>0][:,:3].mean(0)
 def match(t):
     a=np.array(t).astype(float); m=a[:,:,3]>0; cm=a[m][:,:3].mean(0); a[m,:3]=np.clip(a[m,:3]*(rm/cm),0,255); return Image.fromarray(a.astype('uint8'))
@@ -24,6 +36,16 @@ for k,v in sorted(rules.items(),key=lambda kv:int(kv[0].split('_')[1])):
     if m in seen: continue
     seen.add(m); im=Image.open(f'r5/road/{k}.png').convert('RGBA'); add(f'road{m}',im.resize((64,32),Image.NEAREST),0,0)
 P='pick'
+# GPT textures (2x2 seamless variants) and props
+for n in ['concrete','asphalt','quay','grass','sand','water']:
+    for i in (0,1):
+        for j in (0,1): add(f'tex_{n}{i}{j}',Image.open(f'gptw/t_{n}{i}{j}.png'),0,0)
+for i in (0,1):
+    for j in (0,1): add(f'tex_locked{i}{j}',dull(Image.open(f'gptw/t_grass{i}{j}.png')),0,0)
+for f in sorted(os.listdir('gptw')):
+    if f.startswith('p_'):
+        im=Image.open(f'gptw/{f}').convert('RGBA'); n=f[2:-4]
+        add('g_'+n,im,im.width/2,im.height-1 if not n.startswith(('pier','ramp')) else im.height/2)
 for g,n in [('crane',2),('containers',4),('greenislet',3),('warehouse',2),('lamp',1),('piperack',2),('tree',7),('palm',5),('bush',4),('rocks',4),('islet',4),('mountain',2),('cloud',5),('gull',3),('fish',1)]:
     for i in range(n):
         im=Image.open(f'{P}/{g}_{i}.png').convert('RGBA'); im=im.crop(im.getbbox())
@@ -56,5 +78,5 @@ for n in sorted(rects):
     im,ax,ay=items[n]; px,py=rects[n]; lines.append(f"  {n}: [{px}, {py}, {im.width}, {im.height}, {round(ax,1)}, {round(ay,1)}],")
 lines.append("}")
 # average deep-water colour for the world backdrop
-a=np.array(SW[0])[:16]; c=a[a[:,:,3]>0][:,:3].mean(0).astype(int); lines.append(f"export const seaColor = '#{c[0]:02x}{c[1]:02x}{c[2]:02x}'")
+a=np.array(SW[0])[:16]; c=a[a[:,:,3]>0][:,:3].mean(0).astype(int); lines.append("export const seaColor = '#119bf1'")
 open(f'{R}/src/v4/render/worldAtlas.ts','w').write("\n".join(lines)+"\n"); print(W,H,len(rects))

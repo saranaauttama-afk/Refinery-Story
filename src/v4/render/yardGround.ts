@@ -81,7 +81,8 @@ export function yardGround(parcels: string[], placement: boolean, coastal = fals
   for (const tile of tiles) {
     const [x, y] = tile.split(',').map(Number)
     const p = toScreen(x, y)
-    commands.push(diamond(x, y, yardColors.concrete))
+    // With the textured world underneath, only joints and edging are drawn here.
+    if (!coastal) commands.push(diamond(x, y, yardColors.concrete))
     // Quiet two-tile expansion joints normally; the exact one-tile grid while placing.
     const line = placement ? yardColors.grid : yardColors.joint
     if (placement || x % 2 === 0)
