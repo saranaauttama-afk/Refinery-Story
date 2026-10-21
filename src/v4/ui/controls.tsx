@@ -1,5 +1,6 @@
+import { headerArt } from './art'
 import { useState } from 'react'
-import { Pressable, Text, StyleSheet, View, ScrollView } from 'react-native'
+import { Pressable, Text, StyleSheet, View, ScrollView, Image } from 'react-native'
 import { X } from 'lucide-react-native'
 import { text, type LocalizedText } from '../i18n'
 import { useFeedback } from './Feedback'
@@ -78,6 +79,33 @@ export function Sheet({
   return (
     <View style={[styles.sheet, low && { maxHeight: undefined }]}>
       <View style={styles.header}>
+        {headerArt[title.en] && (
+          <>
+            <Image
+              source={headerArt[title.en]}
+              resizeMode="cover"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: '100%',
+                height: '100%',
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                backgroundColor: '#14110F8C',
+              }}
+            />
+          </>
+        )}
         <View style={[styles.headerMark, { backgroundColor: headerColors[title.en] ?? ui.gold }]} />
         <Text style={[styles.heading, { flex: 1, color: ui.paper }]}>{text(title)}</Text>
         {help && (

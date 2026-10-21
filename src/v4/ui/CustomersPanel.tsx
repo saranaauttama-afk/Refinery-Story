@@ -1,5 +1,6 @@
+import { customerPortrait } from './art'
 import { useState } from 'react'
-import { Text, View, Pressable } from 'react-native'
+import { Text, View, Pressable, Image } from 'react-native'
 import { type } from './theme'
 import { useGame } from '../store/useGame'
 import { customers } from '../data/customers'
@@ -161,8 +162,18 @@ export function CustomersPanel() {
           {regulars.map(({ c, rec }) => (
             <Card key={c.id}>
               <Row>
-                <ProductChip base={c.base} label={baseName(c.base)} />
-                <Text style={[styles.text, { flex: 1 }]}>{text(c.name)}</Text>
+                {customerPortrait(c.id) && (
+                  <Image
+                    source={customerPortrait(c.id)}
+                    style={{ width: 48, height: 48, borderWidth: 2, borderRadius: 6 }}
+                  />
+                )}
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={styles.text}>{text(c.name)}</Text>
+                  <View style={{ alignSelf: 'flex-start' }}>
+                    <ProductChip base={c.base} label={baseName(c.base)} />
+                  </View>
+                </View>
                 <GradeChip grade={c.minGrade} suffix="+" />
               </Row>
               {rec.giftGiven ? (

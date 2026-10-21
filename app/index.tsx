@@ -1,7 +1,7 @@
-import { TitleScene } from '../src/v4/render/TitleScene'
+import { sceneArt } from '../src/v4/ui/art'
 import { useGame } from '../src/v4/store/useGame'
 import { Link } from 'expo-router'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
 import { copy, text } from '../src/v4/i18n'
@@ -14,7 +14,19 @@ export default function TitleScreen() {
   const { ready, hasSave, newGame, saveError } = useGame()
   return (
     <SafeAreaView style={styles.screen}>
-      <TitleScene />
+      <Image
+        source={sceneArt.title}
+        resizeMode="cover"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
+        }}
+      />
       <View style={styles.panel}>
         <Text style={styles.title}>{noLigature(text(copy.title))}</Text>
         {saveError && <Text style={styles.buttonText}>{text(saveError)}</Text>}

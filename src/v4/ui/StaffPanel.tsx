@@ -1,8 +1,9 @@
+import { staffPortrait } from './art'
 import { SpriteThumbnail } from '../render/SpriteThumbnail'
 import { useMemo } from 'react'
 import { workerSprite } from '../render/life'
 import { useState } from 'react'
-import { Text, View, Pressable } from 'react-native'
+import { Text, View, Pressable, Image } from 'react-native'
 import { STAFF } from '../data/balance'
 import { useGame } from '../store/useGame'
 import { hiring, trainings, jobs } from '../data/staff'
@@ -34,13 +35,25 @@ const statRows = [
 ] as const
 const STAT_SCALE = 80
 
-function Avatar({ job }: { job: string }) {
+function Avatar({ job, uid, name }: { job: string; uid: string; name: string }) {
+  const portrait = staffPortrait(uid, job, name)
   const commands = useMemo(() => workerSprite(job, 0), [job])
   return (
     <View
-      style={{ width: 46, height: 46, backgroundColor: '#E7F1F2', borderWidth: 1, borderRadius: 5 }}
+      style={{
+        width: 52,
+        height: 52,
+        backgroundColor: '#E7F1F2',
+        borderWidth: 2,
+        borderRadius: 6,
+        overflow: 'hidden',
+      }}
     >
-      <SpriteThumbnail commands={commands} cacheKey={`worker:${job}`} size={44} />
+      {portrait ? (
+        <Image source={portrait} style={{ width: 48, height: 48 }} />
+      ) : (
+        <SpriteThumbnail commands={commands} cacheKey={`worker:${job}`} size={44} />
+      )}
     </View>
   )
 }
@@ -95,15 +108,28 @@ function StaffCard({
           backgroundColor: pressed ? '#FFE7A3' : '#FFFFFF',
         })}
       >
-        <View
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 15,
-            borderWidth: 2,
-            backgroundColor: jobColors[p.job] ?? '#D8D2C4',
-          }}
-        />
+        {staffPortrait(p.uid, p.job, p.name) ? (
+          <Image
+            source={staffPortrait(p.uid, p.job, p.name)}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 6,
+              borderWidth: 2,
+              borderColor: jobColors[p.job] ?? '#14110F',
+            }}
+          />
+        ) : (
+          <View
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              borderWidth: 2,
+              backgroundColor: jobColors[p.job] ?? '#D8D2C4',
+            }}
+          />
+        )}
         <Text style={[styles.text, { flex: 1, fontSize: 14 }]} numberOfLines={1}>
           {p.name} · {jobName(p.job)} Lv{level}
           <Text style={{ color: '#52616B' }}> · {workplace(s, p)}</Text>
@@ -127,7 +153,7 @@ function StaffCard({
   return (
     <Card>
       <Row gap={10}>
-        <Avatar job={p.job} />
+        <Avatar job={p.job} uid={p.uid} name={p.name} />
         <View style={{ flex: 1 }}>
           <Text style={styles.heading}>{p.name}</Text>
           <Muted>
@@ -341,7 +367,7 @@ export function StaffPanel() {
           {s.candidates.map(c => (
             <Card key={c.uid}>
               <Row gap={10}>
-                <Avatar job={c.job} />
+                <Avatar job={c.job} uid={c.uid} name={c.name} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.heading}>{c.name}</Text>
                   <Muted>

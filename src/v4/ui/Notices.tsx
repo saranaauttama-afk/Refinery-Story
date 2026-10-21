@@ -1,6 +1,7 @@
 import { Award } from 'lucide-react-native'
 import { ui } from './theme'
-import { Modal, View, Text, ScrollView } from 'react-native'
+import { Image, Modal, View, Text, ScrollView } from 'react-native'
+import { sceneArt } from './art'
 import { useGame } from '../store/useGame'
 import { dismissNotice } from '../sim/actions'
 import { Button, styles } from './controls'
@@ -28,17 +29,32 @@ export function Notices() {
             borderWidth: 2,
           }}
         >
-          <View
-            style={{
-              alignItems: 'center',
-              backgroundColor: ui.navy,
-              padding: 16,
-              borderRadius: 5,
-              marginBottom: 12,
-            }}
-          >
-            <Award size={32} color={ui.gold} />
-          </View>
+          {n && (n.kind === 'rank' || n.kind === 'awards') ? (
+            <Image
+              source={sceneArt[n.kind]}
+              resizeMode="cover"
+              style={{
+                width: '100%',
+                aspectRatio: 3 / 2,
+                maxHeight: 180,
+                borderRadius: 5,
+                borderWidth: 2,
+                marginBottom: 12,
+              }}
+            />
+          ) : (
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: ui.navy,
+                padding: 16,
+                borderRadius: 5,
+                marginBottom: 12,
+              }}
+            >
+              <Award size={32} color={ui.gold} />
+            </View>
+          )}
           <ScrollView contentContainerStyle={{ gap: 10 }}>
             {n?.kind === 'rank' && n.chips ? (
               <>
