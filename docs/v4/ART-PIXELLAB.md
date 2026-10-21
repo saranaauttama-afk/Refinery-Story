@@ -76,7 +76,20 @@ Use the same seed/style reference for the whole set so the buildings match.
    footprint, matches the UI.
 3. If it works, make L3/L5 for those three, then the rest of the table.
 
-## Engineering (when the pilot images arrive)
+## Pipeline (`scripts/art/`, run from a scratch folder; the API key is read from `~/.pixellab_key` and never enters the repo)
+
+1. `npx tsx <repo>/scripts/art/dump.ts <ids>` → `init/cmds.json` (code sprite commands at L1).
+2. `raster.py` → `init/<id>.png`, the code sprite at 2× on the canvas size above.
+3. `gen.py <ids>` → PixelLab `create-image-pixflux` with the init image at
+   strength 50, isometric, black outline, basic shading → `out/<id>_<tag>.png`.
+4. `clean.py src:dst` → removes a solid background, drops specks/watermarks,
+   crops symmetric around the footprint centre with the lowest row on the
+   diamond tip → `assets/v4/sprites/<id>_L1.png`.
+5. `registry.py` rewrites the table in `src/v4/render/spriteImages.ts`.
+
+Not image-based (animated or tinted in code): `gate`, `flare`, `road`.
+
+## Engineering
 
 - Sprites go in `assets/v4/sprites/<id>_L<tier>.png` and are listed in `src/v4/render/spriteImages.ts` (size + footprint; anchor = bottom tip of the diamond).
 - `src/v4/render/buildings/` gains an image path: when a PNG exists for an id
