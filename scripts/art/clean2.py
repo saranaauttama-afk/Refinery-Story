@@ -90,12 +90,12 @@ def drop_patch(a,cx,cy,hw,t):
         for y,x in zip(*np.nonzero(d)):
             nb=[(y+1,x),(y-1,x),(y,x+1),(y,x-1)]
             if not any(0<=v<H and 0<=u<W and op[v,u] and lum(a[v,u].astype(float))>60 for v,u in nb): a[y,x]=0
-def run(src,dst,n,decor):
+def run(src,dst,n,decor,slab=True):
     a=np.array(Image.open(src).convert('RGBA')).astype(int)
     bgremove(a); despeck(a)
     cx,cy,hw,t,tipy=geometry(a)
     if decor: drop_patch(a,cx,cy,hw,t); despeck(a,0.05)
-    else: normalise_slab(a,cx,cy,hw,t)
+    elif slab: normalise_slab(a,cx,cy,hw,t)
     im=Image.fromarray(a.astype('uint8')); bb=im.getbbox(); im=im.crop(bb); im.save(dst)
     target=n*32*(0.8 if decor else 1.0)
     return dict(w=im.width,h=im.height,ax=round(cx-bb[0],1),ay=round(cy-bb[1],1),scale=round(target/(2*hw),3))
