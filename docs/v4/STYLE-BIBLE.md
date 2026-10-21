@@ -68,3 +68,12 @@ For every sprite: stay within the existing logical footprint, keep its anchor st
 - Yard camera framing uses projected sprite bounds; moving workers and trucks sort by their interpolated position. Placement ghosts use the real sprite, level and anchor.
 - Shared navy headers, cream inset cards, tab accents and 40px minimum action targets apply throughout the game.
 - Acceptance evidence and native-device limitations: [UI-PLAYTEST-4.0.13.md](UI-PLAYTEST-4.0.13.md).
+
+## 4.0.24 shared surfaces
+
+- Owned land uses one quiet light-grey concrete floor, independent of plant artwork. Expansion joints are subtle in normal play; exact one-tile lines appear in placement mode.
+- Perimeter thickness and flush edging follow owned parcel boundaries only. Never draw a curb between adjacent purchased parcels or change their buildable area for visual reasons.
+- Outside grass is visually subordinate. The actual gate approach road keeps its existing alignment; decorative ground never creates roads or pathfinding.
+- Panels share an illustrated navy header, a colored category badge and cream surfaces. Active tabs have a category-colored marker. Thai values always use Kanit, including the market state.
+- Preserve the current plant sprites for the later dedicated plant-art pass.
+- Evidence: [UI-SURFACES-4.0.24.md](UI-SURFACES-4.0.24.md).

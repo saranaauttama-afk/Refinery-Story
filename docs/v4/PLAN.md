@@ -323,6 +323,7 @@ the owner checks on the APK.
 | M8 Balance & polish      | done; 20-seed checks passed                                                       | feat(v4): M8 balance and polish                          | automatic CI                | deferred      |
 | M9 Cleanup (Claude)      | done                                                                              | see git log                                              | pending                     | pending       |
 | UI redesign 4.0.13       | implemented; TypeScript, sim checks, web export and 390×844 browser checks passed | `feat(v4): complete chunky pixel industrial UI redesign` | Android Preview APK on push | deferred      |
+| UI surfaces 4.0.24      | shared concrete yard and screen presentation; automated and browser validation | see UI-SURFACES-4.0.24.md | Android Preview APK on push | deferred |
 
 ### M0 validation
 

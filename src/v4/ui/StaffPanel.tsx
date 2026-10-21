@@ -21,7 +21,7 @@ import {
 import { staffCap } from '../sim/systems/staff'
 import { buildingDef } from '../data/buildings'
 import { jobColors } from '../render/life'
-import { styles } from './controls'
+import { styles, PanelTabs } from './controls'
 import { Card, Section, Row, Bar, SmallButton, Muted, Chip } from './cards'
 import { text } from '../i18n'
 import type { GameState, Staff } from '../sim/types'
@@ -298,32 +298,21 @@ export function StaffPanel() {
   const full = s.staff.length >= staffCap(s)
   return (
     <>
-      <View style={{ flexDirection: 'row', borderWidth: 2, borderRadius: 8, overflow: 'hidden' }}>
-        {(['team', 'hire'] as const).map(t => (
-          <Pressable
-            key={t}
-            accessibilityRole="button"
-            onPress={() => setTab(t)}
-            style={{
-              flex: 1,
-              padding: 6,
-              minHeight: 40,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: tab === t ? '#14110F' : '#FFF6E3',
-            }}
-          >
-            <Text style={[styles.text, tab === t && { color: '#FFF6E3' }]}>
-              {t === 'team'
-                ? text({
-                    en: `Team ${s.staff.length}/${staffCap(s)}`,
-                    th: `ทีม ${s.staff.length}/${staffCap(s)}`,
-                  })
-                : text({ en: 'Hire', th: 'จ้างคนใหม่' })}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <PanelTabs
+        value={tab}
+        onChange={setTab}
+        color="#3D8FE0"
+        options={[
+          {
+            id: 'team',
+            label: {
+              en: `Team ${s.staff.length}/${staffCap(s)}`,
+              th: `ทีม ${s.staff.length}/${staffCap(s)}`,
+            },
+          },
+          { id: 'hire', label: { en: 'Hire', th: 'จ้างคนใหม่' } },
+        ]}
+      />
       {tab === 'team' &&
         s.staff.map(p => (
           <StaffCard

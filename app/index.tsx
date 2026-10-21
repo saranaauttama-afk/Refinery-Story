@@ -94,6 +94,16 @@ export default function TitleScreen() {
           </View>
         </View>
         <View style={styles.menu}>
+          <Text style={styles.menuCaption}>
+            {text(
+              hasSave
+                ? { en: 'YOUR LITTLE WORLD IS WAITING', th: 'กลับมาเติบโตไปกับโรงกลั่นของคุณ' }
+                : {
+                    en: 'EVERY GREAT REFINERY STARTS SMALL',
+                    th: 'โรงกลั่นที่ยิ่งใหญ่ เริ่มจากก้าวเล็ก ๆ',
+                  },
+            )}
+          </Text>
           {saveError && (
             <View style={styles.error}>
               <Text style={styles.errorText}>{text(saveError)}</Text>
@@ -136,21 +146,40 @@ const styles = StyleSheet.create({
     boxShadow: `0px 3px 0px ${INK}`,
   },
   tagline: { fontFamily: 'Kanit_600SemiBold', color: '#FFF6E3', fontSize: 15, textAlign: 'center' },
-  menu: { alignItems: 'center', gap: 14, paddingBottom: 64 },
+  menu: {
+    alignSelf: 'center',
+    width: '88%',
+    maxWidth: 360,
+    alignItems: 'stretch',
+    gap: 10,
+    padding: 14,
+    marginBottom: 52,
+    backgroundColor: '#FFF6E3F2',
+    borderWidth: 3,
+    borderColor: INK,
+    borderRadius: 10,
+    boxShadow: '0px 5px 0px #263D49',
+  },
+  menuCaption: {
+    fontFamily: 'Kanit_400Regular',
+    color: '#52616B',
+    fontSize: 13,
+    textAlign: 'center',
+  },
   button: {
-    width: 260,
-    minHeight: 60,
+    width: '100%',
+    minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: INK,
-    borderRadius: 4,
+    borderRadius: 6,
     boxShadow: `0px 5px 0px ${INK}`,
     overflow: 'hidden',
   },
   buttonShine: { position: 'absolute', top: 0, left: 0, right: 0, height: 5 },
   buttonText: { fontFamily: 'Kanit_600SemiBold', fontSize: 22, color: INK },
-  error: { backgroundColor: '#FFF6E3', borderWidth: 2, borderColor: INK, padding: 8, width: 260 },
+  error: { backgroundColor: '#FFF6E3', borderWidth: 2, borderColor: INK, padding: 8 },
   errorText: { fontFamily: 'Kanit_400Regular', fontSize: 14, color: '#B42318' },
   version: {
     position: 'absolute',

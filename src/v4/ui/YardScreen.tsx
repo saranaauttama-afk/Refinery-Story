@@ -269,17 +269,40 @@ export function YardScreen() {
                 gap: 2,
               })}
             >
-              {tab.id === 'build' ? (
-                <Building2 size={22} color={tab.color} />
-              ) : tab.id === 'blend' ? (
-                <FlaskConical size={22} color={tab.color} />
-              ) : tab.id === 'staff' ? (
-                <Users size={22} color={tab.color} />
-              ) : tab.id === 'customers' ? (
-                <Truck size={22} color={tab.color} />
-              ) : (
-                <Landmark size={22} color={tab.color} />
+              {panel === tab.id && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 10,
+                    right: 10,
+                    height: 3,
+                    backgroundColor: tab.color,
+                  }}
+                />
               )}
+              <View
+                style={{
+                  width: 32,
+                  height: 28,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 6,
+                  backgroundColor: panel === tab.id ? tab.tint : 'transparent',
+                }}
+              >
+                {tab.id === 'build' ? (
+                  <Building2 size={22} color={tab.color} />
+                ) : tab.id === 'blend' ? (
+                  <FlaskConical size={22} color={tab.color} />
+                ) : tab.id === 'staff' ? (
+                  <Users size={22} color={tab.color} />
+                ) : tab.id === 'customers' ? (
+                  <Truck size={22} color={tab.color} />
+                ) : (
+                  <Landmark size={22} color={tab.color} />
+                )}
+              </View>
               <Text
                 style={[
                   type.small,

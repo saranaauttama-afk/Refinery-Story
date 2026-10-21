@@ -8,7 +8,7 @@ import { bases } from '../data/bases'
 import { customerUnlocked, roadPath, salePrice } from '../sim/systems/customers'
 import { acceptContract } from '../sim/actions'
 import { SALES, B } from '../data/balance'
-import { styles } from './controls'
+import { styles, PanelTabs } from './controls'
 import { Card, Section, Row, ProductChip, GradeChip, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
 import { AdsSection } from './AdsSection'
@@ -41,43 +41,22 @@ export function CustomersPanel() {
           </Text>
         </Card>
       )}
-      <View
-        accessibilityRole="tablist"
-        style={{ flexDirection: 'row', borderWidth: 2, borderRadius: 8, overflow: 'hidden' }}
-      >
-        {(
-          [
-            [
-              'contracts',
-              {
-                en: `Contracts ${s.contracts.active.length}/${SALES.maxContracts}`,
-                th: `สัญญา ${s.contracts.active.length}/${SALES.maxContracts}`,
-              },
-            ],
-            ['market', { en: 'Market', th: 'ตลาด' }],
-            ['regulars', { en: 'Regulars', th: 'ประจำ ♥' }],
-          ] as const
-        ).map(([id, label], i) => (
-          <Pressable
-            key={id}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: tab === id }}
-            onPress={() => setTab(id)}
-            style={{
-              flex: 1,
-              minHeight: 42,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderLeftWidth: i ? 2 : 0,
-              backgroundColor: tab === id ? '#14110F' : '#FFF6E3',
-            }}
-          >
-            <Text style={[type.body, { fontSize: 14 }, tab === id && { color: '#FFF6E3' }]}>
-              {text(label)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <PanelTabs
+        value={tab}
+        onChange={setTab}
+        color="#2FB38E"
+        options={[
+          {
+            id: 'contracts',
+            label: {
+              en: `Contracts ${s.contracts.active.length}/${SALES.maxContracts}`,
+              th: `สัญญา ${s.contracts.active.length}/${SALES.maxContracts}`,
+            },
+          },
+          { id: 'market', label: { en: 'Market', th: 'ตลาด' } },
+          { id: 'regulars', label: { en: 'Regulars', th: 'ลูกค้าประจำ' } },
+        ]}
+      />
       {tab === 'contracts' && (
         <>
           <Section>

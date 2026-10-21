@@ -261,7 +261,14 @@ export function CompanyPanel({
             }}
           >
             <Text style={type.small}>{text(label)}</Text>
-            <Text style={type.num}>{value}</Text>
+            <Text
+              style={[
+                type.num,
+                label.en === 'Market' && { fontFamily: 'Kanit_600SemiBold', fontSize: 15 },
+              ]}
+            >
+              {value}
+            </Text>
           </View>
         ))}
       </Row>
@@ -292,7 +299,17 @@ export function CompanyPanel({
                 borderStyle: locked ? 'dashed' : 'solid',
                 borderColor: locked ? '#9E978A' : ui.ink,
                 borderRadius: 10,
-                backgroundColor: locked ? '#EFE8D8' : pressed ? '#FFE7A3' : '#FFFFFF',
+                backgroundColor: locked
+                  ? '#EFE8D8'
+                  : pressed
+                    ? '#FFE7A3'
+                    : t.id === 'invest' || t.id === 'land'
+                      ? '#EAF4E8'
+                      : t.id === 'flow'
+                        ? '#E8F1F6'
+                        : t.id === 'awards'
+                          ? '#F0EAF7'
+                          : '#FFFAEC',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 4,

@@ -173,13 +173,13 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
 const styles = StyleSheet.create({
   chip: {
     borderWidth: 2,
-    borderRadius: 20,
+    borderRadius: 7,
     minHeight: 40,
     justifyContent: 'center',
     paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
   },
-  chipOn: { backgroundColor: '#14110F' },
+  chipOn: { backgroundColor: ui.navy },
   card: {
     width: 116,
     height: 156,
@@ -189,9 +189,19 @@ const styles = StyleSheet.create({
     padding: 6,
     alignItems: 'center',
     gap: 2,
+    borderColor: ui.ink,
+    boxShadow: '0px 2px 0px #D5D0BF',
   },
   cardLocked: { backgroundColor: '#E9E2D2', borderStyle: 'dashed', borderColor: '#9E978A' },
-  swatch: { height: 76, alignItems: 'center', justifyContent: 'center' },
+  swatch: {
+    height: 76,
+    width: '100%',
+    backgroundColor: '#E8EEEA',
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
   cardName: {
     fontFamily: 'Kanit_600SemiBold',
     fontSize: 15,

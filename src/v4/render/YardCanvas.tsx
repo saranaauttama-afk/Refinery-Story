@@ -3,6 +3,7 @@ import { View, Text, Pressable, AccessibilityInfo } from 'react-native'
 import { Canvas, Group, Picture, Skia } from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile } from './iso'
+import { yardGround, yardColors } from './yardGround'
 import { YARD, B, SALES } from '../data/balance'
 import { buildingDef } from '../data/buildings'
 import { palette, productAccent } from './palette'
@@ -180,28 +181,7 @@ export function YardCanvas({
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
-    for (const parcel of s.yard.ownedParcels) {
-      const [px, py] = parcel.split(',').map(Number)
-      for (let x = px * YARD.parcel; x < (px + 1) * YARD.parcel; x++)
-        for (let y = py * YARD.parcel; y < (py + 1) * YARD.parcel; y++) {
-          const p = toScreen(x, y)
-          drawCommands(
-            canvas,
-            [
-              poly(
-                [
-                  [p.x, p.y],
-                  [p.x + 16, p.y + 8],
-                  [p.x, p.y + 16],
-                  [p.x - 16, p.y + 8],
-                ],
-                (x + y) % 2 ? '#A6C685' : '#ADC98E',
-              ),
-            ],
-            false,
-          )
-        }
-    }
+    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost), false)
     // Public road outside the fence that trucks use to reach the gate.
     if (gate) {
       for (let i = 1; i <= SALES.approachTiles; i++) {
@@ -222,7 +202,7 @@ export function YardCanvas({
       }
     }
     return recorder.finishRecordingAsPicture()
-  }, [s.yard.ownedParcels, gateKey])
+  }, [s.yard.ownedParcels, gateKey, !!ghost])
   const truckPositions = new Map(
     s.trucks.map(t => {
       const a = t.path[t.step],
@@ -421,7 +401,7 @@ export function YardCanvas({
       }}
     >
       <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
-        <Canvas style={{ flex: 1, backgroundColor: '#CEE0CE' }}>
+        <Canvas style={{ flex: 1, backgroundColor: yardColors.backdrop }}>
           <Group
             transform={[
               { translateX: Math.round(size.w / 2 + camera.x) },
