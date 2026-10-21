@@ -27,6 +27,7 @@ import {
   drawSparkle,
   sprite,
   truckName,
+  approachTile,
 } from './world'
 import { customers } from '../data/customers'
 const bounds = { x: -2400, y: -900, width: 4800, height: 3000 }
@@ -229,8 +230,9 @@ export function YardCanvas({
   }, [s.yard.ownedParcels, gateKey, !!ghost, world])
   const truckPositions = new Map(
     s.trucks.map(t => {
-      const a = t.path[t.step],
-        b = t.path[Math.min(t.step + 1, t.path.length - 1)]
+      const g = gate ?? undefined
+      const a = t.path[t.step] && approachTile(t.path[t.step], g),
+        b = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g)
       const f =
         t.phase === 'dwell'
           ? 0
@@ -409,9 +411,10 @@ export function YardCanvas({
         canvas.translate(point.x, point.y)
         if (world) {
           const t = entry.t,
-            a = t.path[t.step],
-            n = t.path[Math.min(t.step + 1, t.path.length - 1)],
-            back = t.path[Math.max(0, t.step - 1)]
+            g = gate ?? undefined,
+            a = t.path[t.step] && approachTile(t.path[t.step], g),
+            n = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g),
+            back = approachTile(t.path[Math.max(0, t.step - 1)], g)
           const dx =
               a && n && (n.x !== a.x || n.y !== a.y) ? n.x - a.x : a && back ? a.x - back.x : 1,
             dy = a && n && (n.x !== a.x || n.y !== a.y) ? n.y - a.y : a && back ? a.y - back.y : 0
@@ -520,9 +523,12 @@ export function YardCanvas({
               position: 'absolute',
               left: size.w / 2 + camera.x + a.x * camera.zoom,
               top: camera.y + liftY + a.y * camera.zoom - 60 - (fractional - p.tick) * 6,
-              color: '#B5653A',
+              color: '#FFD84D',
               fontFamily: 'PixelifySans_700Bold',
               fontSize: 22,
+              textShadowColor: '#14110F',
+              textShadowOffset: { width: 2, height: 2 },
+              textShadowRadius: 0,
             }}
           >
             {text(p)}

@@ -24,10 +24,10 @@ for k,v in sorted(rules.items(),key=lambda kv:int(kv[0].split('_')[1])):
     if m in seen: continue
     seen.add(m); im=Image.open(f'r5/road/{k}.png').convert('RGBA'); add(f'road{m}',im.resize((64,32),Image.NEAREST),0,0)
 P='pick'
-for g,n in [('tree',7),('palm',5),('bush',4),('rocks',4),('islet',4),('mountain',2),('cloud',5),('gull',3),('fish',1)]:
+for g,n in [('crane',2),('containers',4),('greenislet',3),('warehouse',2),('lamp',1),('piperack',2),('tree',7),('palm',5),('bush',4),('rocks',4),('islet',4),('mountain',2),('cloud',5),('gull',3),('fish',1)]:
     for i in range(n):
         im=Image.open(f'{P}/{g}_{i}.png').convert('RGBA'); im=im.crop(im.getbbox())
-        add(f'{g}{i}',im,im.width/2,im.height-2 if g in ('tree','palm','bush','rocks') else im.height/2)
+        add(f'{g}{i}',im,im.width/2,im.height-2 if g in ('tree','palm','bush','rocks','crane','containers','warehouse','lamp','piperack') else im.height/2)
 f=Image.open(f'{P}/fence_0.png').convert('RGBA'); f=f.crop(f.getbbox()); add('fence0',f,f.width/2,f.height-3); add('fence1',ImageOps.mirror(f),f.width/2,f.height-3)
 dirs={'se':'south-east','ne':'north-east','nw':'north-west','sw':'south-west'}
 for v in ['crude','product','car','ship','fishboat']:

@@ -1,12 +1,11 @@
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native'
-import { Pause, Bell, Settings, HardHat } from 'lucide-react-native'
+import { Pause, Bell, Settings } from 'lucide-react-native'
 import { useGame } from '../store/useGame'
 import { dateAt } from '../sim/time'
 import { ranks } from '../data/ranks'
 import { text } from '../i18n'
 import { ui } from './theme'
 import { GameIcon } from './GameIcon'
-import { Enamel, Bolts } from './GameChrome'
 
 export const compact = (n: number) =>
   Math.abs(n) >= 1e9
@@ -17,7 +16,7 @@ export const compact = (n: number) =>
         ? `${(n / 1e3).toFixed(1)}K`
         : Math.floor(n).toLocaleString()
 
-/** The approved cream-enamel instrument panel; all values and actions stay live. */
+/** Minimal two-row HUD: resources + bell, then date, rank progress, speed and settings. */
 export function HUD({
   alerts,
   bellOpen,
@@ -40,11 +39,35 @@ export function HUD({
   return (
     <View style={h.panel}>
       <View style={h.row}>
-        <View style={h.brand}>
-          <Enamel dark />
-          <Bolts />
-          <HardHat size={24} color={ui.gold} fill="#E9A31C" strokeWidth={2.5} />
-          <Text style={h.brandText}>{text({ en: 'REFINERY STORY', th: 'REFINERY STORY' })}</Text>
+        <View style={[h.chip, { flex: 1.35 }]}>
+          <GameIcon name="cash" size={24} />
+          <Text
+            accessibilityLabel={`$${Math.floor(s.money).toLocaleString()}`}
+            numberOfLines={1}
+            style={[
+              h.num,
+              { fontSize: width < 380 ? 16 : 18 },
+              s.money < 0 && { color: '#B42318' },
+            ]}
+          >
+            ${Math.abs(s.money) < 1e6 ? Math.floor(s.money).toLocaleString() : compact(s.money)}
+          </Text>
+        </View>
+        <View style={h.chip}>
+          <GameIcon name="star" size={22} />
+          <Text numberOfLines={1} style={h.num}>
+            {compact(s.fame)}
+          </Text>
+        </View>
+        <View style={h.chip}>
+          <GameIcon name="rd" size={22} />
+          <Text
+            accessibilityLabel={text({ en: `Research data ${s.rd}`, th: `ข้อมูลวิจัย ${s.rd}` })}
+            numberOfLines={1}
+            style={h.num}
+          >
+            {compact(s.rd)}
+          </Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -54,68 +77,24 @@ export function HUD({
           onPress={onBell}
           style={[h.tool, bellOpen && { backgroundColor: ui.gold }]}
         >
-          <Enamel />
-          <Bell size={21} color={ui.ink} strokeWidth={2.5} />
+          <Bell size={18} color={ui.ink} strokeWidth={2.5} />
           {alerts > 0 && (
             <View style={h.badge}>
               <Text style={h.badgeText}>{alerts}</Text>
             </View>
           )}
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={text({ en: 'Settings', th: 'ตั้งค่า' })}
-          onPress={onSettings}
-          style={h.tool}
-        >
-          <Enamel />
-          <Settings size={23} color={ui.ink} strokeWidth={2.5} />
-        </Pressable>
       </View>
       <View style={h.row}>
-        <View style={[h.resource, { flex: 1.4 }]}>
-          <Enamel />
-          <GameIcon name="cash" size={28} />
-          <Text
-            accessibilityLabel={`$${Math.floor(s.money).toLocaleString()}`}
-            numberOfLines={1}
-            style={[
-              h.num,
-              { fontSize: width < 380 ? 18 : 20 },
-              s.money < 0 && { color: '#B42318' },
-            ]}
-          >
-            ${Math.abs(s.money) < 1e6 ? Math.floor(s.money).toLocaleString() : compact(s.money)}
-          </Text>
-        </View>
-        <View style={h.resource}>
-          <Enamel />
-          <GameIcon name="star" size={27} />
-          <Text numberOfLines={1} style={h.num}>
-            {compact(s.fame)}
-          </Text>
-        </View>
-        <View style={h.resource}>
-          <Enamel />
-          <GameIcon name="rd" size={27} />
-          <Text
-            accessibilityLabel={text({ en: `Research data ${s.rd}`, th: `ข้อมูลวิจัย ${s.rd}` })}
-            numberOfLines={1}
-            style={h.num}
-          >
-            {compact(s.rd)}
-          </Text>
-        </View>
-      </View>
-      <View style={h.timeline}>
         <Text
           style={h.date}
+          numberOfLines={1}
           accessibilityLabel={text({
             en: `Year ${d.year}, month ${d.month}, week ${d.week}`,
             th: `ปี ${d.year} เดือน ${d.month} สัปดาห์ ${d.week}`,
           })}
         >
-          {text({ en: `Y${d.year} · Month ${d.month}`, th: `ปี ${d.year} · เดือน ${d.month}` })}
+          {text({ en: `Y${d.year} · M${d.month}`, th: `ปี ${d.year} · ด.${d.month}` })}
         </Text>
         <View style={h.rank}>
           <Text style={h.rankText}>{text({ en: `Rank ${s.rank}`, th: `แรงก์ ${s.rank}` })}</Text>
@@ -137,14 +116,21 @@ export function HUD({
           })}
           onPress={() => dispatch(s => ({ ...s, speed: nextSpeed }))}
           onLongPress={() => dispatch(s => ({ ...s, speed: 0 }))}
-          style={[h.speedButton, s.speed === 0 && { backgroundColor: ui.paper }]}
+          style={[h.small, { backgroundColor: s.speed === 0 ? ui.paper : ui.build }]}
         >
-          <Enamel />
           {s.speed === 0 ? (
-            <Pause size={18} color={ui.ink} />
+            <Pause size={14} color={ui.ink} />
           ) : (
             <Text style={h.speed}>{s.speed}×</Text>
           )}
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={text({ en: 'Settings', th: 'ตั้งค่า' })}
+          onPress={onSettings}
+          style={h.small}
+        >
+          <Settings size={15} color={ui.ink} strokeWidth={2.5} />
         </Pressable>
       </View>
     </View>
@@ -152,92 +138,73 @@ export function HUD({
 }
 const h = StyleSheet.create({
   panel: {
-    backgroundColor: ui.paper,
-    borderBottomWidth: 4,
+    backgroundColor: '#263D49',
+    borderBottomWidth: 3,
     borderColor: ui.ink,
-    padding: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
     gap: 4,
-    boxShadow: '0px 3px 0px #183347',
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  brand: {
+  chip: {
     flex: 1,
     minWidth: 0,
-    height: 44,
-    backgroundColor: ui.navy,
-    borderWidth: 2,
-    borderColor: ui.ink,
-    borderRadius: 7,
+    height: 34,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingHorizontal: 12,
-  },
-  brandText: { fontFamily: 'PixelifySans_700Bold', fontSize: 22, color: ui.paper, flexShrink: 1 },
-  tool: {
-    width: 44,
-    height: 44,
-    borderWidth: 2,
-    borderColor: ui.ink,
-    borderRadius: 7,
+    gap: 4,
+    paddingHorizontal: 5,
     backgroundColor: ui.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resource: {
-    flex: 1,
-    minWidth: 0,
-    height: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 6,
-    backgroundColor: ui.surface,
     borderWidth: 2,
     borderColor: ui.ink,
     borderRadius: 6,
   },
-  num: { fontFamily: 'PixelifySans_700Bold', fontSize: 20, color: ui.ink, flexShrink: 1 },
-  timeline: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40 },
-  date: { fontFamily: 'Kanit_600SemiBold', fontSize: 12, color: ui.ink },
-  rank: {
-    backgroundColor: '#7853B0',
+  tool: {
+    width: 36,
+    height: 34,
     borderWidth: 2,
     borderColor: ui.ink,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  rankText: { fontFamily: 'Kanit_600SemiBold', fontSize: 12, color: ui.paper },
-  track: {
-    flex: 1,
-    minWidth: 12,
-    height: 12,
-    backgroundColor: ui.navy,
-    borderWidth: 2,
-    borderColor: ui.ink,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  speedButton: {
-    width: 44,
-    height: 40,
-    backgroundColor: ui.build,
-    borderWidth: 2,
-    borderColor: ui.ink,
-    borderRadius: 5,
+    borderRadius: 6,
+    backgroundColor: ui.paper,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  speed: { fontFamily: 'PixelifySans_700Bold', fontSize: 20, color: ui.ink },
+  num: { fontFamily: 'PixelifySans_700Bold', fontSize: 17, color: ui.ink, flexShrink: 1 },
+  date: { fontFamily: 'Kanit_600SemiBold', fontSize: 12, color: ui.paper },
+  rank: {
+    backgroundColor: '#7853B0',
+    borderWidth: 1.5,
+    borderColor: ui.ink,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+  },
+  rankText: { fontFamily: 'Kanit_600SemiBold', fontSize: 11, color: ui.paper },
+  track: {
+    flex: 1,
+    minWidth: 12,
+    height: 8,
+    backgroundColor: '#14110F',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  small: {
+    width: 36,
+    height: 24,
+    borderWidth: 2,
+    borderColor: ui.ink,
+    borderRadius: 5,
+    backgroundColor: ui.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speed: { fontFamily: 'PixelifySans_700Bold', fontSize: 14, color: ui.ink },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -3,
-    minWidth: 18,
-    height: 18,
+    top: -6,
+    right: -5,
+    minWidth: 17,
+    height: 17,
     paddingHorizontal: 3,
     borderWidth: 2,
     borderColor: ui.ink,
@@ -246,5 +213,5 @@ const h = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { fontFamily: 'PixelifySans_700Bold', fontSize: 11, color: ui.paper },
+  badgeText: { fontFamily: 'PixelifySans_700Bold', fontSize: 10, color: ui.paper },
 })
