@@ -5,7 +5,7 @@ vehicles, workers, small icons). ChatGPT makes the big pictures below. Sarana
 generates them and drops the PNGs into the chat; Claude pixelates them
 (downscale + nearest-neighbour + game palette) so they match the sprites.
 
-## Style line (paste first in every prompt)
+## Style line (paste first in every background/scene prompt; the grid prompts below already include it)
 
 > Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean
 > 1px dark outlines, bright cheerful flat colours with simple 3-tone shading,
@@ -31,25 +31,43 @@ generates them and drops the PNGs into the chat; Claude pixelates them
 | scene_rank.png  | Refinery staff cheering and throwing hard hats in the air in front of their refinery, confetti, golden light.  |
 | scene_award.png | Year-end award ceremony on a small stage, a golden trophy shaped like an oil drop, spotlights, clapping crowd. |
 
-## Staff portraits (square 1024×1024, plain light background, head and shoulders)
+## Staff portraits — 36 people, 3 images (square 1024×1024)
 
-Two per job (one man, one woman), friendly face, looking at the viewer.
+Every image is a 4×3 grid of 12 portraits. Thai/Southeast Asian people, a mix of
+men and women and ages. Claude cuts each cell out.
 
-| job      | clothes / prop                                        |
-| -------- | ----------------------------------------------------- |
-| operator | orange coverall, yellow hard hat, radio               |
-| chemist  | white lab coat, safety goggles on forehead, test tube |
-| engineer | blue work shirt, white hard hat, wrench               |
-| safety   | hi-vis vest, red hard hat, clipboard                  |
-| manager  | shirt and tie, hard hat under the arm, tablet         |
-| director | dark suit, gold pin, confident smile                  |
+**staff_1.png** (operator + chemist)
 
-## Customers (square 1024×1024, plain light background, one character + one prop)
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×3 grid of 12 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and Southeast Asian men and women. Row order: 6 refinery operators in orange coveralls with yellow hard hats (some holding radios), then 6 chemists in white lab coats with safety goggles (some holding test tubes).
 
-| group      | prompt                                                        |
-| ---------- | ------------------------------------------------------------- |
-| gas        | Gas station owner in a cap next to a small fuel pump          |
-| air        | Airline pilot in uniform with a small plane model             |
-| shipping   | Ship captain with a captain's hat and an anchor badge         |
-| industrial | Factory buyer in a grey jacket with a box of plastic pellets  |
-| government | Road works official in a hi-vis vest beside an asphalt roller |
+**staff_2.png** (engineer + safety)
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×3 grid of 12 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and Southeast Asian men and women. Row order: 6 engineers in blue work shirts with white hard hats (some holding wrenches), then 6 safety officers in hi-vis vests with red hard hats (some holding clipboards).
+
+**staff_3.png** (manager + director)
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×3 grid of 12 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and Southeast Asian men and women. Row order: 6 managers in shirts and ties (some with a tablet or a hard hat under the arm), then 6 plant directors in dark suits with a gold pin, confident smiles.
+
+## Customers — 40 people, 5 images (square 1024×1024)
+
+One image per customer group, a 4×2 grid of 8 (one per customer in the game).
+
+**customers_gas.png**
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×2 grid of 8 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and international business people: gas station owners and attendants, caps and uniforms, some next to a small fuel pump.
+
+**customers_air.png**
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×2 grid of 8 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and international business people: airline pilots and airline fuel buyers in uniform, some holding a small plane model.
+
+**customers_shipping.png**
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×2 grid of 8 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and international business people: ship captains and shipping company buyers, captain hats, anchor badges.
+
+**customers_industrial.png**
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×2 grid of 8 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and international business people: factory buyers in grey jackets and work clothes, some holding a box of plastic pellets or a wax block.
+
+**customers_government.png**
+
+> Cute pixel art in the style of Kairosoft mobile games, chunky pixels, clean 1px dark outlines, bright cheerful flat colours with simple 3-tone shading, palette steel grey, cream, safety yellow #F2C230, orange #F08A24, red #E2483D, blue #3D8FE0, teal #2FB38E, dark ink #14110F. No text, no letters, no logos, no watermark. A 4×2 grid of 8 separate head-and-shoulders portraits on a plain light cream background, each in its own equal square cell with a thin gap, every person different (age, face, hair, body type), friendly expression, looking at the viewer. Thai and international business people: public works officials and road engineers in hi-vis vests, some beside traffic cones or an asphalt roller.
