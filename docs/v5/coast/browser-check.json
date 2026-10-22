@@ -1,0 +1,13 @@
+{
+  "viewport": "390x844 @2x",
+  "checks": [
+    "full-yard overview",
+    "headland",
+    "harbor",
+    "town",
+    "greenbelt",
+    "park",
+    "ambient and reduced-motion off"
+  ],
+  "errors": []
+}

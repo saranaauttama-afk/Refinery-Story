@@ -3,44 +3,18 @@ import { GRAPHICS } from './graphics'
 import { ownedTiles, parcelEdges } from './parcelEdges'
 import { rect, type Command } from './buildings/shapes'
 import { topdownArt } from './topdownArt'
+import { naturalCoast, onPier, sceneryPatches, crossingTiles } from './environmentLayout'
 export const LANES = {
   top: [-2.5, -1.5],
   left: [-2.5, -1.5],
   right: [34.5, 33.5],
   bottom: [26.5, 25.5],
 } as const
-export const seaTiles = Array.from({ length: 45 }, (_, i) => ({
+export { environmentProps as scenicProps } from './environmentLayout'
+export const seaTiles = Array.from({ length: 36 }, (_, i) => ({
   x: -7 + ((i * 7) % 46),
-  y: -15 + ((i * 3) % 6),
+  y: -15 + ((i * 3) % 3),
 }))
-export const scenicProps = [
-  { id: 'warehouse', x: 4, y: -6, level: 1 },
-  { id: 'warehouse', x: 15, y: -6, level: 1 },
-  { id: 'containers', x: 27, y: -5, level: 1 },
-  { id: 'crudeTank', x: 32, y: -5, level: 2 },
-  ...[-1, 4, 9, 14, 19, 25].map((y, i) => ({
-    id: i % 2 ? 'house' : 'office',
-    x: -7,
-    y,
-    level: 2,
-  })),
-  ...[1, 6, 11, 17, 22].flatMap((y, i) => [
-    { id: 'tree', x: -5, y, level: 1 },
-    { id: 'tree', x: 38, y: y + 1, level: 1 },
-    { id: 'lamp', x: 36, y, level: 1 },
-  ]),
-  ...[2, 9, 16, 23, 30].flatMap(x => [
-    { id: 'tree', x, y: 30, level: 1 },
-    { id: 'lamp', x, y: -5, level: 1 },
-  ]),
-  { id: 'utility', x: 37, y: 10, level: 1 },
-  { id: 'utility', x: 36, y: 17, level: 1 },
-  { id: 'crane', x: 8, y: -8, level: 1 },
-  { id: 'rocks', x: -5, y: -9, level: 1 },
-  { id: 'rocks', x: -4, y: -10, level: 1 },
-  { id: 'flowerbed', x: -6, y: 7, level: 1 },
-  { id: 'flowerbed', x: 37, y: 4, level: 1 },
-]
 const hash = (x: number, y: number) => ((x * 73856093) ^ (y * 19349663)) >>> 0
 export function groundCommands(
   parcels: readonly string[],
@@ -48,33 +22,45 @@ export function groundCommands(
 ): Command[] {
   const owned = ownedTiles(parcels),
     out: Command[] = []
-  const R = (x: number, y: number, w: number, h: number, c: string) => out.push(rect(x, y, w, h, c))
+  const R = (x: number, y: number, w: number, h: number, c: string) =>
+    out.push(
+      rect(
+        Math.round(x * 2) / 2,
+        Math.round(y * 2) / 2,
+        Math.round(w * 2) / 2,
+        Math.round(h * 2) / 2,
+        c,
+      ),
+    )
   for (let y = -16; y < 32; y++)
     for (let x = -8; x < 40; x++) {
       const px = x * 32,
         py = y * 32,
         n = hash(x, y),
         inYard = x >= 0 && x < 32 && y >= 0 && y < 24
-      const pier = ((x >= 8 && x < 10) || (x >= 23 && x < 25)) && y >= -11 && y < -4
+      const pier = onPier(x, y)
       const water = y < -8 && !pier,
         quay = (y >= -8 && y < -4) || pier
       const horizontal = (y >= -3 && y < -1) || (y >= 25 && y < 27)
       const vertical = ((x >= -3 && x < -1) || (x >= 33 && x < 35)) && y >= -4
       const sidewalk = y === -4 || y === 27 || ((x === -4 || x === 35) && y >= -4)
-      let c = water
-        ? GRAPHICS.sea
-        : quay
-          ? '#D8C7A1'
-          : horizontal || vertical
-            ? '#51575A'
-            : sidewalk
-              ? '#D0CDB9'
-              : inYard
-                ? owned.has(`${x},${y}`)
-                  ? '#C8C8BA'
-                  : '#B0BD88'
-                : '#8DB957'
+      let c = naturalCoast(x, y)
+        ? '#9EBE71'
+        : water
+          ? GRAPHICS.sea
+          : quay
+            ? '#D8C7A1'
+            : horizontal || vertical
+              ? '#51575A'
+              : sidewalk
+                ? '#D0CDB9'
+                : inYard
+                  ? owned.has(`${x},${y}`)
+                    ? '#C8C8BA'
+                    : '#B0BD88'
+                  : '#8DB957'
       R(px, py, 32, 32, c)
+      if (naturalCoast(x, y)) continue
       if (water) {
         if (n % 3 === 0) R(px + 5, py + 13, 12, 1, '#62ADB9')
         if (n % 5 === 0) R(px + 19, py + 24, 8, 1, '#337E9D')
@@ -94,11 +80,11 @@ export function groundCommands(
         if (x === -3 || x === 33) R(px, py, 1, 32, '#B8BFA9')
       }
       // The shoreline is an assembled edge, not a strip of water attached to a prop.
-      if (y === -9 && !pier) {
+      if (y === -9 && !pier && !naturalCoast(x, y)) {
         R(px, py + 29, 32, 3, '#91CBD0')
         R(px + 3, py + 27, 14, 2, '#B6DECC')
       }
-      if (y === -8) {
+      if (y === -8 && !naturalCoast(x, y)) {
         R(px, py, 32, 2, '#F3E5BE')
         if (x % 2 === 0) R(px + 8, py + 3, 4, 3, '#D9A541')
       }
@@ -112,6 +98,22 @@ export function groundCommands(
         R(px + 2, py + 1, 2, 6, '#7B8562')
         R(px + 1, py, 4, 2, '#E5DDBB')
       }
+    }
+  for (const patch of sceneryPatches) {
+    for (let yy = 0; yy < patch.h; yy++)
+      for (let xx = 0; xx < patch.w; xx++)
+        R(
+          (patch.x + xx) * 32,
+          (patch.y + yy) * 32,
+          Math.min(1, patch.w - xx) * 32,
+          Math.min(1, patch.h - yy) * 32,
+          patch.color,
+        )
+  }
+  for (const crossing of crossingTiles)
+    for (let i = 0; i < 6; i++) {
+      if (crossing.x === -3) R(-96, (crossing.y + i / 6) * 32, 64, 2, '#EEE9D2')
+      else R((crossing.x + i / 6) * 32, crossing.y * 32, 2, 64, '#EEE9D2')
     }
   for (const g of gates) {
     if (g.y === 0) R(g.x * 32, -32, 32, 32, '#C8C8BA')

@@ -41,6 +41,8 @@ import { groundCommands, fenceSections, scenicProps } from './scenery'
 import { normalizeAtlas } from './logicalAtlas'
 import { artDefinition } from './topdownArt'
 import { usePixelTerrain } from './pixelTerrain'
+import { drawCoastalTile } from './coastalGround'
+import { neighbourhoodPeople } from './environmentLayout'
 import { buildingAt } from '../sim/systems/yard'
 const seaColor = GRAPHICS.sea
 import {
@@ -48,6 +50,7 @@ import {
   drawTraffic,
   drawSky,
   drawSmoke,
+  drawNeighbourhood,
   drawSparkle,
   sprite,
   truckName,
@@ -350,7 +353,7 @@ export function YardCanvas({
     setOverview(true)
     overviewRef.current = true
     const all = Array.from({ length: 12 }, (_, i) => `${i % 4},${Math.floor(i / 4)}`)
-    setCamera(overviewCamera(sizeRef.current, all))
+    setCamera(overviewCamera(sizeRef.current, all, 0, 1))
   }, [landMode])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
   const worldRaw = useImage(tdAtlasSrc)
@@ -388,7 +391,9 @@ export function YardCanvas({
             a.y + a.h > y,
         )) {
           const tile = a.kind === 'rect' && a.w === TILE && a.h === TILE && terrain?.[a.color]
-          if (tile && a.kind === 'rect')
+          if (terrain && a.kind === 'rect' && a.color === '#9EBE71' && a.w === TILE && a.h === TILE)
+            drawCoastalTile(c, terrain, a.x / TILE, a.y / TILE)
+          else if (tile && a.kind === 'rect')
             c.drawImageRectOptions(
               tile,
               Skia.XYWHRect(0, 0, 64, 64),
@@ -490,11 +495,31 @@ export function YardCanvas({
     }),
   )
   const entries = [
-    ...scenicProps.map(p => ({
-      depth: p.y + artDefinition(p.id).h,
-      kind: 'scenery' as const,
-      p,
-    })),
+    ...(world && ambient
+      ? neighbourhoodPeople(visualTime).map(p => ({ depth: p.y, kind: 'neighbour' as const, p }))
+      : []),
+    ...scenicProps
+      .filter(p => {
+        const d = artDefinition(p.id),
+          im = spriteImageFor(p.id, 1)
+        if (!im) return false
+        const x = (p.x + d.w / 2) * TILE,
+          y = (p.y + d.h) * TILE,
+          z = camera.zoom
+        const left = size.w / 2 + camera.x + (x - im.ax * im.scale) * z
+        const top = camera.y + (y - im.ay * im.scale) * z
+        return (
+          left < size.w &&
+          left + im.w * im.scale * z > 0 &&
+          top < size.h &&
+          top + im.h * im.scale * z > 0
+        )
+      })
+      .map(p => ({
+        depth: p.y + artDefinition(p.id).h,
+        kind: 'scenery' as const,
+        p,
+      })),
     ...fences.map(f => ({ depth: f.depth, kind: 'fence' as const, f })),
     ...s.yard.buildings
       .filter(b => b.uid !== ghost?.uid)
@@ -575,6 +600,7 @@ export function YardCanvas({
     if (world && ambient) {
       drawSeaLife(canvas, world, visualTime)
       drawTraffic(canvas, world, visualTime)
+      drawNeighbourhood(canvas, world, visualTime)
     }
     if (ghost && ghostPath) {
       const paint = Skia.Paint()
@@ -593,7 +619,35 @@ export function YardCanvas({
         const p = entry.p,
           d = artDefinition(p.id)
         canvas.translate((p.x + d.w / 2) * TILE, (p.y + d.h) * TILE)
-        drawBuilding(canvas, loaded, p.id, p.level, '')
+        if (p.id === 'crane' && world)
+          sprite(canvas, world, `crane${ambient ? Math.floor(visualTime / 1.8) % 3 : 0}`, 0, 0)
+        else
+          drawBuilding(
+            canvas,
+            loaded,
+            p.id,
+            p.id === 'envWindsock' && ambient ? 1 + (Math.floor(visualTime * 3) % 3) : p.level,
+            '',
+          )
+        if (p.id === 'envFountain' && ambient) {
+          const paint = Skia.Paint()
+          paint.setAntiAlias(false)
+          paint.setColor(Skia.Color('#B8F4FA'))
+          const rise = 6 + Math.floor(Math.sin(visualTime * 3) * 2)
+          canvas.drawRect(Skia.XYWHRect(-0.5, -20 - rise, 1, rise), paint)
+          canvas.drawRect(Skia.XYWHRect(-2, -22 - rise, 1, 1), paint)
+          canvas.drawRect(Skia.XYWHRect(2, -20 - rise, 1, 1), paint)
+          paint.dispose()
+        }
+      } else if (entry.kind === 'neighbour') {
+        if (world)
+          sprite(
+            canvas,
+            world,
+            entry.p.sprite,
+            Math.round(entry.p.x * 64) / 2,
+            Math.round(entry.p.y * 64) / 2,
+          )
       } else if (entry.kind === 'fence') drawCommands(canvas, entry.f.commands, false)
       else if (entry.kind === 'building') {
         const target = ghost ?? s.yard.buildings.find(b => b.uid === selectedUid)
@@ -605,14 +659,14 @@ export function YardCanvas({
             img = spriteImageFor(b.defId, b.level)
           const tx = (target.x + td.w / 2) * TILE,
             ty = (target.y + td.h / 2) * TILE
-          const left = (b.x + d.w / 2) * TILE - (img?.ax ?? (d.w * TILE) / 2)
+          const left = (b.x + d.w / 2) * TILE - (img ? img.ax * img.scale : (d.w * TILE) / 2)
           const bottom = (b.y + d.h) * TILE,
-            top = bottom - (img?.ay ?? d.h * TILE)
+            top = bottom - (img ? img.ay * img.scale : d.h * TILE)
           faded =
             b.uid !== selectedUid &&
             frontDepth(b) > target.y + td.h &&
             tx >= left &&
-            tx < left + (img?.w ?? d.w * TILE) &&
+            tx < left + (img ? img.w * img.scale : d.w * TILE) &&
             ty > top &&
             ty < bottom
         }
@@ -769,6 +823,11 @@ export function YardCanvas({
     fences,
     selectedUid,
     truckNearGate,
+    camera.x,
+    camera.y,
+    camera.zoom,
+    size.w,
+    size.h,
   ])
   return (
     <View

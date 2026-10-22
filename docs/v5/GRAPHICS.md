@@ -1,8 +1,10 @@
 # V5 graphics — generated pixel artwork
 
-Branch: `topdown/v5`. App **4.1.9 / versionCode 51**.
+Branch: `topdown/v5`. App **4.1.10 / versionCode 52**.
 
 The active art specification, complete source list and generation/extraction workflow are in [pixel/README.md](pixel/README.md).
+
+The surrounding district, curved coast, town, port, green belt and park are documented in [COASTAL-SCENERY.md](COASTAL-SCENERY.md). This pass adds 36 raster sprite frames from four generated sheets, along with local ambient animation and broader scenery framing in overview.
 
 This release replaces the geometric artwork introduced in 4.1.8 with image-generated pixel sprites for all fifteen buildings and their five levels, west-facing gates, scenery and decorations. Six generated ground textures share a **64 art pixels per tile** density with the buildings and moving actors. All art is rendered with nearest-neighbour sampling.
 

@@ -29,12 +29,25 @@ export function playCamera(v: Viewport, buildings: readonly { x: number; y: numb
   const y = ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : 3
   return focusCamera({ x: 0, y: 0, zoom: GRAPHICS.defaultZoom }, x, y, v)
 }
-export function overviewCamera(v: Viewport, parcels: readonly string[], extraTop = 0): Camera {
+export function overviewCamera(
+  v: Viewport,
+  parcels: readonly string[],
+  extraTop = 0,
+  marginTiles = GRAPHICS.overviewMargin,
+): Camera {
   const points = parcels.map(p => p.split(',').map(Number))
-  const left = Math.min(...points.map(p => p[0])) * YARD.parcel * 32 - 32
-  const right = (Math.max(...points.map(p => p[0])) + 1) * YARD.parcel * 32 + 32
-  const top = Math.min(-32, extraTop)
-  const bottom = (Math.max(...points.map(p => p[1])) + 1) * YARD.parcel * 32 + 32
+  const margin = marginTiles * 32,
+    world = GRAPHICS.world
+  const left = Math.max(world.x, Math.min(...points.map(p => p[0])) * YARD.parcel * 32 - margin)
+  const right = Math.min(
+    world.x + world.width,
+    (Math.max(...points.map(p => p[0])) + 1) * YARD.parcel * 32 + margin,
+  )
+  const top = Math.max(world.y, Math.min(-margin, extraTop))
+  const bottom = Math.min(
+    world.y + world.height,
+    (Math.max(...points.map(p => p[1])) + 1) * YARD.parcel * 32 + margin,
+  )
   const zoom = Math.min((v.w - 24) / (right - left), (v.h - 24) / (bottom - top), 1)
   return clampCamera(
     { x: (-(left + right) / 2) * zoom, y: v.h / 2 - ((top + bottom) / 2) * zoom, zoom },

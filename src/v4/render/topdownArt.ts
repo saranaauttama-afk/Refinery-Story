@@ -3,7 +3,9 @@
 import { buildingDef } from '../data/buildings'
 import { rect, poly, type Command } from './buildings/shapes'
 import { scenicSizes } from './graphics'
-export const artDefinition = (id: string) => scenicSizes[id] ?? buildingDef(id)
+import { environmentSizes } from './environmentCatalog'
+export const artDefinition = (id: string) =>
+  scenicSizes[id] ?? environmentSizes[id] ?? buildingDef(id)
 export const artPalette = {
   ink: '#22313D',
   steel: '#B4CDD0',

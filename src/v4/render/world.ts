@@ -12,6 +12,7 @@ import {
 import { logicalAtlas, ATLAS_DENSITY } from './logicalAtlas'
 import { LANES, seaTiles } from './scenery'
 import { TILE } from './iso'
+import { coastalShoreY } from './environmentLayout'
 
 type Pt = { x: number; y: number }
 const paint = () => {
@@ -129,6 +130,27 @@ export function drawSeaLife(c: SkCanvas, img: SkImage, t: number) {
       k = jf / 0.16
     sprite(c, img, 'fish0', g.x + k * 14, g.y - Math.sin(k * Math.PI) * 16, 0.7)
   }
+}
+
+/** Small shore foam accents; residents are depth-sorted by the yard renderer. */
+export function drawNeighbourhood(c: SkCanvas, _img: SkImage, t: number) {
+  const foam = paint()
+  foam.setColor(Skia.Color('#EBFFF5'))
+  for (let i = 0; i < 18; i++) {
+    const x = i < 13 ? -7.8 + i * 0.95 : 35.5 + (i - 13) * 0.8
+    const phase = Math.sin(t * 1.6 + i * 2.4)
+    foam.setAlphaf(Math.max(0, phase) * 0.4)
+    c.drawRect(
+      Skia.XYWHRect(
+        Math.round(x * TILE),
+        Math.round((coastalShoreY(x) - 0.15) * TILE),
+        3 + (i % 4),
+        0.5,
+      ),
+      foam,
+    )
+  }
+  foam.dispose()
 }
 
 /** A closed loop of lane points (tiles); returns the position and heading at distance d. */

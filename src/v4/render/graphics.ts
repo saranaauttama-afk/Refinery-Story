@@ -4,6 +4,7 @@ export const GRAPHICS = {
   artDensity: 2,
   playZooms: [1, 1.5, 2] as readonly number[],
   defaultZoom: 1.5,
+  overviewMargin: 8,
   world: { x: -8 * 32, y: -16 * 32, width: 48 * 32, height: 48 * 32 },
   chunk: 8 * 32,
   margin: 4,
