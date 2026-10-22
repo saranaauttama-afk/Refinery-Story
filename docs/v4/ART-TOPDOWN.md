@@ -29,32 +29,19 @@ Game footprints (w × h tiles): gate 1×2, loading 2×2, crudeTank 2×2, tank 1�
 blend 2×2, pipe 1×1, hydro 2×2, lab 1×1, reformer 2×3, cracker 3×3, control 2×1,
 canteen 2×1, flare 1×1, tower 3×3, every decoration 1×1.
 
-## 3. Map layout (48 × 64 tiles = 1536 × 2048 px)
+## 3. World map — one picture
 
-The world is two pictures stacked: **top panel** and **bottom panel**, each
-1536 × 1024 px landscape. Both keep the 32 px tile scale.
+The whole world is **one image** (`art-src/gpt/topdown/map_v1.png`, 2560 × 2816, drawn
+at 2 image px per art pixel). `scripts/art/td_map.py` finds the flat grey yard block,
+writes `assets/v4/td/map.png` (half size, drawn back at 2×) and `src/v4/render/tdMap.ts`
+(where the yard's tile 0,0 sits, plus open-water tiles for sea glints).
 
-```
-x:  0        192                               1344      1536
-y 0 ┌──────────────────── TOP PANEL ─────────────────────────┐
-    │ sea, cliffs, islands, lighthouse                         │
-    │ port quay with piers, ships, cranes, containers          │
-576 │ side strip │   YARD BLOCK (empty)                │ side  │
-    │ (town /    │   36 × 14 tiles, plain grey          │ strip │
-1024└────────────┴──────────────────────────────────────┴───────┘  ← seam (code road)
-    ┌──────────── BOTTOM PANEL (y 0 here = 1024 on the map) ────┐
-    │ side strip │   YARD BLOCK continues (empty)       │ side  │
-448 │            │   36 × 14 tiles                       │ strip │
-    │ river, bridges, warehouses, forest, farmland           │
-1024└──────────────────────────────────────────────────────────┘
-```
-
-- **Yard block** = the playable yard 32 × 24 tiles + a 2-tile ring road around it =
-  36 × 28 tiles (1152 × 896 px), from x 192 to 1344. The game draws the yard, the ring
-  road and the grid itself, so the panels leave that area as plain flat grey.
-- **Seam** = the line where the panels meet. The game draws a road across the side
-  strips exactly there, so nothing important may cross a panel edge.
-- Side strips are 6 tiles (192 px) wide: houses, trees, a railway, a canal.
+- **Yard block** = flat grey `#CECFCF`, exactly **32 × 24 tiles = 1024 × 768 px**, no
+  marks inside it. That is the buildable yard: 4 × 3 parcels of 8 × 8 tiles.
+- Around it: a ~2-tile ring road with a fence; the entrance gap faces the port at the top.
+- A replacement map must keep the yard block the same size; roads and lanes in
+  `world.ts` (TOP / LEFT / RIGHT / BOTTOM, BERTH) are measured from the current picture
+  and need re-measuring if the layout changes.
 
 ## 4. Sprite sheets (buildings, decorations, vehicles)
 
@@ -70,5 +57,5 @@ y 0 ┌──────────────────── TOP PANEL �
 
 ## 5. What the game draws in code (do not paint these)
 
-Yard concrete and grid, the ring road and seam road, placement highlights, shadows
+Yard grid, the veil over land not bought yet, placement highlights, shadows
 under placed buildings, smoke, sparkles, moving cars, boats, fish, birds and clouds.

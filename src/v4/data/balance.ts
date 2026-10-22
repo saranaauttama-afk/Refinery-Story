@@ -17,7 +17,9 @@ export const YEAR = MONTH * B.monthsPerYear
 export const YARD = {
   startSize: 16,
   parcel: 8,
-  maxSize: 40,
+  // The yard block on the world map: 4 × 3 parcels.
+  maxW: 32,
+  maxH: 24,
   landCost: 20000,
   // Each parcel past the first four costs ×landGrowth more.
   landGrowth: 1.6,

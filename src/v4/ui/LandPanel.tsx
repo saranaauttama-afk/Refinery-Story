@@ -4,13 +4,14 @@ import { useGame } from '../store/useGame'
 import { buyLand } from '../sim/actions'
 import { YARD } from '../data/balance'
 import { landPrice } from '../sim/systems/projects'
+import { parcelCap } from '../sim/systems/yard'
 import { styles } from './controls'
 import { Card, Row, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
 import type { GameState } from '../sim/types'
 
-const GRID = YARD.maxSize / YARD.parcel
-const parcelCap = (s: GameState) => (s.rank >= 8 ? 25 : s.rank >= 6 ? 16 : s.rank >= 4 ? 9 : 5)
+const COLS = YARD.maxW / YARD.parcel,
+  ROWS = YARD.maxH / YARD.parcel
 
 export function LandPanel() {
   const { state: s, dispatch } = useGame()
@@ -52,9 +53,9 @@ export function LandPanel() {
           borderRadius: 6,
         }}
       >
-        {Array.from({ length: GRID }, (_, y) => (
+        {Array.from({ length: ROWS }, (_, y) => (
           <View key={y} style={{ flexDirection: 'row', gap: 4 }}>
-            {Array.from({ length: GRID }, (_, x) => {
+            {Array.from({ length: COLS }, (_, x) => {
               const mine = owned(x, y)
               const open = buyable(x, y)
               const on = picked?.x === x && picked?.y === y

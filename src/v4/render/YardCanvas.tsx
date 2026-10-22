@@ -27,7 +27,8 @@ import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
 import { tdAtlasSrc } from './tdAtlas'
-const seaColor = '#119BF1'
+import { tdMap, tdMapSrc } from './tdMap'
+const seaColor = '#007CE2'
 import {
   drawWorld,
   drawSeaLife,
@@ -40,7 +41,7 @@ import {
   approachTile,
 } from './world'
 import { customers } from '../data/customers'
-const bounds = { x: -2400, y: -900, width: 4800, height: 3000 }
+const bounds = { x: tdMap.x - 400, y: tdMap.y - 400, width: tdMap.w + 800, height: tdMap.h + 800 }
 // Tile just in front of a building's bottom corner, where its staff stand.
 const frontTile = (b: { x: number; y: number; defId: string }) => ({
   x: b.x + buildingDef(b.defId).w / 2,
@@ -57,7 +58,7 @@ const truckAccent = (customerId: string | null) => {
   return (base && productAccent[base]) || '#E2483D'
 }
 // Zoom steps for the square top-down grid (1 = 32 pt per tile, about the mockup's scale).
-export const ZOOMS = [0.75, 1, 1.5, 2, 3]
+export const ZOOMS = [0.35, 0.5, 0.75, 1, 1.5, 2, 3]
 const MIN_ZOOM = ZOOMS[0],
   MAX_ZOOM = ZOOMS[ZOOMS.length - 1]
 // Frame the owned yard plus the road above it, and the tops of tall buildings.
@@ -85,6 +86,19 @@ function yardFrame(s: GameState, width: number, height: number) {
   const zoom = Math.max(MIN_ZOOM, Math.min(2, fit))
   return { x: (-(minX + maxX) / 2) * zoom, y: height / 2 - ((minY + maxY) / 2) * zoom, zoom }
 }
+/** Keep the view inside the world map (centred on it when zoomed out past its size). */
+function clampCamera(c: { x: number; y: number; zoom: number }, w: number, h: number) {
+  const fit = (pos: number, view: number, start: number, len: number, offset: number) => {
+    const lo = view - offset - (start + len) * c.zoom,
+      hi = -offset - start * c.zoom
+    return lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, pos))
+  }
+  return {
+    ...c,
+    x: fit(c.x, w, tdMap.x, tdMap.w, w / 2),
+    y: fit(c.y, h, tdMap.y, tdMap.h, 0),
+  }
+}
 export function YardCanvas({
   state: s,
   ghost,
@@ -98,9 +112,20 @@ export function YardCanvas({
   lift?: number
 }) {
   const [size, setSize] = useState({ w: 360, h: 500 }),
-    [camera, setCamera] = useState({ x: 0, y: 60, zoom: 1 }),
+    [camera, setCameraRaw] = useState({ x: 0, y: 60, zoom: 1 }),
     [frame, setFrame] = useState(0),
     [reduced, setReduced] = useState(false)
+  type Cam = { x: number; y: number; zoom: number }
+  const sizeRef = useRef(size)
+  sizeRef.current = size
+  const setCamera = (next: Cam | ((c: Cam) => Cam)) =>
+    setCameraRaw(c =>
+      clampCamera(
+        typeof next === 'function' ? next(c) : next,
+        sizeRef.current.w,
+        sizeRef.current.h,
+      ),
+    )
   const liftY = -Math.round((lift * size.h) / 2)
   const centered = useRef(false)
   const cameraRef = useRef(camera),
@@ -171,16 +196,16 @@ export function YardCanvas({
     setCamera(c => ({ ...c, x: -p.x * c.zoom, y: size.h / 2 - p.y * c.zoom }))
   }, [ghostKey, size.h])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
-  const gateKey = gate ? `${gate.x},${gate.y}` : ''
-  const world = useImage(tdAtlasSrc)
+  const world = useImage(tdAtlasSrc),
+    map = useImage(tdMapSrc)
   const ambient = !reduced && s.settings.ambient !== false
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
       canvas = recorder.beginRecording(bounds)
-    if (world) drawWorld(canvas, world, s.yard.ownedParcels, gate ?? undefined)
-    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!world), false)
+    if (map) drawWorld(canvas, map, s.yard.ownedParcels)
+    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!map), false)
     return recorder.finishRecordingAsPicture()
-  }, [s.yard.ownedParcels, gateKey, !!ghost, world])
+  }, [s.yard.ownedParcels, !!ghost, map])
   const truckPositions = new Map(
     s.trucks.map(t => {
       const g = gate ?? undefined
@@ -281,7 +306,7 @@ export function YardCanvas({
       canvas = recorder.beginRecording(bounds)
     if (world && ambient) {
       drawSeaLife(canvas, world, visualTime)
-      drawTraffic(canvas, world, visualTime, gate ?? undefined)
+      drawTraffic(canvas, world, visualTime)
     }
     if (ghost && ghostPath) {
       const paint = Skia.Paint()
@@ -413,6 +438,7 @@ export function YardCanvas({
         const w = e.nativeEvent.layout.width,
           h = e.nativeEvent.layout.height
         setSize({ w, h })
+        sizeRef.current = { w, h }
         if (!centered.current && h > 0) {
           // Open with the owned land in the middle of the view instead of empty sky.
           centered.current = true

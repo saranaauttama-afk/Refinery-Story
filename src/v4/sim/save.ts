@@ -1,5 +1,6 @@
 import type { GameState } from './types'
 import { buildings } from '../data/buildings'
+import { YARD } from '../data/balance'
 import { bases } from '../data/bases'
 import { additives } from '../data/additives'
 export const serialize = (s: GameState): string => JSON.stringify(s)
@@ -178,5 +179,32 @@ export function deserialize(raw: string): GameState {
     !Number.isFinite(s.market.nextChangeTick)
   )
     throw new Error('Invalid buffers in v4 save')
-  return s as unknown as GameState
+  return fitYard(s as unknown as GameState)
+}
+/** Older saves had a 40 × 40 yard: drop parcels outside the 32 × 24 block and put any
+ *  building standing outside it back into storage (placing it again is free). */
+function fitYard(s: GameState): GameState {
+  const inside = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < YARD.maxW / YARD.parcel && y < YARD.maxH / YARD.parcel
+  const parcels = s.yard.ownedParcels.filter(k => {
+    const [x, y] = k.split(',').map(Number)
+    return inside(x, y)
+  })
+  if (parcels.length === s.yard.ownedParcels.length) return s
+  const fits = (b: GameState['yard']['buildings'][number]) => {
+    const d = buildings.find(x => x.id === b.defId)!
+    return b.x + d.w <= YARD.maxW && b.y + d.h <= YARD.maxH
+  }
+  const carried = { ...s.carriedBuildings }
+  for (const b of s.yard.buildings) if (!fits(b)) carried[b.defId] = (carried[b.defId] ?? 0) + 1
+  return {
+    ...s,
+    carriedBuildings: carried,
+    yard: {
+      ...s.yard,
+      size: Math.min(s.yard.size, YARD.maxW),
+      ownedParcels: parcels.length ? parcels : ['0,0'],
+      buildings: s.yard.buildings.filter(fits),
+    },
+  }
 }

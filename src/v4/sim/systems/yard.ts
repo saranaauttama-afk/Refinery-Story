@@ -16,8 +16,8 @@ export function canPlace(s: GameState, id: string, x: number, y: number, ignore?
     !Number.isInteger(y) ||
     x < 0 ||
     y < 0 ||
-    x + d.w > YARD.maxSize ||
-    y + d.h > YARD.maxSize
+    x + d.w > YARD.maxW ||
+    y + d.h > YARD.maxH
   )
     return false
   // Trucks drive in from outside the yard, so the gate must sit on the outer edge.
@@ -127,6 +127,8 @@ export function upgrade(s: GameState, uid: string): GameState {
     },
   })
 }
+/** Parcels a rank may own; the whole yard (4 × 3) opens at rank 6. */
+export const parcelCap = (s: GameState) => (s.rank >= 6 ? 12 : s.rank >= 4 ? 9 : 5)
 export function buyLand(s: GameState, px: number, py: number): GameState {
   const key = `${px},${py}`
   const adjacent = [
@@ -140,13 +142,13 @@ export function buyLand(s: GameState, px: number, py: number): GameState {
     !Number.isInteger(py) ||
     px < 0 ||
     py < 0 ||
-    px >= YARD.maxSize / YARD.parcel ||
-    py >= YARD.maxSize / YARD.parcel ||
+    px >= YARD.maxW / YARD.parcel ||
+    py >= YARD.maxH / YARD.parcel ||
     s.yard.ownedParcels.includes(key) ||
     !adjacent ||
     s.money < landPrice(s) ||
     s.rank < 2 ||
-    s.yard.ownedParcels.length >= (s.rank >= 8 ? 25 : s.rank >= 6 ? 16 : s.rank >= 4 ? 9 : 5)
+    s.yard.ownedParcels.length >= parcelCap(s)
   )
     return s
   return refreshCombos({
