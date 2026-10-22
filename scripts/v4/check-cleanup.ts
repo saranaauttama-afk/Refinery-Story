@@ -7,7 +7,7 @@ import { tankCapacity } from '../../src/v4/sim/systems/blending'
 import { customers } from '../../src/v4/data/customers'
 import { bases } from '../../src/v4/data/bases'
 import { hints } from '../../src/v4/data/onboarding'
-import { SALES, BASE_PRICES } from '../../src/v4/data/balance'
+import { SALES, BASE_PRICES, GRADES } from '../../src/v4/data/balance'
 import type { Lot } from '../../src/v4/sim/types'
 import { tick } from '../../src/v4/sim/tick'
 import { starterLayout } from '../../src/v4/data/starter'
@@ -53,8 +53,9 @@ for (const b of bases)
 const lot = (uid: string): Lot => ({
   uid,
   base: 'gasoline',
-  additive: null,
-  grade: 'C',
+  formula: null,
+  secret: null,
+  grade: 'D',
   score: 50,
   stats: { purity: 10, yield: 10, stability: 10, eco: 10 },
   units: 300,
@@ -64,7 +65,11 @@ assert.equal(sellTo(roomy, 'gas0').money, roomy.money)
 const lots = Math.ceil((tankCapacity(starter) * SALES.clearanceFill) / 300)
 const full = { ...starter, tanks: Array.from({ length: lots }, (_, i) => lot(`c${i}`)) }
 const cleared = sellTo(full, 'gas0')
-assert.equal(cleared.money, full.money + BASE_PRICES.gasoline * 0.8 * 300 * SALES.clearancePrice)
+assert.equal(
+  cleared.money,
+  full.money +
+    BASE_PRICES.gasoline * GRADES.find(g => g.id === 'D')!.price * 300 * SALES.clearancePrice,
+)
 assert.equal(cleared.customers.gas0.hearts, 0)
 assert.equal(cleared.fame, full.fame)
 

@@ -1,7 +1,7 @@
 import { SALES, PRODUCTION as P } from '../../data/balance'
 import { blendStations, recipeOf, tankCapacity, tankUnits } from './blending'
 import { bases } from '../../data/bases'
-import { labs, labJob } from './research'
+import { labs, labJob, labRole } from './research'
 import { trending } from './market'
 import { wears, repairing, conditionOf } from './plant'
 import { WEAR } from '../../data/balance'
@@ -53,20 +53,29 @@ export function yardAlerts(s: GameState): Alert[] {
       en: `${worn.length} plant${worn.length > 1 ? 's' : ''} worn down: overhaul to restore output`,
       th: `เครื่องเสื่อม ${worn.length} ตัว ซ่อมใหญ่เพื่อให้ผลิตเต็มที่`,
     })
-  const idleLabs = labs(s).filter(l => !labJob(s, l.uid))
-  if (idleLabs.length && s.unlockedAdditives.length)
+  // A lab is worth nudging when it is idle and has something to work with.
+  const idleLabs = labs(s).filter(
+    l =>
+      !labJob(s, l.uid) &&
+      (labRole(l) === 'catalyst' ? s.unlockedAdditives.length > 0 : s.formulaLab.stock.length > 0),
+  )
+  if (idleLabs.length)
     out.push({
-      id: `lab:${idleLabs.map(l => l.uid).join(',')}:${s.knownRecipes.length}`,
+      id: `lab:${idleLabs.map(l => l.uid).join(',')}:${s.formulaLab.formulas.length}:${s.formulaLab.stock.length}`,
       tab: 'lab',
       target: idleLabs[0].uid,
       en:
         idleLabs.length > 1
-          ? `${idleLabs.length} labs idle: start researching recipes`
-          : 'Lab is idle: start researching a recipe',
+          ? `${idleLabs.length} labs idle: research catalysts or mix a formula`
+          : labRole(idleLabs[0]) === 'catalyst'
+            ? 'Catalyst Lab is idle: research a catalyst'
+            : 'Formula Lab is idle: mix a formula',
       th:
         idleLabs.length > 1
-          ? `ห้องทดลองว่าง ${idleLabs.length} ห้อง เริ่มวิจัยสูตรใหม่ได้`
-          : 'ห้องทดลองว่าง เริ่มวิจัยสูตรใหม่ได้',
+          ? `ห้องแล็บว่าง ${idleLabs.length} ห้อง วิจัยสารเร่งหรือผสมสูตรได้`
+          : labRole(idleLabs[0]) === 'catalyst'
+            ? 'แล็บสารเร่งว่าง เริ่มวิจัยสารเร่งได้'
+            : 'แล็บผสมสูตรว่าง ผสมสูตรใหม่ได้',
     })
   if (s.trend.base && trending(s, s.trend.base)) {
     const name = bases.find(b => b.id === s.trend.base)!.name

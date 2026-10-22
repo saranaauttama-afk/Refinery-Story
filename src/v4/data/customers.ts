@@ -27,7 +27,7 @@ export const customers: CustomerDef[] = groups.flatMap(g =>
         name: { en: `${g.en} ${i + 1}`, th: `${g.th} ${i + 1}` },
         group: g.id,
         base: g.bases[i % g.bases.length],
-        minGrade: i < C.lowerGradeBuyers ? 'B' : 'A',
+        minGrade: i < C.lowerGradeBuyers ? 'C' : 'B',
         gift:
           i % 3 === 0
             ? { kind: 'additive', id: 'dye' as AdditiveId }

@@ -1,7 +1,7 @@
 import { PROGRESSION as P } from '../../data/balance'
 import { hasStimulus } from './investments'
 import { getModifiers } from './combos'
-import { GRADES, SALES as C, CUSTOMER_BALANCE, B } from '../../data/balance'
+import { GRADES, SALES as C, CUSTOMER_BALANCE, B, FORMULA_LAB } from '../../data/balance'
 import { baseDef } from '../../data/bases'
 import { customers, type CustomerDef } from '../../data/customers'
 import type { GameState, Grade, Lot, Truck } from '../types'
@@ -22,9 +22,13 @@ export const marketMultiplier = (s: GameState) =>
     : s.market.phase === 'bust'
       ? 1 - P.marketBonus * (hasStimulus(s) ? P.stimulus : 1)
       : 1
-export const salePrice = (s: GameState, l: Pick<Lot, 'base' | 'grade'>) =>
+export const salePrice = (
+  s: GameState,
+  l: Pick<Lot, 'base' | 'grade'> & { secret?: string | null },
+) =>
   baseDef(l.base).price *
   GRADES.find(g => g.id === l.grade)!.price *
+  (l.secret ? FORMULA_LAB.secretPrice : 1) *
   marketMultiplier(s) *
   (1 + getModifiers(s).price) *
   demandFactor(s, l.base) *

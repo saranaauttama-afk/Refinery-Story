@@ -1,13 +1,18 @@
 import { salePrice } from '../../src/v4/sim/systems/customers'
-import { gradeFor } from '../../src/v4/sim/systems/blending'
 import {
-  recipeKnown,
   labs,
   labJob,
-  researchCandidates,
-  researchCost,
-  startResearch,
+  labRole,
+  setLabRole,
+  catalystBlock,
+  startCatalyst,
+  startMix,
+  labMixBlock,
+  gameYear,
+  labLevel,
+  type MixRequest,
 } from '../../src/v4/sim/systems/research'
+import { mixOdds, slotsFor, gradeIndex, stockOf } from '../../src/v4/sim/systems/formulaLab'
 import {
   wears,
   conditionOf,
@@ -20,22 +25,22 @@ import { projectCost, buyProject } from '../../src/v4/sim/systems/projects'
 import { createNewGame } from '../../src/v4/sim/state'
 import { tick } from '../../src/v4/sim/tick'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
-import { place, canPlace, upgrade } from '../../src/v4/sim/systems/yard'
+import { place, canPlace, upgrade, upgradeCost } from '../../src/v4/sim/systems/yard'
 import { recruit, hire, assign, train, levelUp } from '../../src/v4/sim/systems/staff'
 import { invest, baseAvailable } from '../../src/v4/sim/systems/investments'
 import {
   selectBlend,
-  predictedScore,
   blendStations,
   recipeOf,
   activeRecipes,
+  recipeGrade,
 } from '../../src/v4/sim/systems/blending'
 import { acceptContract, deliverContract } from '../../src/v4/sim/systems/contracts'
 import { bases } from '../../src/v4/data/bases'
 import { hiring, trainings } from '../../src/v4/data/staff'
 import { investments } from '../../src/v4/data/investments'
-import { B, MONTH, YEAR } from '../../src/v4/data/balance'
-import type { GameState } from '../../src/v4/sim/types'
+import { B, MONTH, YEAR, FORMULA_LAB } from '../../src/v4/data/balance'
+import type { GameState, Recipe } from '../../src/v4/sim/types'
 import { random } from '../../src/v4/sim/rng'
 
 // Each seed plays with its own style so balance is not tuned to one fixed bot.
@@ -101,10 +106,20 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
     buildOnce('cracker', 300000)
   }
   const lines = year >= 7 ? 3 : year >= 4.6 ? 2 : 1
-  // More labs as the refinery grows, so research keeps pace.
-  const wantLabs = year >= 7 ? 3 : year >= 4 ? 2 : 1
-  if (labs(s).length && labs(s).length < wantLabs && s.money > 100000 + reserve)
+  // A second lab soon after the first (one researches catalysts, one mixes), a third later.
+  const wantLabs = year >= 7 ? 3 : 2
+  if (
+    labs(s).length &&
+    labs(s).length < wantLabs &&
+    s.money > (year >= 7 ? 100000 : 30000) + reserve
+  )
     s = buildFirstFree(s, 'lab')
+  // Better labs mean better catalysts: upgrade them once the cash is clearly spare.
+  if (year >= 1.5 && s.tick % MONTH === 0)
+    for (const lab of labs(s)) if (s.money > upgradeCost(lab) * 4 + reserve) s = upgrade(s, lab.uid)
+  const allLabs = labs(s)
+  if (allLabs.length >= 2 && !allLabs.some(l => labRole(l) === 'formula'))
+    s = setLabRole(s, allLabs[1].uid, 'formula')
   if (s.money > 500000 + reserve)
     for (const id of ['crudeTank', 'cdu', 'hydro', 'tank', 'blend'])
       if (s.yard.buildings.filter(b => b.defId === id).length < lines) s = buildFirstFree(s, id)
@@ -170,15 +185,27 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
       (!['jet'].includes(b.id) || s.investments.airport > 0) &&
       (!['wax', 'pellet'].includes(b.id) || s.investments.industrial > 0),
   )
-  // Best additive for each available base, then the bases ranked by sale value.
-  type Pick = { base: typeof s.blend.base; additive: typeof s.blend.additive; value: number }
+  // Best recipe for each available base (a formula with catalysts in stock, else plain),
+  // then the bases ranked by sale value.
+  type Pick = { recipe: Recipe; value: number }
+  const usable = (r: Recipe) => {
+    const f = s.formulaLab.formulas.find(x => x.key === r.formula)
+    return !f || f.catalysts.every(a => stockOf(s.formulaLab, a) > 0)
+  }
+  const valueOf = (r: Recipe) => {
+    const f = s.formulaLab.formulas.find(x => x.key === r.formula)
+    return salePrice(s, { base: r.base, grade: recipeGrade(s, r), secret: f?.secret ?? null })
+  }
+  const recipesFor = (base: Recipe['base']): Recipe[] => [
+    { base, formula: null },
+    ...s.formulaLab.formulas.filter(f => f.base === base).map(f => ({ base, formula: f.key })),
+  ]
   const ranked: Pick[] = options
     .map(b => {
       let best: Pick | undefined
-      for (const additive of [null, ...s.unlockedAdditives].filter(a => recipeKnown(s, b.id, a))) {
-        const score = predictedScore(s, b.id, additive)
-        const value = salePrice(s, { base: b.id, grade: gradeFor(score, s.rank) })
-        if (!best || value > best.value) best = { base: b.id, additive, value }
+      for (const recipe of recipesFor(b.id).filter(usable)) {
+        const value = valueOf(recipe)
+        if (!best || value > best.value) best = { recipe, value }
       }
       return best!
     })
@@ -189,38 +216,92 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
   const reserved: Record<string, number> = {}
   if (ranked.length)
     stations.forEach(st => {
-      let pick = ranked.find(r => s.baseStock[r.base] - (reserved[r.base] ?? 0) >= 600) ?? ranked[0]
-      reserved[pick.base] = (reserved[pick.base] ?? 0) + 600
+      let pick =
+        ranked.find(r => s.baseStock[r.recipe.base] - (reserved[r.recipe.base] ?? 0) >= 600) ??
+        ranked[0]
+      reserved[pick.recipe.base] = (reserved[pick.recipe.base] ?? 0) + 600
       if (roll(bot) < bot.explore) {
         // Curious player: try something else this week.
         const base = options[Math.floor(roll(bot) * options.length)]
-        const additives = [null, ...s.unlockedAdditives].filter(a => recipeKnown(s, base.id, a))
-        pick = {
-          base: base.id,
-          additive: additives[Math.floor(roll(bot) * additives.length)],
-          value: 0,
-        }
+        const all = recipesFor(base.id)
+        pick = { recipe: all[Math.floor(roll(bot) * all.length)], value: 0 }
       }
       const cur = recipeOf(s, st)
-      if (cur.base !== pick.base || cur.additive !== pick.additive)
-        s = selectBlend(s, pick.base, pick.additive, st.uid)
+      if (cur.base !== pick.recipe.base || cur.formula !== pick.recipe.formula)
+        s = selectBlend(s, pick.recipe.base, pick.recipe.formula, st.uid)
     })
-  // Keep every lab researching: the best-selling base with pairs still unknown first.
+  // Keep catalyst labs researching, and formula labs mixing whatever looks most promising.
   for (const lab of labs(s))
     if (!labJob(s, lab.uid)) {
-      const target = [...ranked.map(r => r.base), ...options.map(o => o.id)].find(
-        b => researchCandidates(s, b).length,
-      )
-      if (target && s.money > researchCost(s, target).money + reserve)
-        s = startResearch(s, lab.uid, target)
+      if (labRole(lab) === 'catalyst') {
+        if (!catalystBlock(s, lab.uid) && s.money > FORMULA_LAB.catalyst.money + reserve)
+          s = startCatalyst(s, lab.uid)
+      } else if (s.money > FORMULA_LAB.mix.money + reserve) {
+        const mix = bestMix(
+          s,
+          lab,
+          ranked.map(r => r.recipe.base),
+        )
+        if (mix) s = startMix(s, lab.uid, mix)
+      }
     }
   // Advertise the best product once buyers tire of it.
-  const top = ranked[0]?.base
+  const top = ranked[0]?.recipe.base
   if (top && demandOf(s, top) < 0.75 && s.money > adCost(s) * 10 + reserve) s = advertise(s, top)
   const mixing = new Set(activeRecipes(s).map(r => r.base))
   for (const c of s.contracts.offers)
     if (mixing.has(c.base) && s.contracts.active.length < 3) s = acceptContract(s, c.uid)
   return s
+}
+function combos<T>(xs: T[], k: number): T[][] {
+  if (k === 0) return [[]]
+  return xs.flatMap((x, i) => combos(xs.slice(i + 1), k - 1).map(c => [x, ...c]))
+}
+/** Greedy player: the mix whose expected grade beats the current best formula of a base most. */
+function bestMix(
+  s: GameState,
+  lab: GameState['yard']['buildings'][number],
+  bases: Recipe['base'][],
+): MixRequest | null {
+  const year = gameYear(s),
+    level = labLevel(s, lab)
+  const top = new Map<string, GameState['formulaLab']['stock'][number]>()
+  for (const c of s.formulaLab.stock)
+    if (
+      c.units >= FORMULA_LAB.mix.unitsPerSlot &&
+      gradeIndex(c.grade) >
+        gradeIndex(top.get(c.additive)?.grade ?? 'D') - (top.has(c.additive) ? 0 : 1)
+    )
+      top.set(c.additive, c)
+  const lots = [...top.values()]
+    .sort((a, b) => gradeIndex(b.grade) - gradeIndex(a.grade))
+    .slice(0, 6)
+  let best: { mix: MixRequest; gain: number } | null = null
+  for (const base of bases.slice(0, 3)) {
+    const formulas = s.formulaLab.formulas.filter(f => f.base === base)
+    const current = Math.max(gradeIndex('C'), ...formulas.map(f => gradeIndex(f.grade)))
+    const starts = [
+      undefined,
+      ...formulas
+        .sort((a, b) => gradeIndex(b.grade) - gradeIndex(a.grade))
+        .slice(0, 2)
+        .map(f => f.key),
+    ]
+    for (const from of starts)
+      for (let k = 1; k <= slotsFor(year); k++)
+        for (const c of combos(lots, k)) {
+          const mix: MixRequest = {
+            base,
+            from,
+            picks: c.map(x => ({ additive: x.additive, grade: x.grade })),
+          }
+          if (labMixBlock(s, lab.uid, mix)) continue
+          const o = mixOdds({ ...s.formulaLab, rng: s.rng }, { ...mix, year, level })
+          const gain = Math.min(o.center, o.cap) - current
+          if (gain > 0.2 && (!best || gain > best.gain)) best = { mix, gain }
+        }
+  }
+  return best?.mix ?? null
 }
 export function simulate(seed: number, years = 16) {
   const bot = makeBot(seed)
@@ -239,10 +320,14 @@ export function simulate(seed: number, years = 16) {
     expenses: number
   }[] = []
   let firstSS = 0,
+    firstA = 0,
+    firstS = 0,
     expenses = 0
   for (let i = 0; i < years * YEAR; i++) {
     s = autoplay(tick(s), bot)
     if (!firstSS && s.tanks.some(l => l.grade === 'SS')) firstSS = s.tick / YEAR
+    if (!firstS && s.tanks.some(l => l.grade === 'S' || l.grade === 'SS')) firstS = s.tick / YEAR
+    if (!firstA && s.tanks.some(l => ['A', 'S', 'SS'].includes(l.grade))) firstA = s.tick / YEAR
     if (s.tick % YEAR === YEAR - 1) expenses = s.year.expenses
     for (let rank = 2; rank <= s.rank; rank++) if (!(rank in reached)) reached[rank] = s.tick / YEAR
     negative = s.money < 0 ? negative + 1 : 0
@@ -255,7 +340,7 @@ export function simulate(seed: number, years = 16) {
         money: Math.round(s.money),
         profit: Math.round(s.history.profits.slice(-12).reduce((n, p) => n + p.profit, 0) / 12),
         rd: Math.round(s.rd),
-        known: s.knownRecipes.length,
+        known: s.formulaLab.formulas.length,
         expenses: Math.round(expenses),
       })
   }
@@ -265,6 +350,8 @@ export function simulate(seed: number, years = 16) {
     maxNegativeMonths: maxNegative / MONTH,
     unlocksFirst40Weeks: s.unlockHistory.filter(u => u.tick <= 40 * B.ticksPerWeek).length,
     annual,
+    firstA,
+    firstS,
     firstSS,
     awardWins: s.history.awards.map(a => a.wins.length),
   }

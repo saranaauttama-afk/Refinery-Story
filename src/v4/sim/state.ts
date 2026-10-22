@@ -1,3 +1,4 @@
+import { emptyFormulaLab } from './systems/formulaLab'
 import { B, YARD, YEAR, PROGRESSION, STARTING_STAFF as F } from '../data/balance'
 import type { GameState, Staff } from './types'
 const foreman = (): Staff => ({
@@ -41,7 +42,7 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     cuts: { naphtha: 0, kerosene: 0, gasoil: 0, residue: 0 },
     baseStock: { lpg: 0, gasoline: 0, jet: 0, diesel: 0, lube: 0, asphalt: 0, wax: 0, pellet: 0 },
     tanks: [],
-    blend: { base: 'gasoline', additive: null },
+    blend: { base: 'gasoline', formula: null },
     familiarity: {},
     useCounts: {},
     triedPairs: [],
@@ -76,9 +77,8 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     staff: [foreman()],
     ledger: [],
     log: [],
-    knownRecipes: [],
+    formulaLab: emptyFormulaLab(),
     research: [],
-    clues: {},
     demand: {},
     trend: { base: null, until: 0 },
     projects: {},

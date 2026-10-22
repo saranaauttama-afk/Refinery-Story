@@ -1,6 +1,6 @@
-import { SALES as C, B } from '../../data/balance'
+import { SALES as C, B, FORMULA_LAB } from '../../data/balance'
 import { bases } from '../../data/bases'
-import { isMonthStart } from '../time'
+import { isMonthStart, dateAt } from '../time'
 import type { GameState } from '../types'
 import { eligibleLot, salePrice } from './customers'
 export function contractSystem(s: GameState): GameState {
@@ -18,7 +18,10 @@ export function contractSystem(s: GameState): GameState {
     const offers = Array.from({ length: C.offers }, (_, i) => ({
       uid: `c${s.nextId + i}`,
       base: pool[(Math.floor(s.tick / (B.ticksPerWeek * B.weeksPerMonth)) + i) % pool.length].id,
-      minGrade: 'B' as const,
+      minGrade:
+        FORMULA_LAB.contractGradeByYear[
+          Math.min(FORMULA_LAB.contractGradeByYear.length, dateAt(s.tick).year) - 1
+        ],
       units: C.units,
       delivered: 0,
       deadline: s.tick + C.deadlineWeeks * B.ticksPerWeek,

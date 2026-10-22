@@ -11,7 +11,7 @@ import {
   mixOdds,
   produceLot,
   gradeIndex,
-  type FormulaLabState,
+  type LabSlice,
 } from '../../src/v4/sim/systems/formulaLab'
 
 const ids = new Set(additives.map(a => a.id))
@@ -28,8 +28,8 @@ assert.equal(catalystWeights(5, 0, 8)[5], 0)
 assert.ok(catalystWeights(5, 0, 9)[5] > 0)
 assert.ok(catalystWeights(3, 0, 8)[4] < catalystWeights(4, 0, 8)[4])
 
-const withStock = (stock: FormulaLabState['stock']): FormulaLabState => ({
-  ...emptyFormulaLab(7),
+const withStock = (stock: LabSlice['stock']): LabSlice => ({
+  ...{ ...emptyFormulaLab(), rng: 7 },
   stock,
 })
 // Year 1 has one slot.
@@ -171,10 +171,16 @@ for (let i = 0; i < F.production.lotsPerUnit * 3; i++) {
     )
 }
 assert.equal(grades.filter(g => g === 'S').length, F.production.lotsPerUnit * 3 - 1)
-assert.equal(grades.at(-1), F.production.fallbackGrade)
+assert.equal(grades.at(-1), F.plainGrade)
 // Research adds stock deterministically from the seed.
-const a = rollCatalyst(emptyFormulaLab(3), { pool: ['octane', 'dye'], level: 2, chem: 0, year: 2 })
-const b = rollCatalyst(emptyFormulaLab(3), { pool: ['octane', 'dye'], level: 2, chem: 0, year: 2 })
+const a = rollCatalyst(
+  { ...emptyFormulaLab(), rng: 3 },
+  { pool: ['octane', 'dye'], level: 2, chem: 0, year: 2 },
+)
+const b = rollCatalyst(
+  { ...emptyFormulaLab(), rng: 3 },
+  { pool: ['octane', 'dye'], level: 2, chem: 0, year: 2 },
+)
 assert.deepEqual(a.lot, b.lot)
 assert.equal(a.state.stock[0].units, F.catalyst.unitsBase + F.catalyst.unitsPerLevel)
 console.log(

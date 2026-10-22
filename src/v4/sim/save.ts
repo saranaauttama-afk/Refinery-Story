@@ -2,7 +2,7 @@ import type { GameState } from './types'
 import { buildings } from '../data/buildings'
 import { YARD } from '../data/balance'
 import { bases } from '../data/bases'
-import { additives } from '../data/additives'
+import { emptyFormulaLab } from './systems/formulaLab'
 export const serialize = (s: GameState): string => JSON.stringify(s)
 const finiteTree = (x: unknown): boolean =>
   typeof x === 'number'
@@ -14,36 +14,36 @@ const finiteTree = (x: unknown): boolean =>
         : true
 const record = (x: unknown): x is Record<string, unknown> =>
   !!x && typeof x === 'object' && !Array.isArray(x)
-const validBlend = (x: unknown) => {
-  if (!record(x)) return false
-  return (
-    bases.some(b => b.id === x.base) &&
-    (x.additive === null || additives.some(a => a.id === x.additive))
-  )
+const validBlend = (x: unknown) =>
+  record(x) &&
+  bases.some(b => b.id === x.base) &&
+  (x.formula === null || typeof x.formula === 'string')
+const GRADE_IDS = ['SS', 'S', 'A', 'B', 'C', 'D']
+/** Saves from before the Formula Lab: recipes become plain bases, old pair research is dropped. */
+function migrateFormulaLab(s: Record<string, unknown>) {
+  if (s.formulaLab !== undefined) return
+  s.formulaLab = emptyFormulaLab()
+  const plain = (r: unknown) => (record(r) ? { base: r.base, formula: null } : r)
+  s.blend = plain(s.blend)
+  for (const b of (s.yard as { buildings?: Record<string, unknown>[] })?.buildings ?? [])
+    if (b.recipe !== undefined) b.recipe = plain(b.recipe)
+  if (Array.isArray(s.tanks))
+    s.tanks = s.tanks.map(l => {
+      if (!record(l)) return l
+      const { additive: _a, ...rest } = l
+      return { ...rest, formula: null, secret: null }
+    })
+  s.research = []
+  delete s.knownRecipes
+  delete s.clues
 }
 export function deserialize(raw: string): GameState {
   const s = JSON.parse(raw)
   // Fields added after the first v4 builds.
   if (record(s)) {
     if (s.loan === undefined) s.loan = 0
-    if (s.knownRecipes === undefined) {
-      // Saves from before lab research: every pair already tried or in use counts as found.
-      const used = [
-        s.blend,
-        ...((s.yard as { buildings?: { recipe?: unknown }[] })?.buildings ?? []).map(b => b.recipe),
-      ]
-        .filter(record)
-        .map(r => `${r.base}:${r.additive ?? 'none'}`)
-      s.knownRecipes = [
-        ...new Set(
-          [...(Array.isArray(s.triedPairs) ? (s.triedPairs as string[]) : []), ...used].filter(
-            k => !k.endsWith(':none'),
-          ),
-        ),
-      ]
-    }
     if (s.research === undefined) s.research = []
-    if (s.clues === undefined) s.clues = {}
+    migrateFormulaLab(s)
     if (s.demand === undefined) s.demand = {}
     if (s.trend === undefined) s.trend = { base: null, until: 0 }
     if (s.projects === undefined) s.projects = {}
@@ -71,7 +71,6 @@ export function deserialize(raw: string): GameState {
     'notices',
     'ledger',
     'log',
-    'knownRecipes',
     'research',
   ]
   if (
@@ -114,7 +113,21 @@ export function deserialize(raw: string): GameState {
     !Number.isInteger(s.hintIndex) ||
     typeof s.opened !== 'boolean' ||
     !Number.isFinite(s.loan) ||
-    !record(s.clues) ||
+    !record(s.formulaLab) ||
+    !Array.isArray(s.formulaLab.stock) ||
+    !Array.isArray(s.formulaLab.formulas) ||
+    !Array.isArray(s.formulaLab.knownSynergies) ||
+    !Array.isArray(s.formulaLab.hints) ||
+    !record(s.formulaLab.lotCounter) ||
+    !(s.formulaLab.formulas as unknown[]).every(
+      f => record(f) && typeof f.key === 'string' && GRADE_IDS.includes(f.grade as string),
+    ) ||
+    !(s.formulaLab.stock as unknown[]).every(
+      c => record(c) && GRADE_IDS.includes(c.grade as string) && Number.isFinite(c.units),
+    ) ||
+    !(s.research as unknown[]).every(
+      j => record(j) && (j.kind === 'catalyst' || j.kind === 'mix'),
+    ) ||
     !record(s.demand) ||
     !record(s.trend) ||
     !record(s.projects) ||
@@ -134,6 +147,7 @@ export function deserialize(raw: string): GameState {
       !Number.isInteger(b.level) ||
       !Array.isArray(b.staff) ||
       (b.recipe !== undefined && !validBlend(b.recipe)) ||
+      (b.labRole !== undefined && !['catalyst', 'formula'].includes(b.labRole as string)) ||
       (b.condition !== undefined && !Number.isFinite(b.condition)) ||
       (b.spec !== undefined && !['volume', 'quality', 'eco'].includes(b.spec as string)) ||
       (b.repairUntil !== undefined && !Number.isFinite(b.repairUntil))
@@ -161,7 +175,7 @@ export function deserialize(raw: string): GameState {
       !record(l) ||
       !record(l.stats) ||
       !bases.some(b => b.id === l.base) ||
-      !['SS', 'S', 'A', 'B', 'C'].includes(l.grade as string) ||
+      !GRADE_IDS.includes(l.grade as string) ||
       !Number.isFinite(l.units) ||
       !Number.isFinite(l.score) ||
       ['purity', 'yield', 'stability', 'eco'].some(

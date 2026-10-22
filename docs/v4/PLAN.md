@@ -328,6 +328,7 @@ the owner checks on the APK.
 | V5 generated pixel art 4.1.9 | generated L1–L5 sprites, scenery and 64 px terrain; see ../v5/pixel/README.md | fix(v5): restore crafted pixel artwork | Android Preview APK on push | deferred |
 | V5 coastal scenery 4.1.10 | curved coast, town, port, green belt and park; 36 generated prop frames; see ../v5/COASTAL-SCENERY.md | feat(v5): populate the coastal refinery district | Android Preview APK on push | deferred |
 | Coastal redesign 4.0.25 | approved concept implemented for title, HUD, dock, panels and yard scenery | see COASTAL-REDESIGN-4.0.25.md | Android Preview APK on push | deferred |
+| Formula Lab | graded catalysts + permanent formulas replace score grades; lab sheet, blend formulas; see FORMULA-LAB.md | feat(v4): wire Formula Lab into the game | pending (branch feature/formula-lab) | pending |
 
 ### M0 validation
 

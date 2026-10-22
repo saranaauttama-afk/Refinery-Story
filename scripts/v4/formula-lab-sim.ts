@@ -12,7 +12,7 @@ import {
   produceLot,
   slotsFor,
   gradeIndex,
-  type FormulaLabState,
+  type LabSlice,
   type MixPick,
 } from '../../src/v4/sim/systems/formulaLab'
 
@@ -34,10 +34,10 @@ function combos<T>(xs: T[], k: number): T[][] {
   if (k === 0) return [[]]
   return xs.flatMap((x, i) => combos(xs.slice(i + 1), k - 1).map(c => [x, ...c]))
 }
-function bestMix(st: FormulaLabState, year: number) {
+function bestMix(st: LabSlice, year: number) {
   const level = labLevel(year)
   // Only the best usable grade of each catalyst, and only the three best formulas, keep it fast.
-  const bestOf = new Map<string, FormulaLabState['stock'][number]>()
+  const bestOf = new Map<string, LabSlice['stock'][number]>()
   for (const x of st.stock)
     if (
       x.units >= F.mix.unitsPerSlot &&
@@ -80,7 +80,7 @@ function bestMix(st: FormulaLabState, year: number) {
 const firsts: Record<string, number[]> = Object.fromEntries(FORMULA_GRADES.map(g => [g, []]))
 const fallbackShare: number[] = []
 for (let run = 0; run < RUNS; run++) {
-  let st = emptyFormulaLab(1000 + run)
+  let st = { ...emptyFormulaLab(), rng: 1000 + run }
   const seen = new Set<string>()
   let lots = 0,
     fallback = 0,

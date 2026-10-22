@@ -54,33 +54,16 @@ export const PRODUCTION = {
   popupTicks: 4,
   crudeQuality: { light: 1, heavy: 0.9, shale: 0.95 },
 }
-export const PAIR = { S: 1.5, A: 1.25, B: 1.1, C: 1, D: 0.85, F: 0.6 }
+// Sale price multiplier and fame per lot grade, best first. Grades come from formulas
+// (FORMULA_LAB below), not from a score.
 export const GRADES = [
-  { id: 'SS', min: 400, price: 2.7, fame: 10 },
-  { id: 'S', min: 300, price: 1.9, fame: 5 },
-  { id: 'A', min: 200, price: 1.35, fame: 2 },
-  { id: 'B', min: 120, price: 1, fame: 1 },
-  { id: 'C', min: 0, price: 0.8, fame: 0 },
+  { id: 'SS', price: 2.7, fame: 10 },
+  { id: 'S', price: 2, fame: 7 },
+  { id: 'A', price: 1.5, fame: 4 },
+  { id: 'B', price: 1.2, fame: 3 },
+  { id: 'C', price: 1, fame: 1 },
+  { id: 'D', price: 0.8, fame: 0 },
 ] as const
-// Grade thresholds scale with rank: bigger buyers are pickier, so SS stays a goal all game.
-export const GRADE_SCALE = [1, 1.2, 1.35, 1.45, 1.55, 2.4, 4.5, 8, 12, 16] as const
-// Lab research: the blend sheet only offers base × additive pairs found here.
-export const RESEARCH = {
-  rdBase: 100,
-  moneyBase: 5000,
-  weeks: 3,
-  fasterPerLevel: 0.1,
-  chanceBase: 0.4,
-  chancePerLevel: 0.06,
-  chemDivisor: 300,
-  chanceMax: 0.85,
-  clueBonus: 0.15,
-  // Odds of the find's compatibility bucket [bad (C/D/F), B, A, S] at lab Lv1 and Lv5.
-  weightsLv1: [50, 30, 15, 5],
-  weightsLv5: [20, 30, 30, 20],
-  // Fame for a find, by bucket [bad, B, A, S].
-  fame: [2, 8, 20, 40],
-}
 // Demand per product: selling the same thing cools it down; a monthly trend heats one up.
 export const DEMAND = {
   perSale: 0.025,
@@ -248,11 +231,12 @@ export const BASE_PRICES = {
 
 // "Is it too easy?" gates for the bot (AUDIT.md).
 export const FUN = {
-  firstSSMedianMin: 2.75,
+  // Median year (0-based, as tick / YEAR) a lot of each grade first appears.
+  firstGrade: { A: [1.5, 4], S: [4.5, 8], SS: [7, 11] } as Record<'A' | 'S' | 'SS', number[]>,
   awardsFromYear: 3,
   awardsMean: [1, 2.5],
-  knownY5Max: 0.35,
-  knownY15: [0.5, 0.99],
+  // Formulas found by year 15: the lab stays worth using all game.
+  formulasY15: [8, 40],
   // Phase B sinks: cash on hand stays within this many months of profit (Y5, Y10),
   // and RD does not pile up.
   cashMonthsMax: 24,
@@ -691,9 +675,13 @@ export const BASE_RANKS = {
 // with catalysts into a permanent formula; blend stations then produce at that formula's grade.
 export const FORMULA_GRADES = ['D', 'C', 'B', 'A', 'S', 'SS'] as const
 export const FORMULA_LAB = {
+  // Each lab level shortens a job by this share (min half).
+  fasterPerLevel: 0.1,
   catalyst: {
     weeks: 2,
+    // RD per job: rd + rdPerYear × (year − 1), so RD keeps a use all game.
     rd: 60,
+    rdPerYear: 20,
     money: 3000,
     // Units of one catalyst per finished research: unitsBase + unitsPerLevel × (level − 1).
     unitsBase: 4,
@@ -706,12 +694,16 @@ export const FORMULA_LAB = {
       [4, 16, 32, 32, 13, 3],
       [0, 8, 24, 36, 23, 9],
     ],
-    // Every `chemPerLevel` Chem on the assigned chemists counts as one more lab level (fraction).
+    // Every `chemPerLevel` Chem on the assigned chemists counts as one more lab level (fraction),
+    // and each year of experience past the first adds `levelPerYear`.
     chemPerLevel: 200,
+    levelPerYear: 0.2,
     // Highest catalyst grade research can return, by game year (index = year − 1, last repeats).
-    maxGradeByYear: ['B', 'B', 'A', 'A', 'A', 'S', 'S', 'S', 'SS'],
+    maxGradeByYear: ['B', 'B', 'A', 'A', 'A', 'S', 'S', 'S', 'SS'] as const,
     // Chance per finished research to reveal one synergy or secret-formula hint.
-    hintChance: 0.25,
+    hintChance: 0.04,
+    // Fame for each finished research, by the catalyst's grade.
+    fame: { D: 1, C: 2, B: 4, A: 5, S: 6, SS: 8 },
   },
   mix: {
     weeks: 1,
@@ -739,11 +731,16 @@ export const FORMULA_LAB = {
   production: {
     // One catalyst unit of each kind in the formula per this many lots. Lowest grade is used first.
     lotsPerUnit: 6,
-    // Grade a lot falls back to when the catalysts run out.
-    fallbackGrade: 'D' as const,
+    // When a catalyst runs out, lots fall back to plain grade (plainGrade) until restocked.
   },
-  // Price multiplier and fame per grade (D added below C).
-  gradePrice: { D: 0.6, C: 0.8, B: 1, A: 1.35, S: 1.9, SS: 2.7 },
+  // A blend station with no formula makes plain lots of this grade.
+  plainGrade: 'C' as const,
+  // Award "product" score: lot stats × this factor per grade (mirrors the old pair multipliers).
+  gradeScore: { D: 0.85, C: 1, B: 1.1, A: 1.25, S: 1.5, SS: 1.8 },
+  // Fame when a mix finds a new formula or improves one, by its grade.
+  formulaFame: { D: 0, C: 3, B: 10, A: 20, S: 20, SS: 30 },
   secretPrice: 1.3,
   secretFame: 50,
+  // Lowest grade a contract asks for, by game year (index = year − 1, last repeats).
+  contractGradeByYear: ['C', 'C', 'B', 'B', 'B', 'A'] as const,
 }

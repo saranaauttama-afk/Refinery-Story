@@ -2,57 +2,41 @@ import { Text, View, Pressable, ScrollView } from 'react-native'
 import { type, ui } from './theme'
 import { baseAvailable } from '../sim/systems/investments'
 import { bases, type BaseId } from '../data/bases'
-import { additives, type AdditiveId } from '../data/additives'
-import { pairCompat, type Compat } from '../data/compatibility'
+import { additives } from '../data/additives'
 import { useGame } from '../store/useGame'
 import { selectBlend, discardLot } from '../sim/actions'
 import {
   predictedScore,
-  gradeFor,
+  recipeGrade,
+  formulaOf,
   lotStats,
   tankCapacity,
   tankUnits,
   blendStations,
   recipeOf,
-  gradeScale,
-  gradeMin,
 } from '../sim/systems/blending'
 import { useState } from 'react'
-import { recipeKnown, researchCandidates } from '../sim/systems/research'
+import { formulaName } from '../sim/systems/research'
+import { stockOf, gradeIndex } from '../sim/systems/formulaLab'
 import { demandOf, trending } from '../sim/systems/market'
 import { salePrice } from '../sim/systems/customers'
-import { GRADES, SALES } from '../data/balance'
+import { SALES, FORMULA_LAB } from '../data/balance'
 import { productAccent } from '../render/palette'
 import { styles } from './controls'
 import { Card, Section, Row, Bar, SmallButton, Muted, GradeChip } from './cards'
 import { text } from '../i18n'
 import { featureOn } from '../data/features'
-import type { GameState } from '../sim/types'
+import type { Grade } from '../sim/types'
 
-const compatColors: Record<Compat, string> = {
-  S: '#F7DC7A',
-  A: '#8ED9C1',
-  B: '#9CC9EA',
-  C: '#D8D2C4',
-  D: '#F5B37A',
-  F: '#F2A49B',
-}
 const gradeFill: Record<string, string> = {
   SS: '#F5B37A',
   S: '#F7DC7A',
   A: '#8ED9C1',
   B: '#9CC9EA',
   C: '#D8D2C4',
+  D: '#F2A49B',
 }
-const SCORE_MAX = 450
-
-// Badge for a recipe: its compatibility letter once tried, otherwise NEW.
-function recipeBadge(s: GameState, base: BaseId, additive: AdditiveId | null) {
-  if (!s.triedPairs.includes(`${base}:${additive ?? 'none'}`))
-    return { label: text({ en: 'NEW', th: 'ใหม่' }), color: '#E36BB0' }
-  const compat = pairCompat(base, additive)
-  return { label: compat, color: compatColors[compat] }
-}
+const gradeBadge = (grade: Grade) => ({ label: grade, color: gradeFill[grade] })
 
 function Option({
   label,
@@ -129,19 +113,27 @@ export function BlendPanel({ station: initial }: { station?: string }) {
   const [showStats, setShowStats] = useState(false)
   const station = stations.find(b => b.uid === picked) ?? stations[0]
   const r = station ? recipeOf(s, station) : s.blend
-  const pick = (base: BaseId, additive: AdditiveId | null) =>
-    dispatch(s => selectBlend(s, base, additive, station?.uid))
-  const score = predictedScore(s, r.base, r.additive)
-  const grade = gradeFor(score, s.rank)
+  const pick = (base: BaseId, formula: string | null) =>
+    dispatch(s => selectBlend(s, base, formula, station?.uid))
+  const formula = formulaOf(s, r.formula)
+  const grade = recipeGrade(s, r)
+  const score = predictedScore(s, r)
   const stats = lotStats(s)
   const baseName = (id: string) => text(bases.find(b => b.id === id)!.name)
-  const perTruck = Math.round(salePrice(s, { base: r.base, grade }) * SALES.units)
+  const addName = (id: string) => text(additives.find(a => a.id === id)!.name)
+  const short = formula?.catalysts.filter(a => stockOf(s.formulaLab, a) < 1) ?? []
+  const perTruck = Math.round(
+    salePrice(s, {
+      base: r.base,
+      grade: short.length ? FORMULA_LAB.plainGrade : grade,
+      secret: formula?.secret,
+    }) * SALES.units,
+  )
+  const baseFormulas = s.formulaLab.formulas
+    .filter(f => f.base === r.base)
+    .sort((a, b) => gradeIndex(b.grade) - gradeIndex(a.grade))
   const capacity = tankCapacity(s)
   const used = tankUnits(s)
-  const gi = GRADES.findIndex(g => g.id === grade)
-  const better = gi > 0 ? GRADES[gi - 1] : undefined
-  const toNext = better ? Math.max(0, gradeMin(s.rank, better.min) - Math.round(score)) : 0
-  const unknown = researchCandidates(s, r.base).length
   const market = featureOn(s, 'market')
   return (
     <>
@@ -222,12 +214,17 @@ export function BlendPanel({ station: initial }: { station?: string }) {
             <Text style={type.small}> {text({ en: 'per truck', th: 'ต่อคันรถ' })}</Text>
           </Text>
           <Text style={type.small}>
-            {better
+            {short.length
               ? text({
-                  en: `${toNext} more points to ${better.id}`,
-                  th: `อีก ${toNext} คะแนนถึง ${better.id}`,
+                  en: `Out of ${short.map(addName).join(', ')}: making plain ${FORMULA_LAB.plainGrade} lots`,
+                  th: `${short.map(addName).join(', ')} หมด: ผลิตเกรด ${FORMULA_LAB.plainGrade} ธรรมดาไปก่อน`,
                 })
-              : text({ en: 'Top grade', th: 'เกรดสูงสุดแล้ว' })}
+              : grade === 'SS'
+                ? text({ en: 'Top grade', th: 'เกรดสูงสุดแล้ว' })
+                : text({
+                    en: 'Better grades come from the Formula Lab',
+                    th: 'อยากได้เกรดสูงขึ้น ไปผสมสูตรที่แล็บผสมสูตร',
+                  })}
           </Text>
         </View>
       </Pressable>
@@ -251,8 +248,8 @@ export function BlendPanel({ station: initial }: { station?: string }) {
           ))}
           <Text style={type.small}>
             {text({
-              en: `Score ${Math.round(score)} · SS needs ${gradeMin(s.rank, GRADES[0].min)} at rank ${s.rank}`,
-              th: `คะแนน ${Math.round(score)} · SS ต้องได้ ${gradeMin(s.rank, GRADES[0].min)} ที่แรงก์ ${s.rank}`,
+              en: `Award score ${Math.round(score)}`,
+              th: `คะแนนประกวด ${Math.round(score)}`,
             })}
           </Text>
         </View>
@@ -285,7 +282,14 @@ export function BlendPanel({ station: initial }: { station?: string }) {
                 key={b.id}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}
-                onPress={() => pick(b.id, recipeKnown(s, b.id, r.additive) ? r.additive : null)}
+                onPress={() =>
+                  pick(
+                    b.id,
+                    s.formulaLab.formulas
+                      .filter(f => f.base === b.id)
+                      .sort((x, y) => gradeIndex(y.grade) - gradeIndex(x.grade))[0]?.key ?? null,
+                  )
+                }
                 style={{
                   minWidth: 96,
                   height: 54,
@@ -306,47 +310,54 @@ export function BlendPanel({ station: initial }: { station?: string }) {
           })}
       </ScrollView>
 
-      <Text style={type.small}>{text({ en: 'Additive', th: 'สารเติมแต่ง' })}</Text>
+      <Text style={type.small}>{text({ en: 'Formula', th: 'สูตร' })}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         <Option
-          label={text({ en: 'None', th: 'ไม่ใส่' })}
-          selected={r.additive === null}
-          badge={recipeBadge(s, r.base, null)}
+          label={text({ en: 'Plain', th: 'ไม่ใส่สูตร' })}
+          selected={r.formula === null}
+          badge={gradeBadge(FORMULA_LAB.plainGrade)}
           onPress={() => pick(r.base, null)}
         />
-        {additives
-          .filter(a => s.unlockedAdditives.includes(a.id) && recipeKnown(s, r.base, a.id))
-          .map(a => (
+        {baseFormulas.map(f => {
+          const out = f.catalysts.filter(a => stockOf(s.formulaLab, a) < 1)
+          return (
             <Option
-              key={a.id}
-              label={text(a.name)}
-              selected={r.additive === a.id}
-              badge={recipeBadge(s, r.base, a.id)}
-              onPress={() => pick(r.base, a.id)}
+              key={f.key}
+              label={f.secret ? `✨ ${text(formulaName(f))}` : f.catalysts.map(addName).join(' + ')}
+              sub={
+                out.length
+                  ? text({
+                      en: `out of ${out.map(addName).join(', ')}`,
+                      th: `${out.map(addName).join(', ')} หมด`,
+                    })
+                  : f.catalysts.map(a => `${addName(a)} ×${stockOf(s.formulaLab, a)}`).join(' · ')
+              }
+              selected={r.formula === f.key}
+              badge={gradeBadge(f.grade)}
+              onPress={() => pick(r.base, f.key)}
             />
-          ))}
-        {unknown > 0 && (
-          <View
-            style={{
-              width: '48%',
-              minHeight: 44,
-              borderWidth: 2,
-              borderStyle: 'dashed',
-              borderColor: ui.navy,
-              borderRadius: 8,
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingHorizontal: 6,
-            }}
-          >
-            <Text style={[type.small, { color: ui.navy, textAlign: 'center' }]}>
-              {text({
-                en: `+${unknown} more at a Lab`,
-                th: `+ วิจัยอีก ${unknown} สูตรที่ห้องทดลอง`,
-              })}
-            </Text>
-          </View>
-        )}
+          )
+        })}
+        <View
+          style={{
+            width: '48%',
+            minHeight: 44,
+            borderWidth: 2,
+            borderStyle: 'dashed',
+            borderColor: ui.navy,
+            borderRadius: 8,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 6,
+          }}
+        >
+          <Text style={[type.small, { color: ui.navy, textAlign: 'center' }]}>
+            {text({
+              en: 'Mix new formulas at a Formula Lab',
+              th: '+ ผสมสูตรใหม่ที่แล็บผสมสูตร',
+            })}
+          </Text>
+        </View>
       </View>
 
       <Pressable

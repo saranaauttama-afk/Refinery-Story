@@ -15,7 +15,7 @@ const effectLabels: Record<string, { en: string; th: string; pct?: boolean }> = 
   yield: { en: 'Yield', th: 'Yield' },
   stability: { en: 'Stability', th: 'Stability' },
   eco: { en: 'Eco', th: 'Eco' },
-  score: { en: 'Grade score', th: 'คะแนนเกรด' },
+  score: { en: 'Award score', th: 'คะแนนประกวด' },
   gasolineScore: { en: 'Gasoline score', th: 'คะแนนเบนซิน' },
   yieldPct: { en: 'Yield', th: 'Yield', pct: true },
   quality: { en: 'Quality', th: 'คุณภาพ', pct: true },

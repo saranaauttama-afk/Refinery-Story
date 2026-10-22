@@ -1,73 +1,50 @@
-# Formula Lab — design (draft, not wired in yet)
+# Formula Lab
 
-**สรุปภาษาไทย:** แยกแล็บเป็น 2 ตัว — **Catalyst Lab** วิจัยได้สารเร่ง (เกรด D–SS + จำนวน)
-และ **Formula Lab** เอาน้ำมันพื้นฐานหรือสูตรเดิม + สารเร่ง 1–3 ช่อง มาผสมเป็น **สูตรถาวร** ที่มีเกรด
-สถานีผสม (blend) ผลิตตามเกรดของสูตรได้เลย แต่กินสารเร่ง 1 หน่วยต่อ 6 ล็อต (หมด = ตกเป็นเกรด D)
-เพดานเกรดมาจาก **สารเร่งที่ดีที่สุดที่ใส่** ดังนั้นจะได้ S/SS ต้องมีแล็บเลเวลสูงและอยู่ปีหลัง ๆ
+**สรุปภาษาไทย:** ห้องแล็บแต่ละห้องเลือกหน้าที่ได้ 2 แบบ — **แล็บสารเร่ง** วิจัยได้สารเร่งแบบสุ่ม
+(เกรด D–SS + จำนวน) และ **แล็บผสมสูตร** เอาน้ำมันฐานหรือสูตรเดิม + สารเร่ง 1–3 ช่องมาผสมเป็น
+**สูตรถาวร** สถานีผสมเลือกสูตรแล้วผลิตตามเกรดของสูตร โดยใช้สารเร่งอย่างละ 1 หน่วยต่อ 6 ล็อต
+(สารหมด = กลับไปผลิตเกรด C ธรรมดา) เพดานเกรดคือ **สารเร่งที่ดีที่สุดที่ใส่** และสารเกรดสูงได้ตามปี
+(A ปี 3, S ปี 6, SS ปี 9) อัปเกรดแล็บ/นักเคมี/ประสบการณ์ช่วยเพิ่มโอกาส
 
-Why: in the current system the first SS arrives around year 4 (balance report: "first SS
-Y4.3") and comes from stats/upgrades alone. The owner wants grades to come from research
-and experimenting with combos, and to keep improving over a 15-year game.
+Replaces the old system where every lot's grade came from a stats score and labs only
+unlocked base × additive pairs (first SS around year 4).
 
 ## Loop
 
-1. **Catalyst Lab** (research job, 2 weeks, RD + money): returns one random unlocked catalyst
-   (the 20 additives in `data/additives.ts`) with a grade D/C/B/A/S/SS and a few units
-   (4 + 1 per lab level).
-   - Grade odds by lab level (table `FORMULA_LAB.catalyst.weights`); chemists' Chem adds a
-     fraction of a level (`chemPerLevel`).
-   - Hard ceiling by year (`maxGradeByYear`): B in Y1–2, A from Y3, S from Y6, SS from Y9.
-   - 25% of finished jobs also reveal a hint (a good catalyst pair or a secret formula).
-2. **Formula Lab** (mix, 1 week, money): start from a plain base (grade D) or a known formula,
-   add catalysts from stock (2 units each).
-   - Slots per mix by year: 1 (Y1–2), 2 (Y3–5), 3 (Y6+). A formula holds at most 3 catalysts;
-     re-mixing a catalyst already in the formula is a _refine_.
-   - Grade = average of inputs (formula + catalysts) + base×catalyst compatibility
-     (`data/compatibility.ts`) + catalyst×catalyst synergy (`data/formulaLab.ts`) + secret
-     bonus + small luck (±0.6, nudged up by lab level), rounded.
-   - **Cap = best catalyst used** (`capAboveBest: 0`). A formula cannot ratchet itself past
-     its catalysts — that was the first sim's bug (SS in year 3).
-   - Never worse: a known formula keeps its better grade; only the catalysts are spent.
-   - Pity: after 4 mixes in a row that do not beat their best input, the next one gets +1.
-   - Synergy pairs become known once used; the book shows ??? until then.
-3. **Blend stations** run a formula and produce lots at its grade. Every 6 lots use one unit of
-   each catalyst in the formula, lowest grade first. Out of a catalyst → lots fall back to D
-   until restocked. This keeps the Catalyst Lab busy after a formula is found, and gives
-   low-grade research a use.
+1. **Catalyst Lab** (a `lab` building with role `catalyst`, the default). A job takes 2 weeks
+   (shorter at higher lab level) and costs $3k + RD (60 + 20 per year). It returns one random
+   unlocked additive as a catalyst with a grade and 4 + 1/level units, plus a little fame.
+   - Odds by effective level: lab level + Chem of assigned staff / 200 + 0.2 per year.
+   - Ceiling by year: B in Y1–2, A Y3–5, S Y6–8, SS from Y9.
+   - 4% of jobs leave a lab note: a good catalyst pair or a secret formula hint.
+2. **Formula Lab** (role `formula`, switch in the lab sheet while idle). A mix takes 1 week
+   and $2k. Start from the plain base (grade D) or a known formula; add catalysts from stock
+   (2 units each). Slots: 1 (Y1–2), 2 (Y3–5), 3 (Y6+); a formula holds at most 3 catalysts.
+   - Grade = average of inputs + base×catalyst fit (`data/compatibility.ts`) + catalyst pair
+     synergy (`data/formulaLab.ts`) + secret bonus + luck (±0.6, nudged up by lab level).
+   - **Cap = best catalyst used.** A formula can't ratchet itself past its catalysts.
+   - Never worse: a known formula keeps its better grade; the catalysts are spent anyway.
+   - Pity: after 4 mixes that don't beat their best input, the next gets +1.
+   - Catalysts are spent and the grade rolled when the mix starts; it shows when it ends.
+3. **Blend stations** pick plain (grade C) or a formula of that base. Every 6 lots use one unit
+   of each of the formula's catalysts (lowest grade first); if one is out, lots are plain C.
 
-## Secret formulas
+Secret formulas (8, one per base) get +1 grade, ×1.3 price and 50 fame, but don't lift the
+cap. Grade prices/fame: D 0.8/0, C 1/1, B 1.2/3, A 1.5/4, S 2/7, SS 2.7/10. Buyers want C
+(starter) or B; contracts want C (Y1–2), B (Y3–5), A (Y6+). Award score still comes from lot
+stats, scaled by grade.
 
-Exact base + catalyst sets in `secretFormulas` (Premium Gasoline, Euro Diesel, Jet A-1, Clean
-LPG, Synthetic Lube, Eco Asphalt, Scented Candle Wax, Bio Pellet). They get +1 grade step,
-×1.3 price and fame, but do **not** lift the cap (`secretCap: 0`): with the cap lifted the sim
-reached SS in year 6–7 because the bot finds secrets instantly. Players only find them from
-hints or by trying, so this can be loosened after playtest.
+Old saves load with plain recipes and an empty Formula Lab (old pair research is dropped).
 
-## Pacing (scripts/v4/formula-lab-sim.ts, 100 runs, gasoline, greedy bot)
+## Pacing (bot, 20 seeds × 16 years, `npm run v4:check`)
 
-| Grade | First formula (p10 / median / p90 year) |
-| ----- | --------------------------------------- |
-| B     | 1 / 1 / 1                               |
-| A     | 3 / 3 / 3                               |
-| S     | 6 / 6 / 6                               |
-| SS    | 9 / 9 / 9                               |
+First lot of A / S / SS: median year 2.1 / 5.2 / 8.3 (i.e. early in years 3, 6 and 9).
+Rank 5 in years 3–4, rank 10 in years 12–15, monthly profit Y1 $47k, Y5 $245k, Y10 $2.7M.
+The bot builds a second lab early, upgrades labs when cash is spare, and mixes greedily;
+real players will be slower. `node --import tsx scripts/v4/balance-summary.ts` prints all
+of this without assertions; `scripts/v4/formula-lab-sim.ts` checks the lab rules alone.
 
-Lots short of catalyst: median 4%. The bot assumes lab Lv1→5 over 9 years, 1 Catalyst Lab
-until Y5 then 2, and always picks the best mix, so the year gates are the binding limit. Real
-players will lag; luck and lab level matter more for them. Tune with `RUNS=200 node --import
-tsx scripts/v4/formula-lab-sim.ts`.
+## Not done
 
-## Status / next steps
-
-Done: balance (`FORMULA_LAB`, `FORMULA_GRADES` in `data/balance.ts`), content
-(`data/formulaLab.ts`), pure rules (`sim/systems/formulaLab.ts`), checks
-(`scripts/v4/check-formula-lab.ts`, in `v4:check`), pacing sim.
-
-Not done (needs owner decision before wiring):
-
-1. Grade `D` joins `Grade` in `sim/types.ts`; `GRADES`, contracts, awards and prices learn it.
-2. `GameState` gets a `formulaLab: FormulaLabState` slice; saves get a fresh-start or migration.
-3. Buildings: keep `lab` as Catalyst Lab, add `formulaLab`; old base×additive research and the
-   score-based grade in `blending.ts` are removed.
-4. UI: Catalyst Lab sheet (stock by grade), Formula Lab mix sheet (slots, odds low–high,
-   synergy book with ???), blend station picks a formula.
+- No separate building art: a Formula Lab is a `lab` with a different role.
+- Fame and price tables were retuned to keep rank pacing; needs a human playtest.

@@ -3,8 +3,6 @@ import { writeFileSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { simulate } from './sim-run'
 import { POLISH, FUN } from '../../src/v4/data/balance'
-import { additives } from '../../src/v4/data/additives'
-import { bases } from '../../src/v4/data/bases'
 import { serialize, deserialize } from '../../src/v4/sim/save'
 import { hints } from '../../src/v4/data/onboarding'
 import { createNewGame } from '../../src/v4/sim/state'
@@ -22,6 +20,8 @@ for (let seed = 1; seed <= POLISH.reportSeeds; seed++) {
     maxNegativeMonths: r.maxNegativeMonths,
     unlocksFirst40Weeks: r.unlocksFirst40Weeks,
     annual: r.annual,
+    firstA: r.firstA,
+    firstS: r.firstS,
     firstSS: r.firstSS,
     awardWins: r.awardWins,
   })
@@ -49,23 +49,31 @@ const income = ([1, 5, 10] as const).map(year => {
   }
 })
 // Fun gates: the bot must not find the game too easy (docs/v4/AUDIT.md).
-const pairs = additives.length * bases.length
 const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)]
 const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length
-const firstSS = median(reports.map(r => r.firstSS || 99))
-assert.ok(firstSS >= FUN.firstSSMedianMin, `first SS median year ${firstSS}`)
+const first = {
+  A: median(reports.map(r => r.firstA || 99)),
+  S: median(reports.map(r => r.firstS || 99)),
+  SS: median(reports.map(r => r.firstSS || 99)),
+}
+for (const g of ['A', 'S', 'SS'] as const) {
+  const [lo, hi] = FUN.firstGrade[g]
+  assert.ok(first[g] >= lo && first[g] <= hi, `first ${g} median year ${first[g]}`)
+}
 const wins = mean(reports.flatMap(r => r.awardWins.slice(FUN.awardsFromYear - 1, 15)))
 assert.ok(wins >= FUN.awardsMean[0] && wins <= FUN.awardsMean[1], `award wins ${wins}`)
-const known = (y: number) => mean(reports.map(r => r.annual[y - 1].known)) / pairs
-assert.ok(known(5) <= FUN.knownY5Max, `recipes known Y5 ${known(5)}`)
-assert.ok(known(15) >= FUN.knownY15[0] && known(15) <= FUN.knownY15[1], `known Y15 ${known(15)}`)
+const formulas15 = mean(reports.map(r => r.annual[14].known))
+assert.ok(
+  formulas15 >= FUN.formulasY15[0] && formulas15 <= FUN.formulasY15[1],
+  `formulas Y15 ${formulas15}`,
+)
 const cashMonths = (y: number) =>
   mean(reports.map(r => r.annual[y - 1].money / Math.max(1, r.annual[y - 1].profit)))
 for (const y of [5, 10])
   assert.ok(cashMonths(y) <= FUN.cashMonthsMax, `cash Y${y} ${cashMonths(y)} months of profit`)
 const rd10 = mean(reports.map(r => r.annual[9].rd))
 assert.ok(rd10 <= FUN.rdY10Max, `RD piles up: ${rd10}`)
-const funLine = `first SS Y${firstSS.toFixed(1)}, awards ${wins.toFixed(1)}/yr, recipes Y5 ${Math.round(known(5) * 100)}% Y15 ${Math.round(known(15) * 100)}%, cash Y5 ${cashMonths(5).toFixed(0)}/Y10 ${cashMonths(10).toFixed(0)} months, RD Y10 ${Math.round(rd10)}`
+const funLine = `first A/S/SS Y${first.A.toFixed(1)}/${first.S.toFixed(1)}/${first.SS.toFixed(1)}, awards ${wins.toFixed(1)}/yr, formulas Y15 ${formulas15.toFixed(1)}, cash Y5 ${cashMonths(5).toFixed(0)}/Y10 ${cashMonths(10).toFixed(0)} months, RD Y10 ${Math.round(rd10)}`
 assert.equal(hints.length, POLISH.hintLimit)
 const clean = createNewGame()
 assert.throws(() => deserialize(serialize({ ...clean, cuts: {} } as never)))

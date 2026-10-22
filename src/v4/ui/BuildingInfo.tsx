@@ -16,9 +16,9 @@ import { YARD, B } from '../data/balance'
 import { upgrade, demolish } from '../sim/actions'
 import { upgradeCost } from '../sim/systems/yardInfo'
 import { comboLeads } from '../sim/systems/combos'
-import { recipeOf, predictedScore, gradeFor } from '../sim/systems/blending'
+import { recipeOf, recipeGrade, formulaOf } from '../sim/systems/blending'
+import { formulaName } from '../sim/systems/research'
 import { bases } from '../data/bases'
-import { additives } from '../data/additives'
 import { effectText } from './RecipeBook'
 import { ResearchPanel } from './ResearchPanel'
 import { PlantCard } from './PlantCard'
@@ -124,7 +124,8 @@ export function BuildingInfo({
       {b.defId === 'blend' &&
         (() => {
           const r = recipeOf(s, b)
-          const grade = gradeFor(predictedScore(s, r.base, r.additive), s.rank)
+          const grade = recipeGrade(s, r)
+          const f = formulaOf(s, r.formula)
           return (
             <Pressable
               accessibilityRole="button"
@@ -156,8 +157,7 @@ export function BuildingInfo({
               <View style={{ flex: 1 }}>
                 <Text style={type.small}>{text({ en: 'Mixing now', th: 'กำลังผสม' })}</Text>
                 <Text style={type.title} numberOfLines={1}>
-                  {text(bases.find(x => x.id === r.base)!.name)}
-                  {r.additive ? ` + ${text(additives.find(a => a.id === r.additive)!.name)}` : ''}
+                  {f ? text(formulaName(f)) : text(bases.find(x => x.id === r.base)!.name)}
                 </Text>
               </View>
               <Text style={type.body}>{text({ en: 'Change', th: 'เปลี่ยน' })}</Text>

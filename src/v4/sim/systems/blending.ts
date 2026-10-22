@@ -1,24 +1,23 @@
 import { baseAvailable } from './investments'
-import { recipeKnown } from './research'
 import { plantFactor, specStats } from './plant'
 import { staffStats } from './staff'
 import { getModifiers } from './combos'
-import { PRODUCTION as P, PAIR, GRADES, YARD, GRADE_SCALE } from '../../data/balance'
-import { pairCompat, type Compat } from '../../data/compatibility'
+import { produceLot } from './formulaLab'
+import { PRODUCTION as P, YARD, FORMULA_LAB as F } from '../../data/balance'
+import { additives } from '../../data/additives'
 import type { BaseId } from '../../data/bases'
-import type { AdditiveId } from '../../data/additives'
 import type { GameState, Stats, Grade, Building, Recipe } from '../types'
-export const scoreLot = (stats: Stats, pair: Compat, familiarity: number, comboBonus = 0) =>
+/** Award "product" score of a lot: its stats, scaled by grade, familiarity and combos. */
+export const scoreLot = (stats: Stats, grade: Grade, familiarity: number, comboBonus = 0) =>
   Object.values(stats).reduce((a, b) => a + b, 0) *
-  PAIR[pair] *
+  F.gradeScore[grade] *
   (1 + P.familiarityBonus * familiarity) *
   (1 + comboBonus)
-export const gradeScale = (rank: number) =>
-  GRADE_SCALE[Math.max(0, Math.min(GRADE_SCALE.length - 1, rank - 1))]
-/** Minimum score for each grade at this rank. */
-export const gradeMin = (rank: number, min: number) => Math.round(min * gradeScale(rank))
-export const gradeFor = (score: number, rank = 1): Grade =>
-  GRADES.find(g => score >= gradeMin(rank, g.min))?.id ?? 'C'
+export const formulaOf = (s: GameState, key: string | null) =>
+  key ? (s.formulaLab.formulas.find(f => f.key === key) ?? null) : null
+/** Grade a station running this recipe makes while its catalysts last. */
+export const recipeGrade = (s: GameState, r: Recipe): Grade =>
+  formulaOf(s, r.formula)?.grade ?? F.plainGrade
 export function lotStats(s: GameState): Stats {
   const n = P.baseStat * P.crudeQuality[s.crudeType]
   const m = getModifiers(s),
@@ -31,15 +30,15 @@ export function lotStats(s: GameState): Stats {
     eco: n + m.eco + p.eco + sp.eco,
   }
 }
-export function predictedScore(s: GameState, base = s.blend.base, additive = s.blend.additive) {
-  const familiarity = additive
-    ? ((s.familiarity[base] ?? 1) + (s.familiarity[additive] ?? 1)) / 2
-    : (s.familiarity[base] ?? 1)
+const familiarityOf = (s: GameState, base: BaseId, catalysts: readonly string[]) =>
+  [base, ...catalysts].reduce((n, id) => n + (s.familiarity[id] ?? 1), 0) / (1 + catalysts.length)
+export function predictedScore(s: GameState, r: Recipe = s.blend, grade = recipeGrade(s, r)) {
   const m = getModifiers(s)
+  const catalysts = formulaOf(s, r.formula)?.catalysts ?? []
   return (
-    scoreLot(lotStats(s), pairCompat(base, additive), familiarity, m.quality) +
+    scoreLot(lotStats(s), grade, familiarityOf(s, r.base, catalysts), m.quality) +
     m.score +
-    (base === 'gasoline' ? m.gasolineScore : 0)
+    (r.base === 'gasoline' ? m.gasolineScore : 0)
   )
 }
 export const blendStations = (s: GameState) => s.yard.buildings.filter(b => b.defId === 'blend')
@@ -49,20 +48,17 @@ export const activeRecipes = (s: GameState): Recipe[] => {
   const st = blendStations(s)
   return st.length ? st.map(b => recipeOf(s, b)) : [s.blend]
 }
-/** Pick a recipe. With a station uid only that station changes; without one, all stations do. */
+/** Pick a plain base or a formula. With a station uid only that station changes; without one,
+ *  all stations do. */
 export function selectBlend(
   s: GameState,
   base: BaseId,
-  additive: AdditiveId | null,
+  formula: string | null,
   station?: string,
 ): GameState {
-  if (
-    !baseAvailable(s, base) ||
-    (additive && !s.unlockedAdditives.includes(additive)) ||
-    !recipeKnown(s, base, additive)
-  )
-    return s
-  const recipe = { base, additive }
+  const f = formulaOf(s, formula)
+  if (!baseAvailable(s, base) || (formula && (!f || f.base !== base))) return s
+  const recipe: Recipe = { base, formula }
   return {
     ...s,
     blend: recipe,
@@ -87,7 +83,8 @@ export function blending(s: GameState): GameState {
   const capacity = tankCapacity(s)
   let next = s
   for (const station of stations) {
-    const { base, additive } = recipeOf(next, station)
+    const recipe = recipeOf(next, station),
+      { base } = recipe
     const units =
       P.lotUnits * (1 + YARD.outputPerLevel * (station.level - 1)) * plantFactor(next, station)
     if (units <= 0) continue
@@ -111,14 +108,23 @@ export function blending(s: GameState): GameState {
       }
       continue
     }
+    const formula = formulaOf(next, recipe.formula)
+    let grade: Grade = F.plainGrade
+    let short: string[] = []
+    if (formula) {
+      const r = produceLot({ ...next.formulaLab, rng: next.rng }, formula.key)
+      const { rng: _rng, ...lab } = r.state
+      next = { ...next, formulaLab: lab }
+      grade = r.grade
+      short = r.short
+    }
     const stats = lotStats(next),
-      score = predictedScore(next, base, additive),
-      grade = gradeFor(score, next.rank),
-      key = `${base}:${additive ?? 'none'}`,
+      score = predictedScore(next, recipe, grade),
+      key = formula?.key ?? `${base}:none`,
       first = !next.triedPairs.includes(key)
     const familiarity = { ...next.familiarity },
       useCounts = { ...next.useCounts }
-    for (const id of [base, additive])
+    for (const id of [base, ...(formula?.catalysts ?? [])])
       if (id) {
         useCounts[id] = (useCounts[id] ?? 0) + 1
         familiarity[id] = Math.min(
@@ -138,7 +144,16 @@ export function blending(s: GameState): GameState {
       baseStock: { ...next.baseStock, [base]: next.baseStock[base] - units },
       tanks: [
         ...next.tanks,
-        { uid: `l${next.nextId}`, base, additive, stats, score, grade, units },
+        {
+          uid: `l${next.nextId}`,
+          base,
+          formula: formula?.key ?? null,
+          secret: formula?.secret ?? null,
+          stats,
+          score,
+          grade,
+          units,
+        },
       ],
       fame: next.fame + (first ? P.firstTryFame : 0),
       triedPairs: first ? [...next.triedPairs, key] : next.triedPairs,
@@ -151,14 +166,16 @@ export function blending(s: GameState): GameState {
           tick: next.tick,
           x: station.x,
           y: station.y,
-          en: `${grade}!`,
-          th: `${grade}!`,
+          en: short.length ? `No ${shortName(short).en}` : `${grade}!`,
+          th: short.length ? `${shortName(short).th} หมด` : `${grade}!`,
         },
       ],
     }
   }
   return next
 }
+const shortName = (ids: string[]) => additives.find(a => a.id === ids[0])!.name
+
 export function discardLot(s: GameState, uid: string): GameState {
   if (!s.tanks.some(l => l.uid === uid)) return s
   return { ...s, tanks: s.tanks.filter(l => l.uid !== uid) }

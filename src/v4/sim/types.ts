@@ -15,10 +15,14 @@ export interface Building {
   repairUntil?: number
   /** Blend stations only: what this station mixes. Falls back to GameState.blend. */
   recipe?: Recipe
+  /** Labs only: what this lab does. Missing = 'catalyst'. */
+  labRole?: LabRole
 }
+export type LabRole = 'catalyst' | 'formula'
 export interface Recipe {
   base: import('../data/bases').BaseId
-  additive: import('../data/additives').AdditiveId | null
+  /** Formula key from the Formula Lab; null = plain base. */
+  formula: string | null
 }
 export interface Staff {
   uid: string
@@ -88,11 +92,9 @@ export interface GameState {
   staff: Staff[]
   ledger: { tick: number; amount: number; reason: string }[]
   log: { tick: number; en: string; th: string }[]
-  /** Base × additive pairs found by lab research ("base:additive"). No-additive is always known. */
-  knownRecipes: string[]
+  /** Catalyst stock, formulas, synergy book (docs/v4/FORMULA-LAB.md). */
+  formulaLab: FormulaLabState
   research: ResearchJob[]
-  /** Failed research leaves a clue that raises the next attempt's odds, per base. */
-  clues: Record<string, number>
   /** Per-base demand multiplier: falls with each sale, recovers weekly. */
   demand: Record<string, number>
   trend: { base: import('../data/bases').BaseId | null; until: number }
@@ -102,7 +104,7 @@ export interface GameState {
   ads: Record<string, number>
 }
 export type Action = (state: GameState) => GameState
-export type Grade = 'SS' | 'S' | 'A' | 'B' | 'C'
+export type Grade = 'SS' | 'S' | 'A' | 'B' | 'C' | 'D'
 export interface Stats {
   purity: number
   yield: number
@@ -112,7 +114,10 @@ export interface Stats {
 export interface Lot {
   uid: string
   base: import('../data/bases').BaseId
-  additive: import('../data/additives').AdditiveId | null
+  /** Formula key, or null for a plain-base lot. */
+  formula: string | null
+  /** Secret formula id, if the formula is one. */
+  secret: string | null
   stats: Stats
   score: number
   grade: Grade
@@ -174,8 +179,37 @@ export interface Notice {
   en: string
   th: string
 }
-export interface ResearchJob {
-  lab: string
-  base: import('../data/bases').BaseId
-  endTick: number
+export interface CatalystLot {
+  additive: import('../data/additives').AdditiveId
+  grade: Grade
+  units: number
 }
+export interface Formula {
+  key: string
+  base: import('../data/bases').BaseId
+  catalysts: import('../data/additives').AdditiveId[]
+  grade: Grade
+  /** Secret formula id when this set matches one. */
+  secret: string | null
+}
+export interface FormulaLabState {
+  stock: CatalystLot[]
+  formulas: Formula[]
+  /** Mixes in a row that did not beat their best input. */
+  pity: number
+  knownSynergies: string[]
+  /** Revealed hints: `syn:<a+b>` or `secret:<id>`. */
+  hints: string[]
+  /** Lots produced per formula since the last catalyst unit was used. */
+  lotCounter: Record<string, number>
+}
+export type ResearchJob =
+  | { lab: string; kind: 'catalyst'; endTick: number }
+  | {
+      lab: string
+      kind: 'mix'
+      endTick: number
+      /** Rolled when the mix starts (catalysts are spent then); revealed when it ends. */
+      formula: Formula
+      rolled: Grade
+    }

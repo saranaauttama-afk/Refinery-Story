@@ -1,4 +1,4 @@
-// Formula Lab — pure rules, not yet wired into GameState (see docs/v4/FORMULA-LAB.md).
+// Formula Lab — pure rules on the GameState.formulaLab slice plus the rng (docs/v4/FORMULA-LAB.md).
 // Catalyst Lab: research → graded catalyst stock.
 // Formula Lab: base or known formula + catalysts → permanent formula with a grade.
 // Blend stations: produce at the formula's grade while catalyst stock lasts.
@@ -16,38 +16,14 @@ import {
 } from '../../data/formulaLab'
 import { random } from '../rng'
 
-export type FGrade = (typeof FORMULA_GRADES)[number]
+import type { CatalystLot, Formula, FormulaLabState, Grade } from '../types'
+export type FGrade = Grade
+/** The formulaLab slice with the game's rng, so rolls stay on the one seeded stream. */
+export type LabSlice = FormulaLabState & { rng: number }
 export const gradeIndex = (g: FGrade) => FORMULA_GRADES.indexOf(g)
 export const gradeAt = (i: number): FGrade =>
   FORMULA_GRADES[Math.max(0, Math.min(FORMULA_GRADES.length - 1, Math.round(i)))]
-
-export interface CatalystLot {
-  additive: AdditiveId
-  grade: FGrade
-  units: number
-}
-export interface Formula {
-  key: string
-  base: BaseId
-  catalysts: AdditiveId[]
-  grade: FGrade
-  /** Secret formula id when this set matches one. */
-  secret: string | null
-}
-export interface FormulaLabState {
-  rng: number
-  stock: CatalystLot[]
-  formulas: Formula[]
-  /** Mixes in a row that did not beat their best input. */
-  pity: number
-  knownSynergies: string[]
-  /** Revealed hints: `syn:<a+b>` or `secret:<id>`. */
-  hints: string[]
-  /** Lots produced per formula since the last catalyst unit was used. */
-  lotCounter: Record<string, number>
-}
-export const emptyFormulaLab = (rng: number): FormulaLabState => ({
-  rng,
+export const emptyFormulaLab = (): FormulaLabState => ({
   stock: [],
   formulas: [],
   pity: 0,
@@ -65,7 +41,10 @@ export const catalystUnits = (level: number) =>
 
 /** Odds [D…SS] at a fractional lab level (chemists add a fraction), capped by year. */
 export function catalystWeights(level: number, chem: number, year: number): number[] {
-  const eff = Math.max(1, Math.min(5, level + chem / F.catalyst.chemPerLevel))
+  const eff = Math.max(
+    1,
+    Math.min(5, level + chem / F.catalyst.chemPerLevel + F.catalyst.levelPerYear * (year - 1)),
+  )
   const lo = Math.floor(eff),
     hi = Math.min(5, lo + 1),
     t = eff - lo
@@ -88,16 +67,16 @@ const addStock = (stock: CatalystLot[], lot: CatalystLot): CatalystLot[] => {
   if (i < 0) return [...stock, lot]
   return stock.map((x, j) => (j === i ? { ...x, units: x.units + lot.units } : x))
 }
-export const stockOf = (st: FormulaLabState, additive: AdditiveId, grade?: FGrade) =>
+export const stockOf = (st: Pick<LabSlice, 'stock'>, additive: AdditiveId, grade?: FGrade) =>
   st.stock
     .filter(x => x.additive === additive && (!grade || x.grade === grade))
     .reduce((n, x) => n + x.units, 0)
 
 /** A finished Catalyst Lab job: one random unlocked catalyst, graded by lab level. */
 export function rollCatalyst(
-  st: FormulaLabState,
+  st: LabSlice,
   opts: { pool: readonly AdditiveId[]; level: number; chem: number; year: number },
-): { state: FormulaLabState; lot: CatalystLot | null; hint: string | null } {
+): { state: LabSlice; lot: CatalystLot | null; hint: string | null } {
   if (!opts.pool.length) return { state: st, lot: null, hint: null }
   const [r1, g1] = random(st.rng)
   const [r2, g2] = random(g1)
@@ -105,7 +84,7 @@ export function rollCatalyst(
   const additive = opts.pool[Math.floor(r1 * opts.pool.length)]
   const grade = gradeAt(pickWeighted(catalystWeights(opts.level, opts.chem, opts.year), r2))
   const lot = { additive, grade, units: catalystUnits(opts.level) }
-  let next: FormulaLabState = { ...st, rng: g3, stock: addStock(st.stock, lot) }
+  let next: LabSlice = { ...st, rng: g3, stock: addStock(st.stock, lot) }
   let hint: string | null = null
   if (r3 < F.catalyst.hintChance) {
     const [r4, g4] = random(next.rng)
@@ -143,7 +122,7 @@ export interface MixInput {
 }
 export type MixBlock = 'slots' | 'empty' | 'stock' | 'full' | 'formula' | 'duplicate' | null
 
-export function mixBlock(st: FormulaLabState, m: MixInput): MixBlock {
+export function mixBlock(st: LabSlice, m: MixInput): MixBlock {
   if (!m.picks.length) return 'empty'
   if (m.picks.length > slotsFor(m.year)) return 'slots'
   if (new Set(m.picks.map(p => p.additive)).size !== m.picks.length) return 'duplicate'
@@ -156,7 +135,7 @@ export function mixBlock(st: FormulaLabState, m: MixInput): MixBlock {
 }
 
 /** Grade math without luck: what the player can see before mixing. */
-export function mixOdds(st: FormulaLabState, m: MixInput) {
+export function mixOdds(st: LabSlice, m: MixInput) {
   const from = m.from ? st.formulas.find(f => f.key === m.from) : null
   const catalysts = [...new Set([...(from?.catalysts ?? []), ...m.picks.map(p => p.additive)])]
   const inputs = [from ? gradeIndex(from.grade) : 0, ...m.picks.map(p => gradeIndex(p.grade))]
@@ -199,7 +178,7 @@ export function mixOdds(st: FormulaLabState, m: MixInput) {
 }
 
 export interface MixResult {
-  state: FormulaLabState
+  state: LabSlice
   formula: Formula | null
   rolled: FGrade | null
   /** True when a known formula got a better grade, or a new formula was found. */
@@ -207,7 +186,7 @@ export interface MixResult {
   isNew: boolean
   block: MixBlock
 }
-export function mixFormula(st: FormulaLabState, m: MixInput): MixResult {
+export function mixFormula(st: LabSlice, m: MixInput): MixResult {
   const block = mixBlock(st, m)
   if (block) return { state: st, formula: null, rolled: null, improved: false, isNew: false, block }
   const o = mixOdds(st, m)
@@ -259,11 +238,11 @@ export function mixFormula(st: FormulaLabState, m: MixInput): MixResult {
  * each catalyst (lowest grade first). If any catalyst is missing, the lot drops to the fallback.
  */
 export function produceLot(
-  st: FormulaLabState,
+  st: LabSlice,
   key: string,
-): { state: FormulaLabState; grade: FGrade; short: AdditiveId[] } {
+): { state: LabSlice; grade: FGrade; short: AdditiveId[] } {
   const formula = st.formulas.find(f => f.key === key)
-  if (!formula) return { state: st, grade: F.production.fallbackGrade, short: [] }
+  if (!formula) return { state: st, grade: F.plainGrade, short: [] }
   const count = (st.lotCounter[key] ?? 0) + 1
   if (count < F.production.lotsPerUnit || !formula.catalysts.length)
     return {
@@ -272,7 +251,7 @@ export function produceLot(
       short: [],
     }
   const short = formula.catalysts.filter(a => stockOf(st, a) < 1)
-  if (short.length) return { state: st, grade: F.production.fallbackGrade, short }
+  if (short.length) return { state: st, grade: F.plainGrade, short }
   let stock = st.stock
   for (const a of formula.catalysts) {
     const lowest = stock
@@ -288,6 +267,3 @@ export function produceLot(
     short: [],
   }
 }
-
-export const lotPrice = (grade: FGrade, secret: string | null) =>
-  F.gradePrice[grade] * (secret ? F.secretPrice : 1)

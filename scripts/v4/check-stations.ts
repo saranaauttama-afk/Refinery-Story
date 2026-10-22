@@ -2,17 +2,10 @@ import assert from 'node:assert/strict'
 import { createNewGame } from '../../src/v4/sim/state'
 import { buildStarter } from '../../src/v4/sim/systems/starter'
 import { canPlace, place } from '../../src/v4/sim/systems/yard'
-import {
-  selectBlend,
-  recipeOf,
-  blendStations,
-  gradeFor,
-  gradeMin,
-} from '../../src/v4/sim/systems/blending'
+import { selectBlend, recipeOf, blendStations } from '../../src/v4/sim/systems/blending'
 import { arrivalInterval } from '../../src/v4/sim/systems/customers'
 import { serialize, deserialize } from '../../src/v4/sim/save'
 import { tick } from '../../src/v4/sim/tick'
-import { GRADES } from '../../src/v4/data/balance'
 import type { GameState, Lot } from '../../src/v4/sim/types'
 
 // A second blend station can run its own recipe.
@@ -51,7 +44,8 @@ assert.ok(blendStations(loaded).every(b => recipeOf(loaded, b) === loaded.blend)
 const lot = (uid: string, base: Lot['base']): Lot => ({
   uid,
   base,
-  additive: null,
+  formula: null,
+  secret: null,
   grade: 'B',
   score: 150,
   units: 300,
@@ -61,13 +55,9 @@ const single = { ...s, tanks: [lot('a', 'gasoline')] }
 const double = { ...s, tanks: [lot('a', 'gasoline'), lot('b', 'diesel')] }
 assert.ok(arrivalInterval(double) < arrivalInterval(single))
 
-// Grade thresholds rise with rank but SS stays reachable.
-const ss = GRADES[0].min
-assert.equal(gradeFor(ss, 1), 'SS')
-assert.notEqual(gradeFor(ss, 5), 'SS')
-assert.equal(gradeFor(gradeMin(10, ss), 10), 'SS')
-for (let r = 2; r <= 10; r++) assert.ok(gradeMin(r, ss) >= gradeMin(r - 1, ss))
+// Plain stations make plain-grade lots.
+assert.ok(s.tanks.every(l => l.grade === 'C' && l.formula === null))
 
 console.log(
-  'M10 per-station recipes / both lines / legacy save / product-line buyers / rank grades passed',
+  'M10 per-station recipes / both lines / legacy save / product-line buyers / plain grade passed',
 )
