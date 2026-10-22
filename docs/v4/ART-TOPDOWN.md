@@ -31,7 +31,7 @@ canteen 2×1, flare 1×1, tower 3×3, every decoration 1×1.
 
 ## 3. World map — one picture
 
-The whole world is **one image** (`art-src/gpt/topdown/map_v1.png`, 2560 × 2816, drawn
+The whole world is **one image** (`art-src/gpt/topdown/map_v2.png`, 2560 × 2816, drawn
 at 2 image px per art pixel). `scripts/art/td_map.py` finds the flat grey yard block,
 writes `assets/v4/td/map.png` (half size, drawn back at 2×) and `src/v4/render/tdMap.ts`
 (where the yard's tile 0,0 sits, plus open-water tiles for sea glints).
