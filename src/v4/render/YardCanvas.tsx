@@ -22,7 +22,7 @@ import { text } from '../i18n'
 import { sprites } from './buildings'
 import { drawCommands } from './draw'
 import { useSpriteImages, drawBuilding } from './useSpriteImages'
-import { spriteImageFor } from './spriteImages'
+import { spriteImageFor, spriteTierFor } from './spriteImages'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
@@ -396,7 +396,7 @@ export function YardCanvas({
         const sparked = sparkAt.current.get(b.uid)
         if (world && sparked !== undefined && time.current - sparked < 900)
           drawSparkle(canvas, world, (time.current - sparked) / 900, 0, -top / 2)
-        if (b.level >= 5)
+        if (b.level >= 5 && spriteTierFor(b.defId, b.level) !== 5 && !atlasArt(b, 0, false))
           drawCommands(canvas, [
             circle(0, -top - 4, 3, Math.floor(visualTime * 2) % 2 ? '#F2C230' : '#F08A24'),
           ])
