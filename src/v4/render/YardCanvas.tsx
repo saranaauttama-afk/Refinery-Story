@@ -26,7 +26,7 @@ import { spriteImageFor } from './spriteImages'
 import { poly, circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
-import { tdAtlasSrc } from './tdAtlas'
+import { tdAtlas, tdAtlasSrc } from './tdAtlas'
 import { tdMap, tdMapSrc } from './tdMap'
 const seaColor = '#007CE2'
 import {
@@ -43,6 +43,12 @@ import {
 import { customers } from '../data/customers'
 const bounds = { x: tdMap.x - 400, y: tdMap.y - 400, width: tdMap.w + 800, height: tdMap.h + 800 }
 // Tile just in front of a building's bottom corner, where its staff stand.
+/** Atlas sprite standing in for a building (decorations, the animated flare, the gate). */
+function atlasArt(b: { defId: string }, t: number, gateOpen: boolean) {
+  if (b.defId === 'flare') return `flare${Math.floor(t * 8) % 4}`
+  if (b.defId === 'gate') return gateOpen ? 'barrier_up' : 'barrier_down'
+  return tdAtlas[`deco_${b.defId}`] ? `deco_${b.defId}` : undefined
+}
 const frontTile = (b: { x: number; y: number; defId: string }) => ({
   x: b.x + buildingDef(b.defId).w / 2,
   y: b.y + buildingDef(b.defId).h + 0.3,
@@ -221,16 +227,25 @@ export function YardCanvas({
       ]
     }),
   )
+  const truckNearGate =
+    !!gate &&
+    [...truckPositions.values()].some(
+      p => Math.abs(p.x - (gate.x + 0.5)) < 2.5 && Math.abs(p.y - (gate.y + 0.5)) < 3,
+    )
   const workerPositions = new Map(
     s.staff.map(p => {
       const building = s.yard.buildings.find(b => b.uid === p.assignedTo)
-      if (!building) return [p.uid, { x: 0, y: 0 }]
+      if (!building) return [p.uid, { x: 0, y: 0, dir: 's' }]
       const canteen = s.yard.buildings.find(b => b.defId === 'canteen')
       const phase = (visualTime / 8 + staffOffset(p.uid)) % 2,
         f = phase < 1 ? phase : 2 - phase
       const work = frontTile(building),
         rest = canteen ? frontTile(canteen) : { x: work.x - 1.5, y: work.y }
-      return [p.uid, { x: rest.x + (work.x - rest.x) * f, y: rest.y + (work.y - rest.y) * f }]
+      const sign = phase < 1 ? 1 : -1,
+        dx = (work.x - rest.x) * sign,
+        dy = (work.y - rest.y) * sign
+      const dir = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'e' : 'w') : dy >= 0 ? 's' : 'n'
+      return [p.uid, { x: rest.x + (work.x - rest.x) * f, y: rest.y + (work.y - rest.y) * f, dir }]
     }),
   )
   const entries = [
@@ -322,7 +337,7 @@ export function YardCanvas({
     for (const entry of entries) {
       canvas.save()
       if (entry.kind === 'building') {
-        if (world) {
+        if (world && !atlasArt(entry.b, 0, false)) {
           // Soft shadow of the footprint, shifted to the lower right.
           const b0 = entry.b,
             d0 = buildingDef(b0.defId),
@@ -335,7 +350,12 @@ export function YardCanvas({
           path.close()
           canvas.drawPath(path.detach(), sh)
         }
-        canvas.drawPicture(buildingPictures[entry.b.uid])
+        const art = world && atlasArt(entry.b, visualTime, s.trucks.length > 0 && truckNearGate)
+        if (art && world) {
+          const d1 = buildingDef(entry.b.defId),
+            q1 = toScreen(entry.b.x + d1.w / 2, entry.b.y + d1.h)
+          sprite(canvas, world, art, q1.x, q1.y - 3)
+        } else canvas.drawPicture(buildingPictures[entry.b.uid])
         const b = entry.b,
           d = buildingDef(b.defId),
           p = toScreen(b.x, b.y)
@@ -404,14 +424,25 @@ export function YardCanvas({
           const dx =
               a && n && (n.x !== a.x || n.y !== a.y) ? n.x - a.x : a && back ? a.x - back.x : 1,
             dy = a && n && (n.x !== a.x || n.y !== a.y) ? n.y - a.y : a && back ? a.y - back.y : 0
-          sprite(canvas, world, truckName(t.kind, dx, dy), 0, 8, 0.62, 1, true)
+          sprite(canvas, world, truckName(t.kind, dx, dy), 0, 6, 1, 1, true)
         } else
           drawCommands(canvas, truckSprite(entry.t.kind, truckAccent(entry.t.customer), visualTime))
       } else {
         const p = workerPositions.get(entry.p.uid)!,
           point = toScreen(p.x, p.y)
         canvas.translate(point.x, point.y)
-        drawCommands(canvas, workerSprite(entry.p.job, visualTime))
+        if (world && tdAtlas[`${entry.p.job}_s0`])
+          sprite(
+            canvas,
+            world,
+            `${entry.p.job}_${p.dir}${Math.floor(visualTime * 4) % 2}`,
+            0,
+            4,
+            1,
+            1,
+            true,
+          )
+        else drawCommands(canvas, workerSprite(entry.p.job, visualTime))
       }
       canvas.restore()
     }

@@ -28,7 +28,32 @@ def frames(path,fw,fh,nf,prefix,ax,ay):
     for i in range(nf): add(f'{prefix}{i}',sh.crop(((i%cols)*fw,(i//cols)*fh,(i%cols+1)*fw,(i//cols+1)*fh)),ax,ay,1)
 frames('r8/smoke/chimney-smoke.png',32,32,16,'smoke',14,31)
 frames('r8/sparkle/level-up-sparkle.png',48,48,8,'spark',24,24)
-names=sorted(items,key=lambda n:-items[n][0].height); AW=1024; x=y=rowh=0; rects={}
+# GPT sheets (art-src/gpt/topdown/td_*.png, cut by scripts/art/cellcut.py into gpt2/cut/).
+# Stored at 2x the world size (k = 0.5) and drawn with smoothing.
+G='gpt2/cut'
+def gpt(name,src,ref,size,axis,ax,ay,flip=False):
+    im=Image.open(f'{G}/{src}.png').convert('RGBA'); r=Image.open(f'{G}/{ref}.png')
+    s=2*size/(r.width if axis=='w' else r.height)
+    im=im.resize((max(1,round(im.width*s)),max(1,round(im.height*s))),Image.LANCZOS)
+    if flip: im=im.transpose(Image.FLIP_LEFT_RIGHT)
+    add(name,im,im.width*ax,im.height*ay,0.5)
+for v,size in [('crude',64),('product',64),('car',40),('car2',40),('pickup',44),('fork',30)]:
+    for d in ['east','west','north','south']: gpt(f'{v}_{d}',f'{v}_{d}',f'{v}_east',size,'w',0.5,0.62)
+for v,size in [('tanker',256),('tanker2',220),('fishboat',72),('tug',64)]:
+    for d in ['east','west']: gpt(f'{v}_{d}',f'{v}_{d}',f'{v}_east',size,'w',0.5,0.75)
+for j in ['operator','chemist','engineer','safety','manager','director']:
+    for i in (0,1):
+        gpt(f'{j}_e{i}',f'{j}_e{i}',f'{j}_s0',26,'h',0.5,1)
+        gpt(f'{j}_w{i}',f'{j}_e{i}',f'{j}_s0',26,'h',0.5,1,True)
+        gpt(f'{j}_s{i}',f'{j}_s{i}',f'{j}_s0',26,'h',0.5,1)
+        gpt(f'{j}_n{i}',f'{j}_n{i}',f'{j}_s0',26,'h',0.5,1)
+for i in range(3): gpt(f'gull{i}',f'gull{i}','gull1',26,'w',0.5,0.5)
+for i in range(4): gpt(f'flare{i}',f'flare{i}','flare0',72,'h',0.5,1)
+for n in ['barrier_down','barrier_up']: gpt(n,n,'barrier_down',40,'w',0.15,1)
+for i in range(3): gpt(f'crane{i}',f'crane{i}','crane0',64,'w',0.5,1)
+for n,size,axis in [('tree',34,'w'),('goldTree',34,'w'),('lamp',40,'h'),('sign',34,'w'),('flag',48,'h'),('goldSign',32,'w'),('legend',40,'h'),('awardproduct',34,'h'),('awardsafety',34,'h'),('awardeco',34,'h'),('awardrefinery',34,'h'),('flowerbed',32,'w')]:
+    gpt(f'deco_{n}',n,n,size,axis,0.5,1)
+names=sorted(items,key=lambda n:-items[n][0].height); AW=2048; x=y=rowh=0; rects={}
 for n in names:
     im=items[n][0]
     if x+im.width+1>AW: x=0; y+=rowh+1; rowh=0

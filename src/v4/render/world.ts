@@ -62,7 +62,7 @@ export function sprite(
     img,
     Skia.XYWHRect(sx, sy, w, h),
     Skia.XYWHRect(x - ax * s, y - ay * s, w * s, h * s),
-    FilterMode.Nearest,
+    k < 1 ? FilterMode.Linear : FilterMode.Nearest,
     MipmapMode.None,
     p,
   )
@@ -133,14 +133,24 @@ export function drawSeaLife(c: SkCanvas, img: SkImage, t: number) {
       c.drawRect(Skia.XYWHRect(Math.round(g.x + (i % 5)), Math.round(g.y), 6, 2), white)
     }
   })
-  // Tanker sails down into the harbour, berths between the piers, then backs out.
-  const f = cycle(t, 150),
-    top = (Y0 - 3) * TILE,
-    berth = BERTH.y * TILE
-  let sy = berth
-  if (f < 0.3) sy = top + (berth - top) * (1 - (1 - f / 0.3) ** 2)
-  else if (f > 0.7) sy = berth + (top - berth) * ((f - 0.7) / 0.3) ** 2
-  sprite(c, img, f > 0.7 ? 'ship_north' : 'ship_south', BERTH.x * TILE + Math.sin(t * 1.3), sy, 2)
+  // A tanker crosses the open sea, slows off the harbour mouth, then sails on;
+  // a tug keeps it company. Every other trip the blue tanker comes the other way.
+  const trip = Math.floor(t / 150),
+    f = cycle(t, 150),
+    eastbound = trip % 2 === 0
+  const left = X0 * TILE - 200,
+    right = X1 * TILE + 200,
+    stop = BERTH.x * TILE
+  const ease = (k: number) => 1 - (1 - k) ** 2
+  let sx = stop
+  if (f < 0.35)
+    sx = (eastbound ? left : right) + (stop - (eastbound ? left : right)) * ease(f / 0.35)
+  else if (f > 0.65) sx = stop + ((eastbound ? right : left) - stop) * ((f - 0.65) / 0.35) ** 2
+  const dir = eastbound ? 'east' : 'west',
+    ship = eastbound ? 'tanker' : 'tanker2',
+    sy = (Y0 + 9) * TILE + Math.sin(t * 1.3) * 1.5
+  sprite(c, img, `tug_${dir}`, sx + (eastbound ? 170 : -170), sy + 26 + Math.sin(t * 2.1), 1)
+  sprite(c, img, `${ship}_${dir}`, sx, sy, 1)
   // Fishing boat drifting back and forth on the open sea.
   const b = pingPong(cycle(t, 60))
   sprite(
@@ -148,8 +158,8 @@ export function drawSeaLife(c: SkCanvas, img: SkImage, t: number) {
     img,
     cycle(t, 60) < 0.5 ? 'fishboat_east' : 'fishboat_west',
     (-20 + b * 26) * TILE,
-    (Y0 + 6) * TILE + Math.sin(t * 2),
-    1.4,
+    (Y0 + 3) * TILE + Math.sin(t * 2),
+    1,
   )
   // A fish leaps now and then.
   const jf = cycle(t, 7)
@@ -199,13 +209,14 @@ const outer = [
 
 /** Cars driving round the ring road and along the road below the yard. */
 export function drawTraffic(c: SkCanvas, img: SkImage, t: number) {
-  const car = (p: { x: number; y: number; dir: string }) =>
-    sprite(c, img, `car_${p.dir}`, p.x * TILE, p.y * TILE + 5, 0.75)
-  car(along(inner, t * 2.2))
-  car(along(inner, t * 2.2 + 60))
-  car(along(outer, t * 1.9 + 20))
+  const car = (kind: string, p: { x: number; y: number; dir: string }) =>
+    sprite(c, img, `${kind}_${p.dir}`, p.x * TILE, p.y * TILE + 4)
+  car('car', along(inner, t * 2.2))
+  car('pickup', along(inner, t * 2.2 + 60))
+  car('car2', along(outer, t * 1.9 + 20))
   const span = X1 - X0
-  car({ x: X1 - ((t * 2.5) % span), y: BOTTOM[0], dir: 'west' })
+  car('car', { x: X1 - ((t * 2.5) % span), y: BOTTOM[1], dir: 'west' })
+  car('car2', { x: X0 + ((t * 2.1 + 30) % span), y: BOTTOM[0], dir: 'east' })
 }
 
 /** Clouds with their ground shadows, and a gull flock now and then (over everything). */
@@ -229,7 +240,7 @@ export function drawSky(c: SkCanvas, img: SkImage, t: number) {
       sprite(
         c,
         img,
-        `gull${Math.floor(t * 4 + i) % 2}`,
+        `gull${Math.floor(t * 4 + i) % 3}`,
         bx - i * 22,
         by + i * 12 + Math.sin(t * 3 + i) * 3,
         0.9,
