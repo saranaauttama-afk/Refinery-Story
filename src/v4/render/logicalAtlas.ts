@@ -1,6 +1,7 @@
 import { Skia, FilterMode, MipmapMode, type SkImage } from '@shopify/react-native-skia'
 import { tdAtlas } from './tdAtlas'
-// Normalize legacy 2x sources once, onto an integer world-pixel grid. Source files stay intact.
+// Keep moving sprites on the same 64 art px / tile grid as generated buildings and ground.
+export const ATLAS_DENSITY = 2
 export const logicalAtlas: Record<
   string,
   readonly [number, number, number, number, number, number]
@@ -9,19 +10,26 @@ let x = 2,
   y = 2,
   row = 0
 for (const [name, [, , w, h, ax, ay, k]] of Object.entries(tdAtlas)) {
-  const width = Math.max(1, Math.round(w * k)),
-    height = Math.max(1, Math.round(h * k))
-  if (x + width + 2 > 1024) {
+  const width = Math.max(1, Math.round(w * k * ATLAS_DENSITY)),
+    height = Math.max(1, Math.round(h * k * ATLAS_DENSITY))
+  if (x + width + 2 > 2048) {
     x = 2
     y += row + 4
     row = 0
   }
-  logicalAtlas[name] = [x, y, width, height, Math.round(ax * k), Math.round(ay * k)]
+  logicalAtlas[name] = [
+    x,
+    y,
+    width,
+    height,
+    Math.round(ax * k * ATLAS_DENSITY),
+    Math.round(ay * k * ATLAS_DENSITY),
+  ]
   x += width + 4
   row = Math.max(row, height)
 }
 export function normalizeAtlas(source: SkImage): SkImage | null {
-  const surface = Skia.Surface.Make(1024, y + row + 2)
+  const surface = Skia.Surface.Make(2048, y + row + 2)
   if (!surface) return null
   const canvas = surface.getCanvas(),
     paint = Skia.Paint()

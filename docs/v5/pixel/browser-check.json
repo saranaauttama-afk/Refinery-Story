@@ -1,0 +1,19 @@
+{
+  "viewport": "390x844 @2x",
+  "buildings": 25,
+  "checks": [
+    "default 48pt tile",
+    "land overview returns to previous world centre",
+    "detail 64pt tile",
+    "overview round trip",
+    "wide 32pt tile",
+    "pan",
+    "camera restored after reload",
+    "build catalogue opened",
+    "placement switches to >=48pt",
+    "land mode",
+    "purchase fifth parcel",
+    "full 32x24 yard overview in a fresh browser context"
+  ],
+  "errors": []
+}

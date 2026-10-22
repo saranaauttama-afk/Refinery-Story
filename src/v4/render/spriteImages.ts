@@ -1,7 +1,7 @@
-// Building art registry. Native-resolution V5 art lives in v5Buildings.ts; buildings without an
+// Building art registry. Generated pixel sprites live in pixelBuildings.ts; buildings without an
 // entry draw the temporary box from box.ts. Tiers: a level uses its own image, else the
 // nearest lower one.
-import { v5Buildings } from './v5Buildings'
+import { pixelBuildings } from './pixelBuildings'
 export type Tier = 1 | 2 | 3 | 4 | 5
 export type SpriteImage = {
   src: number
@@ -12,8 +12,9 @@ export type SpriteImage = {
   scale: number
   /** Legacy flag; V5 always uses nearest-neighbour at native logical resolution. */
   smooth: boolean
+  emitter?: { x: number; y: number }
 }
-export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = v5Buildings
+export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = pixelBuildings
 export function spriteTierFor(id: string, level: number): Tier | undefined {
   const set = spriteImages[id]
   if (!set) return undefined

@@ -1,6 +1,7 @@
 // Presentation constants only. The simulation owns parcels and building footprints.
 export const GRAPHICS = {
   tile: 32,
+  artDensity: 2,
   playZooms: [1, 1.5, 2] as readonly number[],
   defaultZoom: 1.5,
   world: { x: -8 * 32, y: -16 * 32, width: 48 * 32, height: 48 * 32 },

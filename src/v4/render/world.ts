@@ -9,7 +9,7 @@ import {
   type SkCanvas,
   type SkImage,
 } from '@shopify/react-native-skia'
-import { logicalAtlas } from './logicalAtlas'
+import { logicalAtlas, ATLAS_DENSITY } from './logicalAtlas'
 import { LANES, seaTiles } from './scenery'
 import { TILE } from './iso'
 
@@ -46,7 +46,7 @@ export function sprite(
   const r = logicalAtlas[name]
   if (!r) return
   const [sx, sy, w, h, ax, ay] = r
-  const s = scale
+  const s = scale / ATLAS_DENSITY
   if (shadow) {
     const sp = paint()
     sp.setColor(Skia.Color('#0B2A33'))

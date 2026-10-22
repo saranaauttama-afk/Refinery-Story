@@ -13,7 +13,7 @@
     "v4:check": "node --import tsx scripts/v4/check-all.ts",
     "format": "prettier --write \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
     "format:check": "prettier --check \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
-    "art:v5": "node --import tsx scripts/art/build-topdown-art.ts && prettier --write src/v4/render/v5Buildings.ts"
+    "art:v5": "node --import tsx scripts/art/build-generated-pixel.ts && prettier --write src/v4/render/pixelBuildings.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",
@@ -46,6 +46,7 @@
     "@babel/core": "^7.25.0",
     "@types/react": "~19.2.0",
     "prettier": "^3.9.10",
+    "sharp": "^0.34.5",
     "tsx": "^4.23.15",
     "typescript": "~5.9.0"
   },

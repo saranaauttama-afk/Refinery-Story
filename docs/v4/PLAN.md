@@ -325,6 +325,7 @@ the owner checks on the APK.
 | UI redesign 4.0.13       | implemented; TypeScript, sim checks, web export and 390×844 browser checks passed | `feat(v4): complete chunky pixel industrial UI redesign` | Android Preview APK on push | deferred      |
 | UI surfaces 4.0.24      | shared concrete yard and screen presentation; automated and browser validation | see UI-SURFACES-4.0.24.md | Android Preview APK on push | deferred |
 | V5 unified graphics 4.1.8 | native pixel frames, tiled coast, play/overview cameras, parcel fences; see ../v5/GRAPHICS.md | feat(v5): unify world pixels and play camera | Android Preview APK on push | deferred |
+| V5 generated pixel art 4.1.9 | generated L1–L5 sprites, scenery and 64 px terrain; see ../v5/pixel/README.md | fix(v5): restore crafted pixel artwork | Android Preview APK on push | deferred |
 | Coastal redesign 4.0.25 | approved concept implemented for title, HUD, dock, panels and yard scenery | see COASTAL-REDESIGN-4.0.25.md | Android Preview APK on push | deferred |
 
 ### M0 validation

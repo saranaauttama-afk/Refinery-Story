@@ -13,7 +13,7 @@ import { drawCommands } from './draw'
 
 export type LoadedSprites = Record<string, SkImage | null>
 
-/** Load every PixelLab sprite once; the list is fixed, so the hook count never changes. */
+/** Load every generated sprite once; the list is fixed, so the hook count never changes. */
 export function useSpriteImages(): LoadedSprites {
   const out: LoadedSprites = {}
   for (const { key, img } of allSpriteImages) {
@@ -34,6 +34,7 @@ export function drawBuilding(
   const tier = spriteTierFor(id, level)
   const img = spriteImageFor(id, level)
   const sk = tier ? loaded[`${id}:${tier}`] : null
+  if (img && !sk) return
   if (img && sk) {
     const k = img.scale
     canvas.drawImageRectOptions(

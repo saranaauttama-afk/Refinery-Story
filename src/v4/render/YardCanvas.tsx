@@ -40,6 +40,7 @@ import {
 import { groundCommands, fenceSections, scenicProps } from './scenery'
 import { normalizeAtlas } from './logicalAtlas'
 import { artDefinition } from './topdownArt'
+import { usePixelTerrain } from './pixelTerrain'
 import { buildingAt } from '../sim/systems/yard'
 const seaColor = GRAPHICS.sea
 import {
@@ -336,7 +337,8 @@ export function YardCanvas({
       -32,
       ...s.yard.buildings.map(b => {
         const d = buildingDef(b.defId)
-        return (b.y + d.h) * TILE - (spriteImageFor(b.defId, b.level)?.ay ?? d.h * TILE) - 16
+        const im = spriteImageFor(b.defId, b.level)
+        return (b.y + d.h) * TILE - (im ? im.ay * im.scale : d.h * TILE) - 16
       }),
     )
     setCamera(overviewCamera(sizeRef.current, s.yard.ownedParcels, top))
@@ -352,6 +354,7 @@ export function YardCanvas({
   }, [landMode])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
   const worldRaw = useImage(tdAtlasSrc)
+  const terrain = usePixelTerrain()
   const world = useMemo(() => (worldRaw ? normalizeAtlas(worldRaw) : null), [worldRaw])
   useEffect(() => () => world?.dispose(), [world])
   const ambient = !reduced && s.settings.ambient !== false
@@ -366,28 +369,43 @@ export function YardCanvas({
       chunks = []
     for (let y = bounds.y; y < bounds.y + bounds.height; y += GRAPHICS.chunk)
       for (let x = bounds.x; x < bounds.x + bounds.width; x += GRAPHICS.chunk) {
-        const surface = Skia.Surface.Make(GRAPHICS.chunk, GRAPHICS.chunk)
+        const surface = Skia.Surface.Make(
+          GRAPHICS.chunk * GRAPHICS.artDensity,
+          GRAPHICS.chunk * GRAPHICS.artDensity,
+        )
         if (!surface) continue
         const c = surface.getCanvas()
+        c.scale(GRAPHICS.artDensity, GRAPHICS.artDensity)
         c.translate(-x, -y)
-        drawCommands(
-          c,
-          commands.filter(
-            a =>
-              a.kind === 'rect' &&
-              a.x < x + GRAPHICS.chunk &&
-              a.x + a.w > x &&
-              a.y < y + GRAPHICS.chunk &&
-              a.y + a.h > y,
-          ),
-          false,
-        )
+        const paint = Skia.Paint()
+        paint.setAntiAlias(false)
+        for (const a of commands.filter(
+          a =>
+            a.kind === 'rect' &&
+            a.x < x + GRAPHICS.chunk &&
+            a.x + a.w > x &&
+            a.y < y + GRAPHICS.chunk &&
+            a.y + a.h > y,
+        )) {
+          const tile = a.kind === 'rect' && a.w === TILE && a.h === TILE && terrain?.[a.color]
+          if (tile && a.kind === 'rect')
+            c.drawImageRectOptions(
+              tile,
+              Skia.XYWHRect(0, 0, 64, 64),
+              Skia.XYWHRect(a.x, a.y, TILE, TILE),
+              FilterMode.Nearest,
+              MipmapMode.None,
+              paint,
+            )
+          else drawCommands(c, [a], false)
+        }
+        paint.dispose()
         surface.flush()
         chunks.push({ x, y, image: surface.makeImageSnapshot() })
         surface.dispose()
       }
     return chunks
-  }, [s.yard.ownedParcels, gateKey])
+  }, [s.yard.ownedParcels, gateKey, terrain])
   useEffect(() => () => groundChunks.forEach(c => c.image.dispose()), [groundChunks])
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
@@ -396,7 +414,12 @@ export function YardCanvas({
     for (const c of groundChunks)
       canvas.drawImageRectOptions(
         c.image,
-        Skia.XYWHRect(0, 0, GRAPHICS.chunk, GRAPHICS.chunk),
+        Skia.XYWHRect(
+          0,
+          0,
+          GRAPHICS.chunk * GRAPHICS.artDensity,
+          GRAPHICS.chunk * GRAPHICS.artDensity,
+        ),
         Skia.XYWHRect(c.x, c.y, GRAPHICS.chunk, GRAPHICS.chunk),
         FilterMode.Nearest,
         MipmapMode.None,
@@ -608,8 +631,9 @@ export function YardCanvas({
         // Height of the art (or box) above the slab's bottom, for smoke, sparkles and lights.
         const img = spriteImageFor(b.defId, b.level)
         const top = img ? img.ay * img.scale : d.h * TILE + 20
+        const emitter = img?.emitter ?? buildingSocket(b.defId)
         if (world && ambient && ['cdu', 'cracker'].includes(b.defId))
-          drawSmoke(canvas, world, visualTime, buildingSocket(b.defId).x, buildingSocket(b.defId).y)
+          drawSmoke(canvas, world, visualTime, emitter.x, emitter.y)
         else if (!reduced && ['cdu', 'cracker'].includes(b.defId)) {
           for (let i = 0; i < 3; i++) {
             const phase = (visualTime * 0.6 + i / 3) % 1
@@ -630,7 +654,7 @@ export function YardCanvas({
         }
         if (b.defId === 'flare') {
           const flicker = ambient ? Math.floor(visualTime * 8) % 4 : 1,
-            yy = buildingSocket('flare').y
+            yy = emitter.y
           drawCommands(
             canvas,
             [
