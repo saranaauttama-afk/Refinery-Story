@@ -50,7 +50,7 @@ type Ghost = {
   spent: number
 }
 export function YardScreen() {
-  const { state: s, dispatch } = useGame()
+  const { state: s, dispatch, ready } = useGame()
   const [panel, setPanel] = useState('')
   const [bell, setBell] = useState(false)
   const [selected, setSelected] = useState('')
@@ -119,7 +119,11 @@ export function YardScreen() {
       <View style={{ flex: 1 }}>
         <YardCanvas
           state={s}
+          ready={ready}
+          bottomInset={!ghost && !panel && !bell ? guideHeight + 24 : 0}
           ghost={ghost}
+          selectedUid={panel === 'info' ? selected : undefined}
+          landMode={panel === 'land'}
           lift={panel === 'build' ? 0.3 : panel ? 0.62 : 0}
           onTile={(x, y) => {
             setBell(false)

@@ -1,7 +1,7 @@
-// Building art registry. Top-down GPT art lives in tdBuildings.ts; buildings without an
+// Building art registry. Native-resolution V5 art lives in v5Buildings.ts; buildings without an
 // entry draw the temporary box from box.ts. Tiers: a level uses its own image, else the
 // nearest lower one.
-import { tdBuildings } from './tdBuildings'
+import { v5Buildings } from './v5Buildings'
 export type Tier = 1 | 2 | 3 | 4 | 5
 export type SpriteImage = {
   src: number
@@ -10,10 +10,10 @@ export type SpriteImage = {
   ax: number
   ay: number
   scale: number
-  /** Hi-res art: scale with linear filtering instead of nearest-neighbour. */
+  /** Legacy flag; V5 always uses nearest-neighbour at native logical resolution. */
   smooth: boolean
 }
-export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = tdBuildings
+export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = v5Buildings
 export function spriteTierFor(id: string, level: number): Tier | undefined {
   const set = spriteImages[id]
   if (!set) return undefined

@@ -35,17 +35,17 @@ export function drawBuilding(
   const img = spriteImageFor(id, level)
   const sk = tier ? loaded[`${id}:${tier}`] : null
   if (img && sk) {
-    const k = img.scale / 2
+    const k = img.scale
     canvas.drawImageRectOptions(
       sk,
       rect(0, 0, img.w, img.h),
       rect(-img.ax * k, -img.ay * k, img.w * k, img.h * k),
-      img.smooth ? FilterMode.Linear : FilterMode.Nearest,
-      img.smooth ? MipmapMode.Linear : MipmapMode.None,
+      FilterMode.Nearest,
+      MipmapMode.None,
       Skia.Paint(),
     )
     return
   }
   void accent
-  drawCommands(canvas, boxCommands(id, level))
+  drawCommands(canvas, boxCommands(id === 'gate_w' ? 'gate' : id, level, id === 'gate_w'), false)
 }

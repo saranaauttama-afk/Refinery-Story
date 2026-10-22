@@ -1,36 +1,48 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, Pressable, AccessibilityInfo } from 'react-native'
+import { View, Text, Pressable, AccessibilityInfo, PixelRatio, AppState } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   Canvas,
   Group,
   Picture,
   Skia,
   useImage,
-  Rect as SkRect,
-  RadialGradient,
-  vec,
+  FilterMode,
+  MipmapMode,
 } from '@shopify/react-native-skia'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile, TILE } from './iso'
 import { yardGround, yardColors } from './yardGround'
-import { YARD, B, SALES } from '../data/balance'
+import { B, SALES } from '../data/balance'
 import { buildingDef } from '../data/buildings'
-import { palette, productAccent } from './palette'
+import { productAccent } from './palette'
 import { canPlace } from '../sim/systems/yard'
 import type { GameState } from '../sim/types'
 import { text } from '../i18n'
-import { sprites } from './buildings'
 import { drawCommands } from './draw'
 import { useSpriteImages, drawBuilding } from './useSpriteImages'
 import { spriteImageFor, spriteTierFor } from './spriteImages'
-import { poly, circle, rect } from './buildings/shapes'
+import { circle, rect } from './buildings/shapes'
 import { truckSprite, workerSprite } from './life'
 import { Minus, Plus, Scan } from 'lucide-react-native'
 import { tdAtlas, tdAtlasSrc } from './tdAtlas'
-import { tdMap, tdMapSrc } from './tdMap'
-const seaColor = '#007CE2'
+import { GRAPHICS, buildingSocket } from './graphics'
 import {
-  drawWorld,
+  clampCamera,
+  playCamera,
+  overviewCamera,
+  zoomAt,
+  pinchAt,
+  focusCamera,
+  validCamera,
+  type Camera,
+} from './camera'
+import { groundCommands, fenceSections, scenicProps } from './scenery'
+import { normalizeAtlas } from './logicalAtlas'
+import { artDefinition } from './topdownArt'
+import { buildingAt } from '../sim/systems/yard'
+const seaColor = GRAPHICS.sea
+import {
   drawSeaLife,
   drawTraffic,
   drawSky,
@@ -41,14 +53,11 @@ import {
   approachTile,
 } from './world'
 import { customers } from '../data/customers'
-const bounds = { x: tdMap.x - 400, y: tdMap.y - 400, width: tdMap.w + 800, height: tdMap.h + 800 }
-// Tile just in front of a building's bottom corner, where its staff stand.
-/** Atlas sprite standing in for a building (decorations, the animated flare, the gate). */
-function atlasArt(b: { defId: string }, t: number, gateOpen: boolean) {
-  if (b.defId === 'flare') return `flare${Math.floor(t * 8) % 4}`
-  if (b.defId === 'gate') return gateOpen ? 'barrier_up' : 'barrier_down'
-  return tdAtlas[`deco_${b.defId}`] ? `deco_${b.defId}` : undefined
-}
+const bounds = GRAPHICS.world
+const CAMERA_KEY = 'refinery-v5-play-camera'
+export const ZOOMS = GRAPHICS.playZooms
+const MIN_ZOOM = ZOOMS[0],
+  MAX_ZOOM = ZOOMS[ZOOMS.length - 1]
 const frontTile = (b: { x: number; y: number; defId: string }) => ({
   x: b.x + buildingDef(b.defId).w / 2,
   y: b.y + buildingDef(b.defId).h + 0.3,
@@ -63,76 +72,45 @@ const truckAccent = (customerId: string | null) => {
   const base = customers.find(c => c.id === customerId)?.base
   return (base && productAccent[base]) || '#E2483D'
 }
-// Zoom steps for the square top-down grid (1 = 32 pt per tile, about the mockup's scale).
-export const ZOOMS = [0.35, 0.5, 0.75, 1, 1.5, 2, 3]
-const MIN_ZOOM = ZOOMS[0],
-  MAX_ZOOM = ZOOMS[ZOOMS.length - 1]
-// Frame the owned yard plus the road above it, and the tops of tall buildings.
-function yardFrame(s: GameState, width: number, height: number) {
-  const xs: number[] = [],
-    ys: number[] = []
-  for (const parcel of s.yard.ownedParcels) {
-    const [x, y] = parcel.split(',').map(Number)
-    xs.push(x * YARD.parcel * TILE, (x + 1) * YARD.parcel * TILE)
-    ys.push(y * YARD.parcel * TILE, (y + 1) * YARD.parcel * TILE)
-  }
-  ys.push(-2 * TILE)
-  for (const b of s.yard.buildings) {
-    const image = spriteImageFor(b.defId, b.level)
-    if (image) ys.push((b.y + buildingDef(b.defId).h) * TILE - (image.h * image.scale) / 2)
-  }
-  const minX = Math.min(...xs),
-    maxX = Math.max(...xs),
-    minY = Math.min(...ys),
-    maxY = Math.max(...ys)
-  const fit = Math.min(
-    (width - 12) / Math.max(1, maxX - minX),
-    (height - 24) / Math.max(1, maxY - minY),
-  )
-  const zoom = Math.max(MIN_ZOOM, Math.min(2, fit))
-  return { x: (-(minX + maxX) / 2) * zoom, y: height / 2 - ((minY + maxY) / 2) * zoom, zoom }
-}
-/** Keep the view inside the world map (centred on it when zoomed out past its size). */
-function clampCamera(c: { x: number; y: number; zoom: number }, w: number, h: number) {
-  const fit = (pos: number, view: number, start: number, len: number, offset: number) => {
-    const lo = view - offset - (start + len) * c.zoom,
-      hi = -offset - start * c.zoom
-    return lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, pos))
-  }
-  return {
-    ...c,
-    x: fit(c.x, w, tdMap.x, tdMap.w, w / 2),
-    y: fit(c.y, h, tdMap.y, tdMap.h, 0),
-  }
-}
 export function YardCanvas({
   state: s,
+  ready = true,
+  bottomInset = 0,
   ghost,
   onTile,
   lift = 0,
+  selectedUid,
+  landMode = false,
 }: {
   state: GameState
+  ready?: boolean
+  bottomInset?: number
   ghost?: { id: string; x: number; y: number; uid?: string }
   onTile: (x: number, y: number) => void
   /** Share of the view covered by a sheet from below; the yard slides up by half of it. */
   lift?: number
+  selectedUid?: string
+  landMode?: boolean
 }) {
   const [size, setSize] = useState({ w: 360, h: 500 }),
-    [camera, setCameraRaw] = useState({ x: 0, y: 60, zoom: 1 }),
+    [camera, setCameraRaw] = useState<Camera>({ x: 0, y: 60, zoom: GRAPHICS.defaultZoom }),
     [frame, setFrame] = useState(0),
     [reduced, setReduced] = useState(false)
-  type Cam = { x: number; y: number; zoom: number }
+  type Cam = Camera
+  const [overview, setOverview] = useState(false)
+  const overviewRef = useRef(false)
+  overviewRef.current = overview
+  const interacted = useRef(false)
+  const lastPlay = useRef<Camera | null>(null)
+  const lastPlayHeight = useRef(500)
+  const pinchFocal = useRef({ x: 0, y: 0 })
+  const pinchStart = useRef({ x: 0, y: 0 })
+  const view = { w: size.w, h: Math.max(120, size.h * (1 - lift) - bottomInset) }
   const sizeRef = useRef(size)
-  sizeRef.current = size
+  sizeRef.current = view
   const setCamera = (next: Cam | ((c: Cam) => Cam)) =>
-    setCameraRaw(c =>
-      clampCamera(
-        typeof next === 'function' ? next(c) : next,
-        sizeRef.current.w,
-        sizeRef.current.h,
-      ),
-    )
-  const liftY = -Math.round((lift * size.h) / 2)
+    setCameraRaw(c => clampCamera(typeof next === 'function' ? next(c) : next, sizeRef.current))
+  const liftY = 0
   const centered = useRef(false)
   const cameraRef = useRef(camera),
     origin = useRef(camera),
@@ -162,10 +140,85 @@ export function YardCanvas({
         ? s.tick
         : s.tick + Math.min(1, (frame - tickAt.current) / (B.tickMs / s.speed)),
     visualTime = reduced ? 0 : (fractional * B.tickMs) / 1000
+  useEffect(() => {
+    if (!ready || centered.current) return
+    centered.current = true
+    setCamera(playCamera(sizeRef.current, s.yard.buildings))
+  }, [ready])
+  const previousView = useRef(view)
+  useEffect(() => {
+    const before = previousView.current
+    setCamera(c => ({ ...c, y: c.y + (view.h - before.h) / 2 }))
+    previousView.current = view
+  }, [view.w, view.h])
+  useEffect(() => {
+    if (!ready) return
+    let alive = true
+    AsyncStorage.getItem(CAMERA_KEY)
+      .then(raw => {
+        if (!alive || !raw || interacted.current || s.tick === 0) return
+        try {
+          const saved = JSON.parse(raw)
+          if (
+            validCamera(saved.camera) &&
+            saved.seed === s.seed &&
+            Number.isFinite(saved.height) &&
+            saved.height > 0
+          ) {
+            setCamera({
+              ...saved.camera,
+              y: saved.camera.y + (sizeRef.current.h - saved.height) / 2,
+            })
+          }
+        } catch {
+          /* Ignore a malformed presentation preference, never the game save. */
+        }
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [ready])
+  useEffect(() => {
+    if (!centered.current || overview) return
+    lastPlay.current = camera
+    lastPlayHeight.current = view.h
+    const timer = setTimeout(() => {
+      AsyncStorage.setItem(
+        CAMERA_KEY,
+        JSON.stringify({ camera, seed: s.seed, height: view.h }),
+      ).catch(() => {})
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [camera, overview, s.seed, view.h])
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      const c = overviewRef.current ? lastPlay.current : cameraRef.current
+      if (state !== 'active' && c)
+        AsyncStorage.setItem(
+          CAMERA_KEY,
+          JSON.stringify({
+            camera: c,
+            seed: s.seed,
+            height: overviewRef.current ? lastPlayHeight.current : sizeRef.current.h,
+          }),
+        ).catch(() => {})
+    })
+    return () => sub.remove()
+  }, [s.seed])
+  const enterPlay = (c: Camera) => {
+    if (overviewRef.current) {
+      overviewRef.current = false
+      setOverview(false)
+    }
+    return c
+  }
   const pan = Gesture.Pan()
+    .maxPointers(1)
     .minDistance(8)
     .runOnJS(true)
     .onStart(() => {
+      interacted.current = true
       origin.current = cameraRef.current
     })
     .onUpdate(e =>
@@ -177,41 +230,206 @@ export function YardCanvas({
     )
   const pinch = Gesture.Pinch()
     .runOnJS(true)
-    .onStart(() => {
+    .onStart(e => {
+      pinchFocal.current = { x: e.focalX, y: e.focalY }
+      pinchStart.current = pinchFocal.current
+      interacted.current = true
       origin.current = cameraRef.current
     })
-    .onUpdate(e =>
-      setCamera(c => ({
-        ...c,
-        zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, origin.current.zoom * e.scale)),
-      })),
+    .onUpdate(e => {
+      pinchFocal.current = { x: e.focalX, y: e.focalY }
+      const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.max(1, origin.current.zoom) * e.scale))
+      setCamera(
+        enterPlay(
+          pinchAt(
+            origin.current,
+            z,
+            pinchStart.current,
+            { x: e.focalX, y: e.focalY },
+            sizeRef.current,
+          ),
+        ),
+      )
+    })
+    .onEnd(() =>
+      setCamera(c =>
+        zoomAt(
+          c,
+          ZOOMS.reduce((a, z) => (Math.abs(z - c.zoom) < Math.abs(a - c.zoom) ? z : a), ZOOMS[0]),
+          pinchFocal.current.x,
+          pinchFocal.current.y,
+          sizeRef.current,
+        ),
+      ),
     )
   const tap = Gesture.Tap()
     .maxDistance(8)
     .runOnJS(true)
     .onEnd(e => {
+      interacted.current = true
       const c = cameraRef.current,
-        p = toTile((e.x - size.w / 2 - c.x) / c.zoom, (e.y - c.y - liftY) / c.zoom)
+        p = toTile((e.x - size.w / 2 - c.x) / c.zoom, (e.y - c.y) / c.zoom)
+      if (overviewRef.current && !landMode) {
+        const b = buildingAt(s, p.x, p.y)
+        if (b) {
+          const d = buildingDef(b.defId)
+          setCamera(
+            enterPlay(
+              focusCamera(
+                { ...c, zoom: GRAPHICS.defaultZoom },
+                b.x + d.w / 2,
+                b.y + d.h / 2,
+                sizeRef.current,
+              ),
+            ),
+          )
+        } else {
+          setCamera(
+            enterPlay(
+              focusCamera(
+                { ...c, zoom: GRAPHICS.defaultZoom },
+                p.x + 0.5,
+                p.y + 0.5,
+                sizeRef.current,
+              ),
+            ),
+          )
+          return
+        }
+      }
       onTile(p.x, p.y)
     })
   const ghostKey = ghost ? `${ghost.id}:${ghost.uid ?? ''}` : ''
   useEffect(() => {
     if (!ghost) return
-    const d = buildingDef(ghost.id),
-      p = toScreen(ghost.x + d.w / 2, ghost.y + d.h / 2)
-    setCamera(c => ({ ...c, x: -p.x * c.zoom, y: size.h / 2 - p.y * c.zoom }))
-  }, [ghostKey, size.h])
+    interacted.current = true
+    const d = buildingDef(ghost.id)
+    setOverview(false)
+    overviewRef.current = false
+    setCamera(c =>
+      focusCamera(
+        { ...c, zoom: Math.max(GRAPHICS.defaultZoom, c.zoom) },
+        ghost.x + d.w / 2,
+        ghost.y + d.h / 2,
+        sizeRef.current,
+      ),
+    )
+  }, [ghostKey])
+  const showOverview = () => {
+    interacted.current = true
+    if (overviewRef.current) {
+      setOverview(false)
+      overviewRef.current = false
+      const previous = lastPlay.current
+      setCamera(
+        previous
+          ? { ...previous, y: previous.y + (sizeRef.current.h - lastPlayHeight.current) / 2 }
+          : playCamera(sizeRef.current, s.yard.buildings),
+      )
+      return
+    }
+    lastPlay.current = cameraRef.current
+    lastPlayHeight.current = sizeRef.current.h
+    setOverview(true)
+    overviewRef.current = true
+    const top = Math.min(
+      -32,
+      ...s.yard.buildings.map(b => {
+        const d = buildingDef(b.defId)
+        return (b.y + d.h) * TILE - (spriteImageFor(b.defId, b.level)?.ay ?? d.h * TILE) - 16
+      }),
+    )
+    setCamera(overviewCamera(sizeRef.current, s.yard.ownedParcels, top))
+  }
+  useEffect(() => {
+    if (!landMode) return
+    lastPlay.current = cameraRef.current
+    lastPlayHeight.current = sizeRef.current.h
+    setOverview(true)
+    overviewRef.current = true
+    const all = Array.from({ length: 12 }, (_, i) => `${i % 4},${Math.floor(i / 4)}`)
+    setCamera(overviewCamera(sizeRef.current, all))
+  }, [landMode])
   const gate = s.yard.buildings.find(b => b.defId === 'gate')
-  const world = useImage(tdAtlasSrc),
-    map = useImage(tdMapSrc)
+  const worldRaw = useImage(tdAtlasSrc)
+  const world = useMemo(() => (worldRaw ? normalizeAtlas(worldRaw) : null), [worldRaw])
+  useEffect(() => () => world?.dispose(), [world])
   const ambient = !reduced && s.settings.ambient !== false
+  const gates = s.yard.buildings.filter(b => b.defId === 'gate')
+  const gateKey = gates.map(g => `${g.x},${g.y}`).join(';')
+  const fences = useMemo(
+    () => fenceSections(s.yard.ownedParcels, gates),
+    [s.yard.ownedParcels, gateKey],
+  )
+  const groundChunks = useMemo(() => {
+    const commands = groundCommands(s.yard.ownedParcels, gates),
+      chunks = []
+    for (let y = bounds.y; y < bounds.y + bounds.height; y += GRAPHICS.chunk)
+      for (let x = bounds.x; x < bounds.x + bounds.width; x += GRAPHICS.chunk) {
+        const surface = Skia.Surface.Make(GRAPHICS.chunk, GRAPHICS.chunk)
+        if (!surface) continue
+        const c = surface.getCanvas()
+        c.translate(-x, -y)
+        drawCommands(
+          c,
+          commands.filter(
+            a =>
+              a.kind === 'rect' &&
+              a.x < x + GRAPHICS.chunk &&
+              a.x + a.w > x &&
+              a.y < y + GRAPHICS.chunk &&
+              a.y + a.h > y,
+          ),
+          false,
+        )
+        surface.flush()
+        chunks.push({ x, y, image: surface.makeImageSnapshot() })
+        surface.dispose()
+      }
+    return chunks
+  }, [s.yard.ownedParcels, gateKey])
+  useEffect(() => () => groundChunks.forEach(c => c.image.dispose()), [groundChunks])
   const staticPicture = useMemo(() => {
     const recorder = Skia.PictureRecorder(),
-      canvas = recorder.beginRecording(bounds)
-    if (map) drawWorld(canvas, map, s.yard.ownedParcels)
-    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, !!map), false)
+      canvas = recorder.beginRecording(bounds),
+      paint = Skia.Paint()
+    for (const c of groundChunks)
+      canvas.drawImageRectOptions(
+        c.image,
+        Skia.XYWHRect(0, 0, GRAPHICS.chunk, GRAPHICS.chunk),
+        Skia.XYWHRect(c.x, c.y, GRAPHICS.chunk, GRAPHICS.chunk),
+        FilterMode.Nearest,
+        MipmapMode.None,
+        paint,
+      )
+    drawCommands(canvas, yardGround(s.yard.ownedParcels, !!ghost, true), false)
+    for (const b of s.yard.buildings) {
+      const d = buildingDef(b.defId)
+      if (d.category === 'deco' || b.defId === 'road') continue
+      drawCommands(
+        canvas,
+        [
+          rect(b.x * TILE + 2, b.y * TILE + 2, d.w * TILE, d.h * TILE, '#22313D25'),
+          rect(b.x * TILE, b.y * TILE, d.w * TILE, d.h * TILE, '#8E9B91'),
+          rect(b.x * TILE + 1, b.y * TILE + 1, d.w * TILE - 2, d.h * TILE - 2, '#D0D3BF'),
+        ],
+        false,
+      )
+    }
+    if (landMode) {
+      paint.setStyle(1)
+      paint.setStrokeWidth(2)
+      for (let y = 0; y < 3; y++)
+        for (let x = 0; x < 4; x++) {
+          paint.setColor(
+            Skia.Color(s.yard.ownedParcels.includes(`${x},${y}`) ? '#55844F' : '#D9A541'),
+          )
+          canvas.drawRect(Skia.XYWHRect(x * 256 + 2, y * 256 + 2, 252, 252), paint)
+        }
+    }
+    paint.dispose()
     return recorder.finishRecordingAsPicture()
-  }, [s.yard.ownedParcels, !!ghost, map])
+  }, [groundChunks, s.yard.ownedParcels, s.yard.buildings, !!ghost, landMode])
   const truckPositions = new Map(
     s.trucks.map(t => {
       const g = gate ?? undefined
@@ -249,6 +467,12 @@ export function YardCanvas({
     }),
   )
   const entries = [
+    ...scenicProps.map(p => ({
+      depth: p.y + artDefinition(p.id).h,
+      kind: 'scenery' as const,
+      p,
+    })),
+    ...fences.map(f => ({ depth: f.depth, kind: 'fence' as const, f })),
     ...s.yard.buildings
       .filter(b => b.uid !== ghost?.uid)
       .map(b => ({
@@ -302,7 +526,13 @@ export function YardCanvas({
           recorder = Skia.PictureRecorder(),
           canvas = recorder.beginRecording(bounds)
         canvas.translate(p.x + (d.w * TILE) / 2, p.y + d.h * TILE)
-        drawBuilding(canvas, loaded, b.defId, b.level, d.accent)
+        drawBuilding(
+          canvas,
+          loaded,
+          b.defId === 'gate' && b.x === 0 && b.y > 0 ? 'gate_w' : b.defId,
+          b.level,
+          d.accent,
+        )
         return [b.uid, recorder.finishRecordingAsPicture()]
       }),
     )
@@ -336,36 +566,51 @@ export function YardCanvas({
     }
     for (const entry of entries) {
       canvas.save()
-      if (entry.kind === 'building') {
-        if (world && !atlasArt(entry.b, 0, false)) {
-          // Soft shadow of the footprint, shifted to the lower right.
-          const b0 = entry.b,
-            d0 = buildingDef(b0.defId),
-            q = toScreen(b0.x, b0.y)
-          const sh = Skia.Paint()
-          sh.setColor(Skia.Color('#0B2A33'))
-          sh.setAlphaf(0.16)
-          const path = Skia.PathBuilder.Make()
-          path.addRect(Skia.XYWHRect(q.x + 6, q.y + 6, d0.w * TILE, d0.h * TILE))
-          path.close()
-          canvas.drawPath(path.detach(), sh)
+      if (entry.kind === 'scenery') {
+        const p = entry.p,
+          d = artDefinition(p.id)
+        canvas.translate((p.x + d.w / 2) * TILE, (p.y + d.h) * TILE)
+        drawBuilding(canvas, loaded, p.id, p.level, '')
+      } else if (entry.kind === 'fence') drawCommands(canvas, entry.f.commands, false)
+      else if (entry.kind === 'building') {
+        const target = ghost ?? s.yard.buildings.find(b => b.uid === selectedUid)
+        let faded = false
+        if (target) {
+          const td = buildingDef('id' in target ? target.id : target.defId),
+            b = entry.b,
+            d = buildingDef(b.defId),
+            img = spriteImageFor(b.defId, b.level)
+          const tx = (target.x + td.w / 2) * TILE,
+            ty = (target.y + td.h / 2) * TILE
+          const left = (b.x + d.w / 2) * TILE - (img?.ax ?? (d.w * TILE) / 2)
+          const bottom = (b.y + d.h) * TILE,
+            top = bottom - (img?.ay ?? d.h * TILE)
+          faded =
+            b.uid !== selectedUid &&
+            frontDepth(b) > target.y + td.h &&
+            tx >= left &&
+            tx < left + (img?.w ?? d.w * TILE) &&
+            ty > top &&
+            ty < bottom
         }
-        const art = world && atlasArt(entry.b, visualTime, s.trucks.length > 0 && truckNearGate)
-        if (art && world) {
-          const d1 = buildingDef(entry.b.defId),
-            q1 = toScreen(entry.b.x + d1.w / 2, entry.b.y + d1.h)
-          sprite(canvas, world, art, q1.x, q1.y - 3)
-        } else canvas.drawPicture(buildingPictures[entry.b.uid])
+        if (faded) {
+          const paint = Skia.Paint()
+          paint.setAlphaf(0.3)
+          canvas.saveLayer(paint)
+          paint.dispose()
+        }
+        canvas.drawPicture(buildingPictures[entry.b.uid])
+        if (faded) canvas.restore()
         const b = entry.b,
           d = buildingDef(b.defId),
           p = toScreen(b.x, b.y)
         canvas.translate(p.x + (d.w * TILE) / 2, p.y + d.h * TILE)
         // Height of the art (or box) above the slab's bottom, for smoke, sparkles and lights.
         const img = spriteImageFor(b.defId, b.level)
-        const top = img ? (img.ay * img.scale) / 2 : d.h * TILE + 20
+        const top = img ? img.ay * img.scale : d.h * TILE + 20
         if (world && ambient && ['cdu', 'cracker'].includes(b.defId))
-          drawSmoke(canvas, world, visualTime, -6, -top + 6)
-        else if (!reduced && ['cdu', 'cracker', 'flare'].includes(b.defId)) {
+          drawSmoke(canvas, world, visualTime, buildingSocket(b.defId).x, buildingSocket(b.defId).y)
+        else if (!reduced && ['cdu', 'cracker'].includes(b.defId)) {
           for (let i = 0; i < 3; i++) {
             const phase = (visualTime * 0.6 + i / 3) % 1
             const paint = Skia.Paint()
@@ -383,6 +628,36 @@ export function YardCanvas({
             )
           }
         }
+        if (b.defId === 'flare') {
+          const flicker = ambient ? Math.floor(visualTime * 8) % 4 : 1,
+            yy = buildingSocket('flare').y
+          drawCommands(
+            canvas,
+            [
+              rect(-3, yy - 11 - flicker, 6, 12 + flicker, '#E88239'),
+              rect(-1, yy - 8 - flicker, 3, 10 + flicker, '#FFC94A'),
+              rect(0, yy - 4, 2, 4, '#F3E5BE'),
+            ],
+            false,
+          )
+        }
+        if (b.defId === 'gate') {
+          const west = b.x === 0 && b.y > 0,
+            open = truckNearGate
+          drawCommands(
+            canvas,
+            west
+              ? [
+                  rect(0, -44, 3, open ? 8 : 32, '#22313D'),
+                  rect(1, -43, 1, open ? 6 : 29, '#D35348'),
+                ]
+              : [
+                  rect(-12, -24, open ? 3 : 24, 3, '#22313D'),
+                  rect(-11, -23, open ? 1 : 22, 1, '#D35348'),
+                ],
+            false,
+          )
+        }
         if (b.defId === 'blend' && s.baseStock[(b.recipe ?? s.blend).base] > 0)
           drawCommands(canvas, [
             rect(
@@ -396,7 +671,7 @@ export function YardCanvas({
         const sparked = sparkAt.current.get(b.uid)
         if (world && sparked !== undefined && time.current - sparked < 900)
           drawSparkle(canvas, world, (time.current - sparked) / 900, 0, -top / 2)
-        if (b.level >= 5 && spriteTierFor(b.defId, b.level) !== 5 && !atlasArt(b, 0, false))
+        if (b.level >= 5 && spriteTierFor(b.defId, b.level) !== 5)
           drawCommands(canvas, [
             circle(0, -top - 4, 3, Math.floor(visualTime * 2) % 2 ? '#F2C230' : '#F08A24'),
           ])
@@ -409,7 +684,13 @@ export function YardCanvas({
         const paint = Skia.Paint()
         paint.setAlphaf(0.62)
         canvas.saveLayer(paint)
-        drawBuilding(canvas, loaded, g.id, level, d.accent)
+        drawBuilding(
+          canvas,
+          loaded,
+          g.id === 'gate' && g.x === 0 && g.y > 0 ? 'gate_w' : g.id,
+          level,
+          d.accent,
+        )
         canvas.restore()
       } else if (entry.kind === 'truck') {
         const p = truckPositions.get(entry.t.uid)!,
@@ -461,6 +742,9 @@ export function YardCanvas({
     ghostPath,
     world,
     ambient,
+    fences,
+    selectedUid,
+    truckNearGate,
   ])
   return (
     <View
@@ -469,11 +753,13 @@ export function YardCanvas({
         const w = e.nativeEvent.layout.width,
           h = e.nativeEvent.layout.height
         setSize({ w, h })
-        sizeRef.current = { w, h }
-        if (!centered.current && h > 0) {
+        sizeRef.current = { w, h: Math.max(120, h * (1 - lift) - bottomInset) }
+        if (ready && !centered.current && h > 0) {
           // Open with the owned land in the middle of the view instead of empty sky.
           centered.current = true
-          setCamera(yardFrame(s, w, h))
+          setCamera(
+            playCamera({ w, h: Math.max(120, h * (1 - lift) - bottomInset) }, s.yard.buildings),
+          )
         }
       }}
     >
@@ -481,62 +767,88 @@ export function YardCanvas({
         <Canvas style={{ flex: 1, backgroundColor: world ? seaColor : yardColors.backdrop }}>
           <Group
             transform={[
-              { translateX: Math.round(size.w / 2 + camera.x) },
-              { translateY: Math.round(camera.y + liftY) },
+              { translateX: PixelRatio.roundToNearestPixel(size.w / 2 + camera.x) },
+              { translateY: PixelRatio.roundToNearestPixel(camera.y + liftY) },
               { scale: camera.zoom },
             ]}
           >
             <Picture picture={staticPicture} />
             <Picture picture={dynamicPicture} />
           </Group>
-          {world && (
-            <>
-              {/* One warm grade over everything so art from different sources reads as one scene. */}
-              <SkRect
-                x={0}
-                y={0}
-                width={size.w}
-                height={size.h}
-                color="#FFC56B"
-                opacity={0.07}
-                blendMode="softLight"
-              />
-              <SkRect x={0} y={0} width={size.w} height={size.h}>
-                <RadialGradient
-                  c={vec(size.w / 2, size.h / 2)}
-                  r={Math.max(size.w, size.h) * 0.75}
-                  colors={['#00000000', '#00000000', '#0B2A3340']}
-                  positions={[0, 0.6, 1]}
-                />
-              </SkRect>
-            </>
-          )}
         </Canvas>
       </GestureDetector>
+      {overview && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 10,
+            top: 10,
+            backgroundColor: '#FFF6E3',
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: '#22313D',
+          }}
+        >
+          <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 12 }}>
+            {text({
+              en: landMode ? 'Land overview' : 'Overview · tap to return to play',
+              th: landMode ? 'ภาพรวมที่ดิน' : 'ภาพรวม · แตะเพื่อกลับมุมเล่น',
+            })}
+          </Text>
+        </View>
+      )}
       <View style={{ position: 'absolute', right: 10, bottom: 10, gap: 6 }}>
         {[
           {
             id: 'out',
             label: text({ en: 'Zoom out', th: 'ย่อ' }),
             icon: <Minus size={18} />,
-            act: () =>
-              setCamera(c => ({
-                ...c,
-                zoom: [...ZOOMS].reverse().find(z => z < c.zoom - 0.01) ?? MIN_ZOOM,
-              })),
+            act: () => {
+              interacted.current = true
+              setCamera(c =>
+                enterPlay(
+                  zoomAt(
+                    c,
+                    [...ZOOMS].reverse().find(z => z < c.zoom - 0.01) ?? MIN_ZOOM,
+                    view.w / 2,
+                    view.h / 2,
+                    view,
+                  ),
+                ),
+              )
+            },
           },
           {
             id: 'in',
             label: text({ en: 'Zoom in', th: 'ขยาย' }),
             icon: <Plus size={18} />,
-            act: () =>
-              setCamera(c => ({ ...c, zoom: ZOOMS.find(z => z > c.zoom + 0.01) ?? MAX_ZOOM })),
+            act: () => {
+              interacted.current = true
+              setCamera(c =>
+                enterPlay(
+                  zoomAt(
+                    c,
+                    ZOOMS.find(z => z > c.zoom + 0.01) ?? MAX_ZOOM,
+                    view.w / 2,
+                    view.h / 2,
+                    view,
+                  ),
+                ),
+              )
+            },
           },
           {
             id: 'center',
-            label: text({ en: 'Centre yard', th: 'จัดลานกลางจอ' }),
+            label: text(
+              overview
+                ? { en: 'Return to play', th: 'กลับมุมเล่น' }
+                : { en: 'Yard overview', th: 'ดูภาพรวมลาน' },
+            ),
             icon: <Scan size={18} />,
-            act: () => setCamera(yardFrame(s, size.w, size.h)),
+            act: showOverview,
           },
         ].map(b => (
           <Pressable
@@ -545,11 +857,11 @@ export function YardCanvas({
             accessibilityLabel={b.label}
             onPress={b.act}
             style={{
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               borderWidth: 2,
               borderRadius: 5,
-              backgroundColor: '#FFF6E3',
+              backgroundColor: b.id === 'center' && overview ? '#FFE1A3' : '#FFF6E3',
               alignItems: 'center',
               justifyContent: 'center',
             }}

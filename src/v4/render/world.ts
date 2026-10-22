@@ -9,10 +9,9 @@ import {
   type SkCanvas,
   type SkImage,
 } from '@shopify/react-native-skia'
-import { tdAtlas } from './tdAtlas'
+import { logicalAtlas } from './logicalAtlas'
+import { LANES, seaTiles } from './scenery'
 import { TILE } from './iso'
-import { YARD } from '../data/balance'
-import { tdMap } from './tdMap'
 
 type Pt = { x: number; y: number }
 const paint = () => {
@@ -23,16 +22,15 @@ const paint = () => {
 
 // Roads round the yard on the map, in tiles from the yard's top-left corner.
 // Lanes are the middle of each carriageway: [outer, inner] (inner is nearer the yard).
-const TOP = [-2.8, -1.9],
-  LEFT = [-2.6, -1.9],
-  RIGHT = [34.8, 33.9],
-  BOTTOM = [26.1, 25.3]
-export const LANE = -2.4 // the lane trucks use (row y / column x), drawn at +0.5
-const X0 = Math.floor(tdMap.x / TILE),
-  X1 = Math.ceil((tdMap.x + tdMap.w) / TILE),
-  Y0 = Math.floor(tdMap.y / TILE)
-// The harbour basin between the two piers, where the tanker berths.
-const BERTH = { x: 16.6, y: -10 }
+const TOP = LANES.top,
+  LEFT = LANES.left,
+  RIGHT = LANES.right,
+  BOTTOM = LANES.bottom
+export const LANE = -2 // approachTile returns tile coordinates; callers add the tile centre.
+const X0 = -8,
+  X1 = 40,
+  Y0 = -16
+const BERTH = { x: 16, y: -10 }
 
 /** Draw one atlas sprite with its anchor at (x, y). */
 export function sprite(
@@ -45,10 +43,10 @@ export function sprite(
   alpha = 1,
   shadow = false,
 ) {
-  const r = tdAtlas[name]
+  const r = logicalAtlas[name]
   if (!r) return
-  const [sx, sy, w, h, ax, ay, k] = r
-  const s = k * scale
+  const [sx, sy, w, h, ax, ay] = r
+  const s = scale
   if (shadow) {
     const sp = paint()
     sp.setColor(Skia.Color('#0B2A33'))
@@ -62,7 +60,7 @@ export function sprite(
     img,
     Skia.XYWHRect(sx, sy, w, h),
     Skia.XYWHRect(x - ax * s, y - ay * s, w * s, h * s),
-    k < 1 ? FilterMode.Linear : FilterMode.Nearest,
+    FilterMode.Nearest,
     MipmapMode.None,
     p,
   )
@@ -80,45 +78,8 @@ export function approachTile(p: Pt, _gate?: Pt): Pt {
   return { x: LANE, y: p.y - (i - 1) }
 }
 
-/** Static world: the map picture, then a dim veil over yard land not bought yet. */
-export function drawWorld(c: SkCanvas, map: SkImage, parcels: string[]) {
-  const p = paint()
-  c.drawImageRectOptions(
-    map,
-    Skia.XYWHRect(0, 0, map.width(), map.height()),
-    Skia.XYWHRect(tdMap.x, tdMap.y, tdMap.w, tdMap.h),
-    FilterMode.Nearest,
-    MipmapMode.None,
-    p,
-  )
-  const veil = paint()
-  veil.setColor(Skia.Color('#3B4652'))
-  veil.setAlphaf(0.38)
-  const hatch = paint()
-  hatch.setColor(Skia.Color('#FFFFFF'))
-  hatch.setAlphaf(0.08)
-  for (let px = 0; px < YARD.maxW / YARD.parcel; px++)
-    for (let py = 0; py < YARD.maxH / YARD.parcel; py++) {
-      if (parcels.includes(`${px},${py}`)) continue
-      const x = px * YARD.parcel * TILE,
-        y = py * YARD.parcel * TILE,
-        n = YARD.parcel * TILE
-      c.drawRect(Skia.XYWHRect(x, y, n, n), veil)
-      // Diagonal stripes so locked land reads as "not yours yet" even in daylight.
-      for (let k = 8; k < n * 2; k += 24) {
-        const path = Skia.PathBuilder.Make()
-        path.moveTo(x + Math.min(k, n), y + Math.max(0, k - n))
-        path.lineTo(x + Math.min(k + 8, n), y + Math.max(0, k + 8 - n))
-        path.lineTo(x + Math.max(0, k + 8 - n), y + Math.min(k + 8, n))
-        path.lineTo(x + Math.max(0, k - n), y + Math.min(k, n))
-        path.close()
-        c.drawPath(path.detach(), hatch)
-      }
-    }
-}
-
-// ---------- Ambient life (drawn every frame, skipped when motion is reduced) ----------
-const glints: Pt[] = tdMap.water.map(([x, y]) => ({ x: x * TILE + 8, y: y * TILE + 14 }))
+// Water paths use the same fixed scene layout as the terrain.
+const glints: Pt[] = seaTiles.map(({ x, y }) => ({ x: x * TILE + 8, y: y * TILE + 14 }))
 const cycle = (t: number, period: number) => (t % period) / period
 const pingPong = (f: number) => (f < 0.5 ? f * 2 : 2 - f * 2)
 
@@ -148,7 +109,7 @@ export function drawSeaLife(c: SkCanvas, img: SkImage, t: number) {
   else if (f > 0.65) sx = stop + ((eastbound ? right : left) - stop) * ((f - 0.65) / 0.35) ** 2
   const dir = eastbound ? 'east' : 'west',
     ship = eastbound ? 'tanker' : 'tanker2',
-    sy = (Y0 + 9) * TILE + Math.sin(t * 1.3) * 1.5
+    sy = (Y0 + 4) * TILE + Math.sin(t * 1.3) * 1.5
   sprite(c, img, `tug_${dir}`, sx + (eastbound ? 170 : -170), sy + 26 + Math.sin(t * 2.1), 1)
   sprite(c, img, `${ship}_${dir}`, sx, sy, 1)
   // Fishing boat drifting back and forth on the open sea.
@@ -157,7 +118,7 @@ export function drawSeaLife(c: SkCanvas, img: SkImage, t: number) {
     c,
     img,
     cycle(t, 60) < 0.5 ? 'fishboat_east' : 'fishboat_west',
-    (-20 + b * 26) * TILE,
+    (-6 + b * 16) * TILE,
     (Y0 + 3) * TILE + Math.sin(t * 2),
     1,
   )
@@ -225,11 +186,11 @@ export function drawSky(c: SkCanvas, img: SkImage, t: number) {
   shadow.setColor(Skia.Color('#123B4A'))
   shadow.setAlphaf(0.1)
   const span = (X1 - X0) * TILE
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 2; i++) {
     const x = X0 * TILE + ((t * (8 + i * 3) + i * span * 0.37) % span),
-      y = (Y0 + 8 + i * 20) * TILE
+      y = (i === 0 ? -14 : 30) * TILE
     c.drawOval(Skia.XYWHRect(x - 40, y + 120, 90, 26), shadow)
-    sprite(c, img, `cloud${i % 5}`, x, y, 1.6, 0.85)
+    sprite(c, img, `cloud${i % 5}`, x, y, 1, 0.7)
   }
   const f = cycle(t, 26)
   if (f < 0.35) {
