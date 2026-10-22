@@ -11,6 +11,13 @@ decided until it moves into PLAN.md.
 - **Yard notices are optional:** small pills on the yard (tanks nearly full, contract offers, staff without a post, station with no refining unit). Tap opens the sheet; ✕ hides it. Nothing is forced.
 - **U1 camera:** opens centred on the buildings (or the owned land).
 
+## Formula Lab (2026-10-22) — rules drafted, not wired in
+
+Owner idea: grades come from research + combos, not stats. Catalyst Lab researches graded
+catalysts (D–SS); Formula Lab mixes base/formula + 1–3 catalysts into a permanent formula;
+blend stations produce at that grade and use up catalysts. Design, numbers and pacing sim:
+[`FORMULA-LAB.md`](FORMULA-LAB.md). Next: owner approves, then wire into GameState/UI.
+
 ## Open — waiting for a decision (v4.0.12 Y4–5)
 
 | #   | Topic                                     | Notes                                                                                                                                                                                                                                                                                  |

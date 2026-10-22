@@ -685,3 +685,65 @@ export const BASE_RANKS = {
   wax: 7,
   pellet: 7,
 }
+
+// Formula Lab (v5 design, docs/v4/FORMULA-LAB.md): two labs replace the blend-time score.
+// Catalyst Lab researches graded catalyst stock; Formula Lab mixes a base or a known formula
+// with catalysts into a permanent formula; blend stations then produce at that formula's grade.
+export const FORMULA_GRADES = ['D', 'C', 'B', 'A', 'S', 'SS'] as const
+export const FORMULA_LAB = {
+  catalyst: {
+    weeks: 2,
+    rd: 60,
+    money: 3000,
+    // Units of one catalyst per finished research: unitsBase + unitsPerLevel × (level − 1).
+    unitsBase: 4,
+    unitsPerLevel: 1,
+    // Odds [D, C, B, A, S, SS] by Catalyst Lab level 1–5 (Research Center adds levels).
+    weights: [
+      [55, 35, 10, 0, 0, 0],
+      [30, 40, 25, 5, 0, 0],
+      [12, 30, 35, 20, 3, 0],
+      [4, 16, 32, 32, 13, 3],
+      [0, 8, 24, 36, 23, 9],
+    ],
+    // Every `chemPerLevel` Chem on the assigned chemists counts as one more lab level (fraction).
+    chemPerLevel: 200,
+    // Highest catalyst grade research can return, by game year (index = year − 1, last repeats).
+    maxGradeByYear: ['B', 'B', 'A', 'A', 'A', 'S', 'S', 'S', 'SS'],
+    // Chance per finished research to reveal one synergy or secret-formula hint.
+    hintChance: 0.25,
+  },
+  mix: {
+    weeks: 1,
+    money: 2000,
+    // Catalyst units used per slot when mixing.
+    unitsPerSlot: 2,
+    // Catalyst slots per mix, by game year (index = year − 1, last repeats).
+    slotsByYear: [1, 1, 2, 2, 2, 3],
+    // Most catalysts one formula can hold.
+    maxCatalysts: 3,
+    // Grade steps added per base × catalyst compatibility (data/compatibility.ts).
+    compat: { S: 0.75, A: 0.4, B: 0.15, C: 0, D: -0.4, F: -0.9 },
+    synergy: { good: 0.6, bad: -0.8 },
+    // Secret formulas: extra grade steps, and how far they lift the cap (0 = SS still needs SS catalysts).
+    secretBonus: 1,
+    secretCap: 0,
+    // Luck: uniform ±spread, shifted up by shiftPerLevel × (Formula Lab level − 1).
+    spread: 0.6,
+    shiftPerLevel: 0.08,
+    // A result may be at most this many steps above the best catalyst used.
+    capAboveBest: 0,
+    // After this many mixes in a row that do not beat the best input, the next one gets +1.
+    pityAfter: 4,
+  },
+  production: {
+    // One catalyst unit of each kind in the formula per this many lots. Lowest grade is used first.
+    lotsPerUnit: 6,
+    // Grade a lot falls back to when the catalysts run out.
+    fallbackGrade: 'D' as const,
+  },
+  // Price multiplier and fame per grade (D added below C).
+  gradePrice: { D: 0.6, C: 0.8, B: 1, A: 1.35, S: 1.9, SS: 2.7 },
+  secretPrice: 1.3,
+  secretFame: 50,
+}
