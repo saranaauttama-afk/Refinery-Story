@@ -6,13 +6,22 @@ const p = (id: string, x: number, y: number, level = 1): ScenicProp => ({
   y: Math.round(y * 64) / 64,
   level,
 })
-export const coastalShoreY = (x: number) =>
-  x < 5
-    ? -9.8 + 1.35 * Math.sin((x + 8) * 0.44) + (x + 8) * 0.06
-    : -9.2 + 0.8 * Math.sin((x - 35) * 0.7)
+export const coastalShoreY = (x: number) => {
+  // Beach and quay meet at exactly y=-8 with a level tangent at both joins.
+  const smooth = (k: number) => {
+    const t = Math.max(0, Math.min(1, k))
+    return t * t * (3 - 2 * t)
+  }
+  if (x < 5) {
+    const raw = -9.8 + 1.35 * Math.sin((x + 8) * 0.44) + (x + 8) * 0.06
+    return raw + (-8 - raw) * smooth((x - 2) / 3)
+  }
+  const raw = -9.2 + 0.8 * Math.sin((x - 35) * 0.7)
+  return -8 + (raw + 8) * smooth((x - 35) / 3)
+}
 export const naturalCoast = (x: number, y: number) => (x < 5 || x >= 35) && y < -4
 export const onPier = (x: number, y: number) =>
-  (((x >= 8 && x < 10) || (x >= 23 && x < 25)) && y >= -11 && y < -4) ||
+  (((x >= 8 && x < 11) || (x >= 23 && x < 26)) && y >= -11 && y < -4) ||
   (x >= 30 && x < 34 && y >= -10 && y < -8)
 
 export const environmentProps: ScenicProp[] = [
@@ -32,10 +41,10 @@ export const environmentProps: ScenicProp[] = [
   p('envDistrictSign', -7.5, -5),
   p('envFoodCart', -4.3, -6),
   p('warehouse', 5, -6),
-  p('crane', 8, -9),
+  p('crane', 8.5, -9),
   p('envBollards', 8.5, -10.8),
-  p('envFenders', 10.5, -8),
-  p('envLoadingArm', 23, -10),
+  p('envFenders', 13, -8.5),
+  p('envLoadingArm', 23.5, -10),
   p('warehouse', 13, -6),
   p('envContainerStack', 17, -7),
   p('envCargo', 19.3, -6),
@@ -76,8 +85,6 @@ export const environmentProps: ScenicProp[] = [
   p('utility', 37, 23),
   ...[0, 4, 8, 12, 17, 22, 27.5].map((y, i) => p(i % 2 ? 'envCanopy' : 'envPalm', 36, y)),
   ...[3, 7, 11, 16, 21, 27.5, 29].map(y => p('envShrub', 37.7, y)),
-  p('envCulvert', 35.7, 24),
-  p('envFootbridge', 35.8, 18.5),
   ...[2, 9, 16, 23].map(y => p('lamp', 35.6, y)),
   // Southern arrival plaza and a small community park below the ring road.
   p('envParking', 0.5, 28),
@@ -88,8 +95,6 @@ export const environmentProps: ScenicProp[] = [
   p('envBins', 32, 29.2),
   p('envFountain', 6, 29),
   p('envBench', 8.3, 30),
-  p('envCulvert', 10.3, 28),
-  p('envFootbridge', 10.3, 30),
   p('envPavilion', 14, 29),
   p('envPicnic', 16.3, 30),
   p('envFoodCart', 18, 29.2),
@@ -101,15 +106,13 @@ export const environmentProps: ScenicProp[] = [
 type Patch = { x: number; y: number; w: number; h: number; color: string }
 export const sceneryPatches: Patch[] = [
   { x: -8, y: -5, w: 4, h: 1, color: '#D8C7A1' },
-  { x: -5, y: -4, w: 1, h: 1, color: '#D0CDB9' },
-  { x: -5, y: -1, w: 1, h: 26, color: '#D0CDB9' },
-  ...[0, 4, 9, 13, 17, 22].map(y => ({ x: -8, y, w: 3, h: 3, color: '#C8C8BA' })),
+  { x: -5, y: -4, w: 1, h: 1, color: '#D8C7A1' },
+  { x: -5, y: -1, w: 1, h: 26, color: '#D8C7A1' },
+  ...[0, 4, 9, 13, 17, 22].map(y => ({ x: -8, y, w: 3, h: 2, color: '#D8C7A1' })),
   { x: 0, y: 28, w: 33, h: 1, color: '#D8C7A1' },
   { x: 35, y: 28, w: 5, h: 1, color: '#D8C7A1' },
-  { x: 5, y: 29, w: 5, h: 3, color: '#D0CDB9' },
+  { x: 5, y: 29, w: 5, h: 3, color: '#D8C7A1' },
   { x: 13, y: 29, w: 7, h: 2, color: '#D8C7A1' },
-  { x: 11.15, y: 29, w: 0.35, h: 3, color: '#3D92B2' },
-  { x: 36.4, y: 18.5, w: 0.35, h: 6.5, color: '#3D92B2' },
 ]
 export const crossingTiles = [
   { x: -3, y: 7 },

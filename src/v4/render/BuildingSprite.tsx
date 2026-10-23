@@ -1,3 +1,4 @@
+import { yardRoadCommands } from './roads'
 import { useMemo } from 'react'
 import { boxCommands } from './box'
 import { SpriteThumbnail } from './SpriteThumbnail'
@@ -12,8 +13,11 @@ export function BuildingSprite({
   level?: number
   size?: number
 }) {
-  const commands = useMemo(() => boxCommands(id, level), [id, level])
-  const img = spriteImageFor(id, level)
+  const commands = useMemo(
+    () => (id === 'road' ? yardRoadCommands(-0.5, -1, 15) : boxCommands(id, level)),
+    [id, level],
+  )
+  const img = id === 'road' ? undefined : spriteImageFor(id, level)
   if (img)
     return (
       <Image

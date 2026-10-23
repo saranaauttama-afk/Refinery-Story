@@ -13,7 +13,7 @@ import type { GameState } from '../sim/types'
 const categories: { id: BuildingDef['category']; en: string; th: string }[] = [
   { id: 'process', en: 'Process', th: 'ผลิต' },
   { id: 'storage', en: 'Storage', th: 'ถัง' },
-  { id: 'logistics', en: 'Logistics', th: 'ขนส่ง' },
+  { id: 'logistics', en: 'Logistics', th: 'ถนน / ขนส่ง' },
   { id: 'support', en: 'Support', th: 'สนับสนุน' },
   { id: 'deco', en: 'Decor', th: 'ตกแต่ง' },
 ]
@@ -162,7 +162,12 @@ export function BuildPanel({ onPick }: { onPick: (id: string) => void }) {
         <Text style={type.small}>
           {text({
             en: 'Tap to place · hold for details',
-            th: 'แตะการ์ดเพื่อวางทันที · กดค้างดูรายละเอียด',
+            th:
+              category === 'logistics'
+                ? 'ถนนเชื่อมทางตรง โค้ง และแยกอัตโนมัติ'
+                : category === 'deco'
+                  ? 'วางแต่งได้ต่อเนื่อง · ทุกชิ้นใช้พื้นที่ 1×1'
+                  : 'แตะการ์ดเพื่อวางทันที · กดค้างดูรายละเอียด',
           })}
         </Text>
       )}

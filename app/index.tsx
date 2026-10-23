@@ -106,31 +106,34 @@ export default function TitleScreen() {
   const compact = height < 760
   const words = text(copy.title).toUpperCase().split(' ')
   return (
-    <View style={{ flex: 1, backgroundColor: '#1D9AD0' }}>
+    <View style={{ flex: 1, backgroundColor: '#0693F7' }}>
       <Image
         source={sceneArt.title}
-        resizeMode="cover"
+        resizeMode="contain"
         style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
       />
       <SafeAreaView style={s.screen}>
-        <View style={[s.logoArea, { marginTop: compact ? 14 : 26 }]}>
+        <View style={[s.logoArea, { marginTop: compact ? 8 : 16 }]}>
           <View style={s.logoPlate}>
             <Enamel dark />
             <Bolts />
-            <Outlined size={compact ? 37 : 42} fill="#FFF6E3">
+            <Outlined size={compact ? 27 : 30} fill="#FFF6E3">
               {words[0]}
             </Outlined>
-            <Outlined size={compact ? 49 : 57} fill="#FFC635">
+            <Outlined size={compact ? 35 : 40} fill="#FFC635">
               {words.slice(1).join(' ')}
             </Outlined>
           </View>
           <View style={s.taglinePlate}>
             <Text style={s.tagline}>
-              {text({ en: 'YOUR LITTLE INDUSTRIAL WORLD', th: 'โรงกลั่นจิ๋ว โลกอุตสาหกรรมของคุณ' })}
+              {text({
+                en: 'BUILD YOUR COASTAL REFINERY',
+                th: 'โรงกลั่นจิ๋ว · สร้างเมืองอุตสาหกรรมของคุณ',
+              })}
             </Text>
           </View>
         </View>
-        <View style={[s.menu, { marginBottom: compact ? 22 : 34 }]}>
+        <View style={[s.menu, { marginBottom: compact ? 16 : 24 }]}>
           <Enamel />
           <View style={s.menuStripe} />
           <Text style={s.menuCaption}>
@@ -171,11 +174,11 @@ const s = StyleSheet.create({
   screen: { flex: 1, justifyContent: 'space-between' },
   logoArea: { alignItems: 'center', paddingHorizontal: 24, gap: 7 },
   logoPlate: {
-    width: '100%',
-    maxWidth: 380,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 15,
+    width: '82%',
+    maxWidth: 300,
+    paddingHorizontal: 14,
+    paddingTop: 7,
+    paddingBottom: 9,
     borderWidth: 4,
     borderColor: ui.ink,
     borderRadius: 12,
@@ -193,11 +196,11 @@ const s = StyleSheet.create({
   tagline: { fontFamily: 'Kanit_600SemiBold', fontSize: 13, color: ui.navy, textAlign: 'center' },
   menu: {
     alignSelf: 'center',
-    width: '90%',
-    maxWidth: 420,
-    padding: 14,
-    paddingTop: 18,
-    gap: 11,
+    width: '86%',
+    maxWidth: 380,
+    padding: 10,
+    paddingTop: 12,
+    gap: 9,
     backgroundColor: '#FFF6E3F5',
     borderWidth: 3,
     borderColor: ui.ink,
@@ -214,13 +217,13 @@ const s = StyleSheet.create({
   },
   menuCaption: {
     fontFamily: 'Kanit_400Regular',
-    fontSize: 13,
+    fontSize: 12,
     color: ui.navy,
     textAlign: 'center',
   },
   button: {
     width: '100%',
-    minHeight: 62,
+    minHeight: 48,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -234,7 +237,7 @@ const s = StyleSheet.create({
   buttonIcon: { width: 34, alignItems: 'center' },
   buttonText: {
     fontFamily: 'Kanit_600SemiBold',
-    fontSize: 23,
+    fontSize: 20,
     color: ui.navy,
     flex: 1,
     textAlign: 'center',

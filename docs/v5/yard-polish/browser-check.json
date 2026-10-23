@@ -1,0 +1,19 @@
+{
+  "viewport": "390x844 @2x",
+  "checks": [
+    "title contain 390x844",
+    "title 360x740 and new game",
+    "full-yard overview",
+    "coast join",
+    "harbor",
+    "paved town",
+    "greenbelt without canal",
+    "park",
+    "signal junction",
+    "yard connected roads and 12 decorations",
+    "decor catalogue and placement",
+    "placed decoration survives background save and reload",
+    "ambient and reduced-motion off"
+  ],
+  "errors": []
+}

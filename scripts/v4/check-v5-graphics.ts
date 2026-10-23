@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { yardDecor } from '../../src/v4/data/yardDecor'
 import { buildings } from '../../src/v4/data/buildings'
 import { GRAPHICS, spriteTemplate, scenicSizes } from '../../src/v4/render/graphics'
 import { topdownArt, artDefinition } from '../../src/v4/render/topdownArt'
@@ -45,7 +46,7 @@ const movingPinch = pinchAt(play, 2, { x: px, y: py }, { x: px + 17, y: py + 23 
 assert.ok(Math.abs((px + 17 - v.w / 2 - movingPinch.x) / movingPinch.zoom - wx) < 1e-8)
 assert.ok(Math.abs((py + 23 - movingPinch.y) / movingPinch.zoom - wy) < 1e-8)
 const metadata = JSON.parse(fs.readFileSync('assets/v5/buildings/manifest.json', 'utf8'))
-for (const d of buildings) {
+for (const d of buildings.filter(b => !yardDecor.some(d => d.id === b.id))) {
   const t = spriteTemplate(d.id, d.w, d.h),
     seen = []
   for (let level = 1; level <= 5; level++) {

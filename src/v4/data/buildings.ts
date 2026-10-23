@@ -1,3 +1,4 @@
+import { yardDecor } from './yardDecor'
 import { BUILDING_BALANCE } from './balance'
 import type { LocalizedText } from '../i18n'
 export interface BuildingDef {
@@ -40,6 +41,7 @@ export const buildings: BuildingDef[] = [
   def('control', 'Control Room', 'ห้องควบคุม', 'support', '#4FA3D9'),
   def('canteen', 'Canteen', 'โรงอาหาร', 'support', '#B5653A'),
   def('flare', 'Flare', 'หอเผา', 'support', '#F08A24'),
+  ...yardDecor.map(d => def(d.id, d.en, d.th, 'deco', '#5E8C3A')),
   def('tree', 'Tree', 'ต้นไม้', 'deco', '#5E8C3A'),
   def('lamp', 'Lamp', 'โคมไฟ', 'deco', '#F2C230'),
   def('sign', 'Company Sign', 'ป้ายบริษัท', 'deco', '#4FA3D9'),

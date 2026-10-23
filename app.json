@@ -2,7 +2,7 @@
   "expo": {
     "name": "Refinery Story",
     "slug": "refinery-story",
-    "version": "4.1.10",
+    "version": "4.1.11",
     "icon": "./assets/branding/app-icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.refinerystory.u2",
-      "versionCode": 52,
+      "versionCode": 53,
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/app-icon.png",
         "backgroundColor": "#061827"

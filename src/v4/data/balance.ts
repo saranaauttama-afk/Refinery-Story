@@ -1,3 +1,4 @@
+import { yardDecor } from './yardDecor'
 export const B = {
   startingMoney: 55_000,
   tickMs: 250,
@@ -276,6 +277,18 @@ export const BUILDING_BALANCE: Record<
   string,
   { w: number; h: number; height: number; cost: number; rank: number }
 > = {
+  ...Object.fromEntries(
+    yardDecor.map((d, i) => [
+      d.id,
+      {
+        w: 1,
+        h: 1,
+        height: 24,
+        cost: [900, 450, 400, 600, 2200, 2800, 500, 800, 1200, 650, 450, 350][i],
+        rank: 1,
+      },
+    ]),
+  ),
   gate: {
     w: 1,
     h: 2,
