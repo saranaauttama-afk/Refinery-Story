@@ -27,8 +27,8 @@ export const buildingInfo: Record<string, LocalizedText> = {
     th: 'แยกน้ำมันดิบ ทำฐานเบนซิน ดีเซล และยางมะตอย',
   },
   blend: {
-    en: 'Mixes a base with an additive into a graded lot.',
-    th: 'ผสมฐานกับสารเติมแต่งเป็นล็อตที่มีเกรด',
+    en: 'Makes one product card into graded lots ready to sell.',
+    th: 'ผลิตสินค้าตามการ์ดที่เลือก เป็นล็อตที่มีเกรดพร้อมขาย',
   },
   pipe: { en: 'Pipe rack. Part of the Tank Farm set.', th: 'แนวท่อ ใช้เข้าชุดฟาร์มถัง' },
   hydro: {

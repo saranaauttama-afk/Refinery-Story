@@ -5,7 +5,8 @@ import { GameIcon, type GameIconName } from './GameIcon'
 import { ui } from './theme'
 const tabs = [
   { id: 'build', en: 'Build', th: 'สร้าง', color: ui.build },
-  { id: 'blend', en: 'Blend', th: 'ผสม', color: ui.blend },
+  { id: 'blend', en: 'Products', th: 'สินค้า', color: ui.blend },
+  { id: 'lab', en: 'Lab', th: 'แล็บ', color: '#9C5BD6' },
   { id: 'staff', en: 'Staff', th: 'ทีมงาน', color: ui.staff },
   { id: 'customers', en: 'Customers', th: 'ลูกค้า', color: ui.customers },
   { id: 'company', en: 'Company', th: 'บริษัท', color: ui.company },
@@ -40,7 +41,7 @@ export function GameDock({
           >
             <Enamel />
             {selected && <View style={[s.marker, { backgroundColor: tab.color }]} />}
-            <GameIcon name={tab.id as GameIconName} size={34} />
+            <GameIcon name={tab.id as GameIconName} size={24} />
             <Text numberOfLines={1} style={[s.label, orange && { color: '#132E40' }]}>
               {text(tab)}
             </Text>
@@ -55,12 +56,12 @@ const s = StyleSheet.create({
   dock: {
     height: ui.dockHeight,
     flexDirection: 'row',
-    paddingHorizontal: 5,
-    paddingTop: 6,
-    paddingBottom: 8,
-    gap: 4,
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: 6,
+    gap: 3,
     backgroundColor: '#23465D',
-    borderTopWidth: 4,
+    borderTopWidth: 2,
     borderColor: ui.ink,
   },
   tab: {
@@ -68,21 +69,21 @@ const s = StyleSheet.create({
     minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
-    borderWidth: 2,
+    gap: 0,
+    borderWidth: 1.5,
     borderColor: ui.ink,
-    borderRadius: 8,
-    boxShadow: '0px 3px 0px #102B3A',
+    borderRadius: 7,
+    boxShadow: '0px 2px 0px #102B3A',
     overflow: 'hidden',
   },
-  label: { fontFamily: 'Kanit_600SemiBold', fontSize: 14, color: ui.navy },
-  marker: { position: 'absolute', bottom: 3, left: 8, right: 8, height: 3 },
+  label: { fontFamily: 'Kanit_600SemiBold', fontSize: 11, lineHeight: 14, color: ui.navy },
+  marker: { position: 'absolute', bottom: 2, left: 8, right: 8, height: 2 },
   notice: {
     position: 'absolute',
-    top: 5,
-    right: 6,
-    width: 10,
-    height: 10,
+    top: 3,
+    right: 4,
+    width: 8,
+    height: 8,
     borderWidth: 2,
     borderColor: ui.ink,
     borderRadius: 4,

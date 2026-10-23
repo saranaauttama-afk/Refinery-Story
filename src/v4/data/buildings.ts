@@ -31,7 +31,7 @@ export const buildings: BuildingDef[] = [
   def('crudeTank', 'Crude Tank', 'ถังน้ำมันดิบ', 'storage', '#3C3C46'),
   def('tank', 'Product Tank', 'ถังผลิตภัณฑ์', 'storage', '#E2483D'),
   def('cdu', 'CDU', 'หอกลั่น', 'process', '#3C3C46'),
-  def('blend', 'Blending Station', 'สถานีผสม', 'blend', '#E2483D'),
+  def('blend', 'Production Line', 'สายการผลิต', 'blend', '#E2483D'),
   def('pipe', 'Pipe Rack', 'แนวท่อ', 'logistics', '#9EABB8'),
   def('road', 'Road', 'ถนน', 'logistics', '#4A4E57'),
   def('hydro', 'Hydrotreater', 'หน่วยไฮโดรทรีต', 'process', '#F08A24'),

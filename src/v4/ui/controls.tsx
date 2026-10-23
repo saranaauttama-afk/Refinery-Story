@@ -62,24 +62,19 @@ const headerColors: Record<string, string> = {
   'Buy land': ui.customers,
   'Recipe Book': ui.gold,
   Blend: ui.blend,
+  Products: ui.blend,
+  Lab: '#9C5BD6',
 }
 const headerIcons: Record<string, React.ReactNode> = {
-  Build: <GameIcon name="build" size={32} />,
-  Blend: <GameIcon name="blend" size={32} />,
-  Staff: <GameIcon name="staff" size={32} />,
-  Customers: <GameIcon name="customers" size={32} />,
-  Company: <GameIcon name="company" size={32} />,
-  'Buy land': <Map size={23} color={ui.ink} />,
-  'Recipe Book': <BookOpen size={23} color={ui.ink} />,
-}
-const headerCaptions: Record<string, LocalizedText> = {
-  Build: { en: 'MAKE ROOM FOR YOUR NEXT IDEA', th: 'ต่อเติมโรงกลั่นในแบบของคุณ' },
-  Blend: { en: 'FIND YOUR SIGNATURE FORMULA', th: 'ค้นหาสูตรผสมประจำโรงกลั่น' },
-  Staff: { en: 'A LITTLE TEAM. BIG POSSIBILITIES.', th: 'ทีมเล็ก ๆ ที่เติบโตไปด้วยกัน' },
-  Customers: { en: 'FROM YOUR YARD TO THE WORLD', th: 'ส่งต่อผลิตภัณฑ์จากลานของเรา' },
-  Company: { en: 'WATCH YOUR LITTLE WORLD GROW', th: 'ดูโรงกลั่นจิ๋วค่อย ๆ เติบโต' },
-  'Buy land': { en: 'SPACE FOR WHAT COMES NEXT', th: 'พื้นที่สำหรับก้าวต่อไป' },
-  'Recipe Book': { en: 'GOOD NEIGHBOURS. GREAT IDEAS.', th: 'ไอเดียดี ๆ จากเพื่อนบ้านบนลาน' },
+  Build: <GameIcon name="build" size={24} />,
+  Blend: <GameIcon name="blend" size={24} />,
+  Products: <GameIcon name="blend" size={24} />,
+  Lab: <GameIcon name="lab" size={24} />,
+  Staff: <GameIcon name="staff" size={24} />,
+  Customers: <GameIcon name="customers" size={24} />,
+  Company: <GameIcon name="company" size={24} />,
+  'Buy land': <Map size={18} color={ui.ink} />,
+  'Recipe Book': <BookOpen size={18} color={ui.ink} />,
 }
 
 /** Shared presentation for existing panel tabs; callers keep their own UI state. */
@@ -135,8 +130,8 @@ export function Sheet({
   const [showHelp, setShowHelp] = useState(false)
   return (
     <View style={[styles.sheet, low && { maxHeight: undefined }]}>
-      <View style={{ height: 4, backgroundColor: headerColors[title.en] ?? ui.gold }} />
-      <View style={[styles.header, low && { minHeight: 70 }]}>
+      <View style={{ height: 3, backgroundColor: headerColors[title.en] ?? ui.gold }} />
+      <View style={styles.header}>
         <Enamel dark />
         {headerArt[title.en] && (
           <>
@@ -166,22 +161,21 @@ export function Sheet({
           </>
         )}
         <View style={[styles.headerMark, { backgroundColor: headerColors[title.en] ?? ui.gold }]}>
-          {headerIcons[title.en] ?? <Building2 size={23} color={ui.ink} />}
+          {headerIcons[title.en] ?? <Building2 size={18} color={ui.ink} />}
         </View>
-        <View style={{ flex: 1, gap: 1 }}>
-          <Text style={[styles.heading, { color: ui.paper, fontSize: 22 }]}>{text(title)}</Text>
-          {!low && headerCaptions[title.en] && (
-            <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 12, color: '#DAE4DF' }}>
-              {text(headerCaptions[title.en])}
-            </Text>
-          )}
-        </View>
+        <Text
+          style={[styles.heading, { flex: 1, color: ui.paper, fontSize: 18 }]}
+          numberOfLines={1}
+        >
+          {text(title)}
+        </Text>
         {help && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={text({ en: 'How it works', th: 'วิธีเล่น' })}
             accessibilityState={{ expanded: showHelp }}
             aria-expanded={showHelp}
+            hitSlop={6}
             onPress={() => setShowHelp(v => !v)}
             style={[styles.close, showHelp && { backgroundColor: ui.gold }]}
           >
@@ -191,20 +185,21 @@ export function Sheet({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={text({ en: 'Close', th: 'ปิด' })}
+          hitSlop={6}
           onPress={onClose}
           style={({ pressed }) => [styles.close, pressed && { backgroundColor: ui.gold }]}
         >
-          <X size={20} color={ui.ink} strokeWidth={3} />
+          <X size={17} color={ui.ink} strokeWidth={3} />
         </Pressable>
       </View>
       {low ? (
-        <View style={{ padding: 10, gap: 8 }}>{children}</View>
+        <View style={{ padding: 8, gap: 6 }}>{children}</View>
       ) : (
         <ScrollView
           key={title.en}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
-          contentContainerStyle={{ padding: 12, paddingBottom: 24, gap: 10 }}
+          contentContainerStyle={{ padding: 10, paddingBottom: 20, gap: 8 }}
         >
           {help && showHelp && (
             <View
@@ -276,18 +271,18 @@ export const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     backgroundColor: ui.navy,
-    minHeight: 88,
-    padding: 10,
-    paddingLeft: 12,
+    minHeight: 46,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderBottomWidth: 2,
     borderColor: ui.ink,
   },
   headerMark: {
-    width: 46,
-    height: 46,
-    borderWidth: 2,
+    width: 32,
+    height: 32,
+    borderWidth: 1.5,
     borderColor: ui.ink,
     borderRadius: 7,
     alignItems: 'center',
@@ -297,28 +292,28 @@ export const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     backgroundColor: ui.inset,
-    padding: 3,
-    borderRadius: 8,
+    padding: 2,
+    borderRadius: 7,
     borderWidth: 1,
     borderColor: '#B7B9AA',
-    gap: 3,
+    gap: 2,
   },
   tab: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 34,
     minWidth: 0,
     borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
-    paddingVertical: 5,
+    paddingVertical: 3,
     overflow: 'hidden',
   },
   tabText: { fontSize: 14, textAlign: 'center' },
   tabLine: { position: 'absolute', bottom: 0, height: 3, left: 12, right: 12 },
   close: {
-    width: 44,
-    height: 44,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,

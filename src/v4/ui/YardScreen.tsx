@@ -10,7 +10,8 @@ import { RecipeBook } from './RecipeBook'
 import { detectCombos } from '../sim/systems/combos'
 import { combos } from '../data/combos'
 import { CustomersPanel } from './CustomersPanel'
-import { BlendPanel } from './BlendPanel'
+import { ProductsPanel } from './ProductsPanel'
+import { LabPanel, type LabTab } from './LabPanel'
 import { Alerts } from './Alerts'
 import { yardAlerts } from '../sim/systems/alerts'
 import { help } from './help'
@@ -54,6 +55,7 @@ export function YardScreen() {
   const [bell, setBell] = useState(false)
   const [selected, setSelected] = useState('')
   const [blendStation, setBlendStation] = useState<string>()
+  const [labTarget, setLabTarget] = useState<{ tab: LabTab; lab?: string; upgrade?: string }>()
   const [companyView, setCompanyView] = useState<string>()
   const [ghost, setGhost] = useState<Ghost>()
   const [guideHeight, setGuideHeight] = useState(0)
@@ -99,22 +101,13 @@ export function YardScreen() {
     setGhost(undefined)
     setBell(false)
     setBlendStation(undefined)
+    setLabTarget(undefined)
     setCompanyView(undefined)
     setPanel(panel === id ? '' : id)
   }
   return (
     <View style={{ flex: 1, backgroundColor: ui.paper }}>
-      <HUD
-        alerts={alerts.length}
-        bellOpen={bell}
-        onBell={() => setBell(v => !v)}
-        onSettings={() => {
-          setGhost(undefined)
-          setBell(false)
-          setCompanyView('settings')
-          setPanel('company')
-        }}
-      />
+      <HUD alerts={alerts.length} bellOpen={bell} onBell={() => setBell(v => !v)} />
       <View style={{ flex: 1 }}>
         <YardCanvas
           state={s}
@@ -154,7 +147,16 @@ export function YardScreen() {
           <Alerts
             onOpen={a => {
               setBell(false)
-              if ((a.tab === 'lab' || a.tab === 'building') && a.target) {
+              if (a.tab === 'lab' && a.target) {
+                const target = s.yard.buildings.find(x => x.uid === a.target)
+                setLabTarget({
+                  tab: target?.defId === 'productLab' ? 'develop' : 'research',
+                  lab: a.target,
+                })
+                setPanel('lab')
+                return
+              }
+              if (a.tab === 'building' && a.target) {
                 setSelected(a.target)
                 setPanel('info')
                 return
@@ -304,8 +306,28 @@ export function YardScreen() {
         </Sheet>
       )}
       {panel === 'blend' && (
-        <Sheet title={{ en: 'Blend', th: 'ผสม' }} help={help.blend} onClose={() => setPanel('')}>
-          <BlendPanel station={blendStation} />
+        <Sheet
+          title={{ en: 'Products', th: 'สินค้า' }}
+          help={help.blend}
+          onClose={() => setPanel('')}
+        >
+          <ProductsPanel
+            station={blendStation}
+            onUpgrade={key => {
+              setLabTarget({ tab: 'develop', upgrade: key })
+              setPanel('lab')
+            }}
+          />
+        </Sheet>
+      )}
+      {panel === 'lab' && (
+        <Sheet title={{ en: 'Lab', th: 'แล็บ' }} help={help.lab} onClose={() => setPanel('')}>
+          <LabPanel
+            key={JSON.stringify(labTarget ?? {})}
+            initialTab={labTarget?.tab}
+            initialLab={labTarget?.lab}
+            upgrade={labTarget?.upgrade}
+          />
         </Sheet>
       )}
       {panel === 'build' && (
@@ -334,6 +356,10 @@ export function YardScreen() {
             onRecipe={() => {
               setBlendStation(b.uid)
               setPanel('blend')
+            }}
+            onLab={() => {
+              setLabTarget({ tab: b.defId === 'productLab' ? 'develop' : 'research', lab: b.uid })
+              setPanel('lab')
             }}
           />
         </Sheet>

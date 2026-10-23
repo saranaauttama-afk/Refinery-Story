@@ -8,7 +8,7 @@ import { text } from '../i18n'
 const names = {
   crude: { en: 'Crude in', th: 'น้ำมันดิบเข้า' },
   refine: { en: 'Refining', th: 'กลั่นเป็นฐาน' },
-  blend: { en: 'Blending', th: 'ผสม' },
+  blend: { en: 'Production', th: 'ผลิต' },
   sell: { en: 'Buyers', th: 'ลูกค้ารับไป' },
 }
 const advice = {
@@ -20,7 +20,7 @@ const advice = {
     en: 'Build or upgrade the unit that makes your base, or overhaul worn plants.',
     th: 'สร้างหรืออัปเกรดหน่วยผลิตน้ำมันฐาน หรือซ่อมเครื่องที่เสื่อม',
   },
-  blend: { en: 'Add or upgrade a blend station.', th: 'เพิ่มหรืออัปเกรดสถานีผสม' },
+  blend: { en: 'Add or upgrade a production line.', th: 'เพิ่มหรืออัปเกรดสายการผลิต' },
   sell: {
     en: 'Sell more kinds of product, or invest in the Highway.',
     th: 'ขายสินค้าหลายชนิดขึ้น หรือลงทุนทางหลวง',

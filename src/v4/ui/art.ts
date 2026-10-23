@@ -136,6 +136,8 @@ export const customerPortrait = (id: string): number | undefined => {
 export const headerArt: Record<string, number> = {
   Build: require('../../../art-src/gpt/bg_build.png'),
   Blend: require('../../../art-src/gpt/bg_blend.png'),
+  Products: require('../../../art-src/gpt/bg_blend.png'),
+  Lab: require('../../../art-src/gpt/bg_blend.png'),
   Staff: require('../../../art-src/gpt/bg_staff.png'),
   Customers: require('../../../art-src/gpt/bg_customers.png'),
   Company: require('../../../art-src/gpt/bg_company.png'),

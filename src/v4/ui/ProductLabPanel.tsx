@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Pressable, Text, TextInput, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { useGame } from '../store/useGame'
 import { bases, type BaseId } from '../data/bases'
 import type { AdditiveId } from '../data/additives'
 import { B, FORMULA_GRADES, FORMULA_LAB as F } from '../data/balance'
 import { pairCompat } from '../data/compatibility'
 import { synergies } from '../data/formulaLab'
-import { startMix, renameFormula } from '../sim/actions'
+import { startMix } from '../sim/actions'
 import {
   labJob,
   gameYear,
@@ -14,16 +14,15 @@ import {
   labMixBlock,
   mixInput,
   formulaName,
-  NAME_MAX,
   type MixRequest,
 } from '../sim/systems/research'
 import { slotsFor, mixOdds, gradeIndex } from '../sim/systems/formulaLab'
 import { baseAvailable } from '../sim/systems/investments'
 import { type, ui } from './theme'
 import { PanelTabs } from './controls'
-import { Section, Row, SmallButton, Muted } from './cards'
-import { ProductCard } from './ProductCard'
-import { Book, Choice, JobCard, addName, firstYear } from './labParts'
+import { Row, SmallButton, Muted } from './cards'
+import { ProductCard, ProductTile } from './ProductCard'
+import { Choice, JobCard, addName, firstYear } from './labParts'
 import { text } from '../i18n'
 import type { Formula, GameState, Grade } from '../sim/types'
 
@@ -48,12 +47,12 @@ type Mode = 'new' | 'upgrade'
 type Pick = { additive: AdditiveId; grade: Grade }
 
 /** Product Lab: develop a new product card from a base, or upgrade a card, with catalysts. */
-export function ProductLabPanel({ labUid }: { labUid: string }) {
+export function ProductLabPanel({ labUid, upgrade }: { labUid: string; upgrade?: string }) {
   const { state: s, dispatch } = useGame()
   const lab = s.yard.buildings.find(b => b.uid === labUid)
-  const [mode, setMode] = useState<Mode>('new')
+  const [mode, setMode] = useState<Mode>(upgrade ? 'upgrade' : 'new')
   const [base, setBase] = useState<BaseId>('gasoline')
-  const [from, setFrom] = useState<string | undefined>()
+  const [from, setFrom] = useState<string | undefined>(upgrade)
   const [picks, setPicks] = useState<Pick[]>([])
   if (!lab) return null
   const job = labJob(s, labUid)
@@ -83,7 +82,6 @@ export function ProductLabPanel({ labUid }: { labUid: string }) {
     })
   return (
     <>
-      <Section>{text({ en: 'Develop products', th: 'พัฒนาสินค้า' })}</Section>
       {job?.kind === 'mix' ? (
         <JobCard
           title={text({
@@ -131,7 +129,7 @@ export function ProductLabPanel({ labUid }: { labUid: string }) {
           ) : cards.length ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {cards.map(f => (
-                <ProductCard
+                <ProductTile
                   key={f.key}
                   s={s}
                   formula={f}
@@ -226,8 +224,6 @@ export function ProductLabPanel({ labUid }: { labUid: string }) {
           />
         </>
       )}
-      <MyCards s={s} onUpgrade={key => choose('upgrade', key)} />
-      <Book s={s} />
     </>
   )
 }
@@ -383,84 +379,5 @@ function StockPicker({
         </Row>
       ))}
     </View>
-  )
-}
-
-/** Every product card, best first, with rename and a shortcut to upgrade. */
-function MyCards({ s, onUpgrade }: { s: GameState; onUpgrade: (key: string) => void }) {
-  const { dispatch } = useGame()
-  const [editing, setEditing] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
-  const cards = [...s.formulaLab.formulas].sort(
-    (a, b) => gradeIndex(b.grade) - gradeIndex(a.grade) || a.base.localeCompare(b.base),
-  )
-  if (!cards.length) return null
-  const save = () => {
-    if (editing) dispatch(s => renameFormula(s, editing, draft))
-    setEditing(null)
-  }
-  return (
-    <>
-      <Section>
-        {text({ en: `My products (${cards.length})`, th: `สินค้าของฉัน (${cards.length})` })}
-      </Section>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {cards.map(f => (
-          <ProductCard
-            key={f.key}
-            s={s}
-            formula={f}
-            base={f.base}
-            footer={
-              editing === f.key ? (
-                <View style={{ gap: 4 }}>
-                  <TextInput
-                    value={draft}
-                    onChangeText={setDraft}
-                    onSubmitEditing={save}
-                    maxLength={NAME_MAX}
-                    autoFocus
-                    placeholder={text(formulaName({ ...f, name: null }))}
-                    style={[
-                      type.body,
-                      {
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        paddingHorizontal: 6,
-                        paddingVertical: 4,
-                        backgroundColor: '#FFFFFF',
-                      },
-                    ]}
-                  />
-                  <View style={{ flexDirection: 'row', gap: 4 }}>
-                    <SmallButton label={text({ en: 'Save', th: 'บันทึก' })} onPress={save} />
-                    <SmallButton
-                      label={text({ en: 'Cancel', th: 'ยกเลิก' })}
-                      color="#FFF6E3"
-                      onPress={() => setEditing(null)}
-                    />
-                  </View>
-                </View>
-              ) : (
-                <View style={{ flexDirection: 'row', gap: 4, marginTop: 2 }}>
-                  <SmallButton
-                    label={text({ en: 'Rename', th: 'ตั้งชื่อ' })}
-                    color="#FFF6E3"
-                    onPress={() => {
-                      setDraft(f.name ?? '')
-                      setEditing(f.key)
-                    }}
-                  />
-                  <SmallButton
-                    label={text({ en: 'Upgrade', th: 'อัปเกรด' })}
-                    onPress={() => onUpgrade(f.key)}
-                  />
-                </View>
-              )
-            }
-          />
-        ))}
-      </View>
-    </>
   )
 }

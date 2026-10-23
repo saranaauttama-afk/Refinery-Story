@@ -88,7 +88,7 @@ export function Bar({
 }) {
   const pct = Math.max(0, Math.min(1, value)) * 100
   return (
-    <View style={[styles.bar, { height }]}>
+    <View style={[styles.bar, { height, borderWidth: height < 9 ? 1 : 2 }]}>
       <View style={{ width: `${pct}%`, height: '100%', backgroundColor: color }} />
     </View>
   )

@@ -20,8 +20,6 @@ import { recipeOf, recipeGrade, formulaOf } from '../sim/systems/blending'
 import { formulaName } from '../sim/systems/research'
 import { bases } from '../data/bases'
 import { effectText } from './RecipeBook'
-import { ResearchPanel } from './ResearchPanel'
-import { ProductLabPanel } from './ProductLabPanel'
 import { PlantCard } from './PlantCard'
 import { Card, Section, Row, Bar, SmallButton, Muted, Chip } from './cards'
 import { text } from '../i18n'
@@ -32,11 +30,14 @@ export function BuildingInfo({
   onMove,
   onClose,
   onRecipe,
+  onLab,
 }: {
   uid: string
   onMove: () => void
   onClose: () => void
   onRecipe: () => void
+  /** Open the Lab menu on this lab. */
+  onLab: () => void
 }) {
   const { state: s, dispatch } = useGame()
   const [confirmDemolish, setConfirmDemolish] = useState(false)
@@ -156,7 +157,7 @@ export function BuildingInfo({
                 <Text style={type.numBig}>{grade}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={type.small}>{text({ en: 'Mixing now', th: 'กำลังผสม' })}</Text>
+                <Text style={type.small}>{text({ en: 'Making now', th: 'กำลังผลิต' })}</Text>
                 <Text style={type.title} numberOfLines={1}>
                   {f ? text(formulaName(f)) : text(bases.find(x => x.id === r.base)!.name)}
                 </Text>
@@ -222,8 +223,16 @@ export function BuildingInfo({
         </Card>
       )}
 
-      {b.defId === 'lab' && <ResearchPanel labUid={b.uid} />}
-      {b.defId === 'productLab' && <ProductLabPanel labUid={b.uid} />}
+      {(b.defId === 'lab' || b.defId === 'productLab') && (
+        <SmallButton
+          label={
+            b.defId === 'lab'
+              ? text({ en: 'Open Lab menu · research', th: 'เปิดเมนูแล็บ · วิจัยสารเร่ง' })
+              : text({ en: 'Open Lab menu · develop', th: 'เปิดเมนูแล็บ · พัฒนาสินค้า' })
+          }
+          onPress={onLab}
+        />
+      )}
 
       <Pressable
         accessibilityRole="button"

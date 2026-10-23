@@ -34,8 +34,8 @@ export const hints: HintStep[] = [
   },
   {
     id: 'blend',
-    en: 'Place a Blending Station and a Product Tank to make your first lot.',
-    th: 'วางสถานีผสมกับถังผลิตภัณฑ์ เพื่อผลิตล็อตแรก',
+    en: 'Place a Production Line and a Product Tank to make your first lot.',
+    th: 'วางสายการผลิตกับถังผลิตภัณฑ์ เพื่อผลิตล็อตแรก',
     place: [
       { id: 'blend', x: 6, y: 3 },
       { id: 'tank', x: 9, y: 3 },

@@ -38,8 +38,8 @@ export function yardAlerts(s: GameState): Alert[] {
         id: `idle:${b.uid}:${r.base}`,
         tab: 'blend',
         target: b.uid,
-        en: `Station ${i + 1}: nothing refines this base, try another recipe`,
-        th: `สถานี ${i + 1} ไม่มีหน่วยผลิตน้ำมันฐานนี้ ลองเปลี่ยนสูตร`,
+        en: `Line ${i + 1}: nothing refines this base, pick another product`,
+        th: `สาย ${i + 1} ไม่มีหน่วยผลิตน้ำมันฐานนี้ ลองเปลี่ยนสินค้า`,
       })
   })
   const worn = s.yard.buildings.filter(

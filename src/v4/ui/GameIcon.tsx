@@ -4,6 +4,7 @@ import Svg, { G, Path, Rect } from 'react-native-svg'
 export type GameIconName =
   | 'build'
   | 'blend'
+  | 'lab'
   | 'staff'
   | 'customers'
   | 'company'
@@ -17,7 +18,7 @@ export type GameIconName =
 // nearest-neighbour. Names without a bitmap fall back to the code-drawn icon below.
 const bitmaps: Partial<Record<GameIconName, number>> = {
   build: require('../../../assets/v4/ui/tab_build.png'),
-  blend: require('../../../assets/v4/ui/tab_blend.png'),
+  lab: require('../../../assets/v4/ui/tab_blend.png'),
   staff: require('../../../assets/v4/ui/tab_staff.png'),
   customers: require('../../../assets/v4/ui/tab_customers.png'),
   company: require('../../../assets/v4/ui/tab_company.png'),
@@ -46,6 +47,16 @@ export function GameIcon({ name, size = 36 }: { name: GameIconName; size?: numbe
           </>
         )}
         {name === 'blend' && (
+          <>
+            <Path d="M9 9H31V43H9Z" fill="#E2483D" />
+            <Path d="M9 15H31 M9 37H31" stroke={ink} strokeWidth={2} />
+            <Path d="M13 9V43" stroke="#F2877D" strokeWidth={3} />
+            <Path d="M24 21H40L42 24V43H22V24Z" fill="#F2C230" />
+            <Path d="M27 31H37 M27 36H34" stroke="#8A5A00" strokeWidth={2} />
+            <Path d="M15 5H21V9H15Z" fill="#AFC2CC" />
+          </>
+        )}
+        {name === 'lab' && (
           <>
             <Path d="M18 4H31V10H28V22L39 36V42H10V36L21 22V10H18Z" fill="#DDEAF0" />
             <Path d="M18 30H31L36 37V39H13V37Z" fill="#E45A75" stroke="none" />
