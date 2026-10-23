@@ -202,17 +202,27 @@ export function mixFormula(st: LabSlice, m: MixInput): MixResult {
         : x,
     )
   stock = stock.filter(x => x.units > 0)
-  const key = formulaKey(m.base, o.catalysts)
-  const old = st.formulas.find(f => f.key === key)
-  const formula: Formula = {
-    key,
-    base: m.base,
-    catalysts: [...o.catalysts].sort() as AdditiveId[],
-    grade: old && gradeIndex(old.grade) >= idx ? old.grade : rolled,
-    secret: o.secret?.id ?? null,
-  }
+  // A product card upgrades in place: building on a card (or remaking a card's exact set) keeps
+  // its key, so stations keep making it. A worse roll leaves the card as it was.
+  const catalysts = [...o.catalysts].sort() as AdditiveId[]
+  const setKey = formulaKey(m.base, catalysts)
+  const old =
+    (m.from ? st.formulas.find(f => f.key === m.from) : undefined) ??
+    st.formulas.find(f => formulaKey(f.base, f.catalysts) === setKey)
+  let key = old?.key ?? setKey
+  for (let n = 2; !old && st.formulas.some(f => f.key === key); n++) key = `${setKey}#${n}`
   const isNew = !old
-  const improved = isNew || gradeIndex(formula.grade) > gradeIndex(old!.grade)
+  const improved = isNew || idx > gradeIndex(old!.grade)
+  const formula: Formula = improved
+    ? {
+        key,
+        base: m.base,
+        catalysts,
+        grade: rolled,
+        secret: o.secret?.id ?? null,
+        name: old?.name ?? null,
+      }
+    : old!
   const formulas = old
     ? st.formulas.map(f => (f.key === key ? formula : f))
     : [...st.formulas, formula]

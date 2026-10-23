@@ -343,6 +343,13 @@ export const BUILDING_BALANCE: Record<
     cost: 15000,
     rank: 2,
   },
+  productLab: {
+    w: 1,
+    h: 1,
+    height: 24,
+    cost: 15000,
+    rank: 2,
+  },
   reformer: {
     w: 2,
     h: 3,

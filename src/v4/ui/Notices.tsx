@@ -6,6 +6,7 @@ import { useGame } from '../store/useGame'
 import { dismissNotice } from '../sim/actions'
 import { Button, styles } from './controls'
 import { text } from '../i18n'
+import { ProductCard, gradeFill } from './ProductCard'
 export function Notices() {
   const { state: s, dispatch } = useGame()
   const n = s.notices[0]
@@ -29,7 +30,9 @@ export function Notices() {
             borderWidth: 2,
           }}
         >
-          {n && (n.kind === 'rank' || n.kind === 'awards') ? (
+          {n?.kind === 'product' && n.product ? (
+            <ProductReveal product={n.product} title={text(n)} />
+          ) : n && (n.kind === 'rank' || n.kind === 'awards') ? (
             <Image
               source={sceneArt[n.kind]}
               resizeMode="cover"
@@ -56,7 +59,7 @@ export function Notices() {
             </View>
           )}
           <ScrollView contentContainerStyle={{ gap: 10 }}>
-            {n?.kind === 'rank' && n.chips ? (
+            {n?.kind === 'product' ? null : n?.kind === 'rank' && n.chips ? (
               <>
                 <Text style={styles.heading}>
                   {text({ en: `Rank ${n.uid.slice(4)}!`, th: `แรงก์ ${n.uid.slice(4)}!` })}
@@ -170,5 +173,43 @@ export function Notices() {
         </View>
       </View>
     </Modal>
+  )
+}
+
+/** Card reveal when a product is developed or upgraded. */
+function ProductReveal({
+  product,
+  title,
+}: {
+  product: { key: string; grade: string; before: string | null }
+  title: string
+}) {
+  const { state: s } = useGame()
+  const f = s.formulaLab.formulas.find(x => x.key === product.key)
+  return (
+    <View style={{ gap: 10, marginBottom: 12, alignItems: 'center' }}>
+      <Text style={[styles.heading, { textAlign: 'center' }]}>{title}</Text>
+      {product.before && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {[product.before, '→', product.grade].map((g, i) => (
+            <Text
+              key={i}
+              style={{
+                fontFamily: 'PixelifySans_700Bold',
+                fontSize: 26,
+                paddingHorizontal: g === '→' ? 0 : 10,
+                borderWidth: g === '→' ? 0 : 2,
+                borderRadius: 6,
+                backgroundColor: g === '→' ? 'transparent' : gradeFill[g],
+                overflow: 'hidden',
+              }}
+            >
+              {g}
+            </Text>
+          ))}
+        </View>
+      )}
+      {f && <ProductCard s={s} formula={f} base={f.base} wide />}
+    </View>
   )
 }

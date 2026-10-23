@@ -2,8 +2,7 @@ import { salePrice } from '../../src/v4/sim/systems/customers'
 import {
   labs,
   labJob,
-  labRole,
-  setLabRole,
+  productLabs,
   catalystBlock,
   startCatalyst,
   startMix,
@@ -106,20 +105,16 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
     buildOnce('cracker', 300000)
   }
   const lines = year >= 7 ? 3 : year >= 4.6 ? 2 : 1
-  // A second lab soon after the first (one researches catalysts, one mixes), a third later.
-  const wantLabs = year >= 7 ? 3 : 2
-  if (
-    labs(s).length &&
-    labs(s).length < wantLabs &&
-    s.money > (year >= 7 ? 100000 : 30000) + reserve
-  )
+  // A Product Lab soon after the first Formula Lab, a second Formula Lab later.
+  const wantLabs = year >= 7 ? 2 : 1
+  if (labs(s).length && !productLabs(s).length && s.money > 30000 + reserve)
+    s = buildFirstFree(s, 'productLab')
+  if (productLabs(s).length && labs(s).length < wantLabs && s.money > 100000 + reserve)
     s = buildFirstFree(s, 'lab')
   // Better labs mean better catalysts: upgrade them once the cash is clearly spare.
   if (year >= 1.5 && s.tick % MONTH === 0)
-    for (const lab of labs(s)) if (s.money > upgradeCost(lab) * 4 + reserve) s = upgrade(s, lab.uid)
-  const allLabs = labs(s)
-  if (allLabs.length >= 2 && !allLabs.some(l => labRole(l) === 'formula'))
-    s = setLabRole(s, allLabs[1].uid, 'formula')
+    for (const lab of [...labs(s), ...productLabs(s)])
+      if (s.money > upgradeCost(lab) * 4 + reserve) s = upgrade(s, lab.uid)
   if (s.money > 500000 + reserve)
     for (const id of ['crudeTank', 'cdu', 'hydro', 'tank', 'blend'])
       if (s.yard.buildings.filter(b => b.defId === id).length < lines) s = buildFirstFree(s, id)
@@ -231,9 +226,9 @@ export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
         s = selectBlend(s, pick.recipe.base, pick.recipe.formula, st.uid)
     })
   // Keep catalyst labs researching, and formula labs mixing whatever looks most promising.
-  for (const lab of labs(s))
+  for (const lab of [...labs(s), ...productLabs(s)])
     if (!labJob(s, lab.uid)) {
-      if (labRole(lab) === 'catalyst') {
+      if (lab.defId === 'lab') {
         if (!catalystBlock(s, lab.uid) && s.money > FORMULA_LAB.catalyst.money + reserve)
           s = startCatalyst(s, lab.uid)
       } else if (s.money > FORMULA_LAB.mix.money + reserve) {

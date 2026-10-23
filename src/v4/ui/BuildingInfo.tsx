@@ -21,6 +21,7 @@ import { formulaName } from '../sim/systems/research'
 import { bases } from '../data/bases'
 import { effectText } from './RecipeBook'
 import { ResearchPanel } from './ResearchPanel'
+import { ProductLabPanel } from './ProductLabPanel'
 import { PlantCard } from './PlantCard'
 import { Card, Section, Row, Bar, SmallButton, Muted, Chip } from './cards'
 import { text } from '../i18n'
@@ -222,6 +223,7 @@ export function BuildingInfo({
       )}
 
       {b.defId === 'lab' && <ResearchPanel labUid={b.uid} />}
+      {b.defId === 'productLab' && <ProductLabPanel labUid={b.uid} />}
 
       <Pressable
         accessibilityRole="button"

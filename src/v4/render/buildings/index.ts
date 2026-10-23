@@ -41,6 +41,7 @@ export const sprites: Record<string, Sprite> = {
   blend,
   pipe,
   lab,
+  productLab: lab,
   control,
   canteen,
   flare,

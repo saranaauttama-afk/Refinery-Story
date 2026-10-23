@@ -1,7 +1,7 @@
 import { PROGRESSION as P } from './balance'
 const unlocks = [
   ['cdu', 'tank', 'gate', 'blend', 'gasoline', 'diesel'],
-  ['hydro', 'lab', 'land2', 'training:lab'],
+  ['hydro', 'lab', 'productLab', 'land2', 'training:lab'],
   ['reformer', 'hire:university', 'investment:highway'],
   ['cracker', 'lpg', 'jet', 'investment:airport'],
   ['control', 'hire:fair', 'investment:port'],

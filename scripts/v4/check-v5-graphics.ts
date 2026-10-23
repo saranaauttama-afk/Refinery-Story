@@ -111,7 +111,7 @@ for (const id of Object.keys(scenicSizes)) {
       )
   }
 }
-assert.equal(Object.keys(metadata).length, 148)
+assert.equal(Object.keys(metadata).length, 153)
 assert.notDeepEqual(topdownArt('gate', 1), topdownArt('gate', 1, true))
 // Ownership changes paint only yard surfaces, never move the fixed external scene.
 const before = groundCommands(start, []).filter(c => c.kind === 'rect' && (c.x < 0 || c.y < 0))
@@ -119,5 +119,5 @@ const after = groundCommands(full, []).filter(c => c.kind === 'rect' && (c.x < 0
 assert.deepEqual(before, after)
 assert.deepEqual(GRAPHICS.world, { x: -256, y: -512, width: 1536, height: 1536 })
 console.log(
-  'V5 graphics: 148 native PNGs / fixed L1–L5 frames / pixel bounds / gate orientations / camera focal point / irregular parcel fences / stable scenery passed',
+  'V5 graphics: 153 native PNGs / fixed L1–L5 frames / pixel bounds / gate orientations / camera focal point / irregular parcel fences / stable scenery passed',
 )

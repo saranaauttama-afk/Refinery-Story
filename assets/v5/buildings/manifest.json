@@ -2466,5 +2466,85 @@
       "height": 32
     },
     "headroom": 40
+  },
+  "productLab:1": {
+    "file": "lab_L1.png",
+    "level": 1,
+    "id": "productLab",
+    "width": 40,
+    "height": 52,
+    "ax": 20,
+    "ay": 48,
+    "footprint": {
+      "x": 4,
+      "y": 16,
+      "width": 32,
+      "height": 32
+    },
+    "headroom": 12
+  },
+  "productLab:2": {
+    "file": "lab_L2.png",
+    "level": 2,
+    "id": "productLab",
+    "width": 40,
+    "height": 52,
+    "ax": 20,
+    "ay": 48,
+    "footprint": {
+      "x": 4,
+      "y": 16,
+      "width": 32,
+      "height": 32
+    },
+    "headroom": 12
+  },
+  "productLab:3": {
+    "file": "lab_L3.png",
+    "level": 3,
+    "id": "productLab",
+    "width": 40,
+    "height": 52,
+    "ax": 20,
+    "ay": 48,
+    "footprint": {
+      "x": 4,
+      "y": 16,
+      "width": 32,
+      "height": 32
+    },
+    "headroom": 12
+  },
+  "productLab:4": {
+    "file": "lab_L4.png",
+    "level": 4,
+    "id": "productLab",
+    "width": 40,
+    "height": 52,
+    "ax": 20,
+    "ay": 48,
+    "footprint": {
+      "x": 4,
+      "y": 16,
+      "width": 32,
+      "height": 32
+    },
+    "headroom": 12
+  },
+  "productLab:5": {
+    "file": "lab_L5.png",
+    "level": 5,
+    "id": "productLab",
+    "width": 40,
+    "height": 52,
+    "ax": 20,
+    "ay": 48,
+    "footprint": {
+      "x": 4,
+      "y": 16,
+      "width": 32,
+      "height": 32
+    },
+    "headroom": 12
   }
 }

@@ -16,8 +16,9 @@ import {
   recipeOf,
 } from '../sim/systems/blending'
 import { useState } from 'react'
-import { formulaName } from '../sim/systems/research'
 import { stockOf, gradeIndex } from '../sim/systems/formulaLab'
+import { ProductCard, cardPrice } from './ProductCard'
+import { formulaName } from '../sim/systems/research'
 import { demandOf, trending } from '../sim/systems/market'
 import { salePrice } from '../sim/systems/customers'
 import { SALES, FORMULA_LAB } from '../data/balance'
@@ -26,7 +27,6 @@ import { styles } from './controls'
 import { Card, Section, Row, Bar, SmallButton, Muted, GradeChip } from './cards'
 import { text } from '../i18n'
 import { featureOn } from '../data/features'
-import type { Grade } from '../sim/types'
 
 const gradeFill: Record<string, string> = {
   SS: '#F5B37A',
@@ -36,81 +36,14 @@ const gradeFill: Record<string, string> = {
   C: '#D8D2C4',
   D: '#F2A49B',
 }
-const gradeBadge = (grade: Grade) => ({ label: grade, color: gradeFill[grade] })
-
-function Option({
-  label,
-  sub,
-  selected,
-  badge,
-  onPress,
-}: {
-  label: string
-  sub?: string
-  selected: boolean
-  badge: { label: string; color: string }
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={{
-        width: '48%',
-        minHeight: 64,
-        borderWidth: selected ? 3 : 2,
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: selected ? 5 : 6,
-        backgroundColor: selected ? '#FFE7A3' : '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text
-          style={[styles.text, selected && { fontFamily: 'Kanit_600SemiBold' }]}
-          numberOfLines={2}
-        >
-          {selected ? '✓ ' : ''}
-          {label}
-        </Text>
-        {sub && <Muted>{sub}</Muted>}
-      </View>
-      <View
-        style={{
-          backgroundColor: badge.color,
-          borderWidth: 2,
-          borderRadius: 4,
-          paddingHorizontal: 5,
-        }}
-      >
-        <Text
-          style={{
-            fontFamily:
-              badge.label === text({ en: 'NEW', th: 'ใหม่' })
-                ? 'Kanit_600SemiBold'
-                : 'PixelifySans_700Bold',
-            fontSize: 13,
-            color: '#14110F',
-          }}
-        >
-          {badge.label}
-        </Text>
-      </View>
-    </Pressable>
-  )
-}
-
-/** Blend: pick a station, see grade and price, pick base and additive. Tanks fold into one bar. */
+/** Blend: pick a station, see what it makes, pick a product card. Tanks fold into one bar. */
 export function BlendPanel({ station: initial }: { station?: string }) {
   const { state: s, dispatch } = useGame()
   const stations = blendStations(s)
   const [picked, setPicked] = useState(initial)
   const [showLots, setShowLots] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [filter, setFilter] = useState<BaseId | 'all'>('all')
   const station = stations.find(b => b.uid === picked) ?? stations[0]
   const r = station ? recipeOf(s, station) : s.blend
   const pick = (base: BaseId, formula: string | null) =>
@@ -129,9 +62,14 @@ export function BlendPanel({ station: initial }: { station?: string }) {
       secret: formula?.secret,
     }) * SALES.units,
   )
-  const baseFormulas = s.formulaLab.formulas
-    .filter(f => f.base === r.base)
-    .sort((a, b) => gradeIndex(b.grade) - gradeIndex(a.grade))
+  const available = bases.filter(b => baseAvailable(s, b.id))
+  const cards = s.formulaLab.formulas
+    .filter(f => (filter === 'all' || f.base === filter) && baseAvailable(s, f.base))
+    .sort(
+      (a, b) =>
+        gradeIndex(b.grade) - gradeIndex(a.grade) ||
+        cardPrice(s, b, b.base) - cardPrice(s, a, a.base),
+    )
   const capacity = tankCapacity(s)
   const used = tankUnits(s)
   const market = featureOn(s, 'market')
@@ -209,6 +147,11 @@ export function BlendPanel({ station: initial }: { station?: string }) {
           <Text style={[type.numBig, { fontSize: 30 }]}>{grade}</Text>
         </View>
         <View style={{ flex: 1, gap: 2 }}>
+          <Text style={type.title} numberOfLines={1}>
+            {formula
+              ? text(formulaName(formula))
+              : text({ en: `Plain ${baseName(r.base)}`, th: `${baseName(r.base)} ธรรมดา` })}
+          </Text>
           <Text style={type.numBig}>
             ${perTruck.toLocaleString()}
             <Text style={type.small}> {text({ en: 'per truck', th: 'ต่อคันรถ' })}</Text>
@@ -222,8 +165,8 @@ export function BlendPanel({ station: initial }: { station?: string }) {
               : grade === 'SS'
                 ? text({ en: 'Top grade', th: 'เกรดสูงสุดแล้ว' })
                 : text({
-                    en: 'Better grades come from the Formula Lab',
-                    th: 'อยากได้เกรดสูงขึ้น ไปผสมสูตรที่แล็บผสมสูตร',
+                    en: 'Better grades come from a Product Lab',
+                    th: 'อยากได้เกรดสูงขึ้น ไปอัปเกรดที่แล็บสร้างสินค้า',
                   })}
           </Text>
         </View>
@@ -255,109 +198,117 @@ export function BlendPanel({ station: initial }: { station?: string }) {
         </View>
       )}
 
-      <Text style={type.small}>{text({ en: 'Base', th: 'ฐาน' })}</Text>
+      <Text style={type.small}>{text({ en: 'Product to make', th: 'เลือกสินค้าที่จะผลิต' })}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 6 }}
       >
-        {bases
-          .filter(b => baseAvailable(s, b.id))
-          .map(b => {
-            const on = r.base === b.id
-            const d = demandOf(s, b.id)
-            const sub = trending(s, b.id)
-              ? { text: text({ en: 'trend ×1.5', th: 'กระแส ×1.5' }), color: '#8A5A00' }
-              : market && d < 0.95
-                ? {
-                    text: text({
-                      en: `demand ${Math.round(d * 100)}%`,
-                      th: `ตลาด ${Math.round(d * 100)}%`,
-                    }),
-                    color: d < 0.75 ? '#B42318' : ui.muted,
-                  }
-                : { text: `${Math.floor(s.baseStock[b.id]).toLocaleString()}`, color: ui.muted }
-            return (
-              <Pressable
-                key={b.id}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                onPress={() =>
-                  pick(
-                    b.id,
-                    s.formulaLab.formulas
-                      .filter(f => f.base === b.id)
-                      .sort((x, y) => gradeIndex(y.grade) - gradeIndex(x.grade))[0]?.key ?? null,
-                  )
-                }
-                style={{
-                  minWidth: 96,
-                  height: 54,
-                  paddingHorizontal: 10,
-                  borderWidth: on ? 3 : 2,
-                  borderRadius: 8,
-                  backgroundColor: on ? '#FFE7A3' : '#FFFFFF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={[type.body, on && { fontFamily: 'Kanit_600SemiBold' }]}>
-                  {text(b.name)}
-                </Text>
-                <Text style={[type.small, { fontSize: 11, color: sub.color }]}>{sub.text}</Text>
-              </Pressable>
-            )
-          })}
-      </ScrollView>
-
-      <Text style={type.small}>{text({ en: 'Formula', th: 'สูตร' })}</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        <Option
-          label={text({ en: 'Plain', th: 'ไม่ใส่สูตร' })}
-          selected={r.formula === null}
-          badge={gradeBadge(FORMULA_LAB.plainGrade)}
-          onPress={() => pick(r.base, null)}
-        />
-        {baseFormulas.map(f => {
-          const out = f.catalysts.filter(a => stockOf(s.formulaLab, a) < 1)
+        {(['all', ...available.map(b => b.id)] as const).map(id => {
+          const on = filter === id
+          const d = id === 'all' ? 1 : demandOf(s, id)
+          const sub =
+            id === 'all'
+              ? null
+              : trending(s, id)
+                ? { text: text({ en: 'trend ×1.5', th: 'กระแส ×1.5' }), color: '#8A5A00' }
+                : market && d < 0.95
+                  ? {
+                      text: text({
+                        en: `demand ${Math.round(d * 100)}%`,
+                        th: `ตลาด ${Math.round(d * 100)}%`,
+                      }),
+                      color: d < 0.75 ? '#B42318' : ui.muted,
+                    }
+                  : {
+                      text: `${Math.floor(s.baseStock[id]).toLocaleString()}`,
+                      color: ui.muted,
+                    }
           return (
-            <Option
-              key={f.key}
-              label={f.secret ? `✨ ${text(formulaName(f))}` : f.catalysts.map(addName).join(' + ')}
-              sub={
-                out.length
-                  ? text({
-                      en: `out of ${out.map(addName).join(', ')}`,
-                      th: `${out.map(addName).join(', ')} หมด`,
-                    })
-                  : f.catalysts.map(a => `${addName(a)} ×${stockOf(s.formulaLab, a)}`).join(' · ')
-              }
-              selected={r.formula === f.key}
-              badge={gradeBadge(f.grade)}
-              onPress={() => pick(r.base, f.key)}
-            />
+            <Pressable
+              key={id}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              onPress={() => setFilter(id)}
+              style={{
+                minWidth: 72,
+                height: 48,
+                paddingHorizontal: 10,
+                borderWidth: on ? 3 : 2,
+                borderRadius: 20,
+                backgroundColor: on ? ui.ink : '#FFFFFF',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+              }}
+            >
+              {id !== 'all' && (
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: productAccent[id] ?? '#D8D2C4',
+                  }}
+                />
+              )}
+              <View style={{ alignItems: 'center' }}>
+                <Text style={[type.body, { fontSize: 14 }, on && { color: ui.paper }]}>
+                  {id === 'all' ? text({ en: 'All', th: 'ทั้งหมด' }) : baseName(id)}
+                </Text>
+                {sub && (
+                  <Text style={[type.small, { fontSize: 11, color: on ? ui.paper : sub.color }]}>
+                    {sub.text}
+                  </Text>
+                )}
+              </View>
+            </Pressable>
           )
         })}
-        <View
-          style={{
-            width: '48%',
-            minHeight: 44,
-            borderWidth: 2,
-            borderStyle: 'dashed',
-            borderColor: ui.navy,
-            borderRadius: 8,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 6,
-          }}
-        >
-          <Text style={[type.small, { color: ui.navy, textAlign: 'center' }]}>
-            {text({
-              en: 'Mix new formulas at a Formula Lab',
-              th: '+ ผสมสูตรใหม่ที่แล็บผสมสูตร',
-            })}
-          </Text>
-        </View>
+      </ScrollView>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {cards.map(f => (
+          <ProductCard
+            key={f.key}
+            s={s}
+            formula={f}
+            base={f.base}
+            selected={r.formula === f.key}
+            onPress={() => pick(f.base, f.key)}
+          />
+        ))}
+        {available
+          .filter(b => filter === 'all' || filter === b.id)
+          .map(b => (
+            <ProductCard
+              key={`plain:${b.id}`}
+              s={s}
+              formula={null}
+              base={b.id}
+              selected={r.formula === null && r.base === b.id}
+              onPress={() => pick(b.id, null)}
+            />
+          ))}
+      </View>
+      <View
+        style={{
+          minHeight: 44,
+          borderWidth: 2,
+          borderStyle: 'dashed',
+          borderColor: ui.navy,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 6,
+        }}
+      >
+        <Text style={[type.small, { color: ui.navy, textAlign: 'center' }]}>
+          {text({
+            en: 'New products and upgrades come from a Product Lab',
+            th: '+ สินค้าใหม่และการอัปเกรด ทำที่แล็บสร้างสินค้า',
+          })}
+        </Text>
       </View>
 
       <Pressable

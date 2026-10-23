@@ -8,7 +8,9 @@ import {
   catalystBlock,
   startMix,
   labMixBlock,
-  setLabRole,
+  renameFormula,
+  formulaName,
+  productLabs,
   researchSystem,
   labs,
 } from '../../src/v4/sim/systems/research'
@@ -54,17 +56,17 @@ assert.ok(r.formulaLab.stock.length > 0, 'research adds catalysts')
 // Year 1 never yields A or better.
 assert.ok(r.formulaLab.stock.every(c => ['D', 'C', 'B'].includes(c.grade)))
 
-// A second lab switched to Formula mixes a formula; catalysts are spent at the start.
-at = spot(r, 'lab')
-r = place(r, 'lab', at.x, at.y)
-const mixer = labs(r)[1]
+// A Product Lab develops a product card; catalysts are spent at the start.
+at = spot(r, 'productLab')
+r = place(r, 'productLab', at.x, at.y)
+const mixer = productLabs(r)[0]
+assert.equal(labs(r).length, 1, 'a Product Lab is not a Formula Lab')
 const pick = r.formulaLab.stock.find(c => c.units >= FORMULA_LAB.mix.unitsPerSlot)!
 const request = {
   base: 'gasoline' as const,
   picks: [{ additive: pick.additive, grade: pick.grade }],
 }
-assert.equal(labMixBlock(r, mixer.uid, request), 'role')
-r = setLabRole(r, mixer.uid, 'formula')
+assert.equal(labMixBlock(r, labs(r)[0].uid, request), 'busy', 'Formula Labs cannot develop')
 assert.equal(labMixBlock(r, mixer.uid, request), null)
 const unitsBefore = r.formulaLab.stock.reduce((n, c) => n + c.units, 0)
 r = startMix(r, mixer.uid, request)
@@ -72,11 +74,63 @@ assert.equal(
   r.formulaLab.stock.reduce((n, c) => n + c.units, 0),
   unitsBefore - FORMULA_LAB.mix.unitsPerSlot,
 )
-assert.equal(setLabRole(r, mixer.uid, 'catalyst'), r, 'busy labs keep their role')
 assert.equal(r.formulaLab.formulas.length, 0, 'result shows when the job ends')
 r = researchSystem({ ...r, tick: r.research.find(j => j.kind === 'mix')!.endTick })
 const formula = r.formulaLab.formulas[0]
 assert.ok(formula && formula.key === `gasoline:${pick.additive}`)
+assert.ok(r.notices.some(n => n.kind === 'product' && n.product?.key === formula.key))
+
+// Cards can be renamed; an empty name goes back to the automatic one.
+r = renameFormula(r, formula.key, '  Super   Gas  ')
+assert.equal(formulaName(r.formulaLab.formulas[0]).th, 'Super Gas')
+assert.equal(
+  formulaName(renameFormula(r, formula.key, '   ').formulaLab.formulas[0]).th,
+  formulaName(formula).th,
+)
+
+// Upgrading a card keeps its key (stations keep making it), its name, and never lowers it.
+{
+  const second = r.formulaLab.stock.find(c => c.additive !== pick.additive)?.additive ?? 'dye'
+  let u: GameState = {
+    ...r,
+    tick: 3 * YEAR,
+    research: [],
+    formulaLab: {
+      ...r.formulaLab,
+      formulas: [{ ...r.formulaLab.formulas[0], grade: 'D' }],
+      stock: [{ additive: second, grade: 'A', units: 4 }],
+    },
+  }
+  u = startMix(u, mixer.uid, {
+    base: 'gasoline',
+    from: formula.key,
+    picks: [{ additive: second, grade: 'A' }],
+  })
+  u = researchSystem({ ...u, tick: u.research[0].endTick })
+  const card = u.formulaLab.formulas
+  assert.equal(card.length, 1, 'upgrade does not make a second card')
+  assert.equal(card[0].key, formula.key)
+  assert.equal(card[0].name, 'Super Gas')
+  assert.ok(card[0].grade !== 'D' && card[0].catalysts.includes(second))
+  // A worse roll leaves the card as it was.
+  const top = { ...card[0], grade: 'SS' as const }
+  let w: GameState = {
+    ...u,
+    research: [],
+    formulaLab: {
+      ...u.formulaLab,
+      formulas: [top],
+      stock: [{ additive: second, grade: 'D', units: 4 }],
+    },
+  }
+  w = startMix(w, mixer.uid, {
+    base: 'gasoline',
+    from: top.key,
+    picks: [{ additive: second, grade: 'D' }],
+  })
+  w = researchSystem({ ...w, tick: w.research[0].endTick })
+  assert.deepEqual(w.formulaLab.formulas, [top])
+}
 
 // A station running the formula makes lots at its grade (catalysts permitting).
 const station = blendStations(r)[0]
@@ -103,6 +157,14 @@ assert.equal(offerGrade(1), 'C')
 assert.equal(offerGrade(10), 'A')
 
 // Saves from before the Formula Lab load: recipes become plain, old research is dropped.
+// Labs that were switched to formula mixing load as Product Labs.
+{
+  const old = JSON.parse(serialize(r))
+  old.yard.buildings.find((b: { uid: string }) => b.uid === labs(r)[0].uid).labRole = 'formula'
+  const back = deserialize(JSON.stringify(old))
+  assert.equal(productLabs(back).length, 2)
+  assert.ok(back.yard.buildings.every(b => !('labRole' in b)))
+}
 const legacy = JSON.parse(serialize(s))
 delete legacy.formulaLab
 legacy.knownRecipes = ['gasoline:octane']

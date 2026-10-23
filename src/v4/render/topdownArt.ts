@@ -191,8 +191,8 @@ export function topdownArt(id: string, level = 1, westGate = false): Command[] {
       R(2, 24, 28, 3, p.ink)
       R(2, 25, 28, 1, p.steel)
     }
-  } else if (id === 'lab') {
-    house(3, 6, 26, 17, p.blue)
+  } else if (id === 'lab' || id === 'productLab') {
+    house(3, 6, 26, 17, id === 'lab' ? p.blue : p.orange)
     box(12, 1, 8, 7, p.light)
     R(15, 2, 2, 5, p.red)
     R(13, 3, 6, 2, p.red)

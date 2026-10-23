@@ -2,8 +2,8 @@ import type { LocalizedText } from '../i18n'
 // Rules text shown behind each sheet's "?" button instead of on screen all the time.
 export const help: Record<string, LocalizedText> = {
   blend: {
-    en: 'Each blend station turns one base into 300-unit lots. Plain lots are grade C. Pick a formula from the Formula Lab to make its grade instead; every 6 lots use one unit of each of its catalysts, and when one runs out the station makes plain lots until you research more. Grade sets the price. From rank 3 the market % falls when you sell one product a lot and recovers weekly.',
-    th: 'แต่ละสถานีเปลี่ยนน้ำมันฐานเป็นล็อตละ 300 หน่วย ถ้าไม่ใส่สูตรจะได้เกรด C เลือกสูตรจากแล็บผสมสูตรเพื่อผลิตตามเกรดของสูตร ทุก 6 ล็อตจะใช้สารเร่งในสูตรอย่างละ 1 หน่วย ถ้าสารหมดจะกลับไปผลิตเกรดธรรมดาจนกว่าจะวิจัยเพิ่ม เกรดกำหนดราคา ตั้งแต่แรงก์ 3 ขายชนิดเดียวซ้ำ ๆ ตลาด % จะลด แล้วฟื้นทุกสัปดาห์',
+    en: "Each blend station makes one product card into 300-unit lots. Plain cards are grade C. Product cards come from a Product Lab, which uses catalysts researched at a Formula Lab. Every 6 lots use one unit of each of a card's catalysts; when one runs out the station makes plain lots until you research more. Grade sets the price. From rank 3 the market % falls when you sell one product a lot and recovers weekly.",
+    th: 'แต่ละสถานีผลิตการ์ดสินค้า 1 ใบ เป็นล็อตละ 300 หน่วย การ์ดธรรมดาได้เกรด C การ์ดสินค้ามาจากแล็บสร้างสินค้า ซึ่งใช้สารเร่งที่วิจัยจากแล็บสร้างสูตร ทุก 6 ล็อตใช้สารเร่งของการ์ดอย่างละ 1 หน่วย ถ้าสารหมดจะผลิตเกรดธรรมดาจนกว่าจะวิจัยเพิ่ม เกรดกำหนดราคา ตั้งแต่แรงก์ 3 ขายชนิดเดียวซ้ำ ๆ ตลาด % จะลด แล้วฟื้นทุกสัปดาห์',
   },
   customers: {
     en: 'Trucks come and buy on their own. Contracts deliver automatically every week until done; finishing pays extra and gives Fame. Regulars give a gift at 10 hearts.',

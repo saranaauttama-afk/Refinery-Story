@@ -15,10 +15,7 @@ export interface Building {
   repairUntil?: number
   /** Blend stations only: what this station mixes. Falls back to GameState.blend. */
   recipe?: Recipe
-  /** Labs only: what this lab does. Missing = 'catalyst'. */
-  labRole?: LabRole
 }
-export type LabRole = 'catalyst' | 'formula'
 export interface Recipe {
   base: import('../data/bases').BaseId
   /** Formula key from the Formula Lab; null = plain base. */
@@ -172,7 +169,9 @@ export interface AwardResult {
 }
 export interface Notice {
   uid: string
-  kind: 'rank' | 'awards' | 'ending' | 'market'
+  kind: 'rank' | 'awards' | 'ending' | 'market' | 'product'
+  /** Product reveal: the card key, its grade and the grade it had before (null = new). */
+  product?: { key: string; grade: Grade; before: Grade | null }
   /** Rank-up: what unlocked (chips) and one line per newly active system. */
   chips?: { en: string; th: string }[]
   lines?: { en: string; th: string }[]
@@ -191,6 +190,8 @@ export interface Formula {
   grade: Grade
   /** Secret formula id when this set matches one. */
   secret: string | null
+  /** Player's name for the product card; null = automatic name. */
+  name?: string | null
 }
 export interface FormulaLabState {
   stock: CatalystLot[]

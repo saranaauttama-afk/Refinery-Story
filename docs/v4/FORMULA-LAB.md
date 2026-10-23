@@ -1,5 +1,11 @@
 # Formula Lab
 
+**อัปเดต (product cards):** แล็บแยกเป็น 2 อาคาร — **แล็บสร้างสูตร** (`lab`) วิจัยสารเร่ง และ
+**แล็บสร้างสินค้า** (`productLab`) พัฒนาการ์ดสินค้า 3 ขั้น (ฐาน/การ์ด → ช่องสารเร่ง → ดูเกรดที่คาด)
+อัปเกรดแล้วการ์ดเดิมเลื่อนเกรด (key เดิม สถานีผลิตต่อได้เลย) ตั้งชื่อการ์ดเองได้ สถานีผสมเลือก
+"การ์ดสินค้า" แทนการเลือกฐาน + สูตร มีป๊อปอัปเปิดการ์ดเมื่อพัฒนาเสร็จ และป้ายเกรดบนสถานีในแผนที่
+เซฟเก่า: แล็บที่เคยสลับเป็นโหมดผสมสูตรจะกลายเป็นแล็บสร้างสินค้า
+
 **สรุปภาษาไทย:** ห้องแล็บแต่ละห้องเลือกหน้าที่ได้ 2 แบบ — **แล็บสารเร่ง** วิจัยได้สารเร่งแบบสุ่ม
 (เกรด D–SS + จำนวน) และ **แล็บผสมสูตร** เอาน้ำมันฐานหรือสูตรเดิม + สารเร่ง 1–3 ช่องมาผสมเป็น
 **สูตรถาวร** สถานีผสมเลือกสูตรแล้วผลิตตามเกรดของสูตร โดยใช้สารเร่งอย่างละ 1 หน่วยต่อ 6 ล็อต
@@ -46,5 +52,6 @@ of this without assertions; `scripts/v4/formula-lab-sim.ts` checks the lab rules
 
 ## Not done
 
-- No separate building art: a Formula Lab is a `lab` with a different role.
+- Product Lab art is the Lab sprite hue-shifted (`scripts/art/build-product-lab.ts`, chained
+  after `npm run art:v5`); a proper sprite can replace it later.
 - Fame and price tables were retuned to keep rank pacing; needs a human playtest.

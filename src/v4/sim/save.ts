@@ -44,6 +44,11 @@ export function deserialize(raw: string): GameState {
     if (s.loan === undefined) s.loan = 0
     if (s.research === undefined) s.research = []
     migrateFormulaLab(s)
+    // Labs switched to formula mixing became their own building, the Product Lab.
+    for (const b of (s.yard as { buildings?: Record<string, unknown>[] })?.buildings ?? []) {
+      if (b.labRole === 'formula') b.defId = 'productLab'
+      delete b.labRole
+    }
     if (s.demand === undefined) s.demand = {}
     if (s.trend === undefined) s.trend = { base: null, until: 0 }
     if (s.projects === undefined) s.projects = {}
@@ -147,7 +152,6 @@ export function deserialize(raw: string): GameState {
       !Number.isInteger(b.level) ||
       !Array.isArray(b.staff) ||
       (b.recipe !== undefined && !validBlend(b.recipe)) ||
-      (b.labRole !== undefined && !['catalyst', 'formula'].includes(b.labRole as string)) ||
       (b.condition !== undefined && !Number.isFinite(b.condition)) ||
       (b.spec !== undefined && !['volume', 'quality', 'eco'].includes(b.spec as string)) ||
       (b.repairUntil !== undefined && !Number.isFinite(b.repairUntil))

@@ -36,8 +36,12 @@ export const buildingInfo: Record<string, LocalizedText> = {
     th: 'ทำความสะอาดน้ำมัน ทำฐานเจ็ท น้ำมันหล่อลื่น และแว็กซ์',
   },
   lab: {
-    en: 'Researches new blend recipes (base + additive) with RD. A higher level and a chemist on duty find better pairs. Also raises Purity nearby.',
-    th: 'วิจัยสูตรผสมใหม่ (ฐาน + สารเติมแต่ง) ด้วย RD เลเวลสูงและมีนักเคมีประจำจะเจอสูตรดีขึ้น และเพิ่ม Purity ให้ตึกใกล้ ๆ',
+    en: 'Researches catalysts with RD: one random catalyst with a grade each time. A higher level and a chemist on duty give better grades. Also raises Purity nearby.',
+    th: 'วิจัยสารเร่งด้วย RD ได้สารเร่งสุ่ม 1 ชนิดพร้อมเกรด เลเวลสูงและมีนักเคมีประจำได้เกรดดีขึ้น และเพิ่ม Purity ให้ตึกใกล้ ๆ',
+  },
+  productLab: {
+    en: 'Develops products: a base plus catalysts becomes a product card that blend stations can make. Upgrade a card with better catalysts.',
+    th: 'พัฒนาสินค้า: น้ำมันฐาน + สารเร่ง กลายเป็นการ์ดสินค้าให้สถานีผสมผลิต ใส่สารเร่งที่ดีกว่าเพื่ออัปเกรดการ์ด',
   },
   reformer: {
     en: 'Upgrades naphtha for better Gasoline.',

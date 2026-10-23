@@ -13,7 +13,7 @@
     "v4:check": "node --import tsx scripts/v4/check-all.ts",
     "format": "prettier --write \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
     "format:check": "prettier --check \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
-    "art:v5": "node --import tsx scripts/art/build-generated-pixel.ts && prettier --write src/v4/render/pixelBuildings.ts",
+    "art:v5": "node --import tsx scripts/art/build-generated-pixel.ts && prettier --write src/v4/render/pixelBuildings.ts && node --import tsx scripts/art/build-product-lab.ts && prettier --write src/v4/render/productLabSprites.ts",
     "art:coast": "node --import tsx scripts/art/build-environment-art.ts && prettier --write src/v4/render/environmentSprites.ts",
     "art:yard": "node --import tsx scripts/art/build-yard-decor.ts && prettier --write src/v4/render/yardDecorSprites.ts"
   },

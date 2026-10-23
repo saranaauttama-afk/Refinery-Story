@@ -13,7 +13,7 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { toScreen, toTile, TILE } from './iso'
 import { yardGround, yardColors } from './yardGround'
-import { B, SALES } from '../data/balance'
+import { B, SALES, FORMULA_LAB } from '../data/balance'
 import { buildingDef } from '../data/buildings'
 import { productAccent } from './palette'
 import { canPlace } from '../sim/systems/yard'
@@ -45,6 +45,8 @@ import { drawCoastalTile } from './coastalGround'
 import { neighbourhoodPeople } from './environmentLayout'
 import { roadMask, yardRoadCommands, signalCommands } from './roads'
 import { buildingAt } from '../sim/systems/yard'
+import { blendStations, recipeOf, formulaOf } from '../sim/systems/blending'
+import { stockOf } from '../sim/systems/formulaLab'
 const seaColor = GRAPHICS.sea
 import {
   drawSeaLife,
@@ -989,6 +991,35 @@ export function YardCanvas({
           </Pressable>
         ))}
       </View>
+      {!overview &&
+        blendStations(s).map(b => {
+          // Grade badge: what this station makes now (plain grade when its catalysts are out).
+          const f = formulaOf(s, recipeOf(s, b).formula)
+          const out = f?.catalysts.some(c => stockOf(s.formulaLab, c) < 1)
+          const g = f && !out ? f.grade : FORMULA_LAB.plainGrade
+          const a = toScreen(b.x, b.y)
+          return (
+            <View
+              pointerEvents="none"
+              key={`grade${b.uid}`}
+              style={{
+                position: 'absolute',
+                left: size.w / 2 + camera.x + a.x * camera.zoom - 6,
+                top: camera.y + liftY + a.y * camera.zoom - 14,
+                minWidth: 24,
+                paddingHorizontal: 3,
+                borderWidth: 2,
+                borderRadius: 4,
+                backgroundColor: STATION_GRADE[g] ?? '#D8D2C4',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontFamily: 'PixelifySans_700Bold', fontSize: 13, color: '#14110F' }}>
+                {g}
+              </Text>
+            </View>
+          )
+        })}
       {s.popups.map(p => {
         const a = toScreen(p.x, p.y)
         return (
@@ -1013,4 +1044,12 @@ export function YardCanvas({
       })}
     </View>
   )
+}
+const STATION_GRADE: Record<string, string> = {
+  SS: '#F5B37A',
+  S: '#F7DC7A',
+  A: '#8ED9C1',
+  B: '#9CC9EA',
+  C: '#D8D2C4',
+  D: '#F2A49B',
 }

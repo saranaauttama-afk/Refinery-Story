@@ -14,6 +14,7 @@ export const headroom: Record<string, number> = {
   tank: 16,
   pipe: 8,
   lab: 12,
+  productLab: 12,
   flare: 48,
   gate: 8,
   control: 16,

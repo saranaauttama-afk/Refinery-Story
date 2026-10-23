@@ -16,10 +16,14 @@ import {
   type MixPick,
   type MixBlock,
 } from './formulaLab'
-import type { Building, GameState, LabRole } from '../types'
+import type { Building, GameState } from '../types'
 
+/** Formula Labs (building `lab`): research graded catalysts. */
 export const labs = (s: GameState) => s.yard.buildings.filter(b => b.defId === 'lab')
-export const labRole = (b: Building): LabRole => b.labRole ?? 'catalyst'
+/** Product Labs: develop product cards from a base and catalysts. */
+export const productLabs = (s: GameState) => s.yard.buildings.filter(b => b.defId === 'productLab')
+export const anyLab = (s: GameState, uid: string) =>
+  s.yard.buildings.find(b => b.uid === uid && (b.defId === 'lab' || b.defId === 'productLab'))
 export const labJob = (s: GameState, lab: string) => s.research.find(j => j.lab === lab)
 export const gameYear = (s: GameState) => dateAt(s.tick).year
 /** Lab level for research, including the Research Center project. */
@@ -45,25 +49,11 @@ const pay = (s: GameState, money: number, rd = 0): GameState => ({
   monthProfit: s.monthProfit - money,
 })
 
-/** Switch a lab between catalyst research and formula mixing (only while it is idle). */
-export function setLabRole(s: GameState, labUid: string, role: LabRole): GameState {
-  const lab = labs(s).find(b => b.uid === labUid)
-  if (!lab || labJob(s, labUid) || labRole(lab) === role) return s
-  return {
-    ...s,
-    yard: {
-      ...s.yard,
-      buildings: s.yard.buildings.map(b => (b.uid === labUid ? { ...b, labRole: role } : b)),
-    },
-  }
-}
-
 export const catalystRd = (s: GameState) => F.catalyst.rd + F.catalyst.rdPerYear * (gameYear(s) - 1)
-export type CatalystBlock = 'busy' | 'role' | 'none' | 'rd' | 'money' | null
+export type CatalystBlock = 'busy' | 'none' | 'rd' | 'money' | null
 export function catalystBlock(s: GameState, labUid: string): CatalystBlock {
   const lab = labs(s).find(b => b.uid === labUid)
   if (!lab || labJob(s, labUid)) return 'busy'
-  if (labRole(lab) !== 'catalyst') return 'role'
   if (!s.unlockedAdditives.length) return 'none'
   if (s.rd < catalystRd(s)) return 'rd'
   if (s.money < F.catalyst.money) return 'money'
@@ -84,7 +74,7 @@ export function startCatalyst(s: GameState, labUid: string): GameState {
 
 export interface MixRequest {
   base: BaseId
-  /** Known formula of this base to build on; omit for the plain base. */
+  /** Product card of this base to upgrade; omit for a new product from the plain base. */
   from?: string
   picks: MixPick[]
 }
@@ -93,11 +83,10 @@ export const mixInput = (s: GameState, lab: Building, m: MixRequest) => ({
   year: gameYear(s),
   level: labLevel(s, lab),
 })
-export type LabMixBlock = MixBlock | 'busy' | 'role' | 'base' | 'money'
+export type LabMixBlock = MixBlock | 'busy' | 'base' | 'money'
 export function labMixBlock(s: GameState, labUid: string, m: MixRequest): LabMixBlock {
-  const lab = labs(s).find(b => b.uid === labUid)
+  const lab = productLabs(s).find(b => b.uid === labUid)
   if (!lab || labJob(s, labUid)) return 'busy'
-  if (labRole(lab) !== 'formula') return 'role'
   if (!baseAvailable(s, m.base)) return 'base'
   const block = mixBlock(slice(s), mixInput(s, lab, m))
   if (block) return block
@@ -106,7 +95,7 @@ export function labMixBlock(s: GameState, labUid: string, m: MixRequest): LabMix
 }
 /** Catalysts are spent and the grade is rolled now; the result shows when the job ends. */
 export function startMix(s: GameState, labUid: string, m: MixRequest): GameState {
-  const lab = labs(s).find(b => b.uid === labUid)
+  const lab = productLabs(s).find(b => b.uid === labUid)
   if (!lab || labMixBlock(s, labUid, m)) return s
   const r = mixFormula(slice(s), mixInput(s, lab, m))
   if (!r.formula || !r.rolled) return s
@@ -129,7 +118,26 @@ export function startMix(s: GameState, labUid: string, m: MixRequest): GameState
 
 const baseName = (id: BaseId) => bases.find(b => b.id === id)!.name
 const additiveName = (id: string) => additives.find(a => a.id === id)!.name
-export const formulaName = (f: { base: BaseId; catalysts: string[]; secret: string | null }) => {
+export const NAME_MAX = 20
+/** Name a product card; an empty name goes back to the automatic one. */
+export function renameFormula(s: GameState, key: string, name: string): GameState {
+  if (!s.formulaLab.formulas.some(f => f.key === key)) return s
+  const clean = name.replace(/\s+/g, ' ').trim().slice(0, NAME_MAX) || null
+  return {
+    ...s,
+    formulaLab: {
+      ...s.formulaLab,
+      formulas: s.formulaLab.formulas.map(f => (f.key === key ? { ...f, name: clean } : f)),
+    },
+  }
+}
+export const formulaName = (f: {
+  base: BaseId
+  catalysts: string[]
+  secret: string | null
+  name?: string | null
+}) => {
+  if (f.name) return { en: f.name, th: f.name }
   const secret = f.secret && secretFormulas.find(x => x.id === f.secret)
   if (secret) return secret.name
   const b = baseName(f.base)
@@ -168,7 +176,7 @@ export function researchSystem(s: GameState): GameState {
     }
   }
   for (const job of due) {
-    const lab = labs(next).find(b => b.uid === job.lab)
+    const lab = anyLab(next, job.lab)
     if (!lab) continue
     if (job.kind === 'catalyst') {
       const r = rollCatalyst(slice(next), {
@@ -194,12 +202,12 @@ export function researchSystem(s: GameState): GameState {
       }
       continue
     }
-    // Mix: merge the result, keeping the better grade if the formula was improved meanwhile.
+    // Mix: the card upgrades in place only if this roll beats its grade now; its name is kept.
     const old = next.formulaLab.formulas.find(f => f.key === job.formula.key)
     const improved = !old || gradeIndex(job.rolled) > gradeIndex(old.grade)
-    const formula = { ...job.formula, grade: improved ? job.rolled : old!.grade }
+    const formula = improved ? { ...job.formula, grade: job.rolled, name: old?.name ?? null } : old!
     const name = formulaName(formula)
-    const newSecret = !!formula.secret && !old
+    const newSecret = improved && !!formula.secret && old?.secret !== formula.secret
     next = {
       ...next,
       formulaLab: {
@@ -213,28 +221,42 @@ export function researchSystem(s: GameState): GameState {
       unlockHistory: improved
         ? [...next.unlockHistory, { tick: s.tick, key: `formula:${formula.key}:${formula.grade}` }]
         : next.unlockHistory,
+      // A card reveal for new and upgraded products.
+      notices: improved
+        ? [
+            ...next.notices,
+            {
+              uid: `pn${next.nextId}`,
+              kind: 'product' as const,
+              product: { key: formula.key, grade: formula.grade, before: old?.grade ?? null },
+              en: newSecret ? 'Secret product!' : old ? 'Product upgraded!' : 'New product!',
+              th: newSecret ? 'สินค้าสูตรลับ!' : old ? 'อัปเกรดสินค้า!' : 'สินค้าใหม่!',
+            },
+          ]
+        : next.notices,
+      nextId: next.nextId + 1,
     }
     if (newSecret)
       say(
         lab,
-        `Secret formula found: ${name.en} (${formula.grade})!`,
-        `ค้นพบสูตรลับ: ${name.th} (${formula.grade})!`,
+        `Secret product found: ${name.en} (${formula.grade})!`,
+        `ค้นพบสินค้าสูตรลับ: ${name.th} (${formula.grade})!`,
         `Secret ${formula.grade}!`,
         `สูตรลับ ${formula.grade}!`,
       )
     else if (improved)
       say(
         lab,
-        `${old ? 'Formula improved' : 'New formula'}: ${name.en} → ${formula.grade}`,
-        `${old ? 'สูตรดีขึ้น' : 'สูตรใหม่'}: ${name.th} → ${formula.grade}`,
+        `${old ? 'Product upgraded' : 'New product'}: ${name.en} → ${formula.grade}`,
+        `${old ? 'อัปเกรดสินค้า' : 'สินค้าใหม่'}: ${name.th} → ${formula.grade}`,
         `${old ? 'Up' : 'New'} ${formula.grade}!`,
-        `${old ? 'ดีขึ้น' : 'สูตรใหม่'} ${formula.grade}!`,
+        `${old ? 'อัปเกรด' : 'ใหม่'} ${formula.grade}!`,
       )
     else
       say(
         lab,
-        `Mix came out ${job.rolled}; ${name.en} stays ${formula.grade}`,
-        `ผสมได้ ${job.rolled} สูตร ${name.th} ยังเป็น ${formula.grade} เหมือนเดิม`,
+        `Development came out ${job.rolled}; ${name.en} stays ${formula.grade}`,
+        `พัฒนาได้ ${job.rolled} ${name.th} ยังเป็น ${formula.grade} เหมือนเดิม`,
         `${job.rolled}…`,
         `${job.rolled}…`,
       )
