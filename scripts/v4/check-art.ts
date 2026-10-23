@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
+import { yardDecor } from '../../src/v4/data/yardDecor'
 import { buildings } from '../../src/v4/data/buildings'
 import { sprites } from '../../src/v4/render/buildings'
 import { workerSprite, truckSprite } from '../../src/v4/render/life'
-for (const b of buildings) {
+for (const b of buildings.filter(b => !yardDecor.some(d => d.id === b.id))) {
   const draw = sprites[b.id]
   assert.ok(draw, `${b.id}: missing sprite`)
   const l1 = draw(1, b.accent, 0),

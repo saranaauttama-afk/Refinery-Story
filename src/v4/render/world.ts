@@ -10,7 +10,8 @@ import {
   type SkImage,
 } from '@shopify/react-native-skia'
 import { logicalAtlas, ATLAS_DENSITY } from './logicalAtlas'
-import { LANES, seaTiles } from './scenery'
+import { seaTiles } from './scenery'
+import { trafficPositions } from './traffic'
 import { TILE } from './iso'
 import { coastalShoreY } from './environmentLayout'
 
@@ -23,10 +24,6 @@ const paint = () => {
 
 // Roads round the yard on the map, in tiles from the yard's top-left corner.
 // Lanes are the middle of each carriageway: [outer, inner] (inner is nearer the yard).
-const TOP = LANES.top,
-  LEFT = LANES.left,
-  RIGHT = LANES.right,
-  BOTTOM = LANES.bottom
 export const LANE = -2 // approachTile returns tile coordinates; callers add the tile centre.
 const X0 = -8,
   X1 = 40,
@@ -67,17 +64,7 @@ export function sprite(
   )
 }
 /** Trucks: the sim's straight approach is drawn along the highway into the gate. */
-export function approachTile(p: Pt, _gate?: Pt): Pt {
-  void _gate
-  if (p.x >= 0 && p.y >= 0) return p
-  if (p.y < 0) {
-    // Gate on the top edge: the sim approaches from (gate.x, -i); drive in along the lane.
-    const i = -p.y
-    return { x: p.x - (i - 1), y: LANE }
-  }
-  const i = -p.x
-  return { x: LANE, y: p.y - (i - 1) }
-}
+export { approachTile } from './truckApproach'
 
 // Water paths use the same fixed scene layout as the terrain.
 const glints: Pt[] = seaTiles.map(({ x, y }) => ({ x: x * TILE + 8, y: y * TILE + 14 }))
@@ -153,53 +140,10 @@ export function drawNeighbourhood(c: SkCanvas, _img: SkImage, t: number) {
   foam.dispose()
 }
 
-/** A closed loop of lane points (tiles); returns the position and heading at distance d. */
-function along(pts: Pt[], d: number) {
-  const seg = pts.map((p, i) => {
-    const q = pts[(i + 1) % pts.length]
-    return Math.abs(q.x - p.x) + Math.abs(q.y - p.y)
-  })
-  const total = seg.reduce((a, b) => a + b, 0)
-  let r = ((d % total) + total) % total
-  for (let i = 0; i < pts.length; i++) {
-    if (r <= seg[i]) {
-      const p = pts[i],
-        q = pts[(i + 1) % pts.length],
-        k = seg[i] ? r / seg[i] : 0
-      const dx = q.x - p.x,
-        dy = q.y - p.y
-      const dir =
-        Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'east' : 'west') : dy >= 0 ? 'south' : 'north'
-      return { x: p.x + dx * k, y: p.y + dy * k, dir }
-    }
-    r -= seg[i]
-  }
-  return { x: pts[0].x, y: pts[0].y, dir: 'east' }
-}
-// Clockwise on the inner lanes, anticlockwise on the outer ones.
-const inner = [
-  { x: LEFT[1], y: TOP[1] },
-  { x: RIGHT[1], y: TOP[1] },
-  { x: RIGHT[1], y: BOTTOM[1] },
-  { x: LEFT[1], y: BOTTOM[1] },
-]
-const outer = [
-  { x: LEFT[0], y: TOP[0] },
-  { x: LEFT[0], y: BOTTOM[0] },
-  { x: RIGHT[0], y: BOTTOM[0] },
-  { x: RIGHT[0], y: TOP[0] },
-]
-
-/** Cars driving round the ring road and along the road below the yard. */
+/** Four visual-only cars follow continuous, signal-aware routes. */
 export function drawTraffic(c: SkCanvas, img: SkImage, t: number) {
-  const car = (kind: string, p: { x: number; y: number; dir: string }) =>
-    sprite(c, img, `${kind}_${p.dir}`, p.x * TILE, p.y * TILE + 4)
-  car('car', along(inner, t * 2.2))
-  car('pickup', along(inner, t * 2.2 + 60))
-  car('car2', along(outer, t * 1.9 + 20))
-  const span = X1 - X0
-  car('car', { x: X1 - ((t * 2.5) % span), y: BOTTOM[1], dir: 'west' })
-  car('car2', { x: X0 + ((t * 2.1 + 30) % span), y: BOTTOM[0], dir: 'east' })
+  for (const p of trafficPositions(t))
+    sprite(c, img, `${p.kind}_${p.dir}`, p.x * TILE, p.y * TILE + 4)
 }
 
 /** Clouds with their ground shadows, and a gull flock now and then (over everything). */

@@ -1,0 +1,146 @@
+{
+  "decoPalm": {
+    "file": "decoPalm.png",
+    "width": 80,
+    "height": 76,
+    "ax": 40,
+    "ay": 72,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoShrub": {
+    "file": "decoShrub.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoHedge": {
+    "file": "decoHedge.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoBench": {
+    "file": "decoBench.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoFountain": {
+    "file": "decoFountain.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoPavilion": {
+    "file": "decoPavilion.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoFlowers": {
+    "file": "decoFlowers.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoPicnic": {
+    "file": "decoPicnic.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoVending": {
+    "file": "decoVending.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoFire": {
+    "file": "decoFire.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoBins": {
+    "file": "decoBins.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  },
+  "decoFence": {
+    "file": "decoFence.png",
+    "width": 80,
+    "height": 72,
+    "ax": 40,
+    "ay": 68,
+    "scale": 0.5,
+    "footprint": {
+      "w": 1,
+      "h": 1
+    }
+  }
+}

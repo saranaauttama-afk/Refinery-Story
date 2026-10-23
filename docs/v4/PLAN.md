@@ -327,6 +327,7 @@ the owner checks on the APK.
 | V5 unified graphics 4.1.8 | native pixel frames, tiled coast, play/overview cameras, parcel fences; see ../v5/GRAPHICS.md | feat(v5): unify world pixels and play camera | Android Preview APK on push | deferred |
 | V5 generated pixel art 4.1.9 | generated L1–L5 sprites, scenery and 64 px terrain; see ../v5/pixel/README.md | fix(v5): restore crafted pixel artwork | Android Preview APK on push | deferred |
 | V5 coastal scenery 4.1.10 | curved coast, town, port, green belt and park; 36 generated prop frames; see ../v5/COASTAL-SCENERY.md | feat(v5): populate the coastal refinery district | Android Preview APK on push | deferred |
+| V5 yard and streets 4.1.11 | connected player roads, 12 new decorations, roadside walls, port joins, traffic signals, smaller title menu and no yard welcome card; see ../v5/YARD-POLISH.md | feat(v5): polish yard decoration and coastal streets | Android Preview APK on push | deferred |
 | Coastal redesign 4.0.25 | approved concept implemented for title, HUD, dock, panels and yard scenery | see COASTAL-REDESIGN-4.0.25.md | Android Preview APK on push | deferred |
 | Formula Lab | graded catalysts + permanent formulas replace score grades; lab sheet, blend formulas; see FORMULA-LAB.md | feat(v4): wire Formula Lab into the game | pending (branch feature/formula-lab) | pending |
 

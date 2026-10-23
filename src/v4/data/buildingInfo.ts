@@ -10,7 +10,10 @@ export const buildingInfo: Record<string, LocalizedText> = {
     en: 'Customer trucks load products here. Link it to the gate with road.',
     th: 'รถลูกค้ามารับสินค้าที่นี่ ต้องมีถนนเชื่อมกับประตู',
   },
-  road: { en: 'Links the gate to the loading bay.', th: 'เชื่อมประตูกับลานจ่ายสินค้า' },
+  road: {
+    en: 'Links the gate to loading bays. Joins straight roads, corners and junctions automatically.',
+    th: 'เชื่อมประตูกับลานจ่ายสินค้า วางต่อกันเป็นทางตรง ทางโค้ง สามแยก และสี่แยกอัตโนมัติ',
+  },
   crudeTank: {
     en: 'Stores crude oil from tanker trucks. More tanks, bigger deliveries.',
     th: 'เก็บน้ำมันดิบจากรถ ยิ่งมีมาก รับน้ำมันดิบได้ทีละมาก',

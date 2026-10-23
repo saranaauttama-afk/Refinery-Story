@@ -1,9 +1,11 @@
 // Scene layout is in tiles, independent of ownership. No baked map or hidden scale.
+import { streetDetailCommands } from './roads'
+import { portDetailCommands } from './portDetails'
 import { GRAPHICS } from './graphics'
 import { ownedTiles, parcelEdges } from './parcelEdges'
 import { rect, type Command } from './buildings/shapes'
 import { topdownArt } from './topdownArt'
-import { naturalCoast, onPier, sceneryPatches, crossingTiles } from './environmentLayout'
+import { naturalCoast, onPier, sceneryPatches } from './environmentLayout'
 export const LANES = {
   top: [-2.5, -1.5],
   left: [-2.5, -1.5],
@@ -42,8 +44,8 @@ export function groundCommands(
       const water = y < -8 && !pier,
         quay = (y >= -8 && y < -4) || pier
       const horizontal = (y >= -3 && y < -1) || (y >= 25 && y < 27)
-      const vertical = ((x >= -3 && x < -1) || (x >= 33 && x < 35)) && y >= -4
-      const sidewalk = y === -4 || y === 27 || ((x === -4 || x === 35) && y >= -4)
+      const vertical = ((x >= -3 && x < -1) || (x >= 33 && x < 35)) && y >= -1
+      const sidewalk = y === -4 || y === 27 || ((x === -4 || x === 35) && y >= -1)
       let c = naturalCoast(x, y)
         ? '#9EBE71'
         : water
@@ -59,6 +61,10 @@ export function groundCommands(
                     ? '#C8C8BA'
                     : '#B0BD88'
                   : '#8DB957'
+      const apron =
+        ((x === -1 || x === 32) && y >= -1 && y <= 24) ||
+        ((y === -1 || y === 24) && x >= -1 && x <= 32)
+      if (apron) c = '#C8C8BA'
       R(px, py, 32, 32, c)
       if (naturalCoast(x, y)) continue
       if (water) {
@@ -71,28 +77,6 @@ export function groundCommands(
         R(px + 3 + (n % 11), py + 5 + (n % 17), 3, 1, inYard ? '#91A473' : '#78A34F')
         if (n % 2 === 0) R(px + 19, py + 22, 2, 2, inYard ? '#C3C999' : '#A6CA6B')
       }
-      if (horizontal && !vertical) {
-        if (y === -2 || y === 26) R(px + 6, py, 14, 1, '#E3D8AE')
-        if (y === -3 || y === 25) R(px, py, 32, 1, '#B8BFA9')
-      }
-      if (vertical && !horizontal) {
-        if (x === -2 || x === 34) R(px, py + 6, 1, 14, '#E3D8AE')
-        if (x === -3 || x === 33) R(px, py, 1, 32, '#B8BFA9')
-      }
-      // The shoreline is an assembled edge, not a strip of water attached to a prop.
-      if (y === -9 && !pier && !naturalCoast(x, y)) {
-        R(px, py + 29, 32, 3, '#91CBD0')
-        R(px + 3, py + 27, 14, 2, '#B6DECC')
-      }
-      if (y === -8 && !naturalCoast(x, y)) {
-        R(px, py, 32, 2, '#F3E5BE')
-        if (x % 2 === 0) R(px + 8, py + 3, 4, 3, '#D9A541')
-      }
-      if (pier && (x === 8 || x === 23)) {
-        R(px, py, 2, 32, '#F3E5BE')
-        R(px + 4, py + 5, 3, 3, '#D9A541')
-      }
-      if (pier && (x === 9 || x === 24)) R(px + 30, py, 2, 32, '#A6A88D')
       // Future land remains a real landscape. Survey posts mark only parcel corners.
       if (inYard && !owned.has(`${x},${y}`) && x % 8 === 0 && y % 8 === 0) {
         R(px + 2, py + 1, 2, 6, '#7B8562')
@@ -110,11 +94,7 @@ export function groundCommands(
           patch.color,
         )
   }
-  for (const crossing of crossingTiles)
-    for (let i = 0; i < 6; i++) {
-      if (crossing.x === -3) R(-96, (crossing.y + i / 6) * 32, 64, 2, '#EEE9D2')
-      else R((crossing.x + i / 6) * 32, crossing.y * 32, 2, 64, '#EEE9D2')
-    }
+  out.push(...streetDetailCommands(), ...portDetailCommands())
   for (const g of gates) {
     if (g.y === 0) R(g.x * 32, -32, 32, 32, '#C8C8BA')
     else if (g.x === 0) R(-32, g.y * 32, 32, 64, '#C8C8BA')
@@ -125,25 +105,48 @@ export function fenceSections(
   parcels: readonly string[],
   gates: readonly { x: number; y: number }[],
 ) {
-  return parcelEdges(parcels, gates).map(e => {
-    const x = e.x * 32,
-      y = e.y * 32,
+  const inside = parcelEdges(parcels, gates).filter(
+    e =>
+      !(
+        (e.side === 'n' && e.y === 0) ||
+        (e.side === 'w' && e.x === 0) ||
+        (e.side === 'e' && e.x === 31) ||
+        (e.side === 's' && e.y === 23)
+      ),
+  )
+  const edges = [
+    ...inside,
+    ...Array.from({ length: 34 }, (_, i) => ({ x: i - 1, y: -1, side: 'n' as const })).filter(
+      e => !gates.some(g => g.y === 0 && e.x === g.x),
+    ),
+    ...Array.from({ length: 34 }, (_, i) => ({ x: i - 1, y: 24, side: 's' as const })),
+    ...Array.from({ length: 26 }, (_, i) => ({ x: -1, y: i - 1, side: 'w' as const })).filter(
+      e => !gates.some(g => g.x === 0 && e.y >= g.y && e.y < g.y + 2),
+    ),
+    ...Array.from({ length: 26 }, (_, i) => ({ x: 32, y: i - 1, side: 'e' as const })),
+  ]
+  return edges.map(e => {
+    const x = (e.x + (e.side === 'e' ? 1 : 0)) * 32,
+      y = (e.y + (e.side === 's' ? 1 : 0)) * 32,
       out: Command[] = []
     const R = (px: number, py: number, w: number, h: number, c: string) =>
       out.push(rect(px, py, w, h, c))
-    const horizontal = e.side === 'n' || e.side === 's',
-      xx = x + (e.side === 'e' ? 32 : 0),
-      yy = y + (e.side === 's' ? 32 : 0)
-    if (horizontal) {
-      R(xx, yy - 7, 32, 2, '#7B8980')
-      R(xx, yy - 3, 32, 1, '#8FA08A')
-      R(xx, yy - 9, 2, 10, '#34515D')
-      R(xx, yy - 9, 2, 2, '#E3ECE3')
+    if (e.side === 'n' || e.side === 's') {
+      R(x, y - 6, 32, 7, '#55646A')
+      R(x, y - 6, 32, 4, '#CBC7B0')
+      R(x, y - 7, 32, 1, '#F0E7CD')
+      R(x, y - 13, 32, 1.5, '#364D55')
+      R(x, y - 10, 32, 1, '#6A7E7D')
+      for (let k = 0; k < 32; k += 8) R(x + k, y - 13, 1, 7, '#364D55')
+      R(x, y - 16, 4, 17, '#677575')
+      R(x, y - 16, 3, 14, '#DED4BB')
+      R(x - 0.5, y - 17, 5, 2, '#F2E8CC')
     } else {
-      R(xx, yy - 7, 2, 32, '#8FA08A')
-      for (let k = 0; k <= 24; k += 8) {
-        R(xx - 1, yy + k - 7, 3, 8, '#34515D')
-        R(xx - 1, yy + k - 7, 3, 2, '#E3ECE3')
+      R(x - 2, y, 4, 32, '#53656B')
+      R(x - 1, y, 2, 32, '#C7C3AB')
+      for (let k = 0; k < 32; k += 8) {
+        R(x - 0.5, y + k - 10, 1.5, 12, '#364D55')
+        R(x - 2, y + k - 2, 4, 3, '#E1D7BC')
       }
     }
     return { depth: e.y + (e.side === 'n' ? 0 : 1), commands: out }

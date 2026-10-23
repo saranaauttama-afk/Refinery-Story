@@ -14,7 +14,8 @@
     "format": "prettier --write \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
     "format:check": "prettier --check \"src/v4/**/*.{ts,tsx}\" \"app/**/*.tsx\" \"scripts/v4/**/*.ts\"",
     "art:v5": "node --import tsx scripts/art/build-generated-pixel.ts && prettier --write src/v4/render/pixelBuildings.ts",
-    "art:coast": "node --import tsx scripts/art/build-environment-art.ts && prettier --write src/v4/render/environmentSprites.ts"
+    "art:coast": "node --import tsx scripts/art/build-environment-art.ts && prettier --write src/v4/render/environmentSprites.ts",
+    "art:yard": "node --import tsx scripts/art/build-yard-decor.ts && prettier --write src/v4/render/yardDecorSprites.ts"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "0.4.2",

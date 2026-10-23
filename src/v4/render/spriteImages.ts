@@ -2,6 +2,7 @@
 // entry draw the temporary box from box.ts. Tiers: a level uses its own image, else the
 // nearest lower one.
 import { pixelBuildings } from './pixelBuildings'
+import { yardDecorSprites } from './yardDecorSprites'
 import { environmentSprites } from './environmentSprites'
 export type Tier = 1 | 2 | 3 | 4 | 5
 export type SpriteImage = {
@@ -18,6 +19,7 @@ export type SpriteImage = {
 export const spriteImages: Record<string, Partial<Record<Tier, SpriteImage>>> = {
   ...pixelBuildings,
   ...environmentSprites,
+  ...yardDecorSprites,
 }
 export function spriteTierFor(id: string, level: number): Tier | undefined {
   const set = spriteImages[id]

@@ -1,6 +1,6 @@
 # V5 graphics — generated pixel artwork
 
-Branch: `topdown/v5`. App **4.1.10 / versionCode 52**.
+Branch: `topdown/v5`. App **4.1.11 / versionCode 53**.
 
 The active art specification, complete source list and generation/extraction workflow are in [pixel/README.md](pixel/README.md).
 
@@ -15,3 +15,5 @@ The world remains a 48×48-tile assembled coastal scene, with sea/port north and
 Existing pixel staff, vehicles, ships and ambient animations are reused. Decoration/scenery levels share their static design; the fifteen production/support/logistics buildings and both gate orientations have individual L1–L5 pictures. On-device performance and gestures still need a phone playtest.
 
 The original fresh design brief is preserved in [GRAPHICS-BRIEF.md](GRAPHICS-BRIEF.md). The old code-painted PNGs remain as archived prototypes; `pixelBuildings.ts` is the active sprite registry.
+
+Yard, street and title polish (4.1.11): [YARD-POLISH.md](YARD-POLISH.md).

@@ -1,6 +1,5 @@
-import { Onboarding, currentHint } from './Onboarding'
+import { Onboarding } from './Onboarding'
 import { GameDock } from './GameDock'
-import { YardWelcome } from './YardWelcome'
 import { BuildPanel } from './BuildPanel'
 import { LandPanel } from './LandPanel'
 import { BuildingInfo } from './BuildingInfo'
@@ -148,9 +147,6 @@ export function YardScreen() {
             <Onboarding
               onPlace={(id, x, y) => setGhost({ id, x, y, repeat: false, placed: 0, spent: 0 })}
             />
-            {currentHint(s) === null && s.yard.buildings.length > 0 && (
-              <YardWelcome count={s.yard.buildings.length} onBuild={() => openTab('build')} />
-            )}
           </View>
         )}
         {!ghost && <EventToast bottom={!panel && !bell ? guideHeight + 24 : 12} />}

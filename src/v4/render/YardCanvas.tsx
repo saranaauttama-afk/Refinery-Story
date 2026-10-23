@@ -43,6 +43,7 @@ import { artDefinition } from './topdownArt'
 import { usePixelTerrain } from './pixelTerrain'
 import { drawCoastalTile } from './coastalGround'
 import { neighbourhoodPeople } from './environmentLayout'
+import { roadMask, yardRoadCommands, signalCommands } from './roads'
 import { buildingAt } from '../sim/systems/yard'
 const seaColor = GRAPHICS.sea
 import {
@@ -461,8 +462,8 @@ export function YardCanvas({
   const truckPositions = new Map(
     s.trucks.map(t => {
       const g = gate ?? undefined
-      const a = t.path[t.step] && approachTile(t.path[t.step], g),
-        b = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g)
+      const a = t.path[t.step] && approachTile(t.path[t.step], g, t.phase === 'out'),
+        b = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g, t.phase === 'out')
       const f =
         t.phase === 'dwell'
           ? 0
@@ -574,17 +575,35 @@ export function YardCanvas({
           recorder = Skia.PictureRecorder(),
           canvas = recorder.beginRecording(bounds)
         canvas.translate(p.x + (d.w * TILE) / 2, p.y + d.h * TILE)
-        drawBuilding(
-          canvas,
-          loaded,
-          b.defId === 'gate' && b.x === 0 && b.y > 0 ? 'gate_w' : b.defId,
-          b.level,
-          d.accent,
-        )
+        if (b.defId === 'road') {
+          canvas.translate(-16, -32)
+          const commands = yardRoadCommands(0, 0, roadMask(b.x, b.y, s.yard.buildings))
+          if (terrain) {
+            const paint = Skia.Paint()
+            paint.setAntiAlias(false)
+            canvas.drawImageRectOptions(
+              terrain['#51575A'],
+              Skia.XYWHRect(0, 0, 64, 64),
+              Skia.XYWHRect(0, 0, 32, 32),
+              FilterMode.Nearest,
+              MipmapMode.None,
+              paint,
+            )
+            paint.dispose()
+            drawCommands(canvas, commands.slice(1), false)
+          } else drawCommands(canvas, commands, false)
+        } else
+          drawBuilding(
+            canvas,
+            loaded,
+            b.defId === 'gate' && b.x === 0 && b.y > 0 ? 'gate_w' : b.defId,
+            b.level,
+            d.accent,
+          )
         return [b.uid, recorder.finishRecordingAsPicture()]
       }),
     )
-  }, [s.yard.buildings, loaded])
+  }, [s.yard.buildings, loaded, terrain])
   const ghostPath = useMemo(() => {
     if (!ghost) return null
     const d = buildingDef(ghost.id),
@@ -602,6 +621,7 @@ export function YardCanvas({
       drawTraffic(canvas, world, visualTime)
       drawNeighbourhood(canvas, world, visualTime)
     }
+    drawCommands(canvas, signalCommands(ambient ? visualTime : 0), false)
     if (ghost && ghostPath) {
       const paint = Skia.Paint()
       paint.setAntiAlias(false)
@@ -762,13 +782,29 @@ export function YardCanvas({
         const paint = Skia.Paint()
         paint.setAlphaf(0.62)
         canvas.saveLayer(paint)
-        drawBuilding(
-          canvas,
-          loaded,
-          g.id === 'gate' && g.x === 0 && g.y > 0 ? 'gate_w' : g.id,
-          level,
-          d.accent,
-        )
+        if (g.id === 'road') {
+          canvas.translate(-16, -32)
+          drawCommands(
+            canvas,
+            yardRoadCommands(
+              0,
+              0,
+              roadMask(
+                g.x,
+                g.y,
+                s.yard.buildings.filter(b => b.uid !== g.uid),
+              ),
+            ),
+            false,
+          )
+        } else
+          drawBuilding(
+            canvas,
+            loaded,
+            g.id === 'gate' && g.x === 0 && g.y > 0 ? 'gate_w' : g.id,
+            level,
+            d.accent,
+          )
         canvas.restore()
       } else if (entry.kind === 'truck') {
         const p = truckPositions.get(entry.t.uid)!,
@@ -777,9 +813,9 @@ export function YardCanvas({
         if (world) {
           const t = entry.t,
             g = gate ?? undefined,
-            a = t.path[t.step] && approachTile(t.path[t.step], g),
-            n = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g),
-            back = approachTile(t.path[Math.max(0, t.step - 1)], g)
+            a = t.path[t.step] && approachTile(t.path[t.step], g, t.phase === 'out'),
+            n = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g, t.phase === 'out'),
+            back = approachTile(t.path[Math.max(0, t.step - 1)], g, t.phase === 'out')
           const dx =
               a && n && (n.x !== a.x || n.y !== a.y) ? n.x - a.x : a && back ? a.x - back.x : 1,
             dy = a && n && (n.x !== a.x || n.y !== a.y) ? n.y - a.y : a && back ? a.y - back.y : 0

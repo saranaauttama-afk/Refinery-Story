@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { yardDecor } from '../../src/v4/data/yardDecor'
 import { buildings } from '../../src/v4/data/buildings'
 const registry = fs.readFileSync('src/v4/render/pixelBuildings.ts', 'utf8')
 assert.ok(fs.readFileSync('src/v4/render/spriteImages.ts', 'utf8').includes('...pixelBuildings'))
 const manifest = JSON.parse(fs.readFileSync('assets/v5/pixel/manifest.json', 'utf8'))
-for (const b of buildings) {
+for (const b of buildings.filter(b => !yardDecor.some(d => d.id === b.id))) {
   const frames: string[] = [],
     pixels: string[] = []
   for (let level = 1; level <= 5; level++) {
