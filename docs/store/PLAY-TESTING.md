@@ -9,15 +9,18 @@
       Final app asks only for INTERNET, VIBRATE, MODIFY_AUDIO_SETTINGS (all install-time, no prompts)
 - [x] `eas.json` production profile builds an **AAB**; manual workflow
       `.github/workflows/android-play-aab.yml`
-- [x] Privacy policy text: `docs/store/privacy-policy.md`
+- [x] Privacy policy page (TH/EN, same format as ผีกินหัว): `docs/privacy/index.html`
 - [x] Beginner guide covers the lab → product card → production line loop (unlocks at rank 2)
 - [x] Settings › "Scenery motion off" for slow phones (stops ambient traffic, people, sea life)
 
 ## You need to do (accounts and uploads)
 1. **Upload key / first AAB:** on your PC run `npx eas-cli build -p android --profile production`
    once (EAS creates the keystore). Then add repo secret `EXPO_TOKEN` to use the workflow.
-2. **Host the privacy policy** at a public URL (GitHub Pages, Google Sites, or a public Notion page)
-   and paste it into Play Console.
+2. **Host the privacy policy** the same way as ผีกินหัว: `Refinery-Story` is private, and GitHub
+   Pages on a private repo needs a paid plan, so use a separate PUBLIC repo `refinery-story-privacy`
+   with this `index.html` at its root, then Settings › Pages › Deploy from branch `main` / root.
+   URL: `https://saranaauttama-afk.github.io/refinery-story-privacy/` (source stays in
+   `docs/privacy/index.html`; update both when it changes).
 3. **Play Console › Create app:** package `com.refinerystory.u2` (already in app.json; it can't
    change after the first upload).
 4. **Testing › Internal testing:** create a release, upload the `.aab`, add tester emails.
