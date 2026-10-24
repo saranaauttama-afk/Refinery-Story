@@ -1,0 +1,31 @@
+name: Android Play AAB (EAS)
+
+# Manual build of the signed Android App Bundle for Google Play testing tracks.
+# Needs the repository secret EXPO_TOKEN (expo.dev › Account settings › Access tokens).
+# Run `npx eas-cli build -p android --profile production` once on your own machine first so
+# EAS creates and stores the upload keystore; after that this workflow can build on its own.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify TypeScript
+        run: npm run typecheck
+      - name: Verify v4 milestones
+        run: npm run v4:check
+      - name: Materialize pixel refinery launcher icon
+        run: node scripts/refresh-app-icon.cjs
+      - name: Start EAS production build (AAB)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest build --platform android --profile production --non-interactive --no-wait

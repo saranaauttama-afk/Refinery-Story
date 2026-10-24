@@ -25,14 +25,25 @@ function stepDone(s: GameState, step: HintStep): boolean {
       return has(s, 'blend') && has(s, 'tank')
     case 'sale':
       return s.year.sold > 0 || s.history.awards.length > 0
-    case 'recipe':
+    case 'product':
       return s.triedPairs.length >= 2
+    case 'catalyst':
+      return s.formulaLab.stock.length > 0 || s.formulaLab.formulas.length > 0
+    case 'card':
+      return s.formulaLab.formulas.length > 0
+    case 'make':
+      return s.yard.buildings.some(b => b.defId === 'blend' && !!b.recipe?.formula)
   }
 }
 
 // First step that is neither done nor skipped; null once the guide is finished.
 export function currentHint(s: GameState): number | null {
-  for (let i = s.hintIndex; i < hints.length; i++) if (!stepDone(s, hints[i])) return i
+  for (let i = s.hintIndex; i < hints.length; i++)
+    if (!stepDone(s, hints[i])) {
+      // Lab steps wait for rank 2: hide the guide until then instead of asking the impossible.
+      const need = hints[i].rank
+      return need && s.rank < need ? null : i
+    }
   return null
 }
 
@@ -80,8 +91,14 @@ export function Onboarding({ onPlace }: { onPlace: (id: string, x: number, y: nu
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </Pressable>
         {expanded && (
-          <Text numberOfLines={3} style={[styles.text, { fontSize: 13, lineHeight: 19 }]}>
+          <Text numberOfLines={4} style={[styles.text, { fontSize: 13, lineHeight: 19 }]}>
             {text(step)}
+            {step.id === 'catalyst' && !s.unlockedAdditives.length
+              ? text({
+                  en: ' No catalysts yet: train staff in Staff to unlock one.',
+                  th: ' ยังไม่มีสารเร่ง: ฝึกพนักงานในเมนูทีมงานเพื่อปลดสารเร่ง',
+                })
+              : ''}
           </Text>
         )}
       </View>

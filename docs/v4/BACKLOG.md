@@ -18,7 +18,11 @@ catalysts (D–SS); Formula Lab mixes base/formula + 1–3 catalysts into a perm
 blend stations produce at that grade and use up catalysts. Design, numbers and pacing:
 [`FORMULA-LAB.md`](FORMULA-LAB.md).
 
-## Open — waiting for a decision (v4.0.12 Y4–5)
+## Done since v4.0.12 (were open)
+
+#5 lab research → Formula Lab + Product Lab (4.2), #6 demand per product (market), #7 rivals scale with year.
+
+## Old open list (v4.0.12 Y4–5) — kept for history
 
 | #   | Topic                                     | Notes                                                                                                                                                                                                                                                                                  |
 | --- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

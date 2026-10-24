@@ -116,8 +116,8 @@ export function train(s: GameState, uid: string, training: TrainingId): GameStat
       ...s.log,
       {
         tick: s.tick,
-        en: `${p.name}: ${superUp ? 'Super Up!' : 'training complete'}${unlocked.length ? ' · new additive unlocked' : ''}`,
-        th: `${p.name}: ${superUp ? 'Super Up!' : 'ฝึกเสร็จ'}${unlocked.length ? ' · ปลดสารเติมแต่งใหม่' : ''}`,
+        en: `${p.name}: ${superUp ? 'Super Up!' : 'training complete'}${unlocked.length ? ' · new catalyst unlocked' : ''}`,
+        th: `${p.name}: ${superUp ? 'Super Up!' : 'ฝึกเสร็จ'}${unlocked.length ? ' · ปลดสารเร่งใหม่' : ''}`,
       },
     ].slice(-B.logLimit),
   }

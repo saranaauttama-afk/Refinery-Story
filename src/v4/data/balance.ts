@@ -247,7 +247,7 @@ export const FUN = {
   rdY10Max: 3000,
 }
 export const POLISH = {
-  hintLimit: 6,
+  hintLimit: 9,
   confettiPieces: 28,
   confettiMs: 1000,
   rdScoreDivisor: 1000,

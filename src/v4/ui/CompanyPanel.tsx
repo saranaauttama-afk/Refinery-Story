@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Text, View, Pressable } from 'react-native'
+import { Text, View, Pressable, Platform, Share } from 'react-native'
+import Constants from 'expo-constants'
 import { ChevronLeft, TrendingUp, Map, Waves, BookOpen, Trophy, Rocket } from 'lucide-react-native'
 import { FEATURE_RANK } from '../data/features'
 import { type, ui } from './theme'
@@ -10,6 +11,7 @@ import { ranks } from '../data/ranks'
 import { invest, newGamePlus } from '../sim/actions'
 import { Card, Row, Bar, SmallButton, Muted } from './cards'
 import { text } from '../i18n'
+import { dateAt } from '../sim/time'
 import { FlowCard } from './FlowCard'
 import { ProjectsSection } from './ProjectsSection'
 
@@ -160,6 +162,7 @@ export function CompanyPanel({
                 • {text(l)}
               </Text>
             ))}
+        {view === 'settings' && <About />}
         {view === 'settings' && (
           <Row gap={8}>
             <SmallButton
@@ -377,5 +380,40 @@ export function CompanyPanel({
         </Card>
       )}
     </>
+  )
+}
+
+/** Version line and a feedback button that shares the build and where the player is. */
+function About() {
+  const { state: s } = useGame()
+  const d = dateAt(s.tick)
+  const code = Constants.expoConfig?.android?.versionCode
+  const version = [
+    `v${Constants.expoConfig?.version ?? '?'}${code ? ` (${code})` : ''}`,
+    String(Constants.expoConfig?.extra?.buildLabel ?? ''),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const report = [
+    'Refinery Story feedback',
+    version,
+    `${Platform.OS} ${String(Platform.Version)}`,
+    `Year ${d.year} month ${d.month} · rank ${s.rank} · $${Math.round(s.money).toLocaleString()}`,
+    `Lines ${s.yard.buildings.filter(b => b.defId === 'blend').length} · products ${s.formulaLab.formulas.length} · trucks ${s.trucks.length}`,
+    '',
+    text({ en: 'What happened:', th: 'เกิดอะไรขึ้น:' }),
+    '',
+  ].join('\n')
+  return (
+    <Card>
+      <Text style={type.small}>{text({ en: 'Version', th: 'เวอร์ชัน' })}</Text>
+      <Text style={type.body}>{version}</Text>
+      <SmallButton
+        label={text({ en: 'Send feedback', th: 'ส่งความเห็น / แจ้งบั๊ก' })}
+        onPress={() => {
+          Share.share({ message: report }).catch(() => {})
+        }}
+      />
+    </Card>
   )
 }
