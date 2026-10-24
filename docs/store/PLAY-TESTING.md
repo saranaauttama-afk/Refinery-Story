@@ -16,11 +16,12 @@
 ## You need to do (accounts and uploads)
 1. **Upload key / first AAB:** on your PC run `npx eas-cli build -p android --profile production`
    once (EAS creates the keystore). Then add repo secret `EXPO_TOKEN` to use the workflow.
-2. **Host the privacy policy** the same way as ผีกินหัว: `Refinery-Story` is private, and GitHub
-   Pages on a private repo needs a paid plan, so use a separate PUBLIC repo `refinery-story-privacy`
-   with this `index.html` at its root, then Settings › Pages › Deploy from branch `main` / root.
-   URL: `https://saranaauttama-afk.github.io/refinery-story-privacy/` (source stays in
-   `docs/privacy/index.html`; update both when it changes).
+2. **Host the privacy policy.** `Refinery-Story` is a public repo (checked 24 Oct 2026), so GitHub
+   Pages works straight from it: Settings › Pages › Deploy from a branch › `topdown/v5` › `/docs`.
+   URL: `https://saranaauttama-afk.github.io/Refinery-Story/privacy/`
+   If the repo is ever made private (as ผีกินหัว was), Pages stops working on a free account: then
+   copy `docs/privacy/index.html` to a separate public repo `refinery-story-privacy` like
+   `phikinhua-privacy` and use `https://saranaauttama-afk.github.io/refinery-story-privacy/`.
 3. **Play Console › Create app:** package `com.refinerystory.u2` (already in app.json; it can't
    change after the first upload).
 4. **Testing › Internal testing:** create a release, upload the `.aab`, add tester emails.
