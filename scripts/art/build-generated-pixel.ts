@@ -4,6 +4,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import sharp from 'sharp'
 import { buildings } from '../../src/v4/data/buildings'
+import { yardDecor } from '../../src/v4/data/yardDecor'
 import { scenicSizes } from '../../src/v4/render/graphics'
 
 const root = 'assets/v5/pixel',
@@ -273,7 +274,8 @@ async function main() {
       const d = scenicSizes[id]
       await build(id, d.w, d.h, [await cut(`${root}/source/scenery.png`, i, 3, 3)], i < 6)
     }
-  const decos = buildings.filter(b => b.category === 'deco')
+  // Yard decorations have their own sheet (art:yard); this sheet only holds the older props.
+  const decos = buildings.filter(b => b.category === 'deco' && !yardDecor.some(d => d.id === b.id))
   if (fs.existsSync(`${root}/source/decorations.png`))
     for (const [i, d] of decos.entries())
       await build(
