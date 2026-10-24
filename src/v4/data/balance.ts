@@ -139,8 +139,11 @@ export const SALES = {
   reward: 1.5,
   contractFame: 15,
   failedFame: 10,
-  maxTrucks: 10,
+  maxTrucks: 24,
   approachTiles: 6,
+  // Off-map approach: ticks per tile of the visible approach road (render/truckApproach.ts), so
+  // trucks drive in at about 3 tiles a second at 1× instead of jumping 10+ tiles per step.
+  approachTicksPerTile: 1.3,
   // When tanks are this full, buyers take a below-standard lot at a discount.
   clearanceFill: 0.8,
   clearancePrice: 0.5,

@@ -57,8 +57,9 @@ import {
   drawSparkle,
   sprite,
   truckName,
-  approachTile,
 } from './world'
+import { truckPose } from './truckApproach'
+import { stepTicks } from '../sim/systems/customers'
 import { customers } from '../data/customers'
 const bounds = GRAPHICS.world
 const CAMERA_KEY = 'refinery-v5-play-camera'
@@ -72,6 +73,44 @@ const frontTile = (b: { x: number; y: number; defId: string }) => ({
 // Draw order on a square grid: whatever stands lower on the screen is in front.
 const frontDepth = (b?: { x: number; y: number; defId: string }) =>
   b ? b.y + buildingDef(b.defId).h + b.x * 0.001 : 0
+/** A worker's walk between two front tiles: down to a walkway row in front of every building in
+ *  the way, along it, and back up — never through or behind a building. */
+const walkway = (
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  buildings: { x: number; y: number; defId: string }[],
+) => {
+  const x0 = Math.min(from.x, to.x) - 0.3,
+    x1 = Math.max(from.x, to.x) + 0.3
+  let y = Math.max(from.y, to.y)
+  for (let changed = true, n = 0; changed && n < 20; n++) {
+    changed = false
+    for (const b of buildings) {
+      const d = buildingDef(b.defId)
+      if (b.defId === 'road' || b.x >= x1 || b.x + d.w <= x0) continue
+      if (b.y <= y && b.y + d.h + 0.3 > y) {
+        y = b.y + d.h + 0.3
+        changed = true
+      }
+    }
+  }
+  return [from, { x: from.x, y }, { x: to.x, y }, to]
+}
+const along = (pts: { x: number; y: number }[], f: number) => {
+  const lens = pts.slice(1).map((p, i) => Math.abs(p.x - pts[i].x) + Math.abs(p.y - pts[i].y))
+  let d = f * lens.reduce((n, l) => n + l, 0)
+  for (let i = 0; i < lens.length; i++) {
+    if (d <= lens[i] || i === lens.length - 1) {
+      const t = lens[i] ? Math.min(1, d / lens[i]) : 1,
+        a = pts[i],
+        b = pts[i + 1]
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, dx: b.x - a.x, dy: b.y - a.y }
+    }
+    d -= lens[i]
+  }
+  const last = pts[pts.length - 1]
+  return { ...last, dx: 0, dy: 0 }
+}
 // Spread workers out so they do not walk in lockstep.
 const staffOffset = (uid: string) => (uid.charCodeAt(uid.length - 1) % 7) / 7
 // Product trucks wear the colour of the product line they buy.
@@ -122,7 +161,8 @@ export function YardCanvas({
   const cameraRef = useRef(camera),
     origin = useRef(camera),
     tickAt = useRef(0),
-    time = useRef(0)
+    time = useRef(0),
+    lastHeading = useRef(new Map<string, { dx: number; dy: number }>())
   cameraRef.current = camera
   useEffect(() => {
     let id = 0
@@ -142,11 +182,25 @@ export function YardCanvas({
   useEffect(() => {
     tickAt.current = time.current
   }, [s.tick])
-  const fractional =
-      reduced || s.speed === 0
-        ? s.tick
-        : s.tick + Math.min(1, (frame - tickAt.current) / (B.tickMs / s.speed)),
-    visualTime = reduced ? 0 : (fractional * B.tickMs) / 1000
+  // Smoothed clock for animation. Game ticks arrive from a timer that can run late on a busy
+  // phone; following them directly freezes vehicles at the end of a tick and then snaps them.
+  // Instead the clock runs at the game speed and eases toward the sim.
+  const clock = useRef({ v: 0, at: 0 })
+  let fractional: number
+  if (reduced || s.speed === 0) {
+    fractional = s.tick
+    clock.current = { v: s.tick, at: frame }
+  } else {
+    const rate = s.speed / B.tickMs
+    const dt = Math.min(100, Math.max(0, frame - clock.current.at))
+    const target = s.tick + Math.min(1, Math.max(0, frame - tickAt.current) * rate)
+    let v = clock.current.v + dt * rate
+    v += (target - v) * Math.min(1, dt / 250)
+    if (Math.abs(target - v) > 3) v = target
+    clock.current = { v, at: frame }
+    fractional = v
+  }
+  const visualTime = reduced ? 0 : (fractional * B.tickMs) / 1000
   useEffect(() => {
     if (!ready || centered.current) return
     centered.current = true
@@ -464,16 +518,12 @@ export function YardCanvas({
   const truckPositions = new Map(
     s.trucks.map(t => {
       const g = gate ?? undefined
-      const a = t.path[t.step] && approachTile(t.path[t.step], g, t.phase === 'out'),
-        b = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g, t.phase === 'out')
       const f =
         t.phase === 'dwell'
           ? 0
-          : Math.min(1, Math.max(0, 1 - (t.nextTick - fractional) / SALES.roadTicks))
-      return [
-        t.uid,
-        a ? { x: a.x + 0.5 + (b.x - a.x) * f, y: a.y + 0.5 + (b.y - a.y) * f } : { x: 0, y: 0 },
-      ]
+          : Math.min(1, Math.max(0, 1 - (t.nextTick - fractional) / stepTicks(t.path, t.step)))
+      const p = truckPose(t.path, t.step, f, g, t.phase === 'out')
+      return [t.uid, { x: p.x + 0.5, y: p.y + 0.5, dx: p.dx, dy: p.dy }]
     }),
   )
   const truckNearGate =
@@ -490,11 +540,12 @@ export function YardCanvas({
         f = phase < 1 ? phase : 2 - phase
       const work = frontTile(building),
         rest = canteen ? frontTile(canteen) : { x: work.x - 1.5, y: work.y }
+      const pos = along(walkway(rest, work, s.yard.buildings), f)
       const sign = phase < 1 ? 1 : -1,
-        dx = (work.x - rest.x) * sign,
-        dy = (work.y - rest.y) * sign
+        dx = pos.dx * sign,
+        dy = pos.dy * sign
       const dir = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'e' : 'w') : dy >= 0 ? 's' : 'n'
-      return [p.uid, { x: rest.x + (work.x - rest.x) * f, y: rest.y + (work.y - rest.y) * f, dir }]
+      return [p.uid, { x: pos.x, y: pos.y, dir }]
     }),
   )
   const entries = [
@@ -527,7 +578,8 @@ export function YardCanvas({
     ...s.yard.buildings
       .filter(b => b.uid !== ghost?.uid)
       .map(b => ({
-        depth: frontDepth(b),
+        // Roads are flat ground: draw them before anything that stands or drives on them.
+        depth: b.defId === 'road' ? -1e6 + b.y : frontDepth(b),
         kind: 'building' as const,
         b,
       })),
@@ -813,14 +865,11 @@ export function YardCanvas({
           point = toScreen(p.x, p.y)
         canvas.translate(point.x, point.y)
         if (world) {
-          const t = entry.t,
-            g = gate ?? undefined,
-            a = t.path[t.step] && approachTile(t.path[t.step], g, t.phase === 'out'),
-            n = approachTile(t.path[Math.min(t.step + 1, t.path.length - 1)], g, t.phase === 'out'),
-            back = approachTile(t.path[Math.max(0, t.step - 1)], g, t.phase === 'out')
-          const dx =
-              a && n && (n.x !== a.x || n.y !== a.y) ? n.x - a.x : a && back ? a.x - back.x : 1,
-            dy = a && n && (n.x !== a.x || n.y !== a.y) ? n.y - a.y : a && back ? a.y - back.y : 0
+          const t = entry.t
+          // Keep the last heading while a truck waits, so it doesn't flip at the bay.
+          const dx = p.dx || p.dy ? p.dx : (lastHeading.current.get(t.uid)?.dx ?? 1),
+            dy = p.dx || p.dy ? p.dy : (lastHeading.current.get(t.uid)?.dy ?? 0)
+          lastHeading.current.set(t.uid, { dx, dy })
           sprite(canvas, world, truckName(t.kind, dx, dy), 0, 6, 1, 1, true)
         } else
           drawCommands(canvas, truckSprite(entry.t.kind, truckAccent(entry.t.customer), visualTime))

@@ -88,6 +88,26 @@ export function roadPath(s: GameState): { x: number; y: number }[] {
   }
   return path
 }
+const offYard = (p: { x: number; y: number }) => p.x < 0 || p.y < 0
+/** Length of the visible approach road from off the map to this gate, in tiles. Mirrors the
+ *  lanes in render/truckApproach.ts: north gates come along the top road from x = −10, west
+ *  gates up the left road from y = 34, plus the turn into the gate. */
+export const approachLength = (gate: { x: number; y: number }) =>
+  gate.x === 0 ? 37 - gate.y : gate.x + 13
+/** Ticks for the move from path[step] to path[step + 1]. Off-map steps share the approach time,
+ *  so a far gate gets a longer, steady drive in. */
+export function stepTicks(path: { x: number; y: number }[], step: number) {
+  const a = path[step],
+    b = path[step + 1]
+  if (!a || !b || (!offYard(a) && !offYard(b))) return C.roadTicks
+  // The gate is the yard tile next to the off-map run (first after it inbound, last before it
+  // outbound, where the route is reversed).
+  const lead = path.filter(offYard).length,
+    first = path.findIndex(offYard)
+  const gate = first === 0 ? path[lead] : path[first - 1]
+  if (!gate || !lead) return C.roadTicks
+  return Math.max(C.roadTicks, Math.ceil((approachLength(gate) * C.approachTicksPerTile) / lead))
+}
 // Full truck route: an approach road from outside the yard, then the in-yard road to the bay.
 export function truckRoute(s: GameState): { x: number; y: number }[] {
   const inner = roadPath(s)
@@ -201,10 +221,10 @@ export function customerSystem(s: GameState): GameState {
           phase: 'out',
           path: [...t.path].reverse(),
           step: 0,
-          nextTick: s.tick + C.roadTicks,
+          nextTick: s.tick + stepTicks([...t.path].reverse(), 0),
         }
       } else if (t.step < t.path.length - 1)
-        t = { ...t, step: t.step + 1, nextTick: s.tick + C.roadTicks }
+        t = { ...t, step: t.step + 1, nextTick: s.tick + stepTicks(t.path, t.step + 1) }
       else if (t.phase === 'in')
         t = {
           ...t,
@@ -230,7 +250,7 @@ export function customerSystem(s: GameState): GameState {
         path,
         step: 0,
         phase: 'in',
-        nextTick: s.tick + C.roadTicks,
+        nextTick: s.tick + stepTicks(path, 0),
       })
       next = { ...next, rng, nextId: next.nextId + 1 }
     }

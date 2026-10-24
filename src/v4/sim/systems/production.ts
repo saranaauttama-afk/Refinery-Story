@@ -1,6 +1,6 @@
 import { baseAvailable } from './investments'
 import { getModifiers } from './combos'
-import { truckRoute } from './customers'
+import { truckRoute, stepTicks } from './customers'
 import { activeRecipes } from './blending'
 import { plantFactor } from './plant'
 import { SALES } from '../../data/balance'
@@ -45,7 +45,7 @@ export function production(s: GameState): GameState {
           path,
           step: 0,
           phase: 'in',
-          nextTick: s.tick + SALES.roadTicks,
+          nextTick: s.tick + stepTicks(path, 0),
         },
       ]
       nextId++
