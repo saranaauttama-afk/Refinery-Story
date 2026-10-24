@@ -1,3 +1,11 @@
+import {
+  adAvailable,
+  adDoubleResearch,
+  adFinishResearch,
+  adSkipStorm,
+  adSellBoost,
+  adHint,
+} from '../../src/v4/sim/systems/rewards'
 import { salePrice } from '../../src/v4/sim/systems/customers'
 import {
   labs,
@@ -51,6 +59,8 @@ export interface Bot {
   explore: number // chance per week to try a non-optimal recipe
   supportOrder: string[]
   investOrder: string[]
+  /** Watches every rewarded ad the rules allow (balance check for docs/v4/ADS.md). */
+  ads?: boolean
 }
 export function makeBot(seed: number): Bot {
   let rng = (seed * 2654435761) >>> 0
@@ -84,9 +94,21 @@ export function buildFirstFree(s: GameState, id: string): GameState {
     for (let x = 0; x < s.yard.size; x++) if (canPlace(s, id, x, y)) return place(s, id, x, y)
   return s
 }
+/** The most ads a player can watch: every reward, as soon as its limit allows. */
+function watchAllAds(s: GameState): GameState {
+  for (const lab of labs(s)) {
+    if (adAvailable(s, 'double', lab.uid)) s = adDoubleResearch(s, lab.uid)
+    if (adAvailable(s, 'finish', lab.uid)) s = adFinishResearch(s, lab.uid)
+  }
+  if (adAvailable(s, 'storm')) s = adSkipStorm(s)
+  if (adAvailable(s, 'boost')) s = adSellBoost(s)
+  if (adAvailable(s, 'hint')) s = adHint(s)
+  return s
+}
 export function autoplay(s: GameState, bot: Bot = makeBot(1)): GameState {
   // Decisions use the same guarded actions as the UI. No grants, rank forcing or direct resource edits.
   for (const c of s.contracts.active) s = deliverContract(s, c.uid)
+  if (bot.ads) s = watchAllAds(s)
   if (s.tick % B.ticksPerWeek !== 0) return s
   const year = (Math.floor(s.tick / YEAR) + 1) / bot.pace
   const reserve = (15000 + s.staff.reduce((n, p) => n + p.salary, 0)) * bot.reserveScale
@@ -298,8 +320,8 @@ function bestMix(
   }
   return best?.mix ?? null
 }
-export function simulate(seed: number, years = 16) {
-  const bot = makeBot(seed)
+export function simulate(seed: number, years = 16, withAds = false) {
+  const bot = { ...makeBot(seed), ads: withAds }
   let s = buildStarter(createNewGame(seed)),
     negative = 0,
     maxNegative = 0

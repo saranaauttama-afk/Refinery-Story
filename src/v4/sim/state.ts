@@ -1,4 +1,5 @@
 import { emptyFormulaLab } from './systems/formulaLab'
+import { emptyRewards } from './systems/rewards'
 import { B, YARD, YEAR, PROGRESSION, STARTING_STAFF as F } from '../data/balance'
 import type { GameState, Staff } from './types'
 const foreman = (): Staff => ({
@@ -83,5 +84,6 @@ export function createNewGame(seed = B.defaultSeed): GameState {
     trend: { base: null, until: 0 },
     projects: {},
     ads: {},
+    rewards: emptyRewards(),
   }
 }

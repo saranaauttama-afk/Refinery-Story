@@ -1,7 +1,14 @@
 import { PROGRESSION as P } from '../../data/balance'
 import { hasStimulus } from './investments'
 import { getModifiers } from './combos'
-import { GRADES, SALES as C, CUSTOMER_BALANCE, B, FORMULA_LAB } from '../../data/balance'
+import {
+  GRADES,
+  SALES as C,
+  CUSTOMER_BALANCE,
+  B,
+  FORMULA_LAB,
+  REWARD_ADS as R,
+} from '../../data/balance'
 import { baseDef } from '../../data/bases'
 import { customers, type CustomerDef } from '../../data/customers'
 import type { GameState, Grade, Lot, Truck } from '../types'
@@ -134,7 +141,12 @@ export function sellTo(s: GameState, customerId: string): GameState {
   const lot = standard ?? clearanceLot(s, c.base)
   if (!lot) return s
   const units = Math.min(lot.units, C.units),
-    income = salePrice(s, lot) * units * (standard ? 1 : C.clearancePrice),
+    boosted = !!s.rewards?.boostArmed,
+    income =
+      salePrice(s, lot) *
+      units *
+      (standard ? 1 : C.clearancePrice) *
+      (boosted ? R.sellMultiplier : 1),
     prev = s.customers[c.id] ?? { hearts: 0, giftGiven: false },
     hearts = prev.hearts + (standard ? 1 : 0),
     gift = !prev.giftGiven && hearts >= C.giftHearts
@@ -142,6 +154,7 @@ export function sellTo(s: GameState, customerId: string): GameState {
   const repayment = Math.min(s.loan, income * LOAN.repayShare)
   let next: GameState = {
     ...cooled(s, lot.base),
+    rewards: boosted ? { ...s.rewards, boostArmed: false } : s.rewards,
     opened: true,
     loan: s.loan - repayment,
     money: s.money + income - repayment,

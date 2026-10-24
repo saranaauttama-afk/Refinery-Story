@@ -11,6 +11,13 @@ decided until it moves into PLAN.md.
 - **Yard notices are optional:** small pills on the yard (tanks nearly full, contract offers, staff without a post, station with no refining unit). Tap opens the sheet; ✕ hides it. Nothing is forced.
 - **U1 camera:** opens centred on the buildings (or the owned land).
 
+## Ads and supporter pack (2026-10-24) — phase 1 in the game, waiting for AdMob IDs
+
+Free game; opt-in rewarded ads in five places (finish research, double catalyst, lab hint,
+clear storm, next truck ×2) with game-time limits; supporter pack later. Details, numbers and the
+store to-do: [`ADS.md`](ADS.md). Open: real AdMob IDs from the owner, supporter pack (phase 2),
+consent screen for EEA / UK.
+
 ## Formula Lab (2026-10-22) — in the game on `feature/formula-lab`, waiting for playtest
 
 Owner idea: grades come from research + combos, not stats. Catalyst Lab researches graded

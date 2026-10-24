@@ -99,6 +99,18 @@ export interface GameState {
   projects: Record<string, number>
   /** Ad campaigns: base → tick the campaign ends. */
   ads: Record<string, number>
+  /** Rewarded-ad use, so the limits hold (docs/v4/ADS.md). Periods are game years / months. */
+  rewards: RewardAds
+}
+export interface RewardAds {
+  finishYear: number
+  finishCount: number
+  hintYear: number
+  hintCount: number
+  /** Absolute game month (year × 12 + month) of the last "next truck ×2" claim. */
+  boostMonth: number
+  /** The next truck sale pays double. */
+  boostArmed: boolean
 }
 export type Action = (state: GameState) => GameState
 export type Grade = 'SS' | 'S' | 'A' | 'B' | 'C' | 'D'
@@ -205,7 +217,7 @@ export interface FormulaLabState {
   lotCounter: Record<string, number>
 }
 export type ResearchJob =
-  | { lab: string; kind: 'catalyst'; endTick: number }
+  | { lab: string; kind: 'catalyst'; endTick: number; double?: boolean }
   | {
       lab: string
       kind: 'mix'

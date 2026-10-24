@@ -1,6 +1,6 @@
 // Labs: a Catalyst Lab researches graded catalyst stock; a Formula Lab mixes a base or a
 // known formula with catalysts into a permanent formula. Rules live in ./formulaLab.
-import { FORMULA_LAB as F, B } from '../../data/balance'
+import { FORMULA_LAB as F, B, REWARD_ADS as R } from '../../data/balance'
 import { bases, type BaseId } from '../../data/bases'
 import { additives } from '../../data/additives'
 import { secretFormulas, synergies, synergyKey } from '../../data/formulaLab'
@@ -9,6 +9,7 @@ import { labBonus } from './projects'
 import { dateAt } from '../time'
 import {
   rollCatalyst,
+  addStock,
   mixBlock,
   mixFormula,
   gradeIndex,
@@ -187,6 +188,15 @@ export function researchSystem(s: GameState): GameState {
       })
       next = unslice(next, r.state)
       if (!r.lot) continue
+      // Watched an ad for this research: the catalyst comes out in double units.
+      if (job.double) {
+        const extra = { ...r.lot, units: r.lot.units * (R.doubleCatalyst - 1) }
+        next = {
+          ...next,
+          formulaLab: { ...next.formulaLab, stock: addStock(next.formulaLab.stock, extra) },
+        }
+        r.lot = { ...r.lot, units: r.lot.units * R.doubleCatalyst }
+      }
       next = { ...next, fame: next.fame + F.catalyst.fame[r.lot.grade] }
       const n = additiveName(r.lot.additive)
       say(

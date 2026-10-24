@@ -62,7 +62,7 @@ const pickWeighted = (weights: number[], roll: number) => {
   return weights.length - 1
 }
 
-const addStock = (stock: CatalystLot[], lot: CatalystLot): CatalystLot[] => {
+export const addStock = (stock: CatalystLot[], lot: CatalystLot): CatalystLot[] => {
   const i = stock.findIndex(x => x.additive === lot.additive && x.grade === lot.grade)
   if (i < 0) return [...stock, lot]
   return stock.map((x, j) => (j === i ? { ...x, units: x.units + lot.units } : x))

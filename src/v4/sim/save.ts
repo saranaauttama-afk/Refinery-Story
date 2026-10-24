@@ -3,6 +3,7 @@ import { buildings } from '../data/buildings'
 import { YARD } from '../data/balance'
 import { bases } from '../data/bases'
 import { emptyFormulaLab } from './systems/formulaLab'
+import { emptyRewards } from './systems/rewards'
 export const serialize = (s: GameState): string => JSON.stringify(s)
 const finiteTree = (x: unknown): boolean =>
   typeof x === 'number'
@@ -53,6 +54,7 @@ export function deserialize(raw: string): GameState {
     if (s.trend === undefined) s.trend = { base: null, until: 0 }
     if (s.projects === undefined) s.projects = {}
     if (s.ads === undefined) s.ads = {}
+    if (s.rewards === undefined) s.rewards = emptyRewards()
     if (s.opened === undefined)
       s.opened =
         (record(s.year) && Number(s.year.sold) > 0) ||
@@ -137,6 +139,7 @@ export function deserialize(raw: string): GameState {
     !record(s.trend) ||
     !record(s.projects) ||
     !record(s.ads) ||
+    !record(s.rewards) ||
     ['crude', 'monthProfit', 'stormUntil', 'careerManuals', 'merchantUntil'].some(
       k => !Number.isFinite(s[k]),
     ) ||

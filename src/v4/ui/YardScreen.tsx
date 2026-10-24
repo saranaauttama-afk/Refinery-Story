@@ -16,6 +16,9 @@ import { Alerts } from './Alerts'
 import { yardAlerts } from '../sim/systems/alerts'
 import { help } from './help'
 import { EventToast } from './EventToast'
+import { AdButton } from './AdButton'
+import { adSkipStorm } from '../sim/actions'
+import { adAvailable } from '../sim/systems/rewards'
 import { useState } from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { BuildingSprite } from '../render/BuildingSprite'
@@ -140,6 +143,30 @@ export function YardScreen() {
             <Onboarding
               onPlace={(id, x, y) => setGhost({ id, x, y, repeat: false, placed: 0, spent: 0 })}
             />
+          </View>
+        )}
+        {!ghost && !panel && adAvailable(s, 'storm') && (
+          <View
+            style={{ position: 'absolute', top: 8, left: 10, right: 62, alignItems: 'flex-start' }}
+          >
+            <View
+              style={{
+                backgroundColor: '#FFF6E3',
+                borderWidth: 2,
+                borderColor: '#14110F',
+                borderRadius: 8,
+                padding: 8,
+                gap: 4,
+              }}
+            >
+              <Text style={{ fontFamily: 'Kanit_400Regular', fontSize: 14, color: '#14110F' }}>
+                {text({ en: 'Storm: production stopped', th: 'พายุเข้า: หยุดผลิตอยู่' })}
+              </Text>
+              <AdButton
+                label={{ en: 'Clear the storm now', th: 'ให้พายุผ่านไปเลย' }}
+                onReward={() => dispatch(g => adSkipStorm(g))}
+              />
+            </View>
           </View>
         )}
         {!ghost && <EventToast bottom={!panel && !bell ? guideHeight + 24 : 12} />}

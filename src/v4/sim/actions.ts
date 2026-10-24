@@ -22,3 +22,10 @@ export { startCatalyst, startMix, renameFormula } from './systems/research'
 export { overhaul, specialize } from './systems/plant'
 export { advertise } from './systems/market'
 export { buyProject } from './systems/projects'
+export {
+  adFinishResearch,
+  adDoubleResearch,
+  adSkipStorm,
+  adSellBoost,
+  adHint,
+} from './systems/rewards'

@@ -1,12 +1,14 @@
-# Google Play testing checklist (v4.2.0, versionCode 54)
+# Google Play testing checklist (v4.3.0, versionCode 55)
 
 สรุป: ส่ง APK ให้เพื่อนลองได้ทันทีจาก CI เดิม ถ้าจะขึ้น Play (Internal/Closed testing) ทำตามลิสต์นี้
 
 ## Already done in the repo
-- [x] Version 4.2.0 / versionCode 54, build label "4.2 product cards" (shown in Company › Settings)
+- [x] Version 4.3.0 / versionCode 55, build label "4.3 rewarded ads" (shown in Company › Settings)
 - [x] Settings › "Send feedback" shares version, device and in-game state (no network used)
 - [x] Android permissions trimmed: no microphone, storage, overlay or background service.
-      Final app asks only for INTERNET, VIBRATE, MODIFY_AUDIO_SETTINGS (all install-time, no prompts)
+      The app asks only for INTERNET, ACCESS_NETWORK_STATE, AD_ID (ads), VIBRATE, MODIFY_AUDIO_SETTINGS
+      (all install-time, no prompts)
+- [x] Opt-in rewarded ads (test ads only for now): `docs/v4/ADS.md`
 - [x] `eas.json` production profile builds an **AAB**; manual workflow
       `.github/workflows/android-play-aab.yml`
 - [x] Privacy policy page (TH/EN, same format as ผีกินหัว): `docs/privacy/index.html`
@@ -26,12 +28,17 @@
    change after the first upload).
 4. **Testing › Internal testing:** create a release, upload the `.aab`, add tester emails.
 5. **App content forms:**
-   - Data safety: *No data collected, no data shared*.
-   - Ads: *No ads*.
+   - Data safety: Device or other IDs collected by AdMob (advertising, fraud prevention); no other data.
+   - Ads: *Yes, contains ads*. Advertising ID: used (for ads).
+   - Countries: leave out EEA and UK until a consent screen exists.
    - Content rating: simulation/management, no violence, no user interaction, no purchases.
    - Target audience: 13+ is the simplest choice (avoids Families policy requirements).
 6. **Store listing:** short and full description, icon 512×512, feature graphic 1024×500,
    2–8 phone screenshots (see `docs/art/GPT-PROMPTS-4.2.md` for icon/feature art prompts).
+
+7. **AdMob:** create the app for `com.refinerystory.u2` and one rewarded ad unit, then send the IDs.
+   Real IDs go only in the `production` profile; use `--profile closedtest` for closed testing so
+   testers see test ads.
 
 ## Things to watch in the first test round
 - Slow phones with many trucks (cap is 24): if it lags, try Scenery motion off and report.

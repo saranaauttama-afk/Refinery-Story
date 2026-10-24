@@ -246,6 +246,21 @@ export const FUN = {
   cashMonthsMax: 24,
   rdY10Max: 3000,
 }
+/** Opt-in rewarded ads (docs/v4/ADS.md). Every limit runs on game time, never the phone clock. */
+export const REWARD_ADS = {
+  /** Finish a running catalyst research at once: per game year. */
+  finishPerYear: 3,
+  /** Catalyst research gives this many times the units (once per research). */
+  doubleCatalyst: 2,
+  /** One extra lab note (a synergy or secret-formula hint): per game year. */
+  hintPerYear: 1,
+  /** The next truck pays this many times the price: per game month. */
+  sellMultiplier: 2,
+  sellPerMonth: 1,
+  /** Skipping a storm needs no counter: a storm that ended cannot be skipped twice. */
+  /** Give up waiting for an ad to load after this long (the reward is still granted). */
+  adLoadTimeoutMs: 15_000,
+}
 export const POLISH = {
   hintLimit: 9,
   confettiPieces: 28,

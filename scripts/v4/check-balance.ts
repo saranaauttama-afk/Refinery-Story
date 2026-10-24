@@ -48,6 +48,24 @@ const income = ([1, 5, 10] as const).map(year => {
     max: Math.max(...samples),
   }
 })
+// Rewarded ads (docs/v4/ADS.md): a bot that watches every allowed ad must stay inside the same
+// pacing and grade gates, so ads help a little and never break the game.
+{
+  const withAds = Array.from({ length: 8 }, (_, i) => simulate(i + 1, 16, true))
+  for (const [i, r] of withAds.entries()) {
+    assert.ok(r.maxNegativeMonths <= 6, `ads seed ${i + 1}: softlock`)
+    assert.ok(r.reached[5] >= 2.5, `ads seed ${i + 1}: rank 5 too early ${r.reached[5]}`)
+    assert.ok(!r.reached[10] || r.reached[10] >= 11, `ads seed ${i + 1}: rank 10 too early`)
+  }
+  const med = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)]
+  for (const g of ['A', 'S', 'SS'] as const) {
+    const key = `first${g}` as const
+    const m = med(withAds.map(r => r[key] || 99))
+    const [lo, hi] = FUN.firstGrade[g]
+    assert.ok(m >= lo && m <= hi, `ads: first ${g} median year ${m}`)
+  }
+  console.log('Ads bot: pacing and first-grade gates hold with every allowed ad watched')
+}
 // Fun gates: the bot must not find the game too easy (docs/v4/AUDIT.md).
 const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)]
 const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Refinery Story",
     "slug": "refinery-story",
-    "version": "4.2.0",
+    "version": "4.3.0",
     "icon": "./assets/branding/app-icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.refinerystory.u2",
-      "versionCode": 54,
+      "versionCode": 55,
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/app-icon.png",
         "backgroundColor": "#061827"
@@ -44,13 +44,20 @@
           "recordAudioAndroid": false,
           "enableBackgroundPlayback": false
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "buildLabel": "4.2 product cards",
+      "buildLabel": "4.3 rewarded ads",
       "router": {},
       "eas": {
         "projectId": "e41dff26-bfd6-486d-86a9-fb9b3b74ae7c"

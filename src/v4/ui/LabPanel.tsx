@@ -3,7 +3,9 @@ import { Pressable, Text, View } from 'react-native'
 import { ArrowRight } from 'lucide-react-native'
 import { useGame } from '../store/useGame'
 import { B, FORMULA_GRADES, FORMULA_LAB as F } from '../data/balance'
-import { startCatalyst } from '../sim/actions'
+import { startCatalyst, adFinishResearch, adDoubleResearch, adHint } from '../sim/actions'
+import { adAvailable, finishLeft, hintLeft } from '../sim/systems/rewards'
+import { AdButton } from './AdButton'
 import {
   labs,
   productLabs,
@@ -153,6 +155,25 @@ function Research({ s }: { s: GameState }) {
           })}
           total={catalystTicks(s, lab)}
           busyText={text({ en: 'Researching…', th: 'กำลังวิจัย…' })}
+          jobAction={
+            <View style={{ gap: 4 }}>
+              {adAvailable(s, 'finish', lab.uid) && (
+                <AdButton
+                  label={{
+                    en: `Finish now (${finishLeft(s)} left this year)`,
+                    th: `เสร็จทันที (เหลือ ${finishLeft(s)} ครั้ง/ปี)`,
+                  }}
+                  onReward={() => dispatch(g => adFinishResearch(g, lab.uid))}
+                />
+              )}
+              {adAvailable(s, 'double', lab.uid) && (
+                <AdButton
+                  label={{ en: 'Double the catalyst', th: 'สารเร่งได้ 2 เท่า' }}
+                  onReward={() => dispatch(g => adDoubleResearch(g, lab.uid))}
+                />
+              )}
+            </View>
+          }
           action={(() => {
             const block = catalystBlock(s, lab.uid)
             return (
@@ -185,6 +206,15 @@ function Research({ s }: { s: GameState }) {
           th: `ปีนี้ได้สูงสุด ${cap}${next && nextYear ? ` · ${next} เริ่มปีที่ ${nextYear}` : ''} · เลเวลแล็บและนักเคมีช่วยเพิ่มโอกาส`,
         })}
       </Muted>
+      {adAvailable(s, 'hint') && (
+        <AdButton
+          label={{
+            en: `Get a lab hint (${hintLeft(s)} left this year)`,
+            th: `รับเบาะแสสูตร (เหลือ ${hintLeft(s)} ครั้ง/ปี)`,
+          }}
+          onReward={() => dispatch(g => adHint(g))}
+        />
+      )}
       <Stock s={s} defaultOpen />
       <Book s={s} />
     </>
@@ -254,6 +284,7 @@ function LabRow({
   total,
   busyText,
   action,
+  jobAction,
   selected,
   onPress,
 }: {
@@ -263,6 +294,8 @@ function LabRow({
   total: number
   busyText: string
   action?: React.ReactNode
+  /** Shown under the progress bar while the lab is busy (opt-in ad buttons). */
+  jobAction?: React.ReactNode
   selected?: boolean
   onPress?: () => void
 }) {
@@ -294,6 +327,7 @@ function LabRow({
               })}
             </Text>
             <Bar value={1 - (job.endTick - s.tick) / total} color="#9C5BD6" height={9} />
+            {jobAction}
           </>
         ) : (
           <Text style={[type.small, { fontSize: 12, color: '#2F7D32' }]}>

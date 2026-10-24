@@ -6,7 +6,9 @@ import { useGame } from '../store/useGame'
 import { customers } from '../data/customers'
 import { bases } from '../data/bases'
 import { customerUnlocked, roadPath, salePrice } from '../sim/systems/customers'
-import { acceptContract } from '../sim/actions'
+import { acceptContract, adSellBoost } from '../sim/actions'
+import { adAvailable } from '../sim/systems/rewards'
+import { AdButton } from './AdButton'
 import { SALES, B } from '../data/balance'
 import { styles, PanelTabs } from './controls'
 import { Card, Section, Row, ProductChip, GradeChip, Bar, SmallButton, Muted } from './cards'
@@ -40,6 +42,26 @@ export function CustomersPanel() {
             })}
           </Text>
         </Card>
+      )}
+      {s.rewards?.boostArmed ? (
+        <Card>
+          <Text style={styles.text}>
+            {text({
+              en: 'Bonus ready: the next truck pays double.',
+              th: 'โบนัสพร้อมแล้ว: รถลูกค้าคันถัดไปจ่าย 2 เท่า',
+            })}
+          </Text>
+        </Card>
+      ) : (
+        adAvailable(s, 'boost') && (
+          <AdButton
+            label={{
+              en: 'Next truck pays ×2 (once a month)',
+              th: 'รถคันถัดไปจ่าย ×2 (เดือนละครั้ง)',
+            }}
+            onReward={() => dispatch(g => adSellBoost(g))}
+          />
+        )
       )}
       <PanelTabs
         value={tab}
